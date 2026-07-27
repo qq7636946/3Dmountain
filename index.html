@@ -16,52 +16,43 @@
   --ease:cubic-bezier(.16,1,.3,1);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%}
+html,body{min-height:100%}
 body{
   background:#c6ced5;
   color:var(--ink);
   font-family:'Jost',"Helvetica Neue",Arial,sans-serif;
   font-weight:300;
-  overflow:hidden;
+  overflow-x:clip;
   -webkit-font-smoothing:antialiased;
 }
-body.is-free-scroll{
-  height:auto;min-height:100%;overflow:visible;background:#eef2f5;
-}
+body.is-loading{height:100%;overflow:hidden}
+.visual-scroll{position:relative;height:380vh;background:#c6ced5}
+.visual-sticky{position:sticky;top:0;height:100vh;overflow:hidden}
 canvas#gl{
-  position:fixed;left:0;top:0;z-index:0;width:100vw;height:100vh;display:block;
-  transition:opacity .9s var(--ease);
+  position:absolute;left:0;top:0;z-index:0;width:100%;height:100%;display:block;
+  will-change:opacity;
 }
 .chapter-image{
-  position:fixed;left:0;top:0;z-index:1;width:100%;height:100vh;
+  position:absolute;left:0;top:0;z-index:1;width:100%;height:100%;
   background:url('b.jpg') center center/cover no-repeat;
-  opacity:0;transform:scale(1.018);pointer-events:none;
-  transition:opacity .9s var(--ease),transform 1.5s var(--ease);
+  opacity:0;transform:scale(1.025);pointer-events:none;
+  will-change:opacity,transform;
 }
 .chapter-image:after{
   content:"";position:absolute;inset:0;
   background:linear-gradient(90deg,rgba(229,237,243,.56) 0,rgba(229,237,243,.20) 38%,rgba(229,237,243,0) 68%);
 }
-body.is-image canvas#gl{opacity:0}
-body.is-image .chapter-image{opacity:1;transform:none}
-
 /* ---------- overlay grain / vignette ---------- */
 .grain{
-  position:fixed;left:0;top:0;width:100%;height:100vh;pointer-events:none;z-index:3;
+  position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3;
   background:
     radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(120,138,152,.30) 100%);
   mix-blend-mode:multiply;opacity:.9;
 }
 
 /* ---------- shell ---------- */
-.ui{position:fixed;left:0;top:0;width:100%;height:100vh;z-index:4;pointer-events:none}
+.ui{position:absolute;left:0;top:0;width:100%;height:100%;z-index:4;pointer-events:none}
 .ui a,.ui button{pointer-events:auto}
-body.is-free-scroll canvas#gl,
-body.is-free-scroll .chapter-image,
-body.is-free-scroll .grain,
-body.is-free-scroll .ui{position:absolute}
-body.is-free-scroll .ui{pointer-events:none}
-body.is-free-scroll .ui a,body.is-free-scroll .ui button{pointer-events:none}
 
 header{
   position:absolute;top:0;left:0;right:0;
@@ -86,7 +77,7 @@ header{
 }
 .rail .dot:before{content:"";position:absolute;inset:-9px;border-radius:50%}
 .rail .dot.is-on{background:var(--accent);transform:scale(1.6)}
-.rail .bar{width:1px;height:26px;background:var(--ink);opacity:.85;transition:transform .9s var(--ease)}
+.rail .bar{width:1px;height:26px;background:var(--ink);opacity:.85;transform-origin:50% 0;will-change:transform}
 .rail .label{font-size:.6rem;letter-spacing:.26em;color:var(--accent);font-weight:400}
 
 /* ---------- main block ---------- */
@@ -96,7 +87,7 @@ header{
   padding-left:clamp(64px,15vw,300px);
   padding-right:clamp(24px,6vw,80px);
 }
-.block{max-width:min(760px,64vw)}
+.block{max-width:min(760px,64vw);will-change:opacity,transform}
 .eyebrow{font-size:clamp(.86rem,1.1vw,1.05rem);letter-spacing:.02em;color:var(--ink);opacity:.92;margin-bottom:clamp(22px,3vw,44px)}
 h1{
   font-weight:200;
@@ -145,15 +136,20 @@ h1{
 .diamond.is-idx{left:clamp(30px,8.2vw,168px);top:calc(50% - clamp(150px,17vh,210px))}
 .is-out .diamond,.is-out .next{opacity:0}
 
-/* ---------- next chapter teaser ---------- */
+/* ---------- native scroll cue ---------- */
 .next{
   position:absolute;left:50%;bottom:clamp(22px,4vh,54px);transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.4vh,30px);
-  transition:opacity .9s var(--ease);
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  transition:opacity .45s linear;
 }
-.next .diamond{position:relative;left:auto;top:auto}
-.next .name{font-size:.95rem;letter-spacing:.02em;color:var(--ink);opacity:.9}
+.next .scroll-line{width:1px;height:42px;background:var(--hair);position:relative;overflow:hidden}
+.next .scroll-line:after{
+  content:"";position:absolute;left:0;top:-100%;width:100%;height:100%;background:var(--ink);
+  animation:scrollPulse 1.9s var(--ease) infinite;
+}
+.next .name{font-size:.58rem;letter-spacing:.28em;color:var(--ink);opacity:.82}
 .next .name b{font-weight:300}
+@keyframes scrollPulse{0%{transform:translateY(0)}70%,100%{transform:translateY(200%)}}
 
 /* ---------- bottom right controls ---------- */
 .controls{position:absolute;right:clamp(20px,3.2vw,54px);bottom:clamp(22px,4vh,54px);display:flex;flex-direction:column;gap:14px}
@@ -194,12 +190,11 @@ h1{
 
 /* ---------- native document content after the visual chapters ---------- */
 .free-scroll{
-  position:relative;z-index:6;margin-top:100vh;
+  position:relative;z-index:6;
   background:#eef2f5;
   color:var(--ink);
-  opacity:0;visibility:hidden;pointer-events:none;
+  min-height:100vh;
 }
-body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:auto}
 .free-inner{width:min(1180px,calc(100% - 48px));margin:0 auto}
 .free-intro{
   min-height:92vh;padding:clamp(90px,12vh,140px) 0;
@@ -218,7 +213,7 @@ body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:aut
   transition:opacity 1.05s var(--ease),transform 1.2s var(--ease);
 }
 .free-scroll [data-reveal="soft"]{transform:translateY(18px);transition-delay:.1s}
-body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:none}
+.free-scroll [data-reveal].is-visible{opacity:1;transform:none}
 .free-divisions{padding:clamp(90px,13vh,160px) 0}
 .free-heading{
   display:flex;justify-content:space-between;align-items:end;gap:32px;
@@ -249,6 +244,7 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
 .free-footer{display:flex;justify-content:space-between;gap:30px;font-size:.62rem;letter-spacing:.24em}
 
 @media (max-width:860px){
+  .visual-scroll{height:350vh}
   .rail{display:none}
   .stage{padding-left:clamp(22px,7vw,60px);align-items:flex-end;padding-bottom:26vh}
   .block{max-width:none}
@@ -266,13 +262,15 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
 }
 </style>
 </head>
-<body>
+<body class="is-loading">
 
-<canvas id="gl"></canvas>
-<div class="chapter-image" id="chapterImage" aria-hidden="true"></div>
-<div class="grain"></div>
+<section class="visual-scroll" id="visualScroll" aria-label="Montis visual chapters">
+<div class="visual-sticky">
+  <canvas id="gl"></canvas>
+  <div class="chapter-image" id="chapterImage" aria-hidden="true"></div>
+  <div class="grain"></div>
 
-<div class="ui" id="ui">
+  <div class="ui" id="ui">
   <header>
     <div class="brand">MONTIS</div>
     <div class="menu"><span>MENU</span><i></i></div>
@@ -301,19 +299,16 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
     </div>
   </div>
 
-  <div class="next" id="next">
-    <div class="diamond"><span id="tNextIdx">2</span></div>
-    <div class="name"><b id="tNextName">Montis Research</b></div>
+  <div class="next" id="scrollCue">
+    <div class="scroll-line"></div>
+    <div class="name"><b>SCROLL TO DISCOVER</b></div>
   </div>
 
   <div class="credit" id="credit">3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC&nbsp;BY&nbsp;4.0</div>
 
-  <div class="controls">
-    <button id="btnPrev" title="Previous">&#8593;</button>
-    <button id="btnNext" title="Next">&#8595;</button>
   </div>
-
 </div>
+</section>
 
 <div class="loader" id="loader">
   <div class="in">
@@ -331,8 +326,8 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
         <h2>ONE MOUNTAIN.<br>THREE DIRECTIONS.</h2>
       </div>
       <p data-reveal="soft">
-        Continue through the Montis divisions at your own pace.
-        From this point onward, the page uses natural free scrolling.
+        Move through every Montis chapter at your own pace.
+        The visual sequence and the content below share one continuous, natural scroll.
       </p>
     </section>
 
@@ -909,6 +904,8 @@ const CHAPTERS = [
 ];
 let chapter = 0;                 // the Expeditions hero is the initial section
 let busy = true;
+let scrollChapterT = 0;
+let scrollWashT = 0;
 
 const el = {
   eyebrow:document.getElementById('tEyebrow'),
@@ -916,41 +913,43 @@ const el = {
   l2:document.getElementById('tL2'),
   cta:document.getElementById('tCta'),
   idx:document.querySelector('#dIdx span'),
-  nextIdx:document.getElementById('tNextIdx'),
-  nextName:document.getElementById('tNextName'),
   ui:document.getElementById('ui'),
   dots:document.getElementById('dots'),
-  prev:document.getElementById('btnPrev'),
-  next:document.getElementById('btnNext'),
-  credit:document.getElementById('credit')
+  credit:document.getElementById('credit'),
+  block:document.querySelector('.block'),
+  idxDiamond:document.getElementById('dIdx'),
+  railBar:document.querySelector('.rail .bar'),
+  scrollCue:document.getElementById('scrollCue'),
+  chapterImage:document.getElementById('chapterImage'),
+  canvas:document.getElementById('gl'),
+  visualScroll:document.getElementById('visualScroll')
 };
 
 CHAPTERS.forEach((c,i)=>{
   const d = document.createElement('div');
   d.className = 'dot' + (i===chapter?' is-on':'');
-  d.addEventListener('click', ()=>goTo(i));
+  d.setAttribute('role','button');
+  d.setAttribute('aria-label','Scroll to ' + c.eyebrow);
+  d.addEventListener('click', ()=>scrollToChapter(i));
   el.dots.appendChild(d);
 });
 
 function paint(i){
   const c = CHAPTERS[i];
-  const isLast = i === CHAPTERS.length - 1;
-  const n = CHAPTERS[Math.min(i+1,CHAPTERS.length-1)];
   el.eyebrow.textContent = c.eyebrow;
   el.l1.textContent = c.l1;
   el.l2.textContent = c.l2;
   el.cta.textContent = c.cta;
   el.idx.textContent = c.idx;
-  el.nextIdx.textContent = isLast ? '↓' : n.idx;
-  el.nextName.textContent = isLast ? 'Continue to Montis' : n.eyebrow;
-  el.prev.disabled = i === 0;
   el.credit.textContent = c.credit || '3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC BY 4.0';
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
 }
 
 function setSceneForChapter(i){
   const showImage = CHAPTERS[i].scene === 'image';
-  document.body.classList.toggle('is-image',showImage);
+  el.chapterImage.style.opacity = showImage ? 1 : 0;
+  el.chapterImage.style.transform = showImage ? 'scale(1)' : 'scale(1.025)';
+  el.canvas.style.opacity = showImage ? 0 : 1;
   modelRoot.visible = !showImage;
 }
 
@@ -971,58 +970,89 @@ function applyChapterTarget(i, instant){
   if(instant){ camPos.copy(camPosT); camAim.copy(camAimT); spin.rotation.y = spinT; }
 }
 
-/* transition ----------------------------------------------------------- */
-let trans = { on:false, t:0, dir:1, swapped:false };
+/* native scroll timeline ----------------------------------------------- */
+const CHAPTER_STOPS = [0,.36,.72];
+const clamp01 = v=>Math.max(0,Math.min(1,v));
+const smoothstep = (a,b,v)=>{
+  const t = clamp01((v-a)/(b-a));
+  return t*t*(3-2*t);
+};
+const mix = (a,b,t)=>a+(b-a)*t;
+
+function visualRange(){
+  return Math.max(1,el.visualScroll.offsetHeight-innerHeight);
+}
+
+function scrollToChapter(i){
+  if(i < 0 || i >= CHAPTERS.length) return;
+  scrollTo({top:CHAPTER_STOPS[i]*visualRange(),behavior:'smooth'});
+}
 
 function goTo(i){
-  if(busy) return;
-  const n = CHAPTERS.length;
-  if(i < 0 || i >= n) return;
-  if(i === chapter) return;
-  const fromPos = camPos.clone();
-  const fromAim = camAim.clone();
-  const fromFov = camera.fov;
-  const fromRot = spin.rotation.y;
-  busy = true;
-  chapter = i;
-  el.ui.classList.remove('is-in');
-  el.ui.classList.add('is-out');
-  applyChapterTarget(i);
-  trans = { on:true, t:0, swapped:false, fromPos, fromAim, fromFov, fromRot };
+  if(TUNE){
+    if(i < 0 || i >= CHAPTERS.length) return;
+    chapter = i;paint(i);applyChapterTarget(i,true);setSceneForChapter(i);
+    return;
+  }
+  scrollToChapter(i);
 }
 
-function tickTransition(dt){
-  if(!trans.on) return;
-  trans.t += dt / 1.75;
-  const t = Math.min(trans.t, 1);
-  const ease = t*t*(3-2*t);
-  camPos.lerpVectors(trans.fromPos,camPosT,ease);
-  camAim.lerpVectors(trans.fromAim,camAimT,ease);
-  camera.fov = THREE.MathUtils.lerp(trans.fromFov,fovT,ease);
-  camera.updateProjectionMatrix();
-  spin.rotation.y = THREE.MathUtils.lerp(trans.fromRot,spinT,ease);
-  U.uTransition.value = Math.sin(t * Math.PI);   // 0 -> 1 -> 0
-  U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
-  if(!trans.swapped && t > .46){
-    trans.swapped = true;
-    setSceneForChapter(chapter);
+function chapterCopyOpacity(i,p){
+  if(i === 0) return 1-smoothstep(.14,.22,p);
+  if(i === 1) return smoothstep(.22,.30,p)*(1-smoothstep(.54,.62,p));
+  return smoothstep(.62,.70,p);
+}
+
+function chapterCopyY(i,p){
+  if(i === 0) return -24*smoothstep(.14,.22,p);
+  if(i === 1) return 24*(1-smoothstep(.22,.30,p))-24*smoothstep(.54,.62,p);
+  return 24*(1-smoothstep(.62,.70,p));
+}
+
+function updateScrollTimeline(force=false){
+  if(TUNE) return;
+  const p = clamp01(scrollY/visualRange());
+  const cameraMix = smoothstep(.06,.34,p);
+  const a = CHAPTERS[0], b = CHAPTERS[1];
+  camPosT.set(
+    mix(a.cam.x,b.cam.x,cameraMix),
+    mix(a.cam.y,b.cam.y,cameraMix),
+    mix(a.cam.z,b.cam.z,cameraMix)
+  );
+  camAimT.set(
+    mix(a.cam.tx,b.cam.tx,cameraMix),
+    mix(a.cam.ty,b.cam.ty,cameraMix),
+    mix(a.cam.tz||0,b.cam.tz||0,cameraMix)
+  );
+  fovT = mix(a.fov||40,b.fov||40,cameraMix);
+  spinT = mix(a.rot,b.rot,cameraMix);
+
+  const imageMix = smoothstep(.56,.72,p);
+  scrollChapterT = cameraMix + imageMix;
+  scrollWashT = Math.sin(cameraMix*Math.PI)*.34;
+  el.chapterImage.style.opacity = imageMix;
+  el.chapterImage.style.transform = `scale(${mix(1.025,1,imageMix)})`;
+  el.canvas.style.opacity = 1-imageMix;
+  modelRoot.visible = imageMix < .998;
+
+  const nextChapter = p < .22 ? 0 : p < .62 ? 1 : 2;
+  if(force || nextChapter !== chapter){
+    chapter = nextChapter;
     paint(chapter);
-    /* snap the masks back below the line without animating, then reveal */
-    el.ui.classList.add('no-anim');
-    el.ui.classList.remove('is-out');
-    void el.ui.offsetWidth;
-    el.ui.classList.remove('no-anim');
-    void el.ui.offsetWidth;
-    el.ui.classList.add('is-in');
   }
-  if(t >= 1){
-    camPos.copy(camPosT);camAim.copy(camAimT);spin.rotation.y=spinT;
-    trans.on = false;U.uTransition.value = 0;busy = false;
-  }
+  const copyOpacity = chapterCopyOpacity(chapter,p);
+  const copyY = chapterCopyY(chapter,p);
+  el.block.style.opacity = copyOpacity;
+  el.block.style.transform = `translate3d(0,${copyY}px,0)`;
+  el.idxDiamond.style.opacity = copyOpacity;
+  el.idxDiamond.style.transform = `rotate(45deg) translate3d(${copyY*.24}px,${copyY*.24}px,0)`;
+  el.scrollCue.style.opacity = 1-smoothstep(.03,.12,p);
+  el.railBar.style.transform = `scaleY(${.22+p*.78})`;
 }
 
-/* input ---------------------------------------------------------------- */
-let freeMode = false;
+addEventListener('scroll',()=>updateScrollTimeline(),{passive:true});
+
+/* free-scroll text reveals --------------------------------------------- */
 const freeRevealItems = [...document.querySelectorAll('.free-scroll [data-reveal]')];
 const freeRevealObserver = new IntersectionObserver(entries=>{
   entries.forEach(entry=>{
@@ -1032,80 +1062,7 @@ const freeRevealObserver = new IntersectionObserver(entries=>{
     }
   });
 }, { threshold:.08, rootMargin:'0px 0px -10% 0px' });
-
-function armFreeReveals(){
-  freeRevealItems.forEach(item=>freeRevealObserver.observe(item));
-}
-
-function enterFreeScroll(initialDelta = 0){
-  if(freeMode || busy || chapter !== CHAPTERS.length - 1) return;
-  freeMode = true;
-  document.body.classList.add('is-free-scroll');
-  armFreeReveals();
-  requestAnimationFrame(()=>{
-    if(initialDelta > 0) scrollBy({ top:initialDelta, left:0, behavior:'auto' });
-  });
-}
-
-function exitFreeScroll(){
-  if(!freeMode) return;
-  scrollTo({ top:0, behavior:'auto' });
-  document.body.classList.remove('is-free-scroll');
-  freeRevealObserver.disconnect();
-  freeRevealItems.forEach(item=>item.classList.remove('is-visible'));
-  freeMode = false;
-}
-
-function goNext(unlockDelta = 0){
-  if(chapter === CHAPTERS.length - 1) enterFreeScroll(unlockDelta);
-  else goTo(chapter + 1);
-}
-
-let wheelLock = 0;
-addEventListener('wheel', e=>{
-  if(TUNE) return;
-  if(freeMode){
-    if(scrollY <= 2 && e.deltaY < 0) exitFreeScroll();
-    return;
-  }
-  const now = performance.now();
-  if(busy || now - wheelLock < 700) return;
-  if(Math.abs(e.deltaY) < 14) return;
-  wheelLock = now;
-  const wheelDelta = e.deltaMode === 1 ? e.deltaY * 16
-    : e.deltaMode === 2 ? e.deltaY * innerHeight
-    : e.deltaY;
-  if(e.deltaY > 0) goNext(Math.max(0, wheelDelta));
-  else goTo(chapter - 1);
-}, { passive:true });
-
-let touchY = null;
-addEventListener('touchstart', e=>{ touchY = e.touches[0].clientY; }, { passive:true });
-addEventListener('touchmove', e=>{
-  if(freeMode || touchY === null || busy) return;
-  const dy = touchY - e.touches[0].clientY;
-  if(Math.abs(dy) > 48){
-    if(dy > 0) goNext(dy);
-    else goTo(chapter - 1);
-    touchY = null;
-  }
-}, { passive:true });
-
-addEventListener('keydown', e=>{
-  if(TUNE) return;
-  if(freeMode){
-    if(scrollY <= 2 && (e.key === 'ArrowUp' || e.key === 'PageUp')) exitFreeScroll();
-    return;
-  }
-  if(e.key === 'ArrowDown') goNext(72);
-  if(e.key === 'PageDown' || e.key === ' ') goNext(innerHeight * .8);
-  if(e.key === 'ArrowUp'   || e.key === 'PageUp')  goTo(chapter-1);
-});
-el.prev.addEventListener('click', ()=>goTo(chapter-1));
-el.next.addEventListener('click', ()=>goNext(innerHeight * .18));
-document.getElementById('next').addEventListener('click', ()=>goNext(innerHeight * .18));
-document.getElementById('next').style.cursor = 'pointer';
-document.getElementById('next').style.pointerEvents = 'auto';
+freeRevealItems.forEach(item=>freeRevealObserver.observe(item));
 document.getElementById('cta').addEventListener('click', e=>e.preventDefault());
 
 /* pointer -------------------------------------------------------------- */
@@ -1126,6 +1083,7 @@ function resize(){
   camera.updateProjectionMatrix();
   U.uResolution.value.set(w*dpr, h*dpr);
   U.uAspect.value = w/h;
+  if(!document.body.classList.contains('is-loading')) updateScrollTimeline(true);
 }
 addEventListener('resize', resize);
 resize();
@@ -1152,7 +1110,9 @@ function tryStartIntro(){
   setSceneForChapter(chapter);
   setTimeout(()=>{
     loader.classList.add('is-done');
+    document.body.classList.remove('is-loading');
     el.ui.classList.add('is-in');
+    updateScrollTimeline(true);
     intro = { on:true, t:0 };
   }, 260);
 }
@@ -1246,21 +1206,21 @@ function update(dt){
     const t = Math.min(intro.t, 1);
     U.uTransition.value = Math.pow(1 - t, 1.6);
     if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
+  } else {
+    U.uTransition.value += (scrollWashT-U.uTransition.value)*Math.min(1,dt*5);
   }
-  tickTransition(dt);
+  U.uChapter.value += (scrollChapterT-U.uChapter.value)*Math.min(1,dt*5);
 
   const t = U.uTime.value;
 
-  /* camera: chapter target + idle drift (pointer only drives the hover light) */
+  /* camera follows native page progress; pointer only drives the hover light */
   if(controls){
     controls.update();
   } else {
-  if(!trans.on){
     const k = Math.min(1,dt*2.2);
     camPos.lerp(camPosT,k);
     camAim.lerp(camAimT,k);
-  }
-  const idle = chapter === 0 && !trans.on ? 1 : 0;
+  const idle = scrollY < visualRange()*.02 ? 1 : 0;
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
   camera.position.set(
     camPos.x + Math.sin(t*.11) * .35 * idle,
@@ -1270,7 +1230,7 @@ function update(dt){
   camera.lookAt(camAim.x,camAim.y + Math.sin(t*.13)*.1*idle,camAim.z);
   }
 
-  if(!trans.on && Math.abs(camera.fov - fovT) > .01){
+  if(Math.abs(camera.fov - fovT) > .01){
     camera.fov += (fovT - camera.fov) * Math.min(1, dt*2.2);
     camera.updateProjectionMatrix();
   }
@@ -1278,7 +1238,7 @@ function update(dt){
   const fogAim = CHAPTERS[chapter].fogTop || 2.6;
   mountainMat.uniforms.uFogTop.value += (fogAim - mountainMat.uniforms.uFogTop.value) * Math.min(1, dt*1.2);
 
-  if(!trans.on) spin.rotation.y += (spinT-spin.rotation.y)*Math.min(1,dt*1.1);
+  spin.rotation.y += (spinT-spin.rotation.y)*Math.min(1,dt*1.1);
 
   /* cursor highlight on the terrain */
   const hu = mountainMat.uniforms;
@@ -1469,7 +1429,8 @@ window.viz = {
     camera.lookAt(c.cam.tx, c.cam.ty, c.cam.tz || 0);
     spin.rotation.y = c.rot;
     U.uChapter.value = i; U.uTransition.value = 0;
-    intro.on = false; trans.on = false; busy = false;
+    scrollChapterT = i;scrollWashT = 0;
+    intro.on = false;busy = false;
   },
   draw(){
     renderer.clear();

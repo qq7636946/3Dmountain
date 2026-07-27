@@ -817,9 +817,16 @@ const mountainMat = new THREE.ShaderMaterial({
       float wisp2 = texture2D(tNoise, vWorld.xz*.075 + vec2(-.02*uTime, .012*uTime)).g - .5;
       float h = vWorld.y + wisp*2.2 + wisp2*1.0;
 
-      /* aerial perspective — far ridges wash out into the sky */
+      /* aerial perspective — far ridges wash out into the sky, and the
+         haze glows where you are looking toward the sun (in-scatter) */
       float haze = 1. - exp(-uFogDensity * max(vDepth - 10., 0.));
-      col = mix(col, uSkyColor, haze * .9);
+      float toSun = max(dot(-v, uSunDir), 0.);
+      vec3 hazeCol = mix(uSkyColor, uSunColor, pow(toSun, 3.) * .45);
+      col = mix(col, hazeCol, haze * .9);
+
+      /* thin snow on a ridge lets a little light through from behind */
+      float back = pow(max(dot(-n, uSunDir), 0.), 2.2);
+      col += uSunColor * back * snow * .10 * (1. - haze);
 
       /* fog pooling in the valleys */
       float valley = smoothstep(uFogTop, uFogBottom, h);
@@ -1178,6 +1185,119 @@ const shipMatBase = new THREE.ShaderMaterial({
 
       gl_FragColor = vec4(col, uOpacity);
       #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   SHIP EXTRAS — a wake that spreads astern, a cold funnel plume and
+   three navigation lights. All ride inside shipRoot, so they inherit
+   the exported placement and the swell it sits on.
+   ===================================================================== */
+const wakeMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime, tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uFoam:{ value:new THREE.Color('#ffffff') },
+    uChurn:{ value:new THREE.Color('#6f93a8') }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise;
+    uniform vec3 uFoam, uChurn;
+    uniform float uTime, uOpacity;
+    varying vec2 vUv;
+    void main(){
+      /* v runs astern, u across the wake */
+      float v = vUv.y, u = vUv.x * 2. - 1.;
+
+      /* two churned bands that spread as they travel back */
+      float spread = .18 + v * .95;
+      float band = smoothstep(spread, spread * .35, abs(u));
+      float edge = smoothstep(spread * 1.05, spread * .75, abs(u))
+                 - smoothstep(spread * .78, spread * .45, abs(u));
+
+      float n  = texture2D(tNoise, vec2(u * .5 + .5, v * 1.6 - uTime * .06)).r;
+      float n2 = texture2D(tNoise, vec2(u * 1.3 + .5, v * 3.1 - uTime * .11)).g;
+
+      /* the churned lane reads as displaced water; the crests as foam */
+      float lane = band * (.30 + .45 * n);
+      float crest = edge * (.5 + .5 * n2) * 1.35 + band * pow(n, 3.) * .8;
+      float fade = smoothstep(0., .06, v) * smoothstep(1., .30, v);
+      lane *= fade; crest *= fade;
+
+      vec3 col = mix(uChurn, uFoam, clamp(crest * 1.6, 0., 1.));
+      float a = clamp(lane * .55 + crest, 0., 1.) * uOpacity * .9;
+      gl_FragColor = vec4(col, a);
+      #include <colorspace_fragment>
+    }`
+});
+
+const plumeMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:0 }, uColor:{ value:new THREE.Color('#b9c8d2') } },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    attribute float aSeed;
+    varying float vLife;
+    void main(){
+      /* each puff climbs, drifts downwind and expands, then restarts */
+      float life = fract(uTime * .09 + aSeed);
+      vLife = life;
+      vec3 pos = position;
+      pos.y += life * 5.2;
+      pos.x += life * life * 3.4 + sin(life * 9.4 + aSeed * 30.) * .35;
+      pos.z += sin(life * 6.1 + aSeed * 17.) * .5;
+      vec4 mv = modelViewMatrix * vec4(pos, 1.);
+      gl_PointSize = (10. + 46. * life) * (26. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying float vLife;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float a = smoothstep(.5, .05, d);
+      a *= smoothstep(0., .12, vLife) * smoothstep(1., .45, vLife);
+      gl_FragColor = vec4(uColor, a * .55 * uOpacity);
+    }`
+});
+
+const navMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, depthTest:false, blending:THREE.AdditiveBlending,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:0 } },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    attribute vec3 aColor;
+    attribute float aBlink;
+    varying vec3 vColor;
+    varying float vOn;
+    void main(){
+      vColor = aColor;
+      /* the masthead light blinks, the side lights burn steady */
+      vOn = aBlink > .5 ? step(.62, fract(uTime * .55)) : 1.;
+      vec4 mv = modelViewMatrix * vec4(position, 1.);
+      gl_PointSize = 7. * (34. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uOpacity;
+    varying vec3 vColor;
+    varying float vOn;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float core = smoothstep(.22, .0, d);
+      float halo = smoothstep(.5, .1, d) * .4;
+      gl_FragColor = vec4(vColor, (core + halo) * vOn * uOpacity);
     }`
 });
 
@@ -1699,6 +1819,47 @@ gltfLoader.load('cargo_ship_runtime/scene.gltf', gltf=>{
   holder.scale.setScalar(7.2 / Math.max(size.x, size.z));
   shipRoot.add(holder);
   shipRoot.renderOrder = 3;
+  /* --- wake, plume and lights, sized from the hull --- */
+  const L = Math.max(size.x, size.z) * (7.2 / Math.max(size.x, size.z));  /* = 7.2 */
+  const alongX = size.x >= size.z;
+
+  const wakeGeo = new THREE.PlaneGeometry(L * 1.5, L * 4.2, 1, 24);
+  wakeGeo.rotateX(-Math.PI / 2);
+  const wake = new THREE.Mesh(wakeGeo, wakeMat);
+  wake.position.set(alongX ? -L * 2.4 : 0, .06, alongX ? 0 : -L * 2.4);
+  if(!alongX) wake.rotation.y = Math.PI / 2;
+  wake.rotation.y += Math.PI;                 /* v = 0 at the stern */
+  wake.frustumCulled = false;
+  wake.renderOrder = 2;
+  shipRoot.add(wake);
+
+  const puffs = 26, pp = [], ps = [];
+  for(let i = 0; i < puffs; i++){
+    pp.push(alongX ? L * .12 : 0, L * .42, alongX ? 0 : L * .12);
+    ps.push(i / puffs);
+  }
+  const pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
+  pg.setAttribute('aSeed', new THREE.Float32BufferAttribute(ps, 1));
+  const plume = new THREE.Points(pg, plumeMat);
+  plume.frustumCulled = false;
+  plume.renderOrder = 5;
+  shipRoot.add(plume);
+
+  const lampPos = [], lampCol = [], lampBlink = [];
+  const put = (x, y, z, c, blink) => { lampPos.push(x, y, z); lampCol.push(c[0], c[1], c[2]); lampBlink.push(blink); };
+  put(alongX ?  L * .46 : .22, L * .12, alongX ? .22 : L * .46, [1.0, .25, .22], 0);  /* port  */
+  put(alongX ?  L * .46 : -.22, L * .12, alongX ? -.22 : L * .46, [.25, 1.0, .45], 0); /* stbd  */
+  put(alongX ?  L * .05 : 0, L * .50, alongX ? 0 : L * .05, [1.0, .95, .85], 1);       /* mast  */
+  const lg = new THREE.BufferGeometry();
+  lg.setAttribute('position', new THREE.Float32BufferAttribute(lampPos, 3));
+  lg.setAttribute('aColor', new THREE.Float32BufferAttribute(lampCol, 3));
+  lg.setAttribute('aBlink', new THREE.Float32BufferAttribute(lampBlink, 1));
+  const lamps = new THREE.Points(lg, navMat);
+  lamps.frustumCulled = false;
+  lamps.renderOrder = 7;
+  shipRoot.add(lamps);
+
   m.traverse(o=>{
     if(o.isMesh){
       /* the asset's own PBR material, lit by the scene lights */
@@ -1891,8 +2052,20 @@ function update(dt){
   U.uDeck.value += (deckAim - U.uDeck.value) * Math.min(1, dt * 1.8);
   shipRoot.visible = waterRoot.visible = shipOn;
   if(shipOn){
-    shipRoot.position.set(shipNow.x, shipNow.y, shipNow.z);
-    shipRoot.rotation.set(shipNow.rx, shipNow.ry, shipNow.rz);
+    /* ride the same swell the water shader is drawing */
+    const wt = U.uTime.value * waterNow.waveSpeed;
+    const swell = (x, z) => waterNow.waveHeight *
+      (Math.sin(x * .08 + wt) * .6 + Math.sin(z * .11 - wt * 1.3) * .4);
+    const h  = swell(shipNow.x, shipNow.z);
+    const hf = swell(shipNow.x + 2.2, shipNow.z + 2.2);   /* a point off the bow */
+    const hs = swell(shipNow.x + 2.2, shipNow.z - 2.2);   /* and off the beam    */
+
+    shipRoot.position.set(shipNow.x, shipNow.y + h * .55, shipNow.z);
+    shipRoot.rotation.set(
+      shipNow.rx + (hf - h) * .10,          /* pitch */
+      shipNow.ry,
+      shipNow.rz + (hs - h) * .12           /* roll  */
+    );
     shipRoot.scale.setScalar(shipNow.scale);
     waterRoot.position.set(waterNow.x, waterNow.y, waterNow.z);
     waterRoot.rotation.set(waterNow.rx, waterNow.ry, waterNow.rz);
@@ -1901,6 +2074,9 @@ function update(dt){
     waterMat.uniforms.uOpacity.value = waterNow.opacity * shipAmt;
     waterMat.uniforms.uWaveHeight.value = waterNow.waveHeight;
     waterMat.uniforms.uWaveSpeed.value = waterNow.waveSpeed;
+    wakeMat.uniforms.uOpacity.value  = shipAmt;
+    plumeMat.uniforms.uOpacity.value = shipAmt;
+    navMat.uniforms.uOpacity.value   = shipAmt * .9;
   }
 
   tickPointerUI();

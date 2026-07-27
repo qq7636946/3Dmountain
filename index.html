@@ -1027,6 +1027,7 @@ const camPos  = new THREE.Vector3();
 const camAim  = new THREE.Vector3();
 const camPosT = new THREE.Vector3();
 const camAimT = new THREE.Vector3();
+const camUpT  = new THREE.Vector3(0,1,0);
 let spinT = 0;
 let fovT = 40;
 
@@ -1034,9 +1035,12 @@ function applyChapterTarget(i, instant){
   const c = CHAPTERS[i];
   camPosT.set(c.cam.x, c.cam.y, c.cam.z);
   camAimT.set(c.cam.tx, c.cam.ty, c.cam.tz || 0);
+  camUpT.set(0,i === 0 ? 1 : 0,i === 0 ? 0 : -1);
   fovT = c.fov || 40;
   spinT = c.rot;
-  if(instant){ camPos.copy(camPosT); camAim.copy(camAimT); spin.rotation.y = spinT; }
+  if(instant){
+    camPos.copy(camPosT);camAim.copy(camAimT);camera.up.copy(camUpT);spin.rotation.y = spinT;
+  }
 }
 
 /* native scroll timeline ----------------------------------------------- */
@@ -1047,6 +1051,10 @@ const smoothstep = (a,b,v)=>{
   return t*t*(3-2*t);
 };
 const mix = (a,b,t)=>a+(b-a)*t;
+const cloudWipe = (p,start,end)=>{
+  if(p <= start || p >= end) return 0;
+  return Math.sin(((p-start)/(end-start))*Math.PI);
+};
 
 function visualRange(){
   return Math.max(1,el.visualScroll.offsetHeight-innerHeight);
@@ -1093,17 +1101,21 @@ function updateScrollTimeline(force=false){
     mix(a.cam.ty,b.cam.ty,cameraMix),
     mix(a.cam.tz||0,b.cam.tz||0,cameraMix)
   );
+  camUpT.set(0,1-cameraMix,-cameraMix).normalize();
   fovT = mix(a.fov||40,b.fov||40,cameraMix);
   spinT = mix(a.rot,b.rot,cameraMix);
 
-  const imageMix = smoothstep(.56,.72,p);
+  /* Previous-version cloud wash, now driven continuously by native scroll. */
+  const firstCloudWipe = cloudWipe(p,.10,.34);
+  const secondCloudWipe = cloudWipe(p,.50,.74);
+  const imageMix = smoothstep(.62,.74,p);
   scrollChapterT = cameraMix + imageMix;
-  scrollWashT = Math.sin(cameraMix*Math.PI)*.34;
+  scrollWashT = Math.max(firstCloudWipe,secondCloudWipe);
   el.chapterImage.style.opacity = imageMix;
   el.chapterImage.style.transform = `scale(${mix(1.025,1,imageMix)})`;
   el.canvas.style.opacity = 1-imageMix;
   modelRoot.visible = imageMix < .998;
-  const shipMix = smoothstep(.18,.28,p)*(1-smoothstep(.52,.61,p));
+  const shipMix = smoothstep(.23,.31,p)*(1-smoothstep(.50,.58,p));
   setShipOpacity(shipMix);
 
   const nextChapter = p < .22 ? 0 : p < .62 ? 1 : 2;
@@ -1327,7 +1339,7 @@ function update(dt){
     U.uTransition.value = Math.pow(1 - t, 1.6);
     if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
   } else {
-    U.uTransition.value += (scrollWashT-U.uTransition.value)*Math.min(1,dt*5);
+    U.uTransition.value += (scrollWashT-U.uTransition.value)*Math.min(1,dt*9);
   }
   U.uChapter.value += (scrollChapterT-U.uChapter.value)*Math.min(1,dt*5);
 
@@ -1340,6 +1352,7 @@ function update(dt){
     const k = Math.min(1,dt*2.2);
     camPos.lerp(camPosT,k);
     camAim.lerp(camAimT,k);
+    camera.up.lerp(camUpT,k).normalize();
   const idle = scrollY < visualRange()*.02 ? 1 : 0;
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
   camera.position.set(

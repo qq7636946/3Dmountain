@@ -16,42 +16,27 @@
   --ease:cubic-bezier(.16,1,.3,1);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{min-height:100%}
+html,body{height:100%}
 body{
-  background:#c6ced5;
+  background:#e8ecef;
   color:var(--ink);
   font-family:'Jost',"Helvetica Neue",Arial,sans-serif;
   font-weight:300;
-  overflow-x:clip;
+  overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
-body.is-loading{height:100%;overflow:hidden}
-.visual-scroll{position:relative;height:380vh;background:#c6ced5}
-.visual-sticky{position:sticky;top:0;height:100vh;overflow:hidden}
-canvas#gl{
-  position:absolute;left:0;top:0;z-index:0;width:100%;height:100%;display:block;
-  will-change:opacity;
-}
-.chapter-image{
-  position:absolute;left:0;top:0;z-index:1;width:100%;height:100%;
-  background:#c6ced5;
-  opacity:0;transform:scale(1.025);pointer-events:none;
-  will-change:opacity,transform;
-}
-.chapter-image:after{
-  content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,rgba(229,237,243,.56) 0,rgba(229,237,243,.20) 38%,rgba(229,237,243,0) 68%);
-}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+
 /* ---------- overlay grain / vignette ---------- */
 .grain{
-  position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3;
+  position:fixed;inset:0;pointer-events:none;z-index:3;
   background:
-    radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(120,138,152,.30) 100%);
+    radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(150,165,178,.20) 100%);
   mix-blend-mode:multiply;opacity:.9;
 }
 
 /* ---------- shell ---------- */
-.ui{position:absolute;left:0;top:0;width:100%;height:100%;z-index:4;pointer-events:none}
+.ui{position:fixed;inset:0;z-index:4;pointer-events:none}
 .ui a,.ui button{pointer-events:auto}
 
 header{
@@ -77,7 +62,7 @@ header{
 }
 .rail .dot:before{content:"";position:absolute;inset:-9px;border-radius:50%}
 .rail .dot.is-on{background:var(--accent);transform:scale(1.6)}
-.rail .bar{width:1px;height:26px;background:var(--ink);opacity:.85;transform-origin:50% 0;will-change:transform}
+.rail .bar{width:1px;height:26px;background:var(--ink);opacity:.85;transition:transform .9s var(--ease)}
 .rail .label{font-size:.6rem;letter-spacing:.26em;color:var(--accent);font-weight:400}
 
 /* ---------- main block ---------- */
@@ -87,7 +72,7 @@ header{
   padding-left:clamp(64px,15vw,300px);
   padding-right:clamp(24px,6vw,80px);
 }
-.block{max-width:min(760px,64vw);will-change:opacity,transform}
+.block{max-width:min(760px,64vw)}
 .eyebrow{font-size:clamp(.86rem,1.1vw,1.05rem);letter-spacing:.02em;color:var(--ink);opacity:.92;margin-bottom:clamp(22px,3vw,44px)}
 h1{
   font-weight:200;
@@ -109,6 +94,16 @@ h1{
 .is-out .mask > i{transform:translateY(-112%);opacity:0;transition-duration:.62s,.4s;transition-delay:var(--do,0s)}
 .no-anim .mask > i,.no-anim .rule,.no-anim .diamond,.no-anim .next{transition:none!important}
 
+/* over the globe the page flips to white type */
+body.on-dark{ --ink:#ffffff; --ink-dim:rgba(255,255,255,.70); --hair:rgba(255,255,255,.38); --accent:#bcd9f5 }
+.brand,.menu,.eyebrow,h1,.cta,.next .name,.diamond span,.credit,.rail .label{
+  transition:color .9s var(--ease);
+}
+.rule,.menu i,.menu i:after,.rail .dot,.rail .bar{ transition:background .9s var(--ease),transform .6s var(--ease) }
+.diamond,.controls button,.cta .circle{ transition:border-color .9s var(--ease),background .5s var(--ease),color .5s var(--ease) }
+body.on-dark .diamond,body.on-dark .controls button,body.on-dark .cta .circle{ border-color:rgba(255,255,255,.45) }
+body.on-dark .credit{ color:rgba(255,255,255,.42) }
+
 .cta{
   display:inline-flex;align-items:center;gap:clamp(18px,2vw,34px);
   text-decoration:none;color:var(--ink);
@@ -116,7 +111,7 @@ h1{
 .cta .txt{font-size:.72rem;letter-spacing:.24em;font-weight:500}
 .cta .circle{
   width:42px;height:42px;border-radius:50%;
-  border:1px solid var(--hair);
+  border:1px solid rgba(47,95,138,.45);
   display:grid;place-items:center;font-size:.8rem;
   transition:background .5s var(--ease),color .5s var(--ease),border-color .5s var(--ease),transform .5s var(--ease);
 }
@@ -128,7 +123,7 @@ h1{
 
 /* ---------- diamonds ---------- */
 .diamond{
-  position:absolute;width:46px;height:46px;border:1px solid var(--hair);
+  position:absolute;width:46px;height:46px;border:1px solid rgba(47,95,138,.38);
   transform:rotate(45deg);display:grid;place-items:center;
   transition:opacity .9s var(--ease),transform .9s var(--ease);
 }
@@ -136,32 +131,27 @@ h1{
 .diamond.is-idx{left:clamp(30px,8.2vw,168px);top:calc(50% - clamp(150px,17vh,210px))}
 .is-out .diamond,.is-out .next{opacity:0}
 
-/* ---------- native scroll cue ---------- */
+/* ---------- next chapter teaser ---------- */
 .next{
   position:absolute;left:50%;bottom:clamp(22px,4vh,54px);transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:14px;
-  transition:opacity .45s linear;
+  display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.4vh,30px);
+  transition:opacity .9s var(--ease);
 }
-.next .scroll-line{width:1px;height:42px;background:var(--hair);position:relative;overflow:hidden}
-.next .scroll-line:after{
-  content:"";position:absolute;left:0;top:-100%;width:100%;height:100%;background:var(--ink);
-  animation:scrollPulse 1.9s var(--ease) infinite;
-}
-.next .name{font-size:.58rem;letter-spacing:.28em;color:var(--ink);opacity:.82}
+.next .diamond{position:relative;left:auto;top:auto}
+.next .name{font-size:.95rem;letter-spacing:.02em;color:var(--ink);opacity:.9}
 .next .name b{font-weight:300}
-@keyframes scrollPulse{0%{transform:translateY(0)}70%,100%{transform:translateY(200%)}}
 
 /* ---------- bottom right controls ---------- */
 .controls{position:absolute;right:clamp(20px,3.2vw,54px);bottom:clamp(22px,4vh,54px);display:flex;flex-direction:column;gap:14px}
 .controls button{
   width:44px;height:44px;border-radius:50%;background:none;cursor:pointer;
-  border:1px solid var(--hair);color:var(--ink);
+  border:1px solid rgba(47,95,138,.32);color:var(--ink);
   display:grid;place-items:center;font-size:.85rem;font-family:inherit;
   transition:background .45s var(--ease),color .45s var(--ease),border-color .45s var(--ease),opacity .45s var(--ease);
 }
 .controls button:hover{background:var(--ink);color:#ffffff;border-color:var(--ink)}
 .controls button[disabled]{opacity:.28;cursor:default}
-.controls button[disabled]:hover{background:none;color:var(--ink);border-color:var(--hair)}
+.controls button[disabled]:hover{background:none;color:var(--ink);border-color:rgba(47,95,138,.32)}
 
 /* ---------- scroll hint ---------- */
 .hint{
@@ -172,12 +162,12 @@ h1{
 /* ---------- credit ---------- */
 .credit{
   position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
-  font-size:.55rem;letter-spacing:.14em;color:var(--ink-dim);opacity:.64;
+  font-size:.55rem;letter-spacing:.14em;color:rgba(47,95,138,.38);
 }
 
 /* ---------- loader ---------- */
 .loader{
-  position:fixed;inset:0;z-index:9;background:#c6ced5;
+  position:fixed;inset:0;z-index:9;background:#e8ecef;
   display:grid;place-items:center;gap:0;
   transition:opacity 1.1s var(--ease),visibility 1.1s;
 }
@@ -188,63 +178,7 @@ h1{
 .loader .fill{display:block;height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s linear}
 .loader .pct{font-size:.6rem;letter-spacing:.24em;color:var(--ink-dim)}
 
-/* ---------- native document content after the visual chapters ---------- */
-.free-scroll{
-  position:relative;z-index:6;
-  background:#eef2f5;
-  color:var(--ink);
-  min-height:100vh;
-}
-.free-inner{width:min(1180px,calc(100% - 48px));margin:0 auto}
-.free-intro{
-  min-height:92vh;padding:clamp(90px,12vh,140px) 0;
-  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,.55fr);
-  align-items:start;gap:clamp(48px,8vw,120px);
-  border-bottom:1px solid var(--hair);
-}
-.free-kicker{font-size:.64rem;letter-spacing:.3em;font-weight:500;margin-bottom:28px}
-.free-intro h2{
-  max-width:720px;font-size:clamp(2.35rem,4.8vw,5rem);line-height:1;
-  font-weight:200;letter-spacing:-.018em;text-transform:uppercase;
-}
-.free-intro p{max-width:360px;font-size:clamp(.92rem,1.15vw,1.08rem);line-height:1.8;color:var(--ink-dim)}
-.free-scroll [data-reveal]{
-  opacity:0;transform:translateY(28px);
-  transition:opacity 1.05s var(--ease),transform 1.2s var(--ease);
-}
-.free-scroll [data-reveal="soft"]{transform:translateY(18px);transition-delay:.1s}
-.free-scroll [data-reveal].is-visible{opacity:1;transform:none}
-.free-divisions{padding:clamp(90px,13vh,160px) 0}
-.free-heading{
-  display:flex;justify-content:space-between;align-items:end;gap:32px;
-  margin-bottom:clamp(52px,8vw,100px);
-}
-.free-heading h3{font-size:clamp(1.8rem,3vw,3.2rem);font-weight:300;letter-spacing:-.02em}
-.free-heading span{font-size:.62rem;letter-spacing:.28em;font-weight:500}
-.division-list{border-top:1px solid var(--hair)}
-.division-card{
-  display:grid;grid-template-columns:70px minmax(180px,.7fr) minmax(280px,1.3fr);
-  align-items:center;gap:clamp(24px,5vw,80px);
-  min-height:170px;border-bottom:1px solid var(--hair);
-  transition:background .45s var(--ease),padding .45s var(--ease);
-}
-.division-card:hover{background:rgba(47,95,138,.045);padding:0 24px}
-.division-card .num{font-size:.7rem;letter-spacing:.2em;color:var(--ink-dim)}
-.division-card h4{font-size:clamp(1.3rem,2.1vw,2rem);font-weight:300}
-.division-card p{font-size:clamp(1.05rem,1.8vw,1.55rem);line-height:1.35;text-transform:uppercase}
-.free-outro{
-  min-height:78vh;padding:clamp(100px,15vh,180px) 0;
-  display:flex;flex-direction:column;justify-content:space-between;
-  border-top:1px solid var(--hair);
-}
-.free-outro h3{
-  max-width:900px;font-size:clamp(2.5rem,5vw,5.4rem);
-  line-height:1;font-weight:200;text-transform:uppercase;
-}
-.free-footer{display:flex;justify-content:space-between;gap:30px;font-size:.62rem;letter-spacing:.24em}
-
 @media (max-width:860px){
-  .visual-scroll{height:350vh}
   .rail{display:none}
   .stage{padding-left:clamp(22px,7vw,60px);align-items:flex-end;padding-bottom:26vh}
   .block{max-width:none}
@@ -252,25 +186,15 @@ h1{
   .next{align-items:flex-start;left:clamp(22px,7vw,60px);transform:none;bottom:clamp(18px,3vh,30px)}
   .next .name{font-size:.82rem}
   .credit{display:none}
-  .free-inner{width:min(100% - 36px,680px)}
-  .free-intro{grid-template-columns:1fr;align-content:start;min-height:90vh;padding-top:12vh}
-  .free-intro h2{font-size:clamp(2.35rem,11vw,4.5rem)}
-  .division-card{grid-template-columns:44px 1fr;gap:12px 20px;padding:34px 0}
-  .division-card:hover{padding:34px 14px}
-  .division-card p{grid-column:2}
-  .free-footer{flex-direction:column}
 }
 </style>
 </head>
-<body class="is-loading">
+<body>
 
-<section class="visual-scroll" id="visualScroll" aria-label="Montis visual chapters">
-<div class="visual-sticky">
-  <canvas id="gl"></canvas>
-  <div class="chapter-image" id="chapterImage" aria-hidden="true"></div>
-  <div class="grain"></div>
+<canvas id="gl"></canvas>
+<div class="grain"></div>
 
-  <div class="ui" id="ui">
+<div class="ui" id="ui">
   <header>
     <div class="brand">MONTIS</div>
     <div class="menu"><span>MENU</span><i></i></div>
@@ -299,16 +223,19 @@ h1{
     </div>
   </div>
 
-  <div class="next" id="scrollCue">
-    <div class="scroll-line"></div>
-    <div class="name"><b>SCROLL TO DISCOVER</b></div>
+  <div class="next" id="next">
+    <div class="diamond"><span id="tNextIdx">4</span></div>
+    <div class="name"><b id="tNextName">Montis Ventures</b></div>
   </div>
 
-  <div class="credit" id="credit">3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC&nbsp;BY&nbsp;4.0</div>
+  <div class="credit">Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · Drop: furret · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
 
+  <div class="controls">
+    <button id="btnPrev" title="Previous">&#8593;</button>
+    <button id="btnNext" title="Next">&#8595;</button>
   </div>
+
 </div>
-</section>
 
 <div class="loader" id="loader">
   <div class="in">
@@ -317,53 +244,6 @@ h1{
     <div class="pct" id="loadPct">0%</div>
   </div>
 </div>
-
-<main class="free-scroll" id="freeScroll">
-  <div class="free-inner">
-    <section class="free-intro">
-      <div data-reveal>
-        <div class="free-kicker">BEYOND THE VISUAL CHAPTERS</div>
-        <h2>ONE MOUNTAIN.<br>THREE DIRECTIONS.</h2>
-      </div>
-      <p data-reveal="soft">
-        Move through every Montis chapter at your own pace.
-        The visual sequence and the content below share one continuous, natural scroll.
-      </p>
-    </section>
-
-    <section class="free-divisions">
-      <div class="free-heading" data-reveal>
-        <h3>Montis Divisions</h3>
-        <span>01 — 03</span>
-      </div>
-      <div class="division-list">
-        <article class="division-card" data-reveal>
-          <span class="num">01</span>
-          <h4>Montis Expeditions</h4>
-          <p>Climbing higher, seeing further.</p>
-        </article>
-        <article class="division-card" data-reveal>
-          <span class="num">02</span>
-          <h4>Montis Research</h4>
-          <p>Reading the mountain’s pulse.</p>
-        </article>
-        <article class="division-card" data-reveal>
-          <span class="num">03</span>
-          <h4>Montis Energy</h4>
-          <p>Harnessing height, delivering power.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="free-outro">
-      <h3 data-reveal>The summit is only the beginning.</h3>
-      <div class="free-footer" data-reveal="soft">
-        <span>MONTIS</span>
-        <span>EXPEDITIONS · RESEARCH · ENERGY</span>
-      </div>
-    </section>
-  </div>
-</main>
 
 <script type="importmap">
 { "imports": {
@@ -380,16 +260,16 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
    PALETTE  (dawn above the cloud sea — warm amber / dusk violet)
    ===================================================================== */
 const P = {
-  skyDark      : '#93a0aa',   // sky, high up
-  skyLight     : '#c6ced5',   // sky, toward the horizon
-  cloudDark    : '#aab4bd',   // cloud shadow
+  skyDark      : '#c1c9d1',   // sky, high up
+  skyLight     : '#e8ecef',   // sky, toward the horizon
+  cloudDark    : '#ccd2d7',   // cloud shadow
   cloudLight   : '#ffffff',   // cloud highlight
   sun          : '#ffffff',
   rockDark     : '#39424c',   // crevices / exposed rock
   rockLight    : '#818b95',
   snow         : '#ffffff',
   snowShade    : '#9fb3c6',   // blue shadow side of the snow
-  transition   : '#eef2f5'
+  transition   : '#f2f5f8'
 };
 const C = k => new THREE.Color(P[k]);
 
@@ -410,12 +290,6 @@ const skyScene = new THREE.Scene();
 const fogScene = new THREE.Scene();
 const mouseScene = new THREE.Scene();
 
-/* PBR lights are only used by the cargo ship; the mountain has its own shader. */
-const shipFill = new THREE.HemisphereLight(0xddeeff, 0x5d6670, 2.15);
-const shipSun = new THREE.DirectionalLight(0xffffff, 3.2);
-shipSun.position.set(-18,32,14);
-scene.add(shipFill,shipSun);
-
 /* shared uniforms ------------------------------------------------------ */
 const U = {
   uTime          : { value: 0 },
@@ -427,6 +301,9 @@ const U = {
   uMouseVelocity : { value: new THREE.Vector2(0,0) },
   tNoise         : { value: null },
   tPerlin        : { value: null },
+  uDeck          : { value: 1 },
+  uFlat          : { value: 0 },
+  uFlatColor     : { value: new THREE.Color('#edf1f5') },
   tMouse         : { value: null },
   uDark          : { value: C('skyDark') },
   uLight         : { value: C('skyLight') },
@@ -581,7 +458,8 @@ const skyMat = new THREE.ShaderMaterial({
     uniform sampler2D tMouse;
     uniform vec2 uResolution;
     uniform float uTime, uChapter, uTransition, uAspect;
-    uniform vec3 uDark, uLight, uCloudDark, uCloudLight, uTransitionColor;
+    uniform vec3 uDark, uLight, uCloudDark, uCloudLight, uTransitionColor, uFlatColor;
+    uniform float uFlat;
     varying vec2 vUv;
     ` + CLOUD_LIB + /* glsl */`
 
@@ -595,7 +473,11 @@ const skyMat = new THREE.ShaderMaterial({
 
     void main(){
       vec2 p  = vUv;
+      vec2 sUv = gl_FragCoord.xy / uResolution;
+      float mouse = clamp(texture2D(tMouse, sUv).r, 0., 1.);
+
       vec2 uv = p * vec2(uAspect, 1.0);
+      uv += 0.03 * mouse;                       /* clouds bulge around the cursor */
       vec2 uvSave = uv;
 
       float time = uTime * speed;
@@ -657,12 +539,19 @@ const skyMat = new THREE.ShaderMaterial({
 
       f = cloudcover + cloudalpha*f*r;
 
-      float cloudMix = pow(clamp((f + c) * .5, 0.0, 1.0), 1.28);
-      vec3 color = mix(skycolour, clamp(skytint*skycolour + cloudcolour, 0.0, 1.0), cloudMix);
+      /* a wide, gamma-softened ramp: cloud edges feather out instead of
+         cutting off, which is most of what reads as "quality" here      */
+      float cover = clamp((f + c) * .5, 0.0, 1.0);
+      cover = smoothstep(-.04, .86, cover);
+      cover = pow(cover, 1.10);
+      vec3 color = mix(skycolour, clamp(skytint*skycolour + cloudcolour, 0.0, 1.0), cover);
 
-      /* keep it nearly monochrome like the reference, with a cool cast */
+      /* nearly neutral white-grey, only a whisper of cool left in */
       float lum = dot(color, vec3(.299, .587, .114));
-      color = mix(color, vec3(lum) * uCloudDark / max(dot(uCloudDark, vec3(.299,.587,.114)), .001), .45);
+      color = mix(color, vec3(lum), .70);
+
+      /* some chapters sit on a flat, almost-white panel */
+      color = mix(color, uFlatColor * (.985 + .03 * p.y), uFlat);
 
       /* chapter wash */
       float transition = smoothstep(0., .25, uTransition);
@@ -687,7 +576,7 @@ const cloudMat = new THREE.ShaderMaterial({
     varying vec2 vUv;
     uniform vec2 uResolution;
     uniform sampler2D tMouse;
-    uniform float uChapter, uTime, uTransition, uAspect;
+    uniform float uChapter, uTime, uTransition, uAspect, uDeck;
     uniform vec3 uCloudDark, uCloudLight, uTransitionColor;
     ` + CLOUD_LIB + /* glsl */`
 
@@ -701,7 +590,11 @@ const cloudMat = new THREE.ShaderMaterial({
       vec2 p   = vUv;
       vec2 sUv = gl_FragCoord.xy / uResolution;
 
+      vec4 mouseSample = texture2D(tMouse, sUv);
+      float mouse = clamp(mouseSample.r*.8 + mouseSample.g*.2, 0., 1.);
+
       vec2 uv = p * vec2(uAspect, 1.0) + vec2(0., .12);
+      uv += 0.05 * mouse;
       vec2 uvSave = uv;
 
       float time = uTime * speed;
@@ -711,7 +604,7 @@ const cloudMat = new THREE.ShaderMaterial({
       uv *= cloudscale;
       uv -= q + time;
       float weight = 0.8;
-      for (int i=0; i<6; i++){
+      for (int i=0; i<7; i++){
         r += abs(weight * snoise(uv));
         uv = m*uv - time;
         weight *= 0.7;
@@ -743,20 +636,29 @@ const cloudMat = new THREE.ShaderMaterial({
 
       float density = clamp((cloudalpha*f*r + c) * .5, 0., 1.);
 
+      /* fine wisps riding on top — the frayed edge detail of real cloud */
+      float wisp = fbm(uvSave * cloudscale * 5.5 + vec2(time * 2.2, -time * 1.4));
+      density += .16 * wisp * smoothstep(.02, .45, density);
+
       /* the deck hugs the mountain: thick low down, wisps at eye level,
-         and it swells up over everything during a chapter transition */
-      float band = 1.0 - smoothstep(.10, .62, sUv.y - .10*(r - .5));
+         and it swells up over everything during a chapter transition.
+         the band edge is deliberately very wide so nothing has a seam. */
+      float band = smoothstep(.78, -.05, sUv.y - .14*(r - .5) - .06*wisp);
       float thick = smoothstep(.15, .95, uTransition);
       density *= mix(band, 1., thick);
-      density = clamp(density * (1. + 1.6*thick), 0., 1.);
+      density = clamp(density * (1.30 + 1.6*thick), 0., 1.);
 
       vec3 color = mix(uCloudDark, uCloudLight, clamp(clouddark + cloudlight*c + .35*density, 0., 1.));
+      /* self-shadowing: the thick middle of a puff sits a touch darker */
+      color *= 1. - .10 * smoothstep(.35, .95, density) * (1. - thick);
       color = mix(color, uTransitionColor, thick * .5);
+      float clum = dot(color, vec3(.299, .587, .114));
+      color = mix(color, vec3(clum), .55);
 
-      /* broad feather + denser inner body: thin wisps fade instead of clipping */
-      float feather = smoothstep(.01, .78, density);
-      float body = smoothstep(.18, .64, density);
-      float alpha = mix(feather * .58, body, .68) * .94;
+      /* long, gamma-shaped falloff = feathered edges instead of a cut */
+      float alpha = smoothstep(-.06, .72, density);
+      alpha = pow(alpha, 1.12);
+      alpha *= uDeck * .5;   /* white cloud deck runs at 50% — you see through it */
 
       gl_FragColor = vec4(color, clamp(alpha, 0., 1.));
       #include <colorspace_fragment>
@@ -769,249 +671,22 @@ fogScene.add(new THREE.Mesh(quadGeo, cloudMat));
    ===================================================================== */
 const modelRoot = new THREE.Group();
 scene.add(modelRoot);
+
+/* only the cargo ship is lit conventionally — the terrain and sky are
+   hand-written shaders and ignore these entirely */
+const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+sun.position.set(-14, 16, 12);
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xdfe6ec, 0x8d99a3, 1.35));
+
+const shipRoot  = new THREE.Group();
+const waterRoot = new THREE.Group();
+shipRoot.visible = waterRoot.visible = false;
+scene.add(shipRoot, waterRoot);
+let shipAmt = 0;
+const shipMats = [];
 const spin = new THREE.Group();
 modelRoot.add(spin);
-
-const shipRoot = new THREE.Group();
-shipRoot.visible = false;
-scene.add(shipRoot);
-const SHIP_CONFIG = {
-  section:2,
-  enabled:true,
-  x:-7.8, y:3.6, z:0.0,
-  rx:0.0, ry:1.57, rz:0.0,
-  scale:.82
-};
-const SHIP_DEFAULTS = { ...SHIP_CONFIG };
-const SHIP_SECTION3_CONFIG = {
-  section:3,
-  enabled:true,
-  x:-1.3, y:1.0, z:6.4,
-  rx:-.08, ry:-1.34, rz:0,
-  scale:.68
-};
-let shipReady = false;
-let shipAutoPlaced = false;
-const shipMaterials = [];
-const shipConfigs = [SHIP_CONFIG];
-const shipRoots = [shipRoot];
-const shipMaterialSets = [shipMaterials];
-const shipDefaults = [{ ...SHIP_DEFAULTS }];
-const shipSectionOpacity = { 2:0, 3:0 };
-let activeShipIndex = 0;
-
-function applyShipConfig(index=activeShipIndex){
-  const config = shipConfigs[index];
-  const root = shipRoots[index];
-  if(!config || !root) return;
-  root.position.set(config.x,config.y,config.z);
-  root.rotation.set(config.rx,config.ry,config.rz);
-  root.scale.setScalar(config.scale);
-}
-
-function setShipOpacity(opacity,section=2){
-  shipSectionOpacity[section] = opacity;
-  shipConfigs.forEach((config,index)=>{
-    const visibleOpacity = config.enabled ? (shipSectionOpacity[config.section] || 0) : 0;
-    shipRoots[index].visible = shipReady && visibleOpacity > .01;
-    shipMaterialSets[index].forEach(material=>{
-      material.opacity = visibleOpacity;
-      material.transparent = visibleOpacity < .999;
-      material.depthWrite = visibleOpacity > .82;
-    });
-  });
-}
-
-function createShipObject(config,sourceIndex=0){
-  if(!shipReady) return null;
-  const root = shipRoots[sourceIndex].clone(true);
-  const materials = [];
-  const materialMap = new Map();
-  root.traverse(object=>{
-    if(!object.isMesh) return;
-    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
-    const cloned = sourceMaterials.map(source=>{
-      if(materialMap.has(source)) return materialMap.get(source);
-      const material = source.clone();
-      materialMap.set(source,material);
-      materials.push(material);
-      return material;
-    });
-    object.material = Array.isArray(object.material) ? cloned : cloned[0];
-  });
-  scene.add(root);
-  shipRoots.push(root);
-  shipConfigs.push(config);
-  shipMaterialSets.push(materials);
-  shipDefaults.push({ ...config });
-  const index = shipConfigs.length-1;
-  applyShipConfig(index);
-  setShipOpacity(shipSectionOpacity[config.section] || 0,config.section);
-  return index;
-}
-
-function duplicateShipObject(){
-  const sourceConfig = shipConfigs[activeShipIndex];
-  const config = { ...sourceConfig, enabled:true, x:sourceConfig.x+1.1, z:sourceConfig.z+1.1 };
-  const index = createShipObject(config,activeShipIndex);
-  if(index !== null) activeShipIndex = index;
-  return index;
-}
-
-const waterRoot = new THREE.Group();
-waterRoot.visible = false;
-scene.add(waterRoot);
-const WATER_CONFIG = {
-  section:2,
-  enabled:true,
-  x:-7.8, y:5.4, z:0.0,
-  rx:0.0, ry:0.0, rz:0.0,
-  scaleX:.44, scaleY:.34, scaleZ:1.45,
-  opacity:.72, waveHeight:.70, waveSpeed:.55
-};
-const WATER_DEFAULTS = { ...WATER_CONFIG };
-const WATER_SECTION3_CONFIG = {
-  section:3,
-  enabled:true,
-  x:-2.2, y:1.2, z:3.4,
-  rx:.05, ry:.23, rz:.02,
-  scaleX:.41, scaleY:.36, scaleZ:1.36,
-  opacity:.65, waveHeight:.48, waveSpeed:.64
-};
-let waterReady = false;
-let waterAutoPlaced = false;
-const waterConfigs = [WATER_CONFIG];
-const waterRoots = [waterRoot];
-const waterDefaults = [{ ...WATER_DEFAULTS }];
-const waterSectionOpacity = { 2:0, 3:0 };
-let activeWaterIndex = 0;
-
-const waterMat = new THREE.ShaderMaterial({
-  transparent:true,
-  depthWrite:false,
-  depthTest:true,
-  side:THREE.DoubleSide,
-  uniforms:{
-    uTime:U.uTime,
-    uVisibility:{ value:0 },
-    uOpacity:{ value:WATER_CONFIG.opacity },
-    uWaveHeight:{ value:WATER_CONFIG.waveHeight },
-    uWaveSpeed:{ value:WATER_CONFIG.waveSpeed },
-    uDeep:{ value:new THREE.Color('#2f6688') },
-    uMid:{ value:new THREE.Color('#72abc3') },
-    uLight:{ value:new THREE.Color('#e8fbff') },
-    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
-  },
-  vertexShader:/* glsl */`
-    uniform float uTime, uWaveHeight, uWaveSpeed;
-    varying vec3 vWorld, vNormal, vLocal;
-    varying float vRipple;
-    void main(){
-      vec3 p = position;
-      float t = uTime * uWaveSpeed;
-      float a = sin(p.x*.027 + t*1.35 + cos(p.z*.018));
-      float b = sin(p.z*.041 - t*.92 + p.x*.012);
-      float c = sin((p.x+p.z)*.019 + t*.68);
-      float ripple = a*.48 + b*.32 + c*.20;
-      p.y += ripple * uWaveHeight * 24.0;
-      vec4 world = modelMatrix * vec4(p,1.0);
-      vWorld = world.xyz;
-      vNormal = normalize(mat3(modelMatrix) * normal);
-      vLocal = position;
-      vRipple = ripple;
-      gl_Position = projectionMatrix * viewMatrix * world;
-    }`,
-  fragmentShader:/* glsl */`
-    precision highp float;
-    uniform float uTime, uVisibility, uOpacity, uWaveSpeed;
-    uniform vec3 uDeep, uMid, uLight, uSunDir;
-    varying vec3 vWorld, vNormal, vLocal;
-    varying float vRipple;
-    void main(){
-      vec3 n = normalize(vNormal);
-      vec3 viewDir = normalize(cameraPosition-vWorld);
-      float facing = clamp(dot(n,viewDir),0.0,1.0);
-      float fresnel = pow(1.0-facing,2.4);
-      float diffuse = clamp(dot(n,uSunDir)*.5+.5,0.0,1.0);
-      float flow = .5+.5*sin(vWorld.x*1.7-vWorld.z*.72+uTime*uWaveSpeed*2.2+vRipple*2.0);
-      vec3 color = mix(uDeep,uMid,.30+.48*diffuse);
-      color = mix(color,uLight,clamp(fresnel*.72+flow*.12,0.0,.88));
-      float sparkle = pow(max(dot(reflect(-uSunDir,n),viewDir),0.0),30.0);
-      color += uLight*sparkle*.62;
-      float edge = max(abs(vLocal.x)/428.7,abs(vLocal.z)/421.5);
-      float edgeFade = 1.0-smoothstep(.73,1.0,edge);
-      float alpha = uOpacity*uVisibility*(.78+.18*fresnel)*edgeFade;
-      gl_FragColor = vec4(color,clamp(alpha,0.0,1.0));
-      #include <colorspace_fragment>
-    }`
-});
-const waterMaterials = [waterMat];
-
-function applyWaterConfig(index=activeWaterIndex){
-  const config = waterConfigs[index];
-  const root = waterRoots[index];
-  const material = waterMaterials[index];
-  if(!config || !root || !material) return;
-  root.position.set(config.x,config.y,config.z);
-  root.rotation.set(config.rx,config.ry,config.rz);
-  root.scale.set(config.scaleX,config.scaleY,config.scaleZ);
-  material.uniforms.uOpacity.value = config.opacity;
-  material.uniforms.uWaveHeight.value = config.waveHeight;
-  material.uniforms.uWaveSpeed.value = config.waveSpeed;
-}
-
-function setWaterOpacity(opacity,section=2){
-  waterSectionOpacity[section] = opacity;
-  waterConfigs.forEach((config,index)=>{
-    const visibleOpacity = config.enabled ? (waterSectionOpacity[config.section] || 0) : 0;
-    waterRoots[index].visible = waterReady && visibleOpacity > .01;
-    waterMaterials[index].uniforms.uVisibility.value = visibleOpacity;
-  });
-}
-
-function createWaterObject(config,sourceIndex=0){
-  if(!waterReady) return null;
-  const root = waterRoots[sourceIndex].clone(true);
-  const material = waterMaterials[sourceIndex].clone();
-  material.uniforms.uTime = U.uTime;
-  root.traverse(object=>{ if(object.isMesh) object.material = material; });
-  scene.add(root);
-  waterRoots.push(root);
-  waterConfigs.push(config);
-  waterMaterials.push(material);
-  waterDefaults.push({ ...config });
-  const index = waterConfigs.length-1;
-  applyWaterConfig(index);
-  setWaterOpacity(waterSectionOpacity[config.section] || 0,config.section);
-  return index;
-}
-
-function duplicateWaterObject(){
-  const sourceConfig = waterConfigs[activeWaterIndex];
-  const config = { ...sourceConfig, enabled:true, x:sourceConfig.x+1.1, z:sourceConfig.z+1.1 };
-  const index = createWaterObject(config,activeWaterIndex);
-  if(index !== null) activeWaterIndex = index;
-  return index;
-}
-
-function syncWaterToShip(waterIndex=activeWaterIndex,shipIndex=activeShipIndex){
-  const waterConfig = waterConfigs[waterIndex];
-  const shipConfig = shipConfigs[shipIndex];
-  waterConfig.x = shipConfig.x;
-  waterConfig.y = shipConfig.y - .34;
-  waterConfig.z = shipConfig.z;
-  waterConfig.rx = 0;
-  waterConfig.ry = shipConfig.ry - Math.PI*.5;
-  waterConfig.rz = 0;
-  applyWaterConfig(waterIndex);
-}
-
-function tryAutoPlaceWater(){
-  if(waterAutoPlaced || !waterReady || !shipAutoPlaced) return;
-  syncWaterToShip(0,0);
-  Object.assign(waterDefaults[0],WATER_CONFIG);
-  waterAutoPlaced = true;
-}
 
 const mountainMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:true, side:THREE.FrontSide,
@@ -1134,61 +809,386 @@ raycaster.firstHitOnly = true;
 const hoverTarget = new THREE.Vector3(0,-999,0);
 let hoverAim = 0, bvhReady = false, pointerInside = true;
 const hoverMeshes = [];
-const terrainProbe = new THREE.Raycaster();
-const down = new THREE.Vector3(0,-1,0);
-
-function snapShipToTerrain(offset=.18,index=activeShipIndex){
-  if(!shipReady || !hoverMeshes.length || !bvhReady) return null;
-  const config = shipConfigs[index];
-  scene.updateMatrixWorld(true);
-  terrainProbe.firstHitOnly = true;
-  const along = new THREE.Vector3(Math.cos(config.ry),0,-Math.sin(config.ry));
-  const across = new THREE.Vector3(Math.sin(config.ry),0,Math.cos(config.ry));
-  let highest = -Infinity;
-  [-3.3,-1.65,0,1.65,3.3].forEach(lengthOffset=>{
-    [-.72,0,.72].forEach(widthOffset=>{
-      const x = config.x + (along.x*lengthOffset + across.x*widthOffset)*config.scale;
-      const z = config.z + (along.z*lengthOffset + across.z*widthOffset)*config.scale;
-      terrainProbe.set(new THREE.Vector3(x,80,z),down);
-      const hit = terrainProbe.intersectObjects(hoverMeshes,false)[0];
-      if(hit) highest = Math.max(highest,hit.point.y);
-    });
-  });
-  if(!Number.isFinite(highest)) return null;
-  config.y = highest + offset;
-  applyShipConfig(index);
-  return config.y;
-}
-
-function tryAutoPlaceShip(){
-  if(shipAutoPlaced || !shipReady || !mountainReady || !bvhReady) return;
-  const y = snapShipToTerrain(.18,0);
-  if(y === null) return;
-  shipDefaults[0].y = y;
-  shipAutoPlaced = true;
-  tryAutoPlaceWater();
-}
-
 addEventListener('pointerleave', ()=>{ pointerInside = false; });
 addEventListener('pointerenter', ()=>{ pointerInside = true; });
+
+/* =====================================================================
+   EARTH  (chapter 5) — the water drop hands over to the globe:
+   same place on screen, same size, so one becomes the other
+   ===================================================================== */
+const earthScene = new THREE.Scene();
+const earthCam   = new THREE.PerspectiveCamera(38, 1, .01, 100);
+earthCam.position.set(0, 0, 6);
+const earthRoot  = new THREE.Group();
+const earthSpin  = new THREE.Group();
+earthRoot.add(earthSpin);
+earthScene.add(earthRoot);
+let earthAmt = 0, earthT = 0, earthRadius = 1;
+/* drag to spin the globe (with a little inertia, and it keeps drifting) */
+const earthDrag = { on:false, x:0, y:0, vy:0, vx:0 };
+addEventListener('pointerdown', e=>{
+  if(earthAmt < .35) return;
+  earthDrag.on = true; earthDrag.x = e.clientX; earthDrag.y = e.clientY;
+  earthDrag.vy = earthDrag.vx = 0;
+  document.body.style.cursor = 'grabbing';
+});
+addEventListener('pointerup', ()=>{ earthDrag.on = false; document.body.style.cursor = ''; });
+addEventListener('pointermove', e=>{
+  if(!earthDrag.on) return;
+  const dx = (e.clientX - earthDrag.x) / innerWidth;
+  const dy = (e.clientY - earthDrag.y) / innerHeight;
+  earthDrag.x = e.clientX; earthDrag.y = e.clientY;
+  earthDrag.vy = dx * 3.4;
+  earthDrag.vx = dy * 2.2;
+  earthSpin.rotation.y += earthDrag.vy;
+  earthSpin.rotation.x = Math.max(-.6, Math.min(.6, earthSpin.rotation.x + earthDrag.vx));
+});
+const smoothstep01 = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t*t*(3 - 2*t); };
+
+const earthMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{
+    tMap:{ value:null },
+    uOpacity:{ value:0 },
+    uSunDir:{ value:new THREE.Vector3(-.55,.35,.76).normalize() },
+    uSea:{ value:new THREE.Color('#6d8598') },
+    uLand:{ value:new THREE.Color('#e6ecf1') },
+    uNight:{ value:new THREE.Color('#7d8b98') },
+    uAtmo:{ value:new THREE.Color('#eaf2f8') }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vUv = uv;
+      vN = normalize(mat3(modelMatrix) * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap;
+    uniform vec3 uSunDir, uSea, uLand, uNight, uAtmo;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vec3 tex = texture2D(tMap, vUv).rgb;
+
+      /* keep the continents, drop the postcard colours */
+      float l = dot(tex, vec3(.299, .587, .114));
+      l = pow(l, .82);
+      float land = smoothstep(.09, .32, l);        /* the map's oceans are dark — go low */
+      vec3 albedo = mix(uSea, uLand, land);
+      albedo = mix(albedo, vec3(clamp(l*1.25, 0., 1.)), .30);   /* keep the coastline detail */
+
+      vec3 n = normalize(vN);
+      float ndl = dot(n, uSunDir);
+      float day = smoothstep(-.22, .38, ndl);      /* soft terminator */
+
+      vec3 col = albedo * mix(uNight * .45, vec3(1.06), day);
+
+      /* atmosphere */
+      vec3 v = normalize(cameraPosition - vW);
+      float rim = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
+      col = mix(col, uAtmo, rim * .55);
+      col += uAtmo * pow(rim, 5.) * .35;
+
+      gl_FragColor = vec4(col, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   CARGO SHIP — the asset is painted bright red; strip it back to the
+   site palette (slate-blue hull, cool white upperworks)
+   ===================================================================== */
+const shipMatBase = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{
+    tMap:{ value:null },
+    uOpacity:{ value:0 },
+    uHull:{ value:new THREE.Color('#262c33') },
+    uMid:{ value:new THREE.Color('#78828d') },
+    uTop:{ value:new THREE.Color('#f4f7fa') },
+    uSkyCol:{ value:C('skyLight') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vUv = uv;
+      vN = normalize(mat3(modelMatrix) * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap;
+    uniform vec3 uHull, uMid, uTop, uSkyCol, uSunDir;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vec4 tex = texture2D(tMap, vUv);
+      if(tex.a < .35) discard;
+
+      /* throw the hue away, keep only the painted值 (light/dark) */
+      float l = dot(tex.rgb, vec3(.299, .587, .114));
+      vec3 albedo = mix(uHull, uMid, smoothstep(.14, .55, l));
+      albedo = mix(albedo, uTop, smoothstep(.58, .88, l));
+
+      vec3 n = normalize(vN);
+      float ndl = max(dot(n, uSunDir), 0.);
+      float sky = clamp(n.y * .5 + .5, 0., 1.);
+      vec3 col = albedo * (uSkyCol * (.50 + .34 * sky) + vec3(1.) * ndl * .78);
+
+      vec3 v = normalize(cameraPosition - vW);
+      col += pow(max(dot(normalize(uSunDir + v), n), 0.), 34.) * .12;
+
+      gl_FragColor = vec4(col, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   WATER  — flat translucent surface with a slow shimmer
+   ===================================================================== */
+const waterMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime,
+    tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uWaveHeight:{ value:0 },
+    uWaveSpeed:{ value:.5 },
+    uHalf:{ value:new THREE.Vector2(1,1) },
+    uDeep:{ value:new THREE.Color('#6a93ad') },
+    uShallow:{ value:new THREE.Color('#cfe4f1') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime, uWaveHeight, uWaveSpeed;
+    uniform vec2 uHalf;
+    varying vec3 vW, vN;
+    varying vec2 vUv;
+    varying vec2 vLocal;
+    void main(){
+      vUv = uv;
+      vLocal = position.xz / uHalf;
+      vec3 pos = position;
+      float t = uTime * uWaveSpeed;
+      pos.y += uWaveHeight * (sin(pos.x*.08 + t) * .6 + sin(pos.z*.11 - t*1.3) * .4);
+      vec4 wp = modelMatrix * vec4(pos, 1.);
+      vW = wp.xyz;
+      vN = normalize(mat3(modelMatrix) * normal);
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise;
+    uniform vec3 uDeep, uShallow, uSunDir;
+    uniform float uTime, uOpacity, uWaveSpeed;
+    varying vec3 vW, vN;
+    varying vec2 vUv;
+    varying vec2 vLocal;
+    void main(){
+      float t = uTime * uWaveSpeed;
+      float rip = texture2D(tNoise, vW.xz * .08 + vec2(t*.012, -t*.008)).r;
+      float rip2 = texture2D(tNoise, vW.xz * .21 + vec2(-t*.02, t*.014)).g;
+      vec3 n = normalize(vN + vec3((rip-.5)*.5, 0., (rip2-.5)*.5));
+
+      vec3 v = normalize(cameraPosition - vW);
+      float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.2);
+
+      vec3 col = mix(uDeep, uShallow, .35 + .35*rip + .3*fres);
+      vec3 h = normalize(uSunDir + v);
+      col += pow(max(dot(n, h), 0.), 48.) * .55;
+
+      /* feather the sheet so it never shows a cut rectangle */
+      float edge = smoothstep(1., .80, abs(vLocal.x)) * smoothstep(1., .80, abs(vLocal.y));
+      edge *= .90 + .2 * rip;
+
+      gl_FragColor = vec4(col, uOpacity * (.86 + .14*fres) * edge);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   CONDENSE  (chapter 3) — the whole frame collapses into a water drop
+   ===================================================================== */
+const sceneRT = new THREE.WebGLRenderTarget(1, 1, { depthBuffer:true });
+sceneRT.texture.colorSpace = THREE.SRGBColorSpace;
+sceneRT.texture.minFilter = THREE.LinearFilter;
+sceneRT.texture.magFilter = THREE.LinearFilter;
+
+const postScene = new THREE.Scene();
+const postMat = new THREE.ShaderMaterial({
+  depthTest:false, depthWrite:false,
+  uniforms:{
+    tScene:{ value:sceneRT.texture },
+    uResolution:U.uResolution,
+    uTime:U.uTime,
+    uCondense:{ value:0 },
+    uEarth:{ value:0 },
+    uWash:{ value:0 },
+    uVeil:{ value:new THREE.Color('#f3f6f9') },
+    uBgTop:{ value:new THREE.Color('#f4f7f9') },
+    uBgBottom:{ value:new THREE.Color('#ecf0f3') }
+  },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tScene;
+    uniform vec2 uResolution;
+    uniform float uTime, uCondense, uEarth, uWash;
+    uniform vec3 uBgTop, uBgBottom, uVeil;
+    varying vec2 vUv;
+    ` + CLOUD_LIB + /* glsl */`
+
+    /* one droplet: returns rgb, w = coverage */
+    vec4 droplet(vec2 p, vec2 centre, float radius, float aspect, float R0, float amt, float seed){
+      vec2 d2 = p - centre;
+      float ang = atan(d2.y, d2.x);
+      float wob = fbm(vec2(ang * 1.7 + seed, uTime * .10 + seed)) * .55;
+      float rad = radius * (1. + .045 * wob);
+      float r = length(d2) / rad;
+      if(r > 1.06) return vec4(0.);
+
+      float rr = clamp(r, 0., 1.);
+      float z  = sqrt(max(1. - rr*rr, 1e-4));
+      vec3  n  = vec3(normalize(d2 + 1e-6) * rr, z);
+
+      /* the whole frame squeezed into this disc, bent like a lens.
+         at amt=0 the mapping is the identity (nothing happens);
+         at amt=1 the entire 16:9 frame is packed inside the circle    */
+      /* isotropic all the way: x and y are always scaled by the same factor,
+         so nothing inside the drop is ever squashed — the frame is cropped
+         left/right instead of being squeezed into the circle */
+      float bend = 1. + amt * (.16 * rr * rr - .04);
+      vec2 q = (d2 / rad) * bend;
+      float k = mix(R0, .5, amt);
+      vec2 srcUv = vec2(.5 + .07 * amt, .5) + q * k / vec2(aspect, 1.);
+
+      /* water moving inside */
+      float rip = fbm(q * 3.4 + vec2(uTime * .05, -uTime * .035) + seed);
+      srcUv += (rip - .5) * .014 * amt;
+
+      /* mid-morph the lens can reach past the frame — mirror it back in
+         so the glass continues smoothly instead of smearing the edge row */
+      vec2 ov = max(abs(srcUv - .5) - .5, 0.);
+      vec2 mUv = 1. - abs(1. - mod(srcUv, 2.));
+
+      vec3 c;
+      c.r = texture2D(tScene, 1. - abs(1. - mod(srcUv + n.xy * .005 * amt, 2.))).r;
+      c.g = texture2D(tScene, mUv).g;
+      c.b = texture2D(tScene, 1. - abs(1. - mod(srcUv - n.xy * .005 * amt, 2.))).b;
+
+      /* and let the mirrored part read as dense glass */
+      c = mix(c, vec3(.95, .965, .975), smoothstep(0., .12, max(ov.x, ov.y)) * .55);
+
+      /* glass: rim brightening, a hot ring, two speculars */
+      float fres = pow(1. - z, 2.3);
+      c = mix(c, vec3(1.), fres * .30 * amt);
+      float ring = smoothstep(.80, .985, rr) * smoothstep(1.03, .985, rr);
+      c += ring * (.30 + .35 * fbm(vec2(ang * 3., uTime * .2))) * amt;
+      c += pow(max(dot(n, normalize(vec3(-.42, .58, .70))), 0.), 70.) * .85 * amt;
+      c += pow(max(dot(n, normalize(vec3( .48,-.40, .78))), 0.), 26.) * .10 * amt;
+
+      float cover = smoothstep(1.02, .985, r);
+      return vec4(c, cover);
+    }
+
+    void main(){
+      float aspect = uResolution.x / uResolution.y;
+      vec2 p = (vUv - .5) * vec2(aspect, 1.);
+      float R0 = length(vec2(aspect, 1.)) * .5 * 1.18;   /* circumscribes the screen */
+      float amt = uCondense;
+
+      /* studio backdrop the drop hangs in */
+      vec3 bg = mix(uBgBottom, uBgTop, vUv.y);
+      bg *= 1. - .09 * smoothstep(.25, 1.05, length(p));
+
+      /* the frame eases in a little as the wash sweeps through */
+      p *= 1. - .045 * uWash;
+
+      float R = mix(R0, R0 * .27, amt);
+      /* as it forms, the drop drifts clear of the headline */
+      vec2 c0 = vec2(.30 * amt, .02 * amt);
+      vec4 main_ = droplet(p, c0, R, aspect, R0, amt, 0.);
+      /* as the globe arrives the drop gives up its body, leaving a thin shell */
+      main_.w *= 1. - smoothstep(.06, .72, uEarth) * .92;
+      vec3 col = mix(bg, main_.rgb, main_.w);
+
+      /* satellite droplets flung off as it forms */
+      if(amt > .02){
+        vec2 o1 = vec2( R * 1.18,  R * .30) + vec2(sin(uTime*.5)*.006, cos(uTime*.42)*.006);
+        vec2 o2 = vec2(-R * 1.24,  R * .06) + vec2(cos(uTime*.37)*.006, sin(uTime*.51)*.006);
+        vec2 o3 = vec2( R *  .72, -R * 1.05) + vec2(sin(uTime*.31)*.005, cos(uTime*.6)*.005);
+        vec4 s1 = droplet(p, c0 + o1 * amt, R * .055 * amt, aspect, R0, amt, 3.7);
+        vec4 s2 = droplet(p, c0 + o2 * amt, R * .038 * amt, aspect, R0, amt, 8.1);
+        vec4 s3 = droplet(p, c0 + o3 * amt, R * .028 * amt, aspect, R0, amt, 5.3);
+        col = mix(col, s1.rgb, s1.w);
+        col = mix(col, s2.rgb, s2.w);
+        col = mix(col, s3.rgb, s3.w);
+      }
+
+      /* soft contact shadow under the drop */
+      float sh = smoothstep(1., 0., length((p - c0 - vec2(0., -R * 1.22)) / vec2(R * .95, R * .20)));
+      col -= sh * .045 * amt;
+
+      /* the cut itself — at the peak the screen is entirely the veil, so any
+         camera or prop discontinuity underneath is never seen               */
+      col = mix(col, uVeil, smoothstep(.30, .96, uWash));
+
+      gl_FragColor = vec4(col, 1.);
+      #include <colorspace_fragment>
+    }`
+});
+postScene.add(new THREE.Mesh(quadGeo, postMat));
+let condense = 0;
+
+/* placements exported from the tuning panel (formatVersion 2).
+   each section carries its own, and they glide from one to the next   */
+const SHIP_S3  = { x:-1.30, y:1.00, z:6.40, rx:-0.08, ry:-1.34, rz:0.00, scale:0.68 };
+const WATER_S3 = { x:-2.20, y:1.20, z:3.40, rx:0.05, ry:0.23, rz:0.02,
+                   scaleX:0.41, scaleY:0.36, scaleZ:1.36,
+                   opacity:0.65, waveHeight:0.48, waveSpeed:0.64 };
+const SHIP_S4  = { x:-2.60, y:8.90, z:0.60, rx:-0.23, ry:-1.56, rz:-0.39, scale:0.72 };
+const WATER_S4 = { x:0.70, y:8.20, z:0.30, rx:0.00, ry:-1.72, rz:0.00,
+                   scaleX:2.00, scaleY:0.34, scaleZ:1.45,
+                   opacity:0.72, waveHeight:0.70, waveSpeed:0.55 };
+const shipNow  = Object.assign({}, SHIP_S3);
+const waterNow = Object.assign({}, WATER_S3);
+const lerpCfg = (now, target, k)=>{ for(const key in target) now[key] += (target[key] - now[key]) * k; };
 
 /* =====================================================================
    CHAPTERS
    ===================================================================== */
 const CHAPTERS = [
-  { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',  cta:'MONTIS EXPEDITIONS',
-    cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 },
+  /* 1 — the frame condenses into a water drop
+     2 — straight down over the range
+     3 — the exported pose, with the cargo ship on the water
+     4 — back out to the ground-level wide shot                */
+  { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',   cta:'MONTIS EXPEDITIONS',
+    cam:{ x:7.60, y:6.50, z:22.80, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, condense:true },
   { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
-    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
-    credit:'Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · CC BY 4.0' },
+    cam:{ x:-10.3, y:30.6, z:0.0, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16, fov:40.0, flat:.82, deck:.45 },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
-    cam:{ x:-6.0, y:5.5, z:23.8, tx:-5.9, ty:1.0, tz:-9.8 }, rot:-1.00, fov:40.0,
-    credit:'Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · CC BY 4.0' }
+    cam:{ x:-5.96, y:5.53, z:23.76, tx:-5.87, ty:0.95, tz:-9.85 }, rot:-1.00, fov:40.0,
+    ship:SHIP_S3, water:WATER_S3 },
+  { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',       cta:'MONTIS VENTURES',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, },
+  { idx:'5', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    earth:true, dark:true }
 ];
-let chapter = 0;                 // the Expeditions hero is the initial section
+
+let chapter = 0;                 // the page opens on section 1
 let busy = true;
-let scrollChapterT = 0;
-let scrollWashT = 0;
 
 const el = {
   eyebrow:document.getElementById('tEyebrow'),
@@ -1196,55 +1196,51 @@ const el = {
   l2:document.getElementById('tL2'),
   cta:document.getElementById('tCta'),
   idx:document.querySelector('#dIdx span'),
+  nextIdx:document.getElementById('tNextIdx'),
+  nextName:document.getElementById('tNextName'),
   ui:document.getElementById('ui'),
   dots:document.getElementById('dots'),
-  credit:document.getElementById('credit'),
-  block:document.querySelector('.block'),
-  idxDiamond:document.getElementById('dIdx'),
-  railBar:document.querySelector('.rail .bar'),
-  scrollCue:document.getElementById('scrollCue'),
-  chapterImage:document.getElementById('chapterImage'),
-  canvas:document.getElementById('gl'),
-  visualScroll:document.getElementById('visualScroll')
+  prev:document.getElementById('btnPrev'),
+  next:document.getElementById('btnNext')
 };
 
 CHAPTERS.forEach((c,i)=>{
   const d = document.createElement('div');
   d.className = 'dot' + (i===chapter?' is-on':'');
-  d.setAttribute('role','button');
-  d.setAttribute('aria-label','Scroll to ' + c.eyebrow);
-  d.addEventListener('click', ()=>scrollToChapter(i));
+  d.addEventListener('click', ()=>goTo(i));
   el.dots.appendChild(d);
 });
 
 function paint(i){
-  const c = CHAPTERS[i];
+  const last = i === CHAPTERS.length - 1;
+  const c = CHAPTERS[i], n = CHAPTERS[Math.min(i+1, CHAPTERS.length-1)];
+  document.getElementById('next').style.opacity = last ? '0' : '';
+  document.getElementById('next').style.pointerEvents = last ? 'none' : 'auto';
+  el.next.disabled = last;
+  el.prev.disabled = i === 0;
   el.eyebrow.textContent = c.eyebrow;
   el.l1.textContent = c.l1;
   el.l2.textContent = c.l2;
   el.cta.textContent = c.cta;
   el.idx.textContent = c.idx;
-  el.credit.textContent = c.credit || '3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC BY 4.0';
+  el.nextIdx.textContent = n.idx;
+  el.nextName.textContent = n.eyebrow;
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
-}
-
-function setSceneForChapter(i){
-  el.chapterImage.style.opacity = 0;
-  el.chapterImage.style.transform = 'scale(1.025)';
-  el.canvas.style.opacity = 1;
-  modelRoot.visible = true;
-  setShipOpacity(i === 1 ? 1 : 0,2);
-  setWaterOpacity(i === 1 ? 1 : 0,2);
-  setShipOpacity(i === 2 ? 1 : 0,3);
-  setWaterOpacity(i === 2 ? 1 : 0,3);
+  document.body.classList.toggle('on-dark', CHAPTERS[i].dark === true);
 }
 
 /* camera targets ------------------------------------------------------- */
-const camPos  = new THREE.Vector3();
-const camAim  = new THREE.Vector3();
+const camPos     = new THREE.Vector3();
+const camAim     = new THREE.Vector3();
+const camPosFrom = new THREE.Vector3();
+const camAimFrom = new THREE.Vector3();
+/* looking straight down is a degenerate case for lookAt — pin the roll,
+   otherwise anything placed in world space lands somewhere unpredictable */
+const camUp  = new THREE.Vector3(0, 1, 0);
+const camUpT = new THREE.Vector3(0, 1, 0);
+const easeInOut  = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
 const camPosT = new THREE.Vector3();
 const camAimT = new THREE.Vector3();
-const camUpT  = new THREE.Vector3(0,1,0);
 let spinT = 0;
 let fovT = 40;
 
@@ -1252,126 +1248,90 @@ function applyChapterTarget(i, instant){
   const c = CHAPTERS[i];
   camPosT.set(c.cam.x, c.cam.y, c.cam.z);
   camAimT.set(c.cam.tx, c.cam.ty, c.cam.tz || 0);
-  camUpT.set(0,i === 0 ? 1 : 0,i === 0 ? 0 : -1);
   fovT = c.fov || 40;
+  const look = camPosT.clone().sub(camAimT);
+  const vertical = Math.abs(look.y) / Math.max(look.length(), 1e-4) > .95;
+  camUpT.set(0, vertical ? 0 : 1, vertical ? -1 : 0);
+  if(instant){ camUp.copy(camUpT); camera.up.copy(camUpT); }
   spinT = c.rot;
-  if(instant){
-    camPos.copy(camPosT);camAim.copy(camAimT);camera.up.copy(camUpT);spin.rotation.y = spinT;
-  }
+  if(instant){ camPos.copy(camPosT); camAim.copy(camAimT); spin.rotation.y = spinT; }
 }
 
-/* native scroll timeline ----------------------------------------------- */
-const CHAPTER_STOPS = [0,.36,.72];
-const clamp01 = v=>Math.max(0,Math.min(1,v));
-const smoothstep = (a,b,v)=>{
-  const t = clamp01((v-a)/(b-a));
-  return t*t*(3-2*t);
-};
-const mix = (a,b,t)=>a+(b-a)*t;
-const cloudWipe = (p,start,end)=>{
-  if(p <= start || p >= end) return 0;
-  return Math.sin(((p-start)/(end-start))*Math.PI);
-};
-
-function visualRange(){
-  return Math.max(1,el.visualScroll.offsetHeight-innerHeight);
-}
-
-function scrollToChapter(i){
-  if(i < 0 || i >= CHAPTERS.length) return;
-  scrollTo({top:CHAPTER_STOPS[i]*visualRange(),behavior:'smooth'});
-}
+/* transition ----------------------------------------------------------- */
+let trans = { on:false, t:0, dir:1, swapped:false };
 
 function goTo(i){
-  if(TUNE){
-    if(i < 0 || i >= CHAPTERS.length) return;
-    chapter = i;paint(i);applyChapterTarget(i,true);setSceneForChapter(i);
-    return;
-  }
-  scrollToChapter(i);
+  if(busy) return;
+  const n = CHAPTERS.length;
+  i = Math.max(0, Math.min(n - 1, i));      // the sequence ends on the globe
+  if(i === chapter) return;
+  busy = true;
+  camPosFrom.copy(camPos);
+  camAimFrom.copy(camAim);
+  chapter = i;
+  el.ui.classList.remove('is-in');
+  el.ui.classList.add('is-out');
+  trans = { on:true, t:0, swapped:false };
+  applyChapterTarget(i);
 }
 
-function chapterCopyOpacity(i,p){
-  if(i === 0) return 1-smoothstep(.14,.22,p);
-  if(i === 1) return smoothstep(.22,.30,p)*(1-smoothstep(.54,.62,p));
-  return smoothstep(.62,.70,p);
-}
-
-function chapterCopyY(i,p){
-  if(i === 0) return -24*smoothstep(.14,.22,p);
-  if(i === 1) return 24*(1-smoothstep(.22,.30,p))-24*smoothstep(.54,.62,p);
-  return 24*(1-smoothstep(.62,.70,p));
-}
-
-function updateScrollTimeline(force=false){
-  if(TUNE) return;
-  const p = clamp01(scrollY/visualRange());
-  const cameraMix = smoothstep(.06,.34,p);
-  const thirdCameraMix = smoothstep(.50,.74,p);
-  const a = CHAPTERS[0], b = CHAPTERS[1], c = CHAPTERS[2];
-  camPosT.set(
-    mix(mix(a.cam.x,b.cam.x,cameraMix),c.cam.x,thirdCameraMix),
-    mix(mix(a.cam.y,b.cam.y,cameraMix),c.cam.y,thirdCameraMix),
-    mix(mix(a.cam.z,b.cam.z,cameraMix),c.cam.z,thirdCameraMix)
-  );
-  camAimT.set(
-    mix(mix(a.cam.tx,b.cam.tx,cameraMix),c.cam.tx,thirdCameraMix),
-    mix(mix(a.cam.ty,b.cam.ty,cameraMix),c.cam.ty,thirdCameraMix),
-    mix(mix(a.cam.tz||0,b.cam.tz||0,cameraMix),c.cam.tz||0,thirdCameraMix)
-  );
-  camUpT.set(0,1-cameraMix,-cameraMix).normalize();
-  fovT = mix(mix(a.fov||40,b.fov||40,cameraMix),c.fov||40,thirdCameraMix);
-  spinT = mix(mix(a.rot,b.rot,cameraMix),c.rot,thirdCameraMix);
-
-  /* Previous-version cloud wash, now driven continuously by native scroll. */
-  const firstCloudWipe = cloudWipe(p,.10,.34);
-  const secondCloudWipe = cloudWipe(p,.50,.74);
-  const thirdMix = smoothstep(.62,.74,p);
-  scrollChapterT = cameraMix + thirdMix;
-  scrollWashT = Math.max(firstCloudWipe,secondCloudWipe);
-  el.chapterImage.style.opacity = 0;
-  el.chapterImage.style.transform = 'scale(1.025)';
-  el.canvas.style.opacity = 1;
-  modelRoot.visible = true;
-  const section2Mix = smoothstep(.23,.31,p)*(1-smoothstep(.50,.58,p));
-  const section3Mix = smoothstep(.66,.74,p);
-  setShipOpacity(section2Mix,2);
-  setWaterOpacity(section2Mix,2);
-  setShipOpacity(section3Mix,3);
-  setWaterOpacity(section3Mix,3);
-
-  const nextChapter = p < .22 ? 0 : p < .62 ? 1 : 2;
-  if(force || nextChapter !== chapter){
-    chapter = nextChapter;
+function tickTransition(dt){
+  if(!trans.on) return;
+  trans.t += dt / 2.3;                       // ~2.3s, unhurried
+  const t = Math.min(trans.t, 1);
+  U.uTransition.value = Math.sin(t * Math.PI);         // peaks at a full cover
+  U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
+  if(!trans.swapped && t > .46){
+    trans.swapped = true;
     paint(chapter);
+    camUp.copy(camUpT);        /* straight-down views need a different roll */
+    camera.up.copy(camUp);
+    /* snap the masks back below the line without animating, then reveal */
+    el.ui.classList.add('no-anim');
+    el.ui.classList.remove('is-out');
+    void el.ui.offsetWidth;
+    el.ui.classList.remove('no-anim');
+    void el.ui.offsetWidth;
+    el.ui.classList.add('is-in');
   }
-  const copyOpacity = chapterCopyOpacity(chapter,p);
-  const copyY = chapterCopyY(chapter,p);
-  el.block.style.opacity = copyOpacity;
-  el.block.style.transform = `translate3d(0,${copyY}px,0)`;
-  el.idxDiamond.style.opacity = copyOpacity;
-  el.idxDiamond.style.transform = `rotate(45deg) translate3d(${copyY*.24}px,${copyY*.24}px,0)`;
-  el.scrollCue.style.opacity = 1-smoothstep(.03,.12,p);
-  el.railBar.style.transform = `scaleY(${.22+p*.78})`;
+  if(t >= 1){ trans.on = false; U.uTransition.value = 0; busy = false; }
 }
 
-addEventListener('scroll',()=>updateScrollTimeline(),{passive:true});
+/* input ---------------------------------------------------------------- */
+let wheelLock = 0;
+addEventListener('wheel', e=>{
+  if(TUNE) return;
+  const now = performance.now();
+  if(busy || now - wheelLock < 900) return;
+  if(Math.abs(e.deltaY) < 14) return;
+  wheelLock = now;
+  goTo(chapter + (e.deltaY > 0 ? 1 : -1));
+}, { passive:true });
 
-/* free-scroll text reveals --------------------------------------------- */
-const freeRevealItems = [...document.querySelectorAll('.free-scroll [data-reveal]')];
-const freeRevealObserver = new IntersectionObserver(entries=>{
-  entries.forEach(entry=>{
-    if(entry.isIntersecting){
-      entry.target.classList.add('is-visible');
-      freeRevealObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold:.08, rootMargin:'0px 0px -10% 0px' });
-freeRevealItems.forEach(item=>freeRevealObserver.observe(item));
+let touchY = null;
+addEventListener('touchstart', e=>{ touchY = e.touches[0].clientY; }, { passive:true });
+addEventListener('touchmove', e=>{
+  if(touchY === null || busy) return;
+  const dy = touchY - e.touches[0].clientY;
+  if(Math.abs(dy) > 48){ goTo(chapter + (dy > 0 ? 1 : -1)); touchY = null; }
+}, { passive:true });
+
+addEventListener('keydown', e=>{
+  if(TUNE) return;
+  if(e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') goTo(chapter+1);
+  if(e.key === 'ArrowUp'   || e.key === 'PageUp')  goTo(chapter-1);
+});
+el.prev.addEventListener('click', ()=>goTo(chapter-1));
+el.next.addEventListener('click', ()=>goTo(chapter+1));
+document.getElementById('next').addEventListener('click', ()=>goTo(chapter+1));
+document.getElementById('next').style.cursor = 'pointer';
+document.getElementById('next').style.pointerEvents = 'auto';
 document.getElementById('cta').addEventListener('click', e=>e.preventDefault());
 
 /* pointer -------------------------------------------------------------- */
 const pointer = new THREE.Vector2(0,0);
+const pointerS = new THREE.Vector2(0,0);
+let lastPointer = new THREE.Vector2(0,0);
 addEventListener('pointermove', e=>{
   pointer.set((e.clientX/innerWidth)*2 - 1, -(e.clientY/innerHeight)*2 + 1);
 });
@@ -1388,7 +1348,9 @@ function resize(){
   camera.updateProjectionMatrix();
   U.uResolution.value.set(w*dpr, h*dpr);
   U.uAspect.value = w/h;
-  if(!document.body.classList.contains('is-loading')) updateScrollTimeline(true);
+  sceneRT.setSize(Math.round(w*dpr), Math.round(h*dpr));
+  earthCam.aspect = w/h;
+  earthCam.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
 resize();
@@ -1405,24 +1367,6 @@ manager.onProgress = (url, loaded, total)=>{
   loadFill.style.transform = 'scaleX(' + (p/100) + ')';
   loadPct.textContent = p + '%';
 };
-let mountainReady = false;
-let imageSettled = true;
-let shipSettled = false;
-let waterSettled = false;
-let introStarted = false;
-
-function tryStartIntro(){
-  if(introStarted || !mountainReady || !imageSettled || !shipSettled || !waterSettled) return;
-  introStarted = true;
-  setSceneForChapter(chapter);
-  setTimeout(()=>{
-    loader.classList.add('is-done');
-    document.body.classList.remove('is-loading');
-    el.ui.classList.add('is-in');
-    updateScrollTimeline(true);
-    intro = { on:true, t:0 };
-  }, 260);
-}
 
 const MODEL = 'snowy_mountain_v2_-_terrain/';
 const texLoader = new THREE.TextureLoader(manager);
@@ -1433,88 +1377,67 @@ mountainMat.uniforms.tMap.value    = mapTex;
 mountainMat.uniforms.tNormal.value = nrmTex;
 
 const gltfLoader = new GLTFLoader(manager);
-const SHIP_MODEL = 'cargo_ship_runtime/';
-const WATER_MODEL = 'river_water_runtime/';
 
-gltfLoader.load(SHIP_MODEL + 'scene.gltf', gltf=>{
-  const ship = gltf.scene;
-  const materialMap = new Map();
-  ship.traverse(object=>{
-    if(!object.isMesh) return;
-    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
-    const cloned = sourceMaterials.map(source=>{
-      if(materialMap.has(source)) return materialMap.get(source);
-      const material = source.clone();
-      material.transparent = true;
-      material.opacity = 0;
-      material.depthWrite = false;
-      material.envMapIntensity = .8;
-      [material.map,material.normalMap,material.metalnessMap,material.roughnessMap].forEach(texture=>{
-        if(texture) texture.anisotropy = 8;
-      });
-      materialMap.set(source,material);
-      shipMaterials.push(material);
-      return material;
-    });
-    object.material = Array.isArray(object.material) ? cloned : cloned[0];
-    object.frustumCulled = false;
-    object.renderOrder = 2;
+/* the globe */
+gltfLoader.load('earth/scene.gltf', gltf=>{
+  const e = gltf.scene;
+  const box = new THREE.Box3().setFromObject(e);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  e.position.sub(ctr);
+  earthRadius = Math.max(size.x, size.y, size.z) * .5;
+  e.traverse(o=>{
+    if(o.isMesh){
+      earthMat.uniforms.tMap.value = o.material.map;
+      o.material = earthMat;
+      o.frustumCulled = false;
+    }
   });
-
-  const box = new THREE.Box3().setFromObject(ship);
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  box.getSize(size);box.getCenter(center);
-  ship.position.set(-center.x,-box.min.y,-center.z);
-  const holder = new THREE.Group();
-  holder.add(ship);
-  holder.scale.setScalar(7.2/Math.max(size.x,size.z));
-  shipRoot.add(holder);
-  applyShipConfig();
-  shipReady = true;
-  createShipObject({ ...SHIP_SECTION3_CONFIG },0);
-  shipSettled = true;
-  setShipOpacity(0,2);
-  setShipOpacity(0,3);
-  window.__ship = { size:size.toArray(), normalizedLength:7.2 };
-  tryAutoPlaceShip();
-  tryStartIntro();
-},undefined,error=>{
-  shipSettled = true;
-  console.warn('cargo ship unavailable',error);
-  tryStartIntro();
+  earthSpin.add(e);
+  earthSpin.rotation.z = .28;             /* axial tilt */
+  earthSpin.rotation.y = 4.05;            /* land, not open ocean, facing us */
+  window.__earth = earthSpin;
 });
 
-gltfLoader.load(WATER_MODEL + 'scene.gltf', gltf=>{
-  const water = gltf.scene;
-  water.traverse(object=>{
-    if(!object.isMesh) return;
-    object.material = waterMat;
-    object.frustumCulled = false;
-    object.renderOrder = 1;
-  });
-  const box = new THREE.Box3().setFromObject(water);
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  box.getSize(size);box.getCenter(center);
-  water.position.set(-center.x,-center.y,-center.z);
+/* cargo ship — normalised to 7.2 units long, then the exported transform */
+gltfLoader.load('cargo_ship_runtime/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box  = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.set(-ctr.x, -box.min.y, -ctr.z);
   const holder = new THREE.Group();
-  holder.add(water);
-  holder.scale.setScalar(14/Math.max(size.x,size.z));
+  holder.add(m);
+  holder.scale.setScalar(7.2 / Math.max(size.x, size.z));
+  shipRoot.add(holder);
+  shipRoot.renderOrder = 3;
+  m.traverse(o=>{
+    if(o.isMesh){
+      /* the asset's own PBR material, lit by the scene lights */
+      o.material.transparent = true;
+      o.material.opacity = 0;
+      o.material.depthWrite = false;
+      o.frustumCulled = false;
+      o.renderOrder = 3;
+      shipMats.push(o.material);
+    }
+  });
+});
+
+/* water surface — normalised to 14 units across, then the exported transform */
+gltfLoader.load('river_water_runtime/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box  = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.set(-ctr.x, -ctr.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(14 / Math.max(size.x, size.z));
   waterRoot.add(holder);
-  applyWaterConfig();
-  waterReady = true;
-  createWaterObject({ ...WATER_SECTION3_CONFIG },0);
-  waterSettled = true;
-  setWaterOpacity(0,2);
-  setWaterOpacity(0,3);
-  window.__water = { size:size.toArray(), normalizedFootprint:14 };
-  tryAutoPlaceWater();
-  tryStartIntro();
-},undefined,error=>{
-  waterSettled = true;
-  console.warn('water surface unavailable',error);
-  tryStartIntro();
+  waterRoot.renderOrder = 2;
+  waterMat.uniforms.uHalf.value.set(Math.max(size.x, 1e-3) * .5, Math.max(size.z, 1e-3) * .5);
+  m.traverse(o=>{ if(o.isMesh){ o.material = waterMat; o.frustumCulled = false; o.renderOrder = 2; } });
 });
 
 gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
@@ -1538,9 +1461,12 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
   camera.position.copy(camPos);
   camera.lookAt(camAim);
 
-  mountainReady = true;
-  tryAutoPlaceShip();
-  tryStartIntro();
+  // intro
+  setTimeout(()=>{
+    loader.classList.add('is-done');
+    el.ui.classList.add('is-in');
+    intro = { on:true, t:0 };
+  }, 260);
 
   /* build the raycast BVH once the intro is out of the way — a plain
      raycast against 600k+ triangles would stall the frame */
@@ -1553,7 +1479,7 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
         /* build one chunk per tick so the page never freezes for a whole second */
         let i = 0;
         (function step(){
-          if(i >= hoverMeshes.length){ bvhReady = true;tryAutoPlaceShip();return; }
+          if(i >= hoverMeshes.length){ bvhReady = true; return; }
           hoverMeshes[i++].geometry.computeBoundsTree({ strategy:0, maxLeafTris:16 });
           setTimeout(step, 60);
         })();
@@ -1569,16 +1495,7 @@ let intro = { on:false, t:0 };
 const clock = new THREE.Clock();
 
 /* ?tune — drag the camera around and read the pose back out */
-const TUNE_PARAMS = new URLSearchParams(location.search);
-const TUNE = TUNE_PARAMS.has('tune');
-if(TUNE){
-  const requestedSection = parseInt(TUNE_PARAMS.get('section'),10);
-  chapter = requestedSection >= 1 && requestedSection <= CHAPTERS.length ? requestedSection-1 : 1;
-  paint(chapter);
-  applyChapterTarget(chapter,true);
-  setSceneForChapter(chapter);
-  scrollChapterT = chapter;
-}
+const TUNE = new URLSearchParams(location.search).has('tune');
 let controls = null;
 
 function frame(){
@@ -1595,29 +1512,47 @@ function update(dt){
     const t = Math.min(intro.t, 1);
     U.uTransition.value = Math.pow(1 - t, 1.6);
     if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
-  } else {
-    U.uTransition.value += (scrollWashT-U.uTransition.value)*Math.min(1,dt*9);
   }
-  U.uChapter.value += (scrollChapterT-U.uChapter.value)*Math.min(1,dt*5);
+  tickTransition(dt);
+
+  /* pointer smoothing + mouse fbo */
+  lastPointer.copy(pointerS);
+  pointerS.lerp(pointer, Math.min(1, dt*6));
+  U.uMouse.value.copy(pointerS);
+  U.uMouseVelocity.value.set((pointerS.x-lastPointer.x)/Math.max(dt,.001), (pointerS.y-lastPointer.y)/Math.max(dt,.001));
+
+  mouseMat.uniforms.tLast.value = rtB.texture;
+  renderer.setRenderTarget(rtA);
+  renderer.render(mouseScene, quadCam);
+  renderer.setRenderTarget(null);
+  U.tMouse.value = rtA.texture;
+  const swap = rtA; rtA = rtB; rtB = swap;
 
   const t = U.uTime.value;
 
-  /* camera follows native page progress; pointer only drives the hover light */
+  /* camera: chapter target + parallax + idle drift */
   if(controls){
     controls.update();
   } else {
-    const k = Math.min(1,dt*2.2);
-    camPos.lerp(camPosT,k);
-    camAim.lerp(camAimT,k);
-    camera.up.lerp(camUpT,k).normalize();
-  const idle = scrollY < visualRange()*.02 ? 1 : 0;
+  if(trans.on){
+    /* one eased ride from the old pose to the new one, spread over the
+       whole wash — no exponential snap, no overshoot */
+    const e = easeInOut(Math.min(trans.t, 1));
+    camPos.copy(camPosFrom).lerp(camPosT, e);
+    camAim.copy(camAimFrom).lerp(camAimT, e);
+  } else {
+    const k = Math.min(1, dt * 2.2);
+    camPos.lerp(camPosT, k);
+    camAim.lerp(camAimT, k);
+  }
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
   camera.position.set(
-    camPos.x + Math.sin(t*.11) * .35 * idle,
-    camPos.y + Math.sin(t*.17) * .18 * idle,
+    camPos.x + pointerS.x * .55 + Math.sin(t*.09) * .22,
+    camPos.y - pointerS.y * .30 + Math.sin(t*.13) * .12,
     camPos.z + introPush
   );
-  camera.lookAt(camAim.x,camAim.y + Math.sin(t*.13)*.1*idle,camAim.z);
+  camera.up.copy(camUp);   /* the roll is switched under the veil, never on screen */
+  camera.lookAt(camAim.x, camAim.y + Math.sin(t*.11)*.06, camAim.z);
   }
 
   if(Math.abs(camera.fov - fovT) > .01){
@@ -1628,11 +1563,12 @@ function update(dt){
   const fogAim = CHAPTERS[chapter].fogTop || 2.6;
   mountainMat.uniforms.uFogTop.value += (fogAim - mountainMat.uniforms.uFogTop.value) * Math.min(1, dt*1.2);
 
-  spin.rotation.y += (spinT-spin.rotation.y)*Math.min(1,dt*1.1);
+  spin.rotation.y += (spinT - spin.rotation.y) * Math.min(1, dt*1.1);
+  spin.rotation.y += Math.sin(t*.07) * .00035;
 
   /* cursor highlight on the terrain */
   const hu = mountainMat.uniforms;
-  if(bvhReady && pointerInside && !busy && modelRoot.visible){
+  if(bvhReady && pointerInside && !busy){
     raycaster.setFromCamera(pointer, camera);
     const hit = raycaster.intersectObjects(hoverMeshes, false)[0];
     if(hit){ hoverTarget.copy(hit.point); hoverAim = 1; } else hoverAim = 0;
@@ -1641,12 +1577,94 @@ function update(dt){
   hu.uHoverPos.value.lerp(hoverTarget, Math.min(1, dt*9));
   hu.uHoverStrength.value += (hoverAim - hu.uHoverStrength.value) * Math.min(1, dt*4.5);
 
-  /* draw */
+  /* the cargo ship and its water belong to the sections that declare them */
+  const cfgS = CHAPTERS[chapter].ship, cfgW = CHAPTERS[chapter].water;
+  const shipAim = (cfgS && !trans.on) ? 1 : 0;
+  shipAmt += (shipAim - shipAmt) * Math.min(1, dt * 2.0);
+  const shipOn = shipAmt > .004;
+  if(cfgS && cfgW){
+    /* hidden -> snap into place, visible -> glide from the previous pose */
+    const kc = shipAmt < .03 ? 1 : Math.min(1, dt * 1.6);
+    lerpCfg(shipNow, cfgS, kc);
+    lerpCfg(waterNow, cfgW, kc);
+  }
+  const flatAim = CHAPTERS[chapter].flat || 0;
+  U.uFlat.value += (flatAim - U.uFlat.value) * Math.min(1, dt * 1.8);
+  const deckAim = (CHAPTERS[chapter].deck !== undefined ? CHAPTERS[chapter].deck : 1) - .62 * shipAmt;
+  U.uDeck.value += (deckAim - U.uDeck.value) * Math.min(1, dt * 1.8);
+  shipRoot.visible = waterRoot.visible = shipOn;
+  if(shipOn){
+    shipRoot.position.set(shipNow.x, shipNow.y, shipNow.z);
+    shipRoot.rotation.set(shipNow.rx, shipNow.ry, shipNow.rz);
+    shipRoot.scale.setScalar(shipNow.scale);
+    waterRoot.position.set(waterNow.x, waterNow.y, waterNow.z);
+    waterRoot.rotation.set(waterNow.rx, waterNow.ry, waterNow.rz);
+    waterRoot.scale.set(waterNow.scaleX, waterNow.scaleY, waterNow.scaleZ);
+    for(let i = 0; i < shipMats.length; i++) shipMats[i].opacity = shipAmt;
+    waterMat.uniforms.uOpacity.value = waterNow.opacity * shipAmt;
+    waterMat.uniforms.uWaveHeight.value = waterNow.waveHeight;
+    waterMat.uniforms.uWaveSpeed.value = waterNow.waveSpeed;
+  }
+
+  /* chapter 5: the drop hands over to the globe.
+     one eased clock drives the whole handover — an exponential lerp
+     front-loads the motion and makes it feel like a snap             */
+  const earthWants = CHAPTERS[chapter].earth === true;
+  const earthOpen  = earthWants && (!trans.on || trans.t > .28);
+  earthT = earthOpen ? Math.min(1, earthT + dt / 3.4)
+                     : Math.max(0, earthT - dt / 1.3);
+  earthAmt = easeInOut(earthT);
+  earthMat.uniforms.uOpacity.value = smoothstep01(earthT, .00, .30);
+  postMat.uniforms.uEarth.value = earthAmt;
+  if(earthAmt > .002){
+    /* it starts exactly as the drop, then swells until it fills the frame */
+    const aspect = Math.max(U.uAspect.value, .0001);
+    const R0 = Math.sqrt(aspect*aspect + 1) * .5 * 1.18;
+    const halfH = earthCam.position.z * Math.tan(earthCam.fov * Math.PI / 360);
+
+    /* still growing after it is fully opaque, so the motion never stops dead */
+    const grow = easeInOut(earthT);
+    const breathe = 1 + Math.sin(U.uTime.value * .12) * .012 * earthT;
+    /* it is already a globe when the veil lifts — no circle stage */
+    const rHH  = THREE.MathUtils.lerp(1.42, 2.05, grow);   /* half-heights */
+    const cx   = THREE.MathUtils.lerp(0.20, 0.16, grow);
+    const cy   = THREE.MathUtils.lerp(-0.50, -0.78, grow);
+
+    earthRoot.scale.setScalar(rHH * halfH / earthRadius * breathe);
+    earthRoot.position.set(cx * halfH * aspect, cy * halfH, 0);
+    if(earthDrag.on){
+      /* the pointer is driving it */
+    } else {
+      earthDrag.vy *= .94; earthDrag.vx *= .94;
+      if(Math.abs(earthDrag.vy) < 1e-4) earthDrag.vy = 0;
+      if(Math.abs(earthDrag.vx) < 1e-4) earthDrag.vx = 0;
+      earthSpin.rotation.y += earthDrag.vy + dt * .022;   /* inertia + slow drift */
+      earthSpin.rotation.x = Math.max(-.6, Math.min(.6, earthSpin.rotation.x + earthDrag.vx));
+    }
+  }
+
+  /* chapter 3: the frame condenses into a drop */
+  const wantsDrop   = CHAPTERS[chapter].condense === true;
+  const condenseAim = wantsDrop ? (trans.on ? (trans.t > .55 ? 1 : 0) : 1) : 0;
+  const condenseRate = CHAPTERS[chapter].earth === true ? 1.7 : 1.25;
+  condense += (condenseAim - condense) * Math.min(1, dt * (condenseAim ? condenseRate : 2.4));
+  postMat.uniforms.uCondense.value = condense;
+  postMat.uniforms.uWash.value = U.uTransition.value;
+
+  /* draw: scene to a buffer, then the drop pass to the screen */
+  renderer.setRenderTarget(sceneRT);
   renderer.clear();
   renderer.render(skyScene, quadCam);
   renderer.clearDepth();
   renderer.render(scene, camera);
   renderer.render(fogScene, quadCam);
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  renderer.render(postScene, quadCam);
+  if(earthAmt > .002){
+    renderer.clearDepth();
+    renderer.render(earthScene, earthCam);
+  }
 }
 frame();
 
@@ -1665,35 +1683,11 @@ if(TUNE){
     { k:'fov',  label:'鏡頭視角 fov',       min:18,   max:75,  step:.5  },
     { k:'dist', label:'距離（推近拉遠）',   min:4,    max:90,  step:.2  }
   ];
-  const SHIP_SLIDERS = [
-    { k:'x',     label:'Ship X',       min:-30,  max:15,   step:.1  },
-    { k:'y',     label:'Ship Y',       min:-2,   max:18,   step:.1  },
-    { k:'z',     label:'Ship Z',       min:-24,  max:24,   step:.1  },
-    { k:'rx',    label:'Rotate X',     min:-3.2, max:3.2,  step:.01 },
-    { k:'ry',    label:'Rotate Y',     min:-3.2, max:3.2,  step:.01 },
-    { k:'rz',    label:'Rotate Z',     min:-3.2, max:3.2,  step:.01 },
-    { k:'scale', label:'Ship scale',   min:.2,   max:3.0,  step:.02 }
-  ];
-  const WATER_SLIDERS = [
-    { k:'x',          label:'Water X',        min:-30,  max:15,  step:.1  },
-    { k:'y',          label:'Water Y',        min:-2,   max:18,  step:.1  },
-    { k:'z',          label:'Water Z',        min:-24,  max:24,  step:.1  },
-    { k:'rx',         label:'Rotate X',       min:-3.2, max:3.2, step:.01 },
-    { k:'ry',         label:'Rotate Y',       min:-3.2, max:3.2, step:.01 },
-    { k:'rz',         label:'Rotate Z',       min:-3.2, max:3.2, step:.01 },
-    { k:'scaleX',     label:'寬度 scale X',    min:.05,  max:2.0, step:.01 },
-    { k:'scaleY',     label:'厚度 scale Y',    min:.02,  max:1.5, step:.01 },
-    { k:'scaleZ',     label:'長度 scale Z',    min:.10,  max:3.0, step:.01 },
-    { k:'opacity',    label:'透明度',           min:.05,  max:1.0, step:.01 },
-    { k:'waveHeight', label:'波浪高度',         min:0,    max:3.0, step:.02 },
-    { k:'waveSpeed',  label:'波浪速度',         min:0,    max:3.0, step:.02 }
-  ];
 
   const panel = document.createElement('div');
   panel.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:20;background:rgba(16,24,34,.92);'
     + 'color:#dfe8f2;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;border-radius:9px;'
-    + 'width:440px;max-width:calc(100vw - 28px);max-height:calc(100vh - 28px);overflow-y:auto;overflow-x:hidden;'
-    + 'box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
+    + 'width:400px;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
 
   const btn = (id,txt,primary)=>'<button id="'+id+'" style="font:inherit;cursor:pointer;padding:5px 9px;border-radius:5px;'
     + 'border:1px solid '+(primary?'#4a86bb':'#33465c')+';background:'+(primary?'#1d3550':'#16222f')+';color:#dfe8f2">'+txt+'</button>';
@@ -1703,72 +1697,13 @@ if(TUNE){
     +   '<b id="tuneWho" style="color:#9fd3ff;font-weight:600"></b>'
     +   '<span style="opacity:.55">也可直接拖曳／滾輪</span>'
     + '</div>'
-    + '<div id="tuneQuickNav" style="position:sticky;top:-14px;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);'
-    +   'gap:5px;margin:0 -4px 9px;padding:10px 4px 8px;background:linear-gradient(#172433 78%,rgba(23,36,51,0));">'
-    +   btn('navCamera','鏡頭',1) + btn('navShip','貨輪') + btn('navWater','水面') + btn('navFinal','輸出')
-    + '</div>'
-    + '<div id="tuneCameraAnchor" style="scroll-margin-top:52px"></div>'
     + '<div id="tuneRows"></div>'
-    + '<div id="tuneOut" style="white-space:pre-wrap;word-break:break-word;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div id="tuneOut" style="white-space:pre;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製三段',1)
+    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製四段',1)
     +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
-    + '</div>'
-    + '<div id="tuneShipAnchor" style="height:1px;background:#33465c;margin:12px 0 9px;scroll-margin-top:52px"></div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-    +   '<b id="shipSectionTitle" style="color:#f4c78a;font-weight:600">CARGO SHIP · SECTION 02</b>'
-    +   '<span style="display:flex;align-items:center;gap:9px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer">'
-    +     '<input id="shipEnabled" type="checkbox" style="accent-color:#d39557"> 顯示貨輪</label>'
-    +     '<span id="shipStatus" style="opacity:.55">loading</span></span>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:112px 1fr;gap:8px;align-items:center;margin:5px 0 7px">'
-    +   '<span style="opacity:.72">目前物件</span><select id="shipSelect" style="width:100%;font:inherit;color:#f4c78a;'
-    +     'background:#16222f;border:1px solid #425168;border-radius:4px;padding:4px"></select>'
-    + '</div>'
-    + '<div id="shipRows"></div>'
-    + '<div id="shipOut" style="white-space:pre-wrap;word-break:break-word;color:#f4c78a;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
-    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('shipDuplicate','複製貨輪物件',1) + btn('shipCopy','複製目前參數')
-    +   btn('shipSurface','貼合地形') + btn('shipReset','重設目前貨輪')
-    + '</div>'
-    + '<div id="tuneWaterAnchor" style="height:1px;background:#33465c;margin:12px 0 9px;scroll-margin-top:52px"></div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-    +   '<b id="waterSectionTitle" style="color:#80e4f2;font-weight:600">WATER · SECTION 02</b>'
-    +   '<span style="display:flex;align-items:center;gap:9px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer">'
-    +     '<input id="waterEnabled" type="checkbox" style="accent-color:#43c7d8"> 顯示水面</label>'
-    +     '<span id="waterStatus" style="opacity:.55">loading</span></span>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:112px 1fr;gap:8px;align-items:center;margin:5px 0 7px">'
-    +   '<span style="opacity:.72">目前物件</span><select id="waterSelect" style="width:100%;font:inherit;color:#80e4f2;'
-    +     'background:#16222f;border:1px solid #425168;border-radius:4px;padding:4px"></select>'
-    + '</div>'
-    + '<div id="waterRows"></div>'
-    + '<div id="waterOut" style="white-space:pre-wrap;word-break:break-word;color:#80e4f2;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
-    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('waterDuplicate','複製水面物件',1) + btn('waterCopy','複製目前參數')
-    +   btn('waterFollow','跟隨目前貨輪') + btn('waterReset','重設目前水面')
-    + '</div>'
-    + '<div id="tuneFinalAnchor" style="height:1px;background:#33465c;margin:12px 0 9px;scroll-margin-top:52px"></div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-    +   '<b style="color:#b7f3c4;font-weight:600">FINAL SCENE CONFIG</b>'
-    +   '<span style="opacity:.55">可直接傳給製作端</span>'
-    + '</div>'
-    + '<div id="finalOut" style="white-space:pre-wrap;word-break:break-word;color:#b7f3c4;max-height:260px;overflow:auto;'
-    +   'padding:8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
-    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('finalCopy','複製最終參數',1)
-    +   '<a id="finalDownload" href="#" download="montis-section-02-config.json" style="font:inherit;cursor:pointer;padding:5px 9px;'
-    +     'border-radius:5px;border:1px solid #4a86bb;background:#1d3550;color:#dfe8f2;text-decoration:none">下載 JSON</a>'
     + '</div>';
   document.body.appendChild(panel);
-  const jumpPanelTo = id=>{
-    const target = panel.querySelector(id);
-    if(target) panel.scrollTo({ top:Math.max(0,target.offsetTop-50), behavior:'smooth' });
-  };
-  panel.querySelector('#navCamera').onclick = ()=>jumpPanelTo('#tuneCameraAnchor');
-  panel.querySelector('#navShip').onclick = ()=>jumpPanelTo('#tuneShipAnchor');
-  panel.querySelector('#navWater').onclick = ()=>jumpPanelTo('#tuneWaterAnchor');
-  panel.querySelector('#navFinal').onclick = ()=>jumpPanelTo('#tuneFinalAnchor');
 
   const rows = panel.querySelector('#tuneRows');
   const ui = {};
@@ -1784,96 +1719,6 @@ if(TUNE){
     inp.addEventListener('pointerdown', ()=>ui[sl.k].busy = true);
     addEventListener('pointerup',       ()=>ui[sl.k].busy = false);
     inp.addEventListener('input', ()=>write(sl.k, parseFloat(inp.value)));
-  });
-
-  const shipRows = panel.querySelector('#shipRows');
-  const shipUi = {};
-  SHIP_SLIDERS.forEach(sl=>{
-    const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:112px 1fr 46px;gap:8px;align-items:center;margin:2px 0';
-    row.innerHTML = '<span style="opacity:.72">'+sl.label+'</span>'
-      + '<input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" style="width:100%;accent-color:#d39557">'
-      + '<span style="text-align:right;color:#f4c78a"></span>';
-    shipRows.appendChild(row);
-    const inp = row.querySelector('input');
-    shipUi[sl.k] = { input:inp, val:row.querySelector('span:last-child'), spec:sl, busy:false };
-    inp.addEventListener('pointerdown', ()=>shipUi[sl.k].busy = true);
-    addEventListener('pointerup', ()=>shipUi[sl.k].busy = false);
-    inp.addEventListener('input', ()=>{
-      shipConfigs[activeShipIndex][sl.k] = parseFloat(inp.value);
-      applyShipConfig(activeShipIndex);
-      const config = shipConfigs[activeShipIndex];
-      setShipOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-    });
-  });
-
-  const waterRows = panel.querySelector('#waterRows');
-  const waterUi = {};
-  WATER_SLIDERS.forEach(sl=>{
-    const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:112px 1fr 46px;gap:8px;align-items:center;margin:2px 0';
-    row.innerHTML = '<span style="opacity:.72">'+sl.label+'</span>'
-      + '<input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" style="width:100%;accent-color:#43c7d8">'
-      + '<span style="text-align:right;color:#80e4f2"></span>';
-    waterRows.appendChild(row);
-    const inp = row.querySelector('input');
-    waterUi[sl.k] = { input:inp, val:row.querySelector('span:last-child'), spec:sl, busy:false };
-    inp.addEventListener('pointerdown', ()=>waterUi[sl.k].busy = true);
-    addEventListener('pointerup', ()=>waterUi[sl.k].busy = false);
-    inp.addEventListener('input', ()=>{
-      waterConfigs[activeWaterIndex][sl.k] = parseFloat(inp.value);
-      applyWaterConfig(activeWaterIndex);
-      const config = waterConfigs[activeWaterIndex];
-      setWaterOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-    });
-  });
-
-  const shipSelect = panel.querySelector('#shipSelect');
-  const waterSelect = panel.querySelector('#waterSelect');
-  const shipEnabled = panel.querySelector('#shipEnabled');
-  const waterEnabled = panel.querySelector('#waterEnabled');
-  const objectLabel = (config,index,configs,name)=>{
-    const order = configs.slice(0,index+1).filter(item=>item.section === config.section).length;
-    return name+' · S'+String(config.section).padStart(2,'0')+'-'+String(order).padStart(2,'0');
-  };
-  const refreshObjectSelectors = ()=>{
-    if(shipSelect.options.length !== shipConfigs.length){
-      shipSelect.innerHTML = shipConfigs.map((config,index)=>'<option value="'+index+'">'+objectLabel(config,index,shipConfigs,'Cargo Ship')+'</option>').join('');
-    }
-    if(waterSelect.options.length !== waterConfigs.length){
-      waterSelect.innerHTML = waterConfigs.map((config,index)=>'<option value="'+index+'">'+objectLabel(config,index,waterConfigs,'Water Surface')+'</option>').join('');
-    }
-    shipSelect.value = activeShipIndex;
-    waterSelect.value = activeWaterIndex;
-  };
-  refreshObjectSelectors();
-  const selectObjectsForSection = section=>{
-    const shipIndex = shipConfigs.findIndex(config=>config.section === section);
-    const waterIndex = waterConfigs.findIndex(config=>config.section === section);
-    if(shipIndex >= 0) activeShipIndex = shipIndex;
-    if(waterIndex >= 0) activeWaterIndex = waterIndex;
-    refreshObjectSelectors();
-  };
-  if(chapter > 0) selectObjectsForSection(chapter+1);
-  shipSelect.addEventListener('change', ()=>{
-    activeShipIndex = parseInt(shipSelect.value,10) || 0;
-    activateObjectSection(shipConfigs[activeShipIndex].section,'ship');
-  });
-  waterSelect.addEventListener('change', ()=>{
-    activeWaterIndex = parseInt(waterSelect.value,10) || 0;
-    activateObjectSection(waterConfigs[activeWaterIndex].section,'water');
-  });
-  shipEnabled.checked = shipConfigs[activeShipIndex].enabled;
-  waterEnabled.checked = waterConfigs[activeWaterIndex].enabled;
-  shipEnabled.addEventListener('change', ()=>{
-    const config = shipConfigs[activeShipIndex];
-    config.enabled = shipEnabled.checked;
-    setShipOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-  });
-  waterEnabled.addEventListener('change', ()=>{
-    const config = waterConfigs[activeWaterIndex];
-    config.enabled = waterEnabled.checked;
-    setWaterOpacity(chapter === config.section-1 ? 1 : 0,config.section);
   });
 
   const dirTmp = new THREE.Vector3();
@@ -1908,154 +1753,26 @@ if(TUNE){
     CHAPTERS[chapter].fov = +camera.fov.toFixed(1);
   };
   const flash = (b,t)=>{ const old = b.textContent; b.textContent = t; setTimeout(()=>b.textContent = old, 1100); };
-  const fallbackCopy = text=>{
-    const area = document.createElement('textarea');
-    area.value = text;
-    area.style.cssText = 'position:fixed;left:-9999px;top:0';
-    document.body.appendChild(area);
-    area.select();
-    document.execCommand('copy');
-    area.remove();
-  };
-  const copyText = text=>{
-    fallbackCopy(text);
-    if(!navigator.clipboard?.writeText) return Promise.resolve();
-    const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error('clipboard timeout')),450));
-    return Promise.race([navigator.clipboard.writeText(text),timeout]).catch(()=>{});
-  };
-  const shipFmt = ()=>{
-    const n = x=>(+x).toFixed(2);
-    const config = shipConfigs[activeShipIndex];
-    return 'const SHIP_CONFIG = {\n'
-      + '  enabled:'+config.enabled+',\n'
-      + '  x:'+n(config.x)+', y:'+n(config.y)+', z:'+n(config.z)+',\n'
-      + '  rx:'+n(config.rx)+', ry:'+n(config.ry)+', rz:'+n(config.rz)+',\n'
-      + '  scale:'+n(config.scale)+'\n};';
-  };
-  const waterFmt = ()=>{
-    const n = x=>(+x).toFixed(2);
-    const config = waterConfigs[activeWaterIndex];
-    return 'const WATER_CONFIG = {\n'
-      + '  enabled:'+config.enabled+',\n'
-      + '  x:'+n(config.x)+', y:'+n(config.y)+', z:'+n(config.z)+',\n'
-      + '  rx:'+n(config.rx)+', ry:'+n(config.ry)+', rz:'+n(config.rz)+',\n'
-      + '  scaleX:'+n(config.scaleX)+', scaleY:'+n(config.scaleY)+', scaleZ:'+n(config.scaleZ)+',\n'
-      + '  opacity:'+n(config.opacity)+', waveHeight:'+n(config.waveHeight)+', waveSpeed:'+n(config.waveSpeed)+'\n};';
-  };
-  const finalSceneData = ()=>{
-    const exportSection = chapter === 2 ? 3 : 2;
-    const c = CHAPTERS[exportSection-1];
-    const isCurrentSection = chapter === exportSection-1 && controls;
-    const position = isCurrentSection ? camera.position : c.cam;
-    const target = isCurrentSection ? controls.target : { x:c.cam.tx, y:c.cam.ty, z:c.cam.tz || 0 };
-    const rounded = value=>+Number(value).toFixed(3);
-    const cleanConfig = config=>Object.fromEntries(
-      Object.entries(config)
-        .filter(([key])=>key !== 'section')
-        .map(([key,value])=>[key,typeof value === 'number' ? rounded(value) : value])
-    );
-    return {
-      formatVersion:2,
-      section:exportSection,
-      chapter:c.eyebrow,
-      camera:{
-        position:{ x:rounded(position.x), y:rounded(position.y), z:rounded(position.z) },
-        target:{ x:rounded(target.x), y:rounded(target.y), z:rounded(target.z) },
-        fov:rounded(isCurrentSection ? camera.fov : (c.fov || 40)),
-        mountainRotation:rounded(isCurrentSection ? spinT : c.rot)
-      },
-      cargoShips:shipConfigs.filter(config=>config.section === exportSection).map(cleanConfig),
-      waters:waterConfigs.filter(config=>config.section === exportSection).map(cleanConfig)
-    };
-  };
-  const finalFmt = ()=>JSON.stringify(finalSceneData(),null,2);
 
   panel.querySelector('#tuneCopy').onclick = e=>{
-    grab(); copyText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
+    grab(); navigator.clipboard.writeText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
   };
   panel.querySelector('#tuneCopyAll').onclick = e=>{
     grab();
-    copyText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
-      .then(()=>flash(e.target,'已複製三段 ✓'));
+    navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
+      .then(()=>flash(e.target,'已複製四段 ✓'));
   };
-  panel.querySelector('#shipDuplicate').onclick = e=>{
-    const index = duplicateShipObject();
-    refreshObjectSelectors();
-    flash(e.target,index === null ? '貨輪尚未載入' : '已建立貨輪副本 ✓');
-  };
-  panel.querySelector('#shipCopy').onclick = e=>{
-    copyText(shipFmt()).then(()=>flash(e.target,'已複製船參數 ✓'));
-  };
-  panel.querySelector('#shipSurface').onclick = e=>{
-    const y = snapShipToTerrain(.18);
-    const config = shipConfigs[activeShipIndex];
-    setShipOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-    flash(e.target,y === null ? '找不到地形' : '已貼合地形 ✓');
-  };
-  panel.querySelector('#shipReset').onclick = e=>{
-    Object.assign(shipConfigs[activeShipIndex],shipDefaults[activeShipIndex]);
-    applyShipConfig(activeShipIndex);
-    const config = shipConfigs[activeShipIndex];
-    setShipOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-    flash(e.target,'已重設 ✓');
-  };
-  panel.querySelector('#waterDuplicate').onclick = e=>{
-    const index = duplicateWaterObject();
-    refreshObjectSelectors();
-    flash(e.target,index === null ? '水面尚未載入' : '已建立水面副本 ✓');
-  };
-  panel.querySelector('#waterCopy').onclick = e=>{
-    copyText(waterFmt()).then(()=>flash(e.target,'已複製水參數 ✓'));
-  };
-  panel.querySelector('#waterFollow').onclick = e=>{
-    syncWaterToShip();
-    const config = waterConfigs[activeWaterIndex];
-    setWaterOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-    flash(e.target,'已移到貨輪下方 ✓');
-  };
-  panel.querySelector('#waterReset').onclick = e=>{
-    Object.assign(waterConfigs[activeWaterIndex],waterDefaults[activeWaterIndex]);
-    applyWaterConfig(activeWaterIndex);
-    const config = waterConfigs[activeWaterIndex];
-    setWaterOpacity(chapter === config.section-1 ? 1 : 0,config.section);
-    flash(e.target,'已重設 ✓');
-  };
-  panel.querySelector('#finalCopy').onclick = e=>{
-    copyText(finalFmt()).then(()=>flash(e.target,'已複製最終參數 ✓'));
-  };
-  const finalDownload = panel.querySelector('#finalDownload');
-  finalDownload.onclick = e=>flash(e.currentTarget,'JSON 已下載 ✓');
   const restore = ()=>{
     applyChapterTarget(chapter, true);
-    setSceneForChapter(chapter);
     if(controls){
       camera.position.copy(camPosT); controls.target.copy(camAimT);
       camera.fov = fovT; camera.updateProjectionMatrix(); controls.update();
     }
     spinT = CHAPTERS[chapter].rot; spin.rotation.y = spinT;
   };
-  const activateObjectSection = (section,source)=>{
-    const nextChapter = section-1;
-    if(nextChapter < 0 || nextChapter >= CHAPTERS.length) return;
-    if(source !== 'ship'){
-      const shipIndex = shipConfigs.findIndex(config=>config.section === section);
-      if(shipIndex >= 0) activeShipIndex = shipIndex;
-    }
-    if(source !== 'water'){
-      const waterIndex = waterConfigs.findIndex(config=>config.section === section);
-      if(waterIndex >= 0) activeWaterIndex = waterIndex;
-    }
-    chapter = nextChapter;
-    paint(chapter);
-    restore();
-    refreshObjectSelectors();
-  };
   const jump = d=>{
     grab();
-    const next = chapter+d;
-    if(next < 0 || next >= CHAPTERS.length) return;
-    chapter = next;
-    if(chapter > 0) selectObjectsForSection(chapter+1);
+    chapter = (chapter + d + CHAPTERS.length) % CHAPTERS.length;
     paint(chapter);
     restore();
   };
@@ -2083,53 +1800,19 @@ if(TUNE){
   });
 
   /* keep sliders and the readout in step with whatever moved the camera */
-  let initialObjectSelectionDone = false;
   setInterval(()=>{
     if(!controls) return;
-    if(!initialObjectSelectionDone && shipReady && waterReady){
-      if(chapter > 0) selectObjectsForSection(chapter+1);
-      initialObjectSelectionDone = true;
-    }
     const live = {
       x:camera.position.x, y:camera.position.y, z:camera.position.z,
       tx:controls.target.x, ty:controls.target.y, tz:controls.target.z,
       rot:spinT, fov:camera.fov, dist:camera.position.distanceTo(controls.target)
     };
-    const shipConfig = shipConfigs[activeShipIndex];
-    const waterConfig = waterConfigs[activeWaterIndex];
-    refreshObjectSelectors();
     SLIDERS.forEach(sl=>{
       const u = ui[sl.k];
       if(u.busy) return;
       u.input.value = live[sl.k];
       u.val.textContent = live[sl.k].toFixed(sl.step < .05 ? 2 : 1);
     });
-    SHIP_SLIDERS.forEach(sl=>{
-      const u = shipUi[sl.k];
-      if(u.busy) return;
-      u.input.value = shipConfig[sl.k];
-      u.val.textContent = shipConfig[sl.k].toFixed(sl.step < .05 ? 2 : 1);
-    });
-    WATER_SLIDERS.forEach(sl=>{
-      const u = waterUi[sl.k];
-      if(u.busy) return;
-      u.input.value = waterConfig[sl.k];
-      u.val.textContent = waterConfig[sl.k].toFixed(sl.step < .05 ? 2 : 1);
-    });
-    shipEnabled.checked = shipConfig.enabled;
-    waterEnabled.checked = waterConfig.enabled;
-    shipRows.style.opacity = shipConfig.enabled ? 1 : .35;
-    waterRows.style.opacity = waterConfig.enabled ? 1 : .35;
-    panel.querySelector('#shipSectionTitle').textContent = 'CARGO SHIP · SECTION ' + String(shipConfig.section).padStart(2,'0');
-    panel.querySelector('#shipStatus').textContent = shipReady ? ((shipConfig.enabled ? 'ready' : 'off')+' · '+(activeShipIndex+1)+'/'+shipConfigs.length) : 'loading';
-    panel.querySelector('#shipOut').textContent = shipFmt();
-    panel.querySelector('#waterSectionTitle').textContent = 'WATER · SECTION ' + String(waterConfig.section).padStart(2,'0');
-    panel.querySelector('#waterStatus').textContent = waterReady ? ((waterConfig.enabled ? 'ready' : 'off')+' · '+(activeWaterIndex+1)+'/'+waterConfigs.length) : 'loading';
-    panel.querySelector('#waterOut').textContent = waterFmt();
-    const finalJSON = finalFmt();
-    panel.querySelector('#finalOut').textContent = finalJSON;
-    finalDownload.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(finalJSON);
-    finalDownload.download = 'montis-section-0'+finalSceneData().section+'-config.json';
     panel.querySelector('#tuneWho').textContent = '第 ' + (chapter+1) + ' 段 · ' + CHAPTERS[chapter].eyebrow;
     const n = x=>(+x).toFixed(1);
     panel.querySelector('#tuneOut').textContent =
@@ -2141,29 +1824,31 @@ if(TUNE){
 
 /* expose for debugging / screenshots */
 window.viz = {
-  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin,
-  shipRoot, SHIP_CONFIG, shipRoots, shipConfigs, waterRoot, WATER_CONFIG, waterRoots, waterConfigs, waterMat,
-  applyShipConfig, duplicateShipObject, snapShipToTerrain,
-  applyWaterConfig, duplicateWaterObject, syncWaterToShip, CHAPTERS, mountainMat, update,
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
+  postMat, setCondense(v){ condense = v; postMat.uniforms.uCondense.value = v; },
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){
     const c = CHAPTERS[i];
     chapter = i; paint(i); applyChapterTarget(i, true);
-    setSceneForChapter(i);
     camera.position.set(c.cam.x, c.cam.y, c.cam.z);
+    camera.up.copy(camUpT);
     camera.lookAt(c.cam.tx, c.cam.ty, c.cam.tz || 0);
     spin.rotation.y = c.rot;
     U.uChapter.value = i; U.uTransition.value = 0;
-    scrollChapterT = i;scrollWashT = 0;
-    intro.on = false;busy = false;
+    intro.on = false; trans.on = false; busy = false;
   },
   draw(){
+    renderer.setRenderTarget(sceneRT);
     renderer.clear();
     renderer.render(skyScene, quadCam);
     renderer.clearDepth();
     renderer.render(scene, camera);
     renderer.render(fogScene, quadCam);
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(postScene, quadCam);
+    if(earthAmt > .002){ renderer.clearDepth(); renderer.render(earthScene, earthCam); }
   }
 };
 </script>

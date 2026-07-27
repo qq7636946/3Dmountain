@@ -26,18 +26,23 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 body.is-free-scroll{overflow-x:hidden;overflow-y:auto;background:#eef2f5}
-canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+canvas#gl{
+  position:fixed;inset:0;width:100%;height:100%;display:block;
+  transition:filter 1.4s var(--ease),transform 2.2s var(--ease);
+}
+body.is-free-scroll canvas#gl{filter:saturate(.82) brightness(1.06);transform:scale(1.018)}
 
 /* ---------- overlay grain / vignette ---------- */
 .grain{
   position:fixed;inset:0;pointer-events:none;z-index:3;
   background:
     radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(120,138,152,.30) 100%);
-  mix-blend-mode:multiply;opacity:.9;
+  mix-blend-mode:multiply;opacity:.9;transition:opacity 1.2s var(--ease);
 }
+body.is-free-scroll .grain{opacity:.58}
 
 /* ---------- shell ---------- */
-.ui{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity .7s var(--ease)}
+.ui{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity 1s var(--ease)}
 .ui a,.ui button{pointer-events:auto}
 body.is-free-scroll .ui{opacity:0;pointer-events:none}
 body.is-free-scroll .ui a,body.is-free-scroll .ui button{pointer-events:none}
@@ -173,25 +178,39 @@ h1{
 
 /* ---------- native free-scroll content after chapter four ---------- */
 .free-scroll{
-  position:relative;z-index:6;margin-top:100vh;
-  background:#eef2f5;color:var(--ink);
+  position:relative;z-index:6;margin-top:0;
+  background:linear-gradient(
+    180deg,
+    rgba(238,242,245,0) 0,
+    rgba(238,242,245,.08) 38vh,
+    rgba(238,242,245,.58) 92vh,
+    rgba(238,242,245,.94) 148vh,
+    #eef2f5 190vh
+  );
+  color:var(--ink);
   opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .7s var(--ease);
+  transition:opacity 1.15s var(--ease);
 }
 body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:auto}
 .free-inner{width:min(1180px,calc(100% - 48px));margin:0 auto}
 .free-intro{
-  min-height:92vh;padding:clamp(90px,13vh,150px) 0;
+  min-height:116vh;padding:38vh 0 clamp(90px,14vh,150px);
   display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,.55fr);
   align-items:end;gap:clamp(48px,8vw,120px);
   border-bottom:1px solid var(--hair);
 }
 .free-kicker{font-size:.64rem;letter-spacing:.3em;font-weight:500;margin-bottom:28px}
 .free-intro h2{
-  max-width:850px;font-size:clamp(3rem,7vw,7.2rem);line-height:.93;
-  font-weight:200;letter-spacing:-.025em;text-transform:uppercase;
+  max-width:760px;font-size:clamp(2.5rem,5.4vw,5.6rem);line-height:.98;
+  font-weight:200;letter-spacing:-.018em;text-transform:uppercase;
 }
-.free-intro p{font-size:clamp(1rem,1.35vw,1.25rem);line-height:1.75;color:var(--ink-dim)}
+.free-intro p{max-width:360px;font-size:clamp(.92rem,1.15vw,1.08rem);line-height:1.8;color:var(--ink-dim)}
+.free-scroll [data-reveal]{
+  opacity:0;transform:translateY(42px);
+  transition:opacity 1.1s var(--ease),transform 1.25s var(--ease);
+}
+.free-scroll [data-reveal="soft"]{transform:translateY(24px);transition-delay:.12s}
+body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:none}
 .free-divisions{padding:clamp(90px,13vh,160px) 0}
 .free-heading{
   display:flex;justify-content:space-between;align-items:end;gap:32px;
@@ -216,7 +235,7 @@ body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:aut
   border-top:1px solid var(--hair);
 }
 .free-outro h3{
-  max-width:900px;font-size:clamp(2.8rem,6vw,6.4rem);
+  max-width:900px;font-size:clamp(2.5rem,5vw,5.4rem);
   line-height:1;font-weight:200;text-transform:uppercase;
 }
 .free-footer{display:flex;justify-content:space-between;gap:30px;font-size:.62rem;letter-spacing:.24em}
@@ -230,8 +249,8 @@ body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:aut
   .next .name{font-size:.82rem}
   .credit{display:none}
   .free-inner{width:min(100% - 36px,680px)}
-  .free-intro{grid-template-columns:1fr;align-content:center;min-height:88vh}
-  .free-intro h2{font-size:clamp(2.8rem,15vw,5.6rem)}
+  .free-intro{grid-template-columns:1fr;align-content:end;min-height:112vh;padding-top:46vh}
+  .free-intro h2{font-size:clamp(2.45rem,12vw,4.8rem)}
   .division-card{grid-template-columns:44px 1fr;gap:12px 20px;padding:34px 0}
   .division-card:hover{padding:34px 14px}
   .division-card p{grid-column:2}
@@ -298,38 +317,38 @@ body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:aut
 <main class="free-scroll" id="freeScroll">
   <div class="free-inner">
     <section class="free-intro">
-      <div>
+      <div data-reveal>
         <div class="free-kicker">BEYOND THE FOURTH CHAPTER</div>
         <h2>ONE MOUNTAIN.<br>FOUR DIRECTIONS.</h2>
       </div>
-      <p>
+      <p data-reveal="soft">
         Continue through the Montis divisions at your own pace.
         From this point onward, the page uses natural free scrolling.
       </p>
     </section>
 
     <section class="free-divisions">
-      <div class="free-heading">
+      <div class="free-heading" data-reveal>
         <h3>Montis Divisions</h3>
         <span>01 — 04</span>
       </div>
       <div class="division-list">
-        <article class="division-card">
+        <article class="division-card" data-reveal>
           <span class="num">01</span>
           <h4>Montis Expeditions</h4>
           <p>Climbing higher, seeing further.</p>
         </article>
-        <article class="division-card">
+        <article class="division-card" data-reveal>
           <span class="num">02</span>
           <h4>Montis Research</h4>
           <p>Reading the mountain’s pulse.</p>
         </article>
-        <article class="division-card">
+        <article class="division-card" data-reveal>
           <span class="num">03</span>
           <h4>Montis Energy</h4>
           <p>Harnessing height, delivering power.</p>
         </article>
-        <article class="division-card">
+        <article class="division-card" data-reveal>
           <span class="num">04</span>
           <h4>Montis Ventures</h4>
           <p>Building what comes next.</p>
@@ -338,8 +357,8 @@ body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:aut
     </section>
 
     <section class="free-outro">
-      <h3>The summit is only the beginning.</h3>
-      <div class="free-footer">
+      <h3 data-reveal>The summit is only the beginning.</h3>
+      <div class="free-footer" data-reveal="soft">
         <span>MONTIS</span>
         <span>EXPEDITIONS · RESEARCH · ENERGY · VENTURES</span>
       </div>
@@ -1018,11 +1037,25 @@ function tickTransition(dt){
 
 /* input ---------------------------------------------------------------- */
 let freeMode = false;
+const freeRevealItems = [...document.querySelectorAll('.free-scroll [data-reveal]')];
+const freeRevealObserver = new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add('is-visible');
+      freeRevealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold:.08, rootMargin:'0px 0px -10% 0px' });
+
+function armFreeReveals(){
+  freeRevealItems.forEach(item=>freeRevealObserver.observe(item));
+}
 
 function enterFreeScroll(initialDelta = 0){
   if(freeMode || busy || chapter !== CHAPTERS.length - 1) return;
   freeMode = true;
   document.body.classList.add('is-free-scroll');
+  armFreeReveals();
   requestAnimationFrame(()=>{
     if(initialDelta > 0) scrollBy({ top:initialDelta, left:0, behavior:'auto' });
   });
@@ -1032,6 +1065,8 @@ function exitFreeScroll(){
   if(!freeMode) return;
   scrollTo({ top:0, behavior:'auto' });
   document.body.classList.remove('is-free-scroll');
+  freeRevealObserver.disconnect();
+  freeRevealItems.forEach(item=>item.classList.remove('is-visible'));
   freeMode = false;
 }
 

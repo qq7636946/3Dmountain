@@ -1568,7 +1568,16 @@ let intro = { on:false, t:0 };
 const clock = new THREE.Clock();
 
 /* ?tune — drag the camera around and read the pose back out */
-const TUNE = new URLSearchParams(location.search).has('tune');
+const TUNE_PARAMS = new URLSearchParams(location.search);
+const TUNE = TUNE_PARAMS.has('tune');
+if(TUNE){
+  const requestedSection = parseInt(TUNE_PARAMS.get('section'),10);
+  chapter = requestedSection >= 1 && requestedSection <= CHAPTERS.length ? requestedSection-1 : 1;
+  paint(chapter);
+  applyChapterTarget(chapter,true);
+  setSceneForChapter(chapter);
+  scrollChapterT = chapter;
+}
 let controls = null;
 
 function frame(){
@@ -1693,13 +1702,18 @@ if(TUNE){
     +   '<b id="tuneWho" style="color:#9fd3ff;font-weight:600"></b>'
     +   '<span style="opacity:.55">也可直接拖曳／滾輪</span>'
     + '</div>'
+    + '<div id="tuneQuickNav" style="position:sticky;top:-14px;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);'
+    +   'gap:5px;margin:0 -4px 9px;padding:10px 4px 8px;background:linear-gradient(#172433 78%,rgba(23,36,51,0));">'
+    +   btn('navCamera','鏡頭',1) + btn('navShip','貨輪') + btn('navWater','水面') + btn('navFinal','輸出')
+    + '</div>'
+    + '<div id="tuneCameraAnchor" style="scroll-margin-top:52px"></div>'
     + '<div id="tuneRows"></div>'
     + '<div id="tuneOut" style="white-space:pre-wrap;word-break:break-word;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
     +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製三段',1)
     +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
     + '</div>'
-    + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
+    + '<div id="tuneShipAnchor" style="height:1px;background:#33465c;margin:12px 0 9px;scroll-margin-top:52px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
     +   '<b id="shipSectionTitle" style="color:#f4c78a;font-weight:600">CARGO SHIP · SECTION 02</b>'
     +   '<span style="display:flex;align-items:center;gap:9px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer">'
@@ -1716,7 +1730,7 @@ if(TUNE){
     +   btn('shipDuplicate','複製貨輪物件',1) + btn('shipCopy','複製目前參數')
     +   btn('shipSurface','貼合地形') + btn('shipReset','重設目前貨輪')
     + '</div>'
-    + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
+    + '<div id="tuneWaterAnchor" style="height:1px;background:#33465c;margin:12px 0 9px;scroll-margin-top:52px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
     +   '<b id="waterSectionTitle" style="color:#80e4f2;font-weight:600">WATER · SECTION 02</b>'
     +   '<span style="display:flex;align-items:center;gap:9px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer">'
@@ -1733,7 +1747,7 @@ if(TUNE){
     +   btn('waterDuplicate','複製水面物件',1) + btn('waterCopy','複製目前參數')
     +   btn('waterFollow','跟隨目前貨輪') + btn('waterReset','重設目前水面')
     + '</div>'
-    + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
+    + '<div id="tuneFinalAnchor" style="height:1px;background:#33465c;margin:12px 0 9px;scroll-margin-top:52px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
     +   '<b style="color:#b7f3c4;font-weight:600">FINAL SCENE CONFIG</b>'
     +   '<span style="opacity:.55">可直接傳給製作端</span>'
@@ -1746,6 +1760,14 @@ if(TUNE){
     +     'border-radius:5px;border:1px solid #4a86bb;background:#1d3550;color:#dfe8f2;text-decoration:none">下載 JSON</a>'
     + '</div>';
   document.body.appendChild(panel);
+  const jumpPanelTo = id=>{
+    const target = panel.querySelector(id);
+    if(target) panel.scrollTo({ top:Math.max(0,target.offsetTop-50), behavior:'smooth' });
+  };
+  panel.querySelector('#navCamera').onclick = ()=>jumpPanelTo('#tuneCameraAnchor');
+  panel.querySelector('#navShip').onclick = ()=>jumpPanelTo('#tuneShipAnchor');
+  panel.querySelector('#navWater').onclick = ()=>jumpPanelTo('#tuneWaterAnchor');
+  panel.querySelector('#navFinal').onclick = ()=>jumpPanelTo('#tuneFinalAnchor');
 
   const rows = panel.querySelector('#tuneRows');
   const ui = {};
@@ -1831,8 +1853,15 @@ if(TUNE){
     if(waterIndex >= 0) activeWaterIndex = waterIndex;
     refreshObjectSelectors();
   };
-  shipSelect.addEventListener('change', ()=>{ activeShipIndex = parseInt(shipSelect.value,10) || 0; });
-  waterSelect.addEventListener('change', ()=>{ activeWaterIndex = parseInt(waterSelect.value,10) || 0; });
+  if(chapter > 0) selectObjectsForSection(chapter+1);
+  shipSelect.addEventListener('change', ()=>{
+    activeShipIndex = parseInt(shipSelect.value,10) || 0;
+    activateObjectSection(shipConfigs[activeShipIndex].section,'ship');
+  });
+  waterSelect.addEventListener('change', ()=>{
+    activeWaterIndex = parseInt(waterSelect.value,10) || 0;
+    activateObjectSection(waterConfigs[activeWaterIndex].section,'water');
+  });
   shipEnabled.checked = shipConfigs[activeShipIndex].enabled;
   waterEnabled.checked = waterConfigs[activeWaterIndex].enabled;
   shipEnabled.addEventListener('change', ()=>{
@@ -2004,6 +2033,22 @@ if(TUNE){
     }
     spinT = CHAPTERS[chapter].rot; spin.rotation.y = spinT;
   };
+  const activateObjectSection = (section,source)=>{
+    const nextChapter = section-1;
+    if(nextChapter < 0 || nextChapter >= CHAPTERS.length) return;
+    if(source !== 'ship'){
+      const shipIndex = shipConfigs.findIndex(config=>config.section === section);
+      if(shipIndex >= 0) activeShipIndex = shipIndex;
+    }
+    if(source !== 'water'){
+      const waterIndex = waterConfigs.findIndex(config=>config.section === section);
+      if(waterIndex >= 0) activeWaterIndex = waterIndex;
+    }
+    chapter = nextChapter;
+    paint(chapter);
+    restore();
+    refreshObjectSelectors();
+  };
   const jump = d=>{
     grab();
     const next = chapter+d;
@@ -2037,8 +2082,13 @@ if(TUNE){
   });
 
   /* keep sliders and the readout in step with whatever moved the camera */
+  let initialObjectSelectionDone = false;
   setInterval(()=>{
     if(!controls) return;
+    if(!initialObjectSelectionDone && shipReady && waterReady){
+      if(chapter > 0) selectObjectsForSection(chapter+1);
+      initialObjectSelectionDone = true;
+    }
     const live = {
       x:camera.position.x, y:camera.position.y, z:camera.position.z,
       tx:controls.target.x, ty:controls.target.y, tz:controls.target.z,

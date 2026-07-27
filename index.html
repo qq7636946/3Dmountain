@@ -459,11 +459,7 @@ const skyMat = new THREE.ShaderMaterial({
 
     void main(){
       vec2 p  = vUv;
-      vec2 sUv = gl_FragCoord.xy / uResolution;
-      float mouse = clamp(texture2D(tMouse, sUv).r, 0., 1.);
-
       vec2 uv = p * vec2(uAspect, 1.0);
-      uv += 0.03 * mouse;                       /* clouds bulge around the cursor */
       vec2 uvSave = uv;
 
       float time = uTime * speed;
@@ -568,11 +564,7 @@ const cloudMat = new THREE.ShaderMaterial({
       vec2 p   = vUv;
       vec2 sUv = gl_FragCoord.xy / uResolution;
 
-      vec4 mouseSample = texture2D(tMouse, sUv);
-      float mouse = clamp(mouseSample.r*.8 + mouseSample.g*.2, 0., 1.);
-
       vec2 uv = p * vec2(uAspect, 1.0) + vec2(0., .12);
-      uv += 0.05 * mouse;
       vec2 uvSave = uv;
 
       float time = uTime * speed;
@@ -777,7 +769,7 @@ const CHAPTERS = [
   { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',      cta:'MONTIS VENTURES',
     cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 }
 ];
-let chapter = 2;                 // start on "3" like the reference frame
+let chapter = 0;                 // the Expeditions hero is the initial section
 let busy = true;
 
 const el = {
@@ -899,8 +891,6 @@ document.getElementById('cta').addEventListener('click', e=>e.preventDefault());
 
 /* pointer -------------------------------------------------------------- */
 const pointer = new THREE.Vector2(0,0);
-const pointerS = new THREE.Vector2(0,0);
-let lastPointer = new THREE.Vector2(0,0);
 addEventListener('pointermove', e=>{
   pointer.set((e.clientX/innerWidth)*2 - 1, -(e.clientY/innerHeight)*2 + 1);
 });
@@ -1019,22 +1009,9 @@ function update(dt){
   }
   tickTransition(dt);
 
-  /* pointer smoothing + mouse fbo */
-  lastPointer.copy(pointerS);
-  pointerS.lerp(pointer, Math.min(1, dt*6));
-  U.uMouse.value.copy(pointerS);
-  U.uMouseVelocity.value.set((pointerS.x-lastPointer.x)/Math.max(dt,.001), (pointerS.y-lastPointer.y)/Math.max(dt,.001));
-
-  mouseMat.uniforms.tLast.value = rtB.texture;
-  renderer.setRenderTarget(rtA);
-  renderer.render(mouseScene, quadCam);
-  renderer.setRenderTarget(null);
-  U.tMouse.value = rtA.texture;
-  const swap = rtA; rtA = rtB; rtB = swap;
-
   const t = U.uTime.value;
 
-  /* camera: chapter target + parallax + idle drift */
+  /* camera: chapter target + idle drift (pointer only drives the hover light) */
   if(controls){
     controls.update();
   } else {
@@ -1043,8 +1020,8 @@ function update(dt){
   camAim.lerp(camAimT, k);
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
   camera.position.set(
-    camPos.x + pointerS.x * .9 + Math.sin(t*.11) * .35,
-    camPos.y - pointerS.y * .5 + Math.sin(t*.17) * .18,
+    camPos.x + Math.sin(t*.11) * .35,
+    camPos.y + Math.sin(t*.17) * .18,
     camPos.z + introPush
   );
   camera.lookAt(camAim.x, camAim.y + Math.sin(t*.13)*.1, camAim.z);

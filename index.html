@@ -25,6 +25,7 @@ body{
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
+body.is-free-scroll{overflow-x:hidden;overflow-y:auto;background:#eef2f5}
 canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 
 /* ---------- overlay grain / vignette ---------- */
@@ -36,8 +37,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 }
 
 /* ---------- shell ---------- */
-.ui{position:fixed;inset:0;z-index:4;pointer-events:none}
+.ui{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity .7s var(--ease)}
 .ui a,.ui button{pointer-events:auto}
+body.is-free-scroll .ui{opacity:0;pointer-events:none}
+body.is-free-scroll .ui a,body.is-free-scroll .ui button{pointer-events:none}
 
 header{
   position:absolute;top:0;left:0;right:0;
@@ -168,6 +171,56 @@ h1{
 .loader .fill{display:block;height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s linear}
 .loader .pct{font-size:.6rem;letter-spacing:.24em;color:var(--ink-dim)}
 
+/* ---------- native free-scroll content after chapter four ---------- */
+.free-scroll{
+  position:relative;z-index:6;margin-top:100vh;
+  background:#eef2f5;color:var(--ink);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .7s var(--ease);
+}
+body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:auto}
+.free-inner{width:min(1180px,calc(100% - 48px));margin:0 auto}
+.free-intro{
+  min-height:92vh;padding:clamp(90px,13vh,150px) 0;
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,.55fr);
+  align-items:end;gap:clamp(48px,8vw,120px);
+  border-bottom:1px solid var(--hair);
+}
+.free-kicker{font-size:.64rem;letter-spacing:.3em;font-weight:500;margin-bottom:28px}
+.free-intro h2{
+  max-width:850px;font-size:clamp(3rem,7vw,7.2rem);line-height:.93;
+  font-weight:200;letter-spacing:-.025em;text-transform:uppercase;
+}
+.free-intro p{font-size:clamp(1rem,1.35vw,1.25rem);line-height:1.75;color:var(--ink-dim)}
+.free-divisions{padding:clamp(90px,13vh,160px) 0}
+.free-heading{
+  display:flex;justify-content:space-between;align-items:end;gap:32px;
+  margin-bottom:clamp(52px,8vw,100px);
+}
+.free-heading h3{font-size:clamp(1.8rem,3vw,3.2rem);font-weight:300;letter-spacing:-.02em}
+.free-heading span{font-size:.62rem;letter-spacing:.28em;font-weight:500}
+.division-list{border-top:1px solid var(--hair)}
+.division-card{
+  display:grid;grid-template-columns:70px minmax(180px,.7fr) minmax(280px,1.3fr);
+  align-items:center;gap:clamp(24px,5vw,80px);
+  min-height:170px;border-bottom:1px solid var(--hair);
+  transition:background .45s var(--ease),padding .45s var(--ease);
+}
+.division-card:hover{background:rgba(47,95,138,.045);padding:0 24px}
+.division-card .num{font-size:.7rem;letter-spacing:.2em;color:var(--ink-dim)}
+.division-card h4{font-size:clamp(1.3rem,2.1vw,2rem);font-weight:300}
+.division-card p{font-size:clamp(1.05rem,1.8vw,1.55rem);line-height:1.35;text-transform:uppercase}
+.free-outro{
+  min-height:78vh;padding:clamp(100px,15vh,180px) 0;
+  display:flex;flex-direction:column;justify-content:space-between;
+  border-top:1px solid var(--hair);
+}
+.free-outro h3{
+  max-width:900px;font-size:clamp(2.8rem,6vw,6.4rem);
+  line-height:1;font-weight:200;text-transform:uppercase;
+}
+.free-footer{display:flex;justify-content:space-between;gap:30px;font-size:.62rem;letter-spacing:.24em}
+
 @media (max-width:860px){
   .rail{display:none}
   .stage{padding-left:clamp(22px,7vw,60px);align-items:flex-end;padding-bottom:26vh}
@@ -176,6 +229,13 @@ h1{
   .next{align-items:flex-start;left:clamp(22px,7vw,60px);transform:none;bottom:clamp(18px,3vh,30px)}
   .next .name{font-size:.82rem}
   .credit{display:none}
+  .free-inner{width:min(100% - 36px,680px)}
+  .free-intro{grid-template-columns:1fr;align-content:center;min-height:88vh}
+  .free-intro h2{font-size:clamp(2.8rem,15vw,5.6rem)}
+  .division-card{grid-template-columns:44px 1fr;gap:12px 20px;padding:34px 0}
+  .division-card:hover{padding:34px 14px}
+  .division-card p{grid-column:2}
+  .free-footer{flex-direction:column}
 }
 </style>
 </head>
@@ -234,6 +294,58 @@ h1{
     <div class="pct" id="loadPct">0%</div>
   </div>
 </div>
+
+<main class="free-scroll" id="freeScroll">
+  <div class="free-inner">
+    <section class="free-intro">
+      <div>
+        <div class="free-kicker">BEYOND THE FOURTH CHAPTER</div>
+        <h2>ONE MOUNTAIN.<br>FOUR DIRECTIONS.</h2>
+      </div>
+      <p>
+        Continue through the Montis divisions at your own pace.
+        From this point onward, the page uses natural free scrolling.
+      </p>
+    </section>
+
+    <section class="free-divisions">
+      <div class="free-heading">
+        <h3>Montis Divisions</h3>
+        <span>01 — 04</span>
+      </div>
+      <div class="division-list">
+        <article class="division-card">
+          <span class="num">01</span>
+          <h4>Montis Expeditions</h4>
+          <p>Climbing higher, seeing further.</p>
+        </article>
+        <article class="division-card">
+          <span class="num">02</span>
+          <h4>Montis Research</h4>
+          <p>Reading the mountain’s pulse.</p>
+        </article>
+        <article class="division-card">
+          <span class="num">03</span>
+          <h4>Montis Energy</h4>
+          <p>Harnessing height, delivering power.</p>
+        </article>
+        <article class="division-card">
+          <span class="num">04</span>
+          <h4>Montis Ventures</h4>
+          <p>Building what comes next.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="free-outro">
+      <h3>The summit is only the beginning.</h3>
+      <div class="free-footer">
+        <span>MONTIS</span>
+        <span>EXPEDITIONS · RESEARCH · ENERGY · VENTURES</span>
+      </div>
+    </section>
+  </div>
+</main>
 
 <script type="importmap">
 { "imports": {
@@ -798,14 +910,16 @@ CHAPTERS.forEach((c,i)=>{
 });
 
 function paint(i){
-  const c = CHAPTERS[i], n = CHAPTERS[(i+1)%CHAPTERS.length];
+  const c = CHAPTERS[i];
+  const isLast = i === CHAPTERS.length - 1;
+  const n = CHAPTERS[(i+1)%CHAPTERS.length];
   el.eyebrow.textContent = c.eyebrow;
   el.l1.textContent = c.l1;
   el.l2.textContent = c.l2;
   el.cta.textContent = c.cta;
   el.idx.textContent = c.idx;
-  el.nextIdx.textContent = n.idx;
-  el.nextName.textContent = n.eyebrow;
+  el.nextIdx.textContent = isLast ? '↓' : n.idx;
+  el.nextName.textContent = isLast ? 'Continue to Montis' : n.eyebrow;
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
 }
 
@@ -863,32 +977,69 @@ function tickTransition(dt){
 }
 
 /* input ---------------------------------------------------------------- */
+const freeScrollEl = document.getElementById('freeScroll');
+let freeMode = false;
+
+function enterFreeScroll(){
+  if(freeMode || busy || chapter !== CHAPTERS.length - 1) return;
+  freeMode = true;
+  document.body.classList.add('is-free-scroll');
+  requestAnimationFrame(()=>{
+    scrollTo({ top:freeScrollEl.offsetTop, behavior:'smooth' });
+  });
+}
+
+function exitFreeScroll(){
+  if(!freeMode) return;
+  scrollTo({ top:0, behavior:'auto' });
+  document.body.classList.remove('is-free-scroll');
+  freeMode = false;
+}
+
+function goNext(){
+  if(chapter === CHAPTERS.length - 1) enterFreeScroll();
+  else goTo(chapter + 1);
+}
+
 let wheelLock = 0;
 addEventListener('wheel', e=>{
   if(TUNE) return;
+  if(freeMode){
+    if(scrollY <= 2 && e.deltaY < 0) exitFreeScroll();
+    return;
+  }
   const now = performance.now();
   if(busy || now - wheelLock < 900) return;
   if(Math.abs(e.deltaY) < 14) return;
   wheelLock = now;
-  goTo(chapter + (e.deltaY > 0 ? 1 : -1));
+  if(e.deltaY > 0) goNext();
+  else goTo(chapter - 1);
 }, { passive:true });
 
 let touchY = null;
 addEventListener('touchstart', e=>{ touchY = e.touches[0].clientY; }, { passive:true });
 addEventListener('touchmove', e=>{
-  if(touchY === null || busy) return;
+  if(freeMode || touchY === null || busy) return;
   const dy = touchY - e.touches[0].clientY;
-  if(Math.abs(dy) > 48){ goTo(chapter + (dy > 0 ? 1 : -1)); touchY = null; }
+  if(Math.abs(dy) > 48){
+    if(dy > 0) goNext();
+    else goTo(chapter - 1);
+    touchY = null;
+  }
 }, { passive:true });
 
 addEventListener('keydown', e=>{
   if(TUNE) return;
-  if(e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') goTo(chapter+1);
+  if(freeMode){
+    if(scrollY <= 2 && (e.key === 'ArrowUp' || e.key === 'PageUp')) exitFreeScroll();
+    return;
+  }
+  if(e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') goNext();
   if(e.key === 'ArrowUp'   || e.key === 'PageUp')  goTo(chapter-1);
 });
 el.prev.addEventListener('click', ()=>goTo(chapter-1));
-el.next.addEventListener('click', ()=>goTo(chapter+1));
-document.getElementById('next').addEventListener('click', ()=>goTo(chapter+1));
+el.next.addEventListener('click', goNext);
+document.getElementById('next').addEventListener('click', goNext);
 document.getElementById('next').style.cursor = 'pointer';
 document.getElementById('next').style.pointerEvents = 'auto';
 document.getElementById('cta').addEventListener('click', e=>e.preventDefault());

@@ -785,21 +785,59 @@ const SHIP_DEFAULTS = { ...SHIP_CONFIG };
 let shipReady = false;
 let shipAutoPlaced = false;
 const shipMaterials = [];
+const shipConfigs = [SHIP_CONFIG];
+const shipRoots = [shipRoot];
+const shipMaterialSets = [shipMaterials];
+let activeShipIndex = 0;
 
-function applyShipConfig(){
-  shipRoot.position.set(SHIP_CONFIG.x,SHIP_CONFIG.y,SHIP_CONFIG.z);
-  shipRoot.rotation.set(SHIP_CONFIG.rx,SHIP_CONFIG.ry,SHIP_CONFIG.rz);
-  shipRoot.scale.setScalar(SHIP_CONFIG.scale);
+function applyShipConfig(index=activeShipIndex){
+  const config = shipConfigs[index];
+  const root = shipRoots[index];
+  if(!config || !root) return;
+  root.position.set(config.x,config.y,config.z);
+  root.rotation.set(config.rx,config.ry,config.rz);
+  root.scale.setScalar(config.scale);
 }
 
 function setShipOpacity(opacity){
-  const visibleOpacity = SHIP_CONFIG.enabled ? opacity : 0;
-  shipRoot.visible = shipReady && visibleOpacity > .01;
-  shipMaterials.forEach(material=>{
-    material.opacity = visibleOpacity;
-    material.transparent = visibleOpacity < .999;
-    material.depthWrite = visibleOpacity > .82;
+  shipConfigs.forEach((config,index)=>{
+    const visibleOpacity = config.enabled ? opacity : 0;
+    shipRoots[index].visible = shipReady && visibleOpacity > .01;
+    shipMaterialSets[index].forEach(material=>{
+      material.opacity = visibleOpacity;
+      material.transparent = visibleOpacity < .999;
+      material.depthWrite = visibleOpacity > .82;
+    });
   });
+}
+
+function duplicateShipObject(){
+  if(!shipReady) return null;
+  const root = shipRoots[activeShipIndex].clone(true);
+  const materials = [];
+  const materialMap = new Map();
+  root.traverse(object=>{
+    if(!object.isMesh) return;
+    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+    const cloned = sourceMaterials.map(source=>{
+      if(materialMap.has(source)) return materialMap.get(source);
+      const material = source.clone();
+      materialMap.set(source,material);
+      materials.push(material);
+      return material;
+    });
+    object.material = Array.isArray(object.material) ? cloned : cloned[0];
+  });
+  const sourceConfig = shipConfigs[activeShipIndex];
+  const config = { ...sourceConfig, enabled:true, x:sourceConfig.x+1.1, z:sourceConfig.z+1.1 };
+  scene.add(root);
+  shipRoots.push(root);
+  shipConfigs.push(config);
+  shipMaterialSets.push(materials);
+  activeShipIndex = shipConfigs.length-1;
+  applyShipConfig(activeShipIndex);
+  setShipOpacity(chapter === 1 ? 1 : 0);
+  return activeShipIndex;
 }
 
 const waterRoot = new THREE.Group();
@@ -815,6 +853,9 @@ const WATER_CONFIG = {
 const WATER_DEFAULTS = { ...WATER_CONFIG };
 let waterReady = false;
 let waterAutoPlaced = false;
+const waterConfigs = [WATER_CONFIG];
+const waterRoots = [waterRoot];
+let activeWaterIndex = 0;
 
 const waterMat = new THREE.ShaderMaterial({
   transparent:true,
@@ -875,35 +916,62 @@ const waterMat = new THREE.ShaderMaterial({
       #include <colorspace_fragment>
     }`
 });
+const waterMaterials = [waterMat];
 
-function applyWaterConfig(){
-  waterRoot.position.set(WATER_CONFIG.x,WATER_CONFIG.y,WATER_CONFIG.z);
-  waterRoot.rotation.set(WATER_CONFIG.rx,WATER_CONFIG.ry,WATER_CONFIG.rz);
-  waterRoot.scale.set(WATER_CONFIG.scaleX,WATER_CONFIG.scaleY,WATER_CONFIG.scaleZ);
-  waterMat.uniforms.uOpacity.value = WATER_CONFIG.opacity;
-  waterMat.uniforms.uWaveHeight.value = WATER_CONFIG.waveHeight;
-  waterMat.uniforms.uWaveSpeed.value = WATER_CONFIG.waveSpeed;
+function applyWaterConfig(index=activeWaterIndex){
+  const config = waterConfigs[index];
+  const root = waterRoots[index];
+  const material = waterMaterials[index];
+  if(!config || !root || !material) return;
+  root.position.set(config.x,config.y,config.z);
+  root.rotation.set(config.rx,config.ry,config.rz);
+  root.scale.set(config.scaleX,config.scaleY,config.scaleZ);
+  material.uniforms.uOpacity.value = config.opacity;
+  material.uniforms.uWaveHeight.value = config.waveHeight;
+  material.uniforms.uWaveSpeed.value = config.waveSpeed;
 }
 
 function setWaterOpacity(opacity){
-  const visibleOpacity = WATER_CONFIG.enabled ? opacity : 0;
-  waterRoot.visible = waterReady && visibleOpacity > .01;
-  waterMat.uniforms.uVisibility.value = visibleOpacity;
+  waterConfigs.forEach((config,index)=>{
+    const visibleOpacity = config.enabled ? opacity : 0;
+    waterRoots[index].visible = waterReady && visibleOpacity > .01;
+    waterMaterials[index].uniforms.uVisibility.value = visibleOpacity;
+  });
 }
 
-function syncWaterToShip(){
-  WATER_CONFIG.x = SHIP_CONFIG.x;
-  WATER_CONFIG.y = SHIP_CONFIG.y - .34;
-  WATER_CONFIG.z = SHIP_CONFIG.z;
-  WATER_CONFIG.rx = 0;
-  WATER_CONFIG.ry = SHIP_CONFIG.ry - Math.PI*.5;
-  WATER_CONFIG.rz = 0;
-  applyWaterConfig();
+function duplicateWaterObject(){
+  if(!waterReady) return null;
+  const root = waterRoots[activeWaterIndex].clone(true);
+  const material = waterMaterials[activeWaterIndex].clone();
+  material.uniforms.uTime = U.uTime;
+  root.traverse(object=>{ if(object.isMesh) object.material = material; });
+  const sourceConfig = waterConfigs[activeWaterIndex];
+  const config = { ...sourceConfig, enabled:true, x:sourceConfig.x+1.1, z:sourceConfig.z+1.1 };
+  scene.add(root);
+  waterRoots.push(root);
+  waterConfigs.push(config);
+  waterMaterials.push(material);
+  activeWaterIndex = waterConfigs.length-1;
+  applyWaterConfig(activeWaterIndex);
+  setWaterOpacity(chapter === 1 ? 1 : 0);
+  return activeWaterIndex;
+}
+
+function syncWaterToShip(waterIndex=activeWaterIndex,shipIndex=activeShipIndex){
+  const waterConfig = waterConfigs[waterIndex];
+  const shipConfig = shipConfigs[shipIndex];
+  waterConfig.x = shipConfig.x;
+  waterConfig.y = shipConfig.y - .34;
+  waterConfig.z = shipConfig.z;
+  waterConfig.rx = 0;
+  waterConfig.ry = shipConfig.ry - Math.PI*.5;
+  waterConfig.rz = 0;
+  applyWaterConfig(waterIndex);
 }
 
 function tryAutoPlaceWater(){
   if(waterAutoPlaced || !waterReady || !shipAutoPlaced) return;
-  syncWaterToShip();
+  syncWaterToShip(0,0);
   Object.assign(WATER_DEFAULTS,WATER_CONFIG);
   waterAutoPlaced = true;
 }
@@ -1032,31 +1100,32 @@ const hoverMeshes = [];
 const terrainProbe = new THREE.Raycaster();
 const down = new THREE.Vector3(0,-1,0);
 
-function snapShipToTerrain(offset=.18){
+function snapShipToTerrain(offset=.18,index=activeShipIndex){
   if(!shipReady || !hoverMeshes.length || !bvhReady) return null;
+  const config = shipConfigs[index];
   scene.updateMatrixWorld(true);
   terrainProbe.firstHitOnly = true;
-  const along = new THREE.Vector3(Math.cos(SHIP_CONFIG.ry),0,-Math.sin(SHIP_CONFIG.ry));
-  const across = new THREE.Vector3(Math.sin(SHIP_CONFIG.ry),0,Math.cos(SHIP_CONFIG.ry));
+  const along = new THREE.Vector3(Math.cos(config.ry),0,-Math.sin(config.ry));
+  const across = new THREE.Vector3(Math.sin(config.ry),0,Math.cos(config.ry));
   let highest = -Infinity;
   [-3.3,-1.65,0,1.65,3.3].forEach(lengthOffset=>{
     [-.72,0,.72].forEach(widthOffset=>{
-      const x = SHIP_CONFIG.x + (along.x*lengthOffset + across.x*widthOffset)*SHIP_CONFIG.scale;
-      const z = SHIP_CONFIG.z + (along.z*lengthOffset + across.z*widthOffset)*SHIP_CONFIG.scale;
+      const x = config.x + (along.x*lengthOffset + across.x*widthOffset)*config.scale;
+      const z = config.z + (along.z*lengthOffset + across.z*widthOffset)*config.scale;
       terrainProbe.set(new THREE.Vector3(x,80,z),down);
       const hit = terrainProbe.intersectObjects(hoverMeshes,false)[0];
       if(hit) highest = Math.max(highest,hit.point.y);
     });
   });
   if(!Number.isFinite(highest)) return null;
-  SHIP_CONFIG.y = highest + offset;
-  applyShipConfig();
-  return SHIP_CONFIG.y;
+  config.y = highest + offset;
+  applyShipConfig(index);
+  return config.y;
 }
 
 function tryAutoPlaceShip(){
   if(shipAutoPlaced || !shipReady || !mountainReady || !bvhReady) return;
-  const y = snapShipToTerrain(.18);
+  const y = snapShipToTerrain(.18,0);
   if(y === null) return;
   SHIP_DEFAULTS.y = y;
   shipAutoPlaced = true;
@@ -1603,10 +1672,15 @@ if(TUNE){
     +     '<input id="shipEnabled" type="checkbox" style="accent-color:#d39557"> 顯示貨輪</label>'
     +     '<span id="shipStatus" style="opacity:.55">loading</span></span>'
     + '</div>'
+    + '<div style="display:grid;grid-template-columns:112px 1fr;gap:8px;align-items:center;margin:5px 0 7px">'
+    +   '<span style="opacity:.72">目前物件</span><select id="shipSelect" style="width:100%;font:inherit;color:#f4c78a;'
+    +     'background:#16222f;border:1px solid #425168;border-radius:4px;padding:4px"></select>'
+    + '</div>'
     + '<div id="shipRows"></div>'
     + '<div id="shipOut" style="white-space:pre-wrap;word-break:break-word;color:#f4c78a;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('shipCopy','複製船參數',1) + btn('shipSurface','貼合地形') + btn('shipReset','重設船')
+    +   btn('shipDuplicate','複製貨輪物件',1) + btn('shipCopy','複製目前參數')
+    +   btn('shipSurface','貼合地形') + btn('shipReset','重設目前貨輪')
     + '</div>'
     + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
@@ -1615,10 +1689,15 @@ if(TUNE){
     +     '<input id="waterEnabled" type="checkbox" style="accent-color:#43c7d8"> 顯示水面</label>'
     +     '<span id="waterStatus" style="opacity:.55">loading</span></span>'
     + '</div>'
+    + '<div style="display:grid;grid-template-columns:112px 1fr;gap:8px;align-items:center;margin:5px 0 7px">'
+    +   '<span style="opacity:.72">目前物件</span><select id="waterSelect" style="width:100%;font:inherit;color:#80e4f2;'
+    +     'background:#16222f;border:1px solid #425168;border-radius:4px;padding:4px"></select>'
+    + '</div>'
     + '<div id="waterRows"></div>'
     + '<div id="waterOut" style="white-space:pre-wrap;word-break:break-word;color:#80e4f2;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('waterCopy','複製水參數',1) + btn('waterFollow','跟隨貨輪') + btn('waterReset','重設水面')
+    +   btn('waterDuplicate','複製水面物件',1) + btn('waterCopy','複製目前參數')
+    +   btn('waterFollow','跟隨目前貨輪') + btn('waterReset','重設目前水面')
     + '</div>'
     + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
@@ -1664,8 +1743,8 @@ if(TUNE){
     inp.addEventListener('pointerdown', ()=>shipUi[sl.k].busy = true);
     addEventListener('pointerup', ()=>shipUi[sl.k].busy = false);
     inp.addEventListener('input', ()=>{
-      SHIP_CONFIG[sl.k] = parseFloat(inp.value);
-      applyShipConfig();
+      shipConfigs[activeShipIndex][sl.k] = parseFloat(inp.value);
+      applyShipConfig(activeShipIndex);
       setShipOpacity(1);
     });
   });
@@ -1684,22 +1763,37 @@ if(TUNE){
     inp.addEventListener('pointerdown', ()=>waterUi[sl.k].busy = true);
     addEventListener('pointerup', ()=>waterUi[sl.k].busy = false);
     inp.addEventListener('input', ()=>{
-      WATER_CONFIG[sl.k] = parseFloat(inp.value);
-      applyWaterConfig();
+      waterConfigs[activeWaterIndex][sl.k] = parseFloat(inp.value);
+      applyWaterConfig(activeWaterIndex);
       setWaterOpacity(1);
     });
   });
 
+  const shipSelect = panel.querySelector('#shipSelect');
+  const waterSelect = panel.querySelector('#waterSelect');
   const shipEnabled = panel.querySelector('#shipEnabled');
   const waterEnabled = panel.querySelector('#waterEnabled');
-  shipEnabled.checked = SHIP_CONFIG.enabled;
-  waterEnabled.checked = WATER_CONFIG.enabled;
+  const refreshObjectSelectors = ()=>{
+    if(shipSelect.options.length !== shipConfigs.length){
+      shipSelect.innerHTML = shipConfigs.map((_,index)=>'<option value="'+index+'">Cargo Ship '+String(index+1).padStart(2,'0')+'</option>').join('');
+    }
+    if(waterSelect.options.length !== waterConfigs.length){
+      waterSelect.innerHTML = waterConfigs.map((_,index)=>'<option value="'+index+'">Water Surface '+String(index+1).padStart(2,'0')+'</option>').join('');
+    }
+    shipSelect.value = activeShipIndex;
+    waterSelect.value = activeWaterIndex;
+  };
+  refreshObjectSelectors();
+  shipSelect.addEventListener('change', ()=>{ activeShipIndex = parseInt(shipSelect.value,10) || 0; });
+  waterSelect.addEventListener('change', ()=>{ activeWaterIndex = parseInt(waterSelect.value,10) || 0; });
+  shipEnabled.checked = shipConfigs[activeShipIndex].enabled;
+  waterEnabled.checked = waterConfigs[activeWaterIndex].enabled;
   shipEnabled.addEventListener('change', ()=>{
-    SHIP_CONFIG.enabled = shipEnabled.checked;
+    shipConfigs[activeShipIndex].enabled = shipEnabled.checked;
     setShipOpacity(chapter === 1 ? 1 : 0);
   });
   waterEnabled.addEventListener('change', ()=>{
-    WATER_CONFIG.enabled = waterEnabled.checked;
+    waterConfigs[activeWaterIndex].enabled = waterEnabled.checked;
     setWaterOpacity(chapter === 1 ? 1 : 0);
   });
 
@@ -1745,26 +1839,29 @@ if(TUNE){
     area.remove();
   };
   const copyText = text=>{
-    if(!navigator.clipboard?.writeText){ fallbackCopy(text);return Promise.resolve(); }
+    fallbackCopy(text);
+    if(!navigator.clipboard?.writeText) return Promise.resolve();
     const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error('clipboard timeout')),450));
-    return Promise.race([navigator.clipboard.writeText(text),timeout]).catch(()=>fallbackCopy(text));
+    return Promise.race([navigator.clipboard.writeText(text),timeout]).catch(()=>{});
   };
   const shipFmt = ()=>{
     const n = x=>(+x).toFixed(2);
+    const config = shipConfigs[activeShipIndex];
     return 'const SHIP_CONFIG = {\n'
-      + '  enabled:'+SHIP_CONFIG.enabled+',\n'
-      + '  x:'+n(SHIP_CONFIG.x)+', y:'+n(SHIP_CONFIG.y)+', z:'+n(SHIP_CONFIG.z)+',\n'
-      + '  rx:'+n(SHIP_CONFIG.rx)+', ry:'+n(SHIP_CONFIG.ry)+', rz:'+n(SHIP_CONFIG.rz)+',\n'
-      + '  scale:'+n(SHIP_CONFIG.scale)+'\n};';
+      + '  enabled:'+config.enabled+',\n'
+      + '  x:'+n(config.x)+', y:'+n(config.y)+', z:'+n(config.z)+',\n'
+      + '  rx:'+n(config.rx)+', ry:'+n(config.ry)+', rz:'+n(config.rz)+',\n'
+      + '  scale:'+n(config.scale)+'\n};';
   };
   const waterFmt = ()=>{
     const n = x=>(+x).toFixed(2);
+    const config = waterConfigs[activeWaterIndex];
     return 'const WATER_CONFIG = {\n'
-      + '  enabled:'+WATER_CONFIG.enabled+',\n'
-      + '  x:'+n(WATER_CONFIG.x)+', y:'+n(WATER_CONFIG.y)+', z:'+n(WATER_CONFIG.z)+',\n'
-      + '  rx:'+n(WATER_CONFIG.rx)+', ry:'+n(WATER_CONFIG.ry)+', rz:'+n(WATER_CONFIG.rz)+',\n'
-      + '  scaleX:'+n(WATER_CONFIG.scaleX)+', scaleY:'+n(WATER_CONFIG.scaleY)+', scaleZ:'+n(WATER_CONFIG.scaleZ)+',\n'
-      + '  opacity:'+n(WATER_CONFIG.opacity)+', waveHeight:'+n(WATER_CONFIG.waveHeight)+', waveSpeed:'+n(WATER_CONFIG.waveSpeed)+'\n};';
+      + '  enabled:'+config.enabled+',\n'
+      + '  x:'+n(config.x)+', y:'+n(config.y)+', z:'+n(config.z)+',\n'
+      + '  rx:'+n(config.rx)+', ry:'+n(config.ry)+', rz:'+n(config.rz)+',\n'
+      + '  scaleX:'+n(config.scaleX)+', scaleY:'+n(config.scaleY)+', scaleZ:'+n(config.scaleZ)+',\n'
+      + '  opacity:'+n(config.opacity)+', waveHeight:'+n(config.waveHeight)+', waveSpeed:'+n(config.waveSpeed)+'\n};';
   };
   const finalSceneData = ()=>{
     const isResearch = chapter === 1 && controls;
@@ -1776,7 +1873,7 @@ if(TUNE){
       Object.entries(config).map(([key,value])=>[key,typeof value === 'number' ? rounded(value) : value])
     );
     return {
-      formatVersion:1,
+      formatVersion:2,
       section:2,
       chapter:'Montis Research',
       camera:{
@@ -1785,8 +1882,8 @@ if(TUNE){
         fov:rounded(isResearch ? camera.fov : (c.fov || 40)),
         mountainRotation:rounded(isResearch ? spinT : c.rot)
       },
-      cargoShip:cleanConfig(SHIP_CONFIG),
-      water:cleanConfig(WATER_CONFIG)
+      cargoShips:shipConfigs.map(cleanConfig),
+      waters:waterConfigs.map(cleanConfig)
     };
   };
   const finalFmt = ()=>JSON.stringify(finalSceneData(),null,2);
@@ -1799,6 +1896,11 @@ if(TUNE){
     copyText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
       .then(()=>flash(e.target,'已複製三段 ✓'));
   };
+  panel.querySelector('#shipDuplicate').onclick = e=>{
+    const index = duplicateShipObject();
+    refreshObjectSelectors();
+    flash(e.target,index === null ? '貨輪尚未載入' : '已建立 Cargo Ship '+String(index+1).padStart(2,'0')+' ✓');
+  };
   panel.querySelector('#shipCopy').onclick = e=>{
     copyText(shipFmt()).then(()=>flash(e.target,'已複製船參數 ✓'));
   };
@@ -1808,10 +1910,15 @@ if(TUNE){
     flash(e.target,y === null ? '找不到地形' : '已貼合地形 ✓');
   };
   panel.querySelector('#shipReset').onclick = e=>{
-    Object.assign(SHIP_CONFIG,SHIP_DEFAULTS);
-    applyShipConfig();
+    Object.assign(shipConfigs[activeShipIndex],SHIP_DEFAULTS);
+    applyShipConfig(activeShipIndex);
     setShipOpacity(1);
     flash(e.target,'已重設 ✓');
+  };
+  panel.querySelector('#waterDuplicate').onclick = e=>{
+    const index = duplicateWaterObject();
+    refreshObjectSelectors();
+    flash(e.target,index === null ? '水面尚未載入' : '已建立 Water Surface '+String(index+1).padStart(2,'0')+' ✓');
   };
   panel.querySelector('#waterCopy').onclick = e=>{
     copyText(waterFmt()).then(()=>flash(e.target,'已複製水參數 ✓'));
@@ -1822,8 +1929,8 @@ if(TUNE){
     flash(e.target,'已移到貨輪下方 ✓');
   };
   panel.querySelector('#waterReset').onclick = e=>{
-    Object.assign(WATER_CONFIG,WATER_DEFAULTS);
-    applyWaterConfig();
+    Object.assign(waterConfigs[activeWaterIndex],WATER_DEFAULTS);
+    applyWaterConfig(activeWaterIndex);
     setWaterOpacity(1);
     flash(e.target,'已重設 ✓');
   };
@@ -1880,6 +1987,9 @@ if(TUNE){
       tx:controls.target.x, ty:controls.target.y, tz:controls.target.z,
       rot:spinT, fov:camera.fov, dist:camera.position.distanceTo(controls.target)
     };
+    const shipConfig = shipConfigs[activeShipIndex];
+    const waterConfig = waterConfigs[activeWaterIndex];
+    refreshObjectSelectors();
     SLIDERS.forEach(sl=>{
       const u = ui[sl.k];
       if(u.busy) return;
@@ -1889,22 +1999,22 @@ if(TUNE){
     SHIP_SLIDERS.forEach(sl=>{
       const u = shipUi[sl.k];
       if(u.busy) return;
-      u.input.value = SHIP_CONFIG[sl.k];
-      u.val.textContent = SHIP_CONFIG[sl.k].toFixed(sl.step < .05 ? 2 : 1);
+      u.input.value = shipConfig[sl.k];
+      u.val.textContent = shipConfig[sl.k].toFixed(sl.step < .05 ? 2 : 1);
     });
     WATER_SLIDERS.forEach(sl=>{
       const u = waterUi[sl.k];
       if(u.busy) return;
-      u.input.value = WATER_CONFIG[sl.k];
-      u.val.textContent = WATER_CONFIG[sl.k].toFixed(sl.step < .05 ? 2 : 1);
+      u.input.value = waterConfig[sl.k];
+      u.val.textContent = waterConfig[sl.k].toFixed(sl.step < .05 ? 2 : 1);
     });
-    shipEnabled.checked = SHIP_CONFIG.enabled;
-    waterEnabled.checked = WATER_CONFIG.enabled;
-    shipRows.style.opacity = SHIP_CONFIG.enabled ? 1 : .35;
-    waterRows.style.opacity = WATER_CONFIG.enabled ? 1 : .35;
-    panel.querySelector('#shipStatus').textContent = shipReady ? (SHIP_CONFIG.enabled ? 'ready' : 'off') : 'loading';
+    shipEnabled.checked = shipConfig.enabled;
+    waterEnabled.checked = waterConfig.enabled;
+    shipRows.style.opacity = shipConfig.enabled ? 1 : .35;
+    waterRows.style.opacity = waterConfig.enabled ? 1 : .35;
+    panel.querySelector('#shipStatus').textContent = shipReady ? ((shipConfig.enabled ? 'ready' : 'off')+' · '+(activeShipIndex+1)+'/'+shipConfigs.length) : 'loading';
     panel.querySelector('#shipOut').textContent = shipFmt();
-    panel.querySelector('#waterStatus').textContent = waterReady ? (WATER_CONFIG.enabled ? 'ready' : 'off') : 'loading';
+    panel.querySelector('#waterStatus').textContent = waterReady ? ((waterConfig.enabled ? 'ready' : 'off')+' · '+(activeWaterIndex+1)+'/'+waterConfigs.length) : 'loading';
     panel.querySelector('#waterOut').textContent = waterFmt();
     panel.querySelector('#finalOut').textContent = finalFmt();
     finalDownload.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(finalFmt());
@@ -1920,8 +2030,9 @@ if(TUNE){
 /* expose for debugging / screenshots */
 window.viz = {
   renderer, scene, camera, U, skyScene, fogScene, quadCam, spin,
-  shipRoot, SHIP_CONFIG, waterRoot, WATER_CONFIG, waterMat,
-  applyShipConfig, snapShipToTerrain, applyWaterConfig, syncWaterToShip, CHAPTERS, mountainMat, update,
+  shipRoot, SHIP_CONFIG, shipRoots, shipConfigs, waterRoot, WATER_CONFIG, waterRoots, waterConfigs, waterMat,
+  applyShipConfig, duplicateShipObject, snapShipToTerrain,
+  applyWaterConfig, duplicateWaterObject, syncWaterToShip, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){

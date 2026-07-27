@@ -800,6 +800,110 @@ function setShipOpacity(opacity){
   });
 }
 
+const waterRoot = new THREE.Group();
+waterRoot.visible = false;
+scene.add(waterRoot);
+const WATER_CONFIG = {
+  x:-7.8, y:5.4, z:0.0,
+  rx:0.0, ry:0.0, rz:0.0,
+  scaleX:.44, scaleY:.34, scaleZ:1.45,
+  opacity:.72, waveHeight:.70, waveSpeed:.55
+};
+const WATER_DEFAULTS = { ...WATER_CONFIG };
+let waterReady = false;
+let waterAutoPlaced = false;
+
+const waterMat = new THREE.ShaderMaterial({
+  transparent:true,
+  depthWrite:false,
+  depthTest:true,
+  side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime,
+    uVisibility:{ value:0 },
+    uOpacity:{ value:WATER_CONFIG.opacity },
+    uWaveHeight:{ value:WATER_CONFIG.waveHeight },
+    uWaveSpeed:{ value:WATER_CONFIG.waveSpeed },
+    uDeep:{ value:new THREE.Color('#2f6688') },
+    uMid:{ value:new THREE.Color('#72abc3') },
+    uLight:{ value:new THREE.Color('#e8fbff') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader:/* glsl */`
+    uniform float uTime, uWaveHeight, uWaveSpeed;
+    varying vec3 vWorld, vNormal, vLocal;
+    varying float vRipple;
+    void main(){
+      vec3 p = position;
+      float t = uTime * uWaveSpeed;
+      float a = sin(p.x*.027 + t*1.35 + cos(p.z*.018));
+      float b = sin(p.z*.041 - t*.92 + p.x*.012);
+      float c = sin((p.x+p.z)*.019 + t*.68);
+      float ripple = a*.48 + b*.32 + c*.20;
+      p.y += ripple * uWaveHeight * 24.0;
+      vec4 world = modelMatrix * vec4(p,1.0);
+      vWorld = world.xyz;
+      vNormal = normalize(mat3(modelMatrix) * normal);
+      vLocal = position;
+      vRipple = ripple;
+      gl_Position = projectionMatrix * viewMatrix * world;
+    }`,
+  fragmentShader:/* glsl */`
+    precision highp float;
+    uniform float uTime, uVisibility, uOpacity, uWaveSpeed;
+    uniform vec3 uDeep, uMid, uLight, uSunDir;
+    varying vec3 vWorld, vNormal, vLocal;
+    varying float vRipple;
+    void main(){
+      vec3 n = normalize(vNormal);
+      vec3 viewDir = normalize(cameraPosition-vWorld);
+      float facing = clamp(dot(n,viewDir),0.0,1.0);
+      float fresnel = pow(1.0-facing,2.4);
+      float diffuse = clamp(dot(n,uSunDir)*.5+.5,0.0,1.0);
+      float flow = .5+.5*sin(vWorld.x*1.7-vWorld.z*.72+uTime*uWaveSpeed*2.2+vRipple*2.0);
+      vec3 color = mix(uDeep,uMid,.30+.48*diffuse);
+      color = mix(color,uLight,clamp(fresnel*.72+flow*.12,0.0,.88));
+      float sparkle = pow(max(dot(reflect(-uSunDir,n),viewDir),0.0),30.0);
+      color += uLight*sparkle*.62;
+      float edge = max(abs(vLocal.x)/428.7,abs(vLocal.z)/421.5);
+      float edgeFade = 1.0-smoothstep(.73,1.0,edge);
+      float alpha = uOpacity*uVisibility*(.78+.18*fresnel)*edgeFade;
+      gl_FragColor = vec4(color,clamp(alpha,0.0,1.0));
+      #include <colorspace_fragment>
+    }`
+});
+
+function applyWaterConfig(){
+  waterRoot.position.set(WATER_CONFIG.x,WATER_CONFIG.y,WATER_CONFIG.z);
+  waterRoot.rotation.set(WATER_CONFIG.rx,WATER_CONFIG.ry,WATER_CONFIG.rz);
+  waterRoot.scale.set(WATER_CONFIG.scaleX,WATER_CONFIG.scaleY,WATER_CONFIG.scaleZ);
+  waterMat.uniforms.uOpacity.value = WATER_CONFIG.opacity;
+  waterMat.uniforms.uWaveHeight.value = WATER_CONFIG.waveHeight;
+  waterMat.uniforms.uWaveSpeed.value = WATER_CONFIG.waveSpeed;
+}
+
+function setWaterOpacity(opacity){
+  waterRoot.visible = waterReady && opacity > .01;
+  waterMat.uniforms.uVisibility.value = opacity;
+}
+
+function syncWaterToShip(){
+  WATER_CONFIG.x = SHIP_CONFIG.x;
+  WATER_CONFIG.y = SHIP_CONFIG.y - .34;
+  WATER_CONFIG.z = SHIP_CONFIG.z;
+  WATER_CONFIG.rx = 0;
+  WATER_CONFIG.ry = SHIP_CONFIG.ry - Math.PI*.5;
+  WATER_CONFIG.rz = 0;
+  applyWaterConfig();
+}
+
+function tryAutoPlaceWater(){
+  if(waterAutoPlaced || !waterReady || !shipAutoPlaced) return;
+  syncWaterToShip();
+  Object.assign(WATER_DEFAULTS,WATER_CONFIG);
+  waterAutoPlaced = true;
+}
+
 const mountainMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:true, side:THREE.FrontSide,
   uniforms:{
@@ -952,6 +1056,7 @@ function tryAutoPlaceShip(){
   if(y === null) return;
   SHIP_DEFAULTS.y = y;
   shipAutoPlaced = true;
+  tryAutoPlaceWater();
 }
 
 addEventListener('pointerleave', ()=>{ pointerInside = false; });
@@ -965,7 +1070,7 @@ const CHAPTERS = [
     cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 },
   { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
     cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
-    credit:'Terrain: artfromheath · Cargo ship: hungry_drifter · CC BY 4.0' },
+    credit:'Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · CC BY 4.0' },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
     cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
     scene:'image', credit:'MONTIS — ARCTIC PASSAGE' }
@@ -1020,6 +1125,7 @@ function setSceneForChapter(i){
   el.canvas.style.opacity = showImage ? 0 : 1;
   modelRoot.visible = !showImage;
   setShipOpacity(i === 1 ? 1 : 0);
+  setWaterOpacity(i === 1 ? 1 : 0);
 }
 
 /* camera targets ------------------------------------------------------- */
@@ -1117,6 +1223,7 @@ function updateScrollTimeline(force=false){
   modelRoot.visible = imageMix < .998;
   const shipMix = smoothstep(.23,.31,p)*(1-smoothstep(.50,.58,p));
   setShipOpacity(shipMix);
+  setWaterOpacity(shipMix);
 
   const nextChapter = p < .22 ? 0 : p < .62 ? 1 : 2;
   if(force || nextChapter !== chapter){
@@ -1186,10 +1293,11 @@ manager.onProgress = (url, loaded, total)=>{
 let mountainReady = false;
 let imageSettled = false;
 let shipSettled = false;
+let waterSettled = false;
 let introStarted = false;
 
 function tryStartIntro(){
-  if(introStarted || !mountainReady || !imageSettled || !shipSettled) return;
+  if(introStarted || !mountainReady || !imageSettled || !shipSettled || !waterSettled) return;
   introStarted = true;
   setSceneForChapter(chapter);
   setTimeout(()=>{
@@ -1222,6 +1330,7 @@ mountainMat.uniforms.tNormal.value = nrmTex;
 
 const gltfLoader = new GLTFLoader(manager);
 const SHIP_MODEL = 'cargo_ship_runtime/';
+const WATER_MODEL = 'river_water_runtime/';
 
 gltfLoader.load(SHIP_MODEL + 'scene.gltf', gltf=>{
   const ship = gltf.scene;
@@ -1245,6 +1354,7 @@ gltfLoader.load(SHIP_MODEL + 'scene.gltf', gltf=>{
     });
     object.material = Array.isArray(object.material) ? cloned : cloned[0];
     object.frustumCulled = false;
+    object.renderOrder = 2;
   });
 
   const box = new THREE.Box3().setFromObject(ship);
@@ -1266,6 +1376,36 @@ gltfLoader.load(SHIP_MODEL + 'scene.gltf', gltf=>{
 },undefined,error=>{
   shipSettled = true;
   console.warn('cargo ship unavailable',error);
+  tryStartIntro();
+});
+
+gltfLoader.load(WATER_MODEL + 'scene.gltf', gltf=>{
+  const water = gltf.scene;
+  water.traverse(object=>{
+    if(!object.isMesh) return;
+    object.material = waterMat;
+    object.frustumCulled = false;
+    object.renderOrder = 1;
+  });
+  const box = new THREE.Box3().setFromObject(water);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);box.getCenter(center);
+  water.position.set(-center.x,-center.y,-center.z);
+  const holder = new THREE.Group();
+  holder.add(water);
+  holder.scale.setScalar(14/Math.max(size.x,size.z));
+  waterRoot.add(holder);
+  applyWaterConfig();
+  waterReady = true;
+  waterSettled = true;
+  setWaterOpacity(0);
+  window.__water = { size:size.toArray(), normalizedFootprint:14 };
+  tryAutoPlaceWater();
+  tryStartIntro();
+},undefined,error=>{
+  waterSettled = true;
+  console.warn('water surface unavailable',error);
   tryStartIntro();
 });
 
@@ -1417,11 +1557,26 @@ if(TUNE){
     { k:'rz',    label:'Rotate Z',     min:-3.2, max:3.2,  step:.01 },
     { k:'scale', label:'Ship scale',   min:.2,   max:3.0,  step:.02 }
   ];
+  const WATER_SLIDERS = [
+    { k:'x',          label:'Water X',        min:-30,  max:15,  step:.1  },
+    { k:'y',          label:'Water Y',        min:-2,   max:18,  step:.1  },
+    { k:'z',          label:'Water Z',        min:-24,  max:24,  step:.1  },
+    { k:'rx',         label:'Rotate X',       min:-3.2, max:3.2, step:.01 },
+    { k:'ry',         label:'Rotate Y',       min:-3.2, max:3.2, step:.01 },
+    { k:'rz',         label:'Rotate Z',       min:-3.2, max:3.2, step:.01 },
+    { k:'scaleX',     label:'寬度 scale X',    min:.05,  max:2.0, step:.01 },
+    { k:'scaleY',     label:'厚度 scale Y',    min:.02,  max:1.5, step:.01 },
+    { k:'scaleZ',     label:'長度 scale Z',    min:.10,  max:3.0, step:.01 },
+    { k:'opacity',    label:'透明度',           min:.05,  max:1.0, step:.01 },
+    { k:'waveHeight', label:'波浪高度',         min:0,    max:3.0, step:.02 },
+    { k:'waveSpeed',  label:'波浪速度',         min:0,    max:3.0, step:.02 }
+  ];
 
   const panel = document.createElement('div');
   panel.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:20;background:rgba(16,24,34,.92);'
     + 'color:#dfe8f2;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;border-radius:9px;'
-    + 'width:420px;max-height:calc(100vh - 28px);overflow:auto;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
+    + 'width:440px;max-width:calc(100vw - 28px);max-height:calc(100vh - 28px);overflow-y:auto;overflow-x:hidden;'
+    + 'box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
 
   const btn = (id,txt,primary)=>'<button id="'+id+'" style="font:inherit;cursor:pointer;padding:5px 9px;border-radius:5px;'
     + 'border:1px solid '+(primary?'#4a86bb':'#33465c')+';background:'+(primary?'#1d3550':'#16222f')+';color:#dfe8f2">'+txt+'</button>';
@@ -1432,7 +1587,7 @@ if(TUNE){
     +   '<span style="opacity:.55">也可直接拖曳／滾輪</span>'
     + '</div>'
     + '<div id="tuneRows"></div>'
-    + '<div id="tuneOut" style="white-space:pre;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div id="tuneOut" style="white-space:pre-wrap;word-break:break-word;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
     +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製三段',1)
     +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
@@ -1443,9 +1598,19 @@ if(TUNE){
     +   '<span id="shipStatus" style="opacity:.55">loading</span>'
     + '</div>'
     + '<div id="shipRows"></div>'
-    + '<div id="shipOut" style="white-space:pre;color:#f4c78a;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div id="shipOut" style="white-space:pre-wrap;word-break:break-word;color:#f4c78a;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
     +   btn('shipCopy','複製船參數',1) + btn('shipSurface','貼合地形') + btn('shipReset','重設船')
+    + '</div>'
+    + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +   '<b style="color:#80e4f2;font-weight:600">WATER · SECTION 02</b>'
+    +   '<span id="waterStatus" style="opacity:.55">loading</span>'
+    + '</div>'
+    + '<div id="waterRows"></div>'
+    + '<div id="waterOut" style="white-space:pre-wrap;word-break:break-word;color:#80e4f2;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   btn('waterCopy','複製水參數',1) + btn('waterFollow','跟隨貨輪') + btn('waterReset','重設水面')
     + '</div>';
   document.body.appendChild(panel);
 
@@ -1482,6 +1647,26 @@ if(TUNE){
       SHIP_CONFIG[sl.k] = parseFloat(inp.value);
       applyShipConfig();
       setShipOpacity(1);
+    });
+  });
+
+  const waterRows = panel.querySelector('#waterRows');
+  const waterUi = {};
+  WATER_SLIDERS.forEach(sl=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:112px 1fr 46px;gap:8px;align-items:center;margin:2px 0';
+    row.innerHTML = '<span style="opacity:.72">'+sl.label+'</span>'
+      + '<input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" style="width:100%;accent-color:#43c7d8">'
+      + '<span style="text-align:right;color:#80e4f2"></span>';
+    waterRows.appendChild(row);
+    const inp = row.querySelector('input');
+    waterUi[sl.k] = { input:inp, val:row.querySelector('span:last-child'), spec:sl, busy:false };
+    inp.addEventListener('pointerdown', ()=>waterUi[sl.k].busy = true);
+    addEventListener('pointerup', ()=>waterUi[sl.k].busy = false);
+    inp.addEventListener('input', ()=>{
+      WATER_CONFIG[sl.k] = parseFloat(inp.value);
+      applyWaterConfig();
+      setWaterOpacity(1);
     });
   });
 
@@ -1524,6 +1709,14 @@ if(TUNE){
       + '  rx:'+n(SHIP_CONFIG.rx)+', ry:'+n(SHIP_CONFIG.ry)+', rz:'+n(SHIP_CONFIG.rz)+',\n'
       + '  scale:'+n(SHIP_CONFIG.scale)+'\n};';
   };
+  const waterFmt = ()=>{
+    const n = x=>(+x).toFixed(2);
+    return 'const WATER_CONFIG = {\n'
+      + '  x:'+n(WATER_CONFIG.x)+', y:'+n(WATER_CONFIG.y)+', z:'+n(WATER_CONFIG.z)+',\n'
+      + '  rx:'+n(WATER_CONFIG.rx)+', ry:'+n(WATER_CONFIG.ry)+', rz:'+n(WATER_CONFIG.rz)+',\n'
+      + '  scaleX:'+n(WATER_CONFIG.scaleX)+', scaleY:'+n(WATER_CONFIG.scaleY)+', scaleZ:'+n(WATER_CONFIG.scaleZ)+',\n'
+      + '  opacity:'+n(WATER_CONFIG.opacity)+', waveHeight:'+n(WATER_CONFIG.waveHeight)+', waveSpeed:'+n(WATER_CONFIG.waveSpeed)+'\n};';
+  };
 
   panel.querySelector('#tuneCopy').onclick = e=>{
     grab(); navigator.clipboard.writeText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
@@ -1545,6 +1738,20 @@ if(TUNE){
     Object.assign(SHIP_CONFIG,SHIP_DEFAULTS);
     applyShipConfig();
     setShipOpacity(1);
+    flash(e.target,'已重設 ✓');
+  };
+  panel.querySelector('#waterCopy').onclick = e=>{
+    navigator.clipboard.writeText(waterFmt()).then(()=>flash(e.target,'已複製水參數 ✓'));
+  };
+  panel.querySelector('#waterFollow').onclick = e=>{
+    syncWaterToShip();
+    setWaterOpacity(1);
+    flash(e.target,'已移到貨輪下方 ✓');
+  };
+  panel.querySelector('#waterReset').onclick = e=>{
+    Object.assign(WATER_CONFIG,WATER_DEFAULTS);
+    applyWaterConfig();
+    setWaterOpacity(1);
     flash(e.target,'已重設 ✓');
   };
   const restore = ()=>{
@@ -1607,8 +1814,16 @@ if(TUNE){
       u.input.value = SHIP_CONFIG[sl.k];
       u.val.textContent = SHIP_CONFIG[sl.k].toFixed(sl.step < .05 ? 2 : 1);
     });
+    WATER_SLIDERS.forEach(sl=>{
+      const u = waterUi[sl.k];
+      if(u.busy) return;
+      u.input.value = WATER_CONFIG[sl.k];
+      u.val.textContent = WATER_CONFIG[sl.k].toFixed(sl.step < .05 ? 2 : 1);
+    });
     panel.querySelector('#shipStatus').textContent = shipReady ? 'ready' : 'loading';
     panel.querySelector('#shipOut').textContent = shipFmt();
+    panel.querySelector('#waterStatus').textContent = waterReady ? 'ready' : 'loading';
+    panel.querySelector('#waterOut').textContent = waterFmt();
     panel.querySelector('#tuneWho').textContent = '第 ' + (chapter+1) + ' 段 · ' + CHAPTERS[chapter].eyebrow;
     const n = x=>(+x).toFixed(1);
     panel.querySelector('#tuneOut').textContent =
@@ -1620,8 +1835,9 @@ if(TUNE){
 
 /* expose for debugging / screenshots */
 window.viz = {
-  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, shipRoot, SHIP_CONFIG,
-  applyShipConfig, snapShipToTerrain, CHAPTERS, mountainMat, update,
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin,
+  shipRoot, SHIP_CONFIG, waterRoot, WATER_CONFIG, waterMat,
+  applyShipConfig, snapShipToTerrain, applyWaterConfig, syncWaterToShip, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){

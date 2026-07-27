@@ -410,6 +410,12 @@ const skyScene = new THREE.Scene();
 const fogScene = new THREE.Scene();
 const mouseScene = new THREE.Scene();
 
+/* PBR lights are only used by the cargo ship; the mountain has its own shader. */
+const shipFill = new THREE.HemisphereLight(0xddeeff, 0x5d6670, 2.15);
+const shipSun = new THREE.DirectionalLight(0xffffff, 3.2);
+shipSun.position.set(-18,32,14);
+scene.add(shipFill,shipSun);
+
 /* shared uniforms ------------------------------------------------------ */
 const U = {
   uTime          : { value: 0 },
@@ -766,6 +772,34 @@ scene.add(modelRoot);
 const spin = new THREE.Group();
 modelRoot.add(spin);
 
+const shipRoot = new THREE.Group();
+shipRoot.visible = false;
+scene.add(shipRoot);
+const SHIP_CONFIG = {
+  x:-7.8, y:3.6, z:0.0,
+  rx:0.0, ry:1.57, rz:0.0,
+  scale:.82
+};
+const SHIP_DEFAULTS = { ...SHIP_CONFIG };
+let shipReady = false;
+let shipAutoPlaced = false;
+const shipMaterials = [];
+
+function applyShipConfig(){
+  shipRoot.position.set(SHIP_CONFIG.x,SHIP_CONFIG.y,SHIP_CONFIG.z);
+  shipRoot.rotation.set(SHIP_CONFIG.rx,SHIP_CONFIG.ry,SHIP_CONFIG.rz);
+  shipRoot.scale.setScalar(SHIP_CONFIG.scale);
+}
+
+function setShipOpacity(opacity){
+  shipRoot.visible = shipReady && opacity > .01;
+  shipMaterials.forEach(material=>{
+    material.opacity = opacity;
+    material.transparent = opacity < .999;
+    material.depthWrite = opacity > .82;
+  });
+}
+
 const mountainMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:true, side:THREE.FrontSide,
   uniforms:{
@@ -887,6 +921,39 @@ raycaster.firstHitOnly = true;
 const hoverTarget = new THREE.Vector3(0,-999,0);
 let hoverAim = 0, bvhReady = false, pointerInside = true;
 const hoverMeshes = [];
+const terrainProbe = new THREE.Raycaster();
+const down = new THREE.Vector3(0,-1,0);
+
+function snapShipToTerrain(offset=.18){
+  if(!shipReady || !hoverMeshes.length || !bvhReady) return null;
+  scene.updateMatrixWorld(true);
+  terrainProbe.firstHitOnly = true;
+  const along = new THREE.Vector3(Math.cos(SHIP_CONFIG.ry),0,-Math.sin(SHIP_CONFIG.ry));
+  const across = new THREE.Vector3(Math.sin(SHIP_CONFIG.ry),0,Math.cos(SHIP_CONFIG.ry));
+  let highest = -Infinity;
+  [-3.3,-1.65,0,1.65,3.3].forEach(lengthOffset=>{
+    [-.72,0,.72].forEach(widthOffset=>{
+      const x = SHIP_CONFIG.x + (along.x*lengthOffset + across.x*widthOffset)*SHIP_CONFIG.scale;
+      const z = SHIP_CONFIG.z + (along.z*lengthOffset + across.z*widthOffset)*SHIP_CONFIG.scale;
+      terrainProbe.set(new THREE.Vector3(x,80,z),down);
+      const hit = terrainProbe.intersectObjects(hoverMeshes,false)[0];
+      if(hit) highest = Math.max(highest,hit.point.y);
+    });
+  });
+  if(!Number.isFinite(highest)) return null;
+  SHIP_CONFIG.y = highest + offset;
+  applyShipConfig();
+  return SHIP_CONFIG.y;
+}
+
+function tryAutoPlaceShip(){
+  if(shipAutoPlaced || !shipReady || !mountainReady || !bvhReady) return;
+  const y = snapShipToTerrain(.18);
+  if(y === null) return;
+  SHIP_DEFAULTS.y = y;
+  shipAutoPlaced = true;
+}
+
 addEventListener('pointerleave', ()=>{ pointerInside = false; });
 addEventListener('pointerenter', ()=>{ pointerInside = true; });
 
@@ -897,7 +964,8 @@ const CHAPTERS = [
   { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',  cta:'MONTIS EXPEDITIONS',
     cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 },
   { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
-    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0 },
+    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
+    credit:'Terrain: artfromheath · Cargo ship: hungry_drifter · CC BY 4.0' },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
     cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
     scene:'image', credit:'MONTIS — ARCTIC PASSAGE' }
@@ -951,6 +1019,7 @@ function setSceneForChapter(i){
   el.chapterImage.style.transform = showImage ? 'scale(1)' : 'scale(1.025)';
   el.canvas.style.opacity = showImage ? 0 : 1;
   modelRoot.visible = !showImage;
+  setShipOpacity(i === 1 ? 1 : 0);
 }
 
 /* camera targets ------------------------------------------------------- */
@@ -1034,6 +1103,8 @@ function updateScrollTimeline(force=false){
   el.chapterImage.style.transform = `scale(${mix(1.025,1,imageMix)})`;
   el.canvas.style.opacity = 1-imageMix;
   modelRoot.visible = imageMix < .998;
+  const shipMix = smoothstep(.18,.28,p)*(1-smoothstep(.52,.61,p));
+  setShipOpacity(shipMix);
 
   const nextChapter = p < .22 ? 0 : p < .62 ? 1 : 2;
   if(force || nextChapter !== chapter){
@@ -1102,10 +1173,11 @@ manager.onProgress = (url, loaded, total)=>{
 };
 let mountainReady = false;
 let imageSettled = false;
+let shipSettled = false;
 let introStarted = false;
 
 function tryStartIntro(){
-  if(introStarted || !mountainReady || !imageSettled) return;
+  if(introStarted || !mountainReady || !imageSettled || !shipSettled) return;
   introStarted = true;
   setSceneForChapter(chapter);
   setTimeout(()=>{
@@ -1137,6 +1209,53 @@ mountainMat.uniforms.tMap.value    = mapTex;
 mountainMat.uniforms.tNormal.value = nrmTex;
 
 const gltfLoader = new GLTFLoader(manager);
+const SHIP_MODEL = 'cargo_ship_runtime/';
+
+gltfLoader.load(SHIP_MODEL + 'scene.gltf', gltf=>{
+  const ship = gltf.scene;
+  const materialMap = new Map();
+  ship.traverse(object=>{
+    if(!object.isMesh) return;
+    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+    const cloned = sourceMaterials.map(source=>{
+      if(materialMap.has(source)) return materialMap.get(source);
+      const material = source.clone();
+      material.transparent = true;
+      material.opacity = 0;
+      material.depthWrite = false;
+      material.envMapIntensity = .8;
+      [material.map,material.normalMap,material.metalnessMap,material.roughnessMap].forEach(texture=>{
+        if(texture) texture.anisotropy = 8;
+      });
+      materialMap.set(source,material);
+      shipMaterials.push(material);
+      return material;
+    });
+    object.material = Array.isArray(object.material) ? cloned : cloned[0];
+    object.frustumCulled = false;
+  });
+
+  const box = new THREE.Box3().setFromObject(ship);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);box.getCenter(center);
+  ship.position.set(-center.x,-box.min.y,-center.z);
+  const holder = new THREE.Group();
+  holder.add(ship);
+  holder.scale.setScalar(7.2/Math.max(size.x,size.z));
+  shipRoot.add(holder);
+  applyShipConfig();
+  shipReady = true;
+  shipSettled = true;
+  setShipOpacity(0);
+  window.__ship = { size:size.toArray(), normalizedLength:7.2 };
+  tryAutoPlaceShip();
+  tryStartIntro();
+},undefined,error=>{
+  shipSettled = true;
+  console.warn('cargo ship unavailable',error);
+  tryStartIntro();
+});
 
 gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
   const m = gltf.scene;
@@ -1160,6 +1279,7 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
   camera.lookAt(camAim);
 
   mountainReady = true;
+  tryAutoPlaceShip();
   tryStartIntro();
 
   /* build the raycast BVH once the intro is out of the way — a plain
@@ -1173,7 +1293,7 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
         /* build one chunk per tick so the page never freezes for a whole second */
         let i = 0;
         (function step(){
-          if(i >= hoverMeshes.length){ bvhReady = true; return; }
+          if(i >= hoverMeshes.length){ bvhReady = true;tryAutoPlaceShip();return; }
           hoverMeshes[i++].geometry.computeBoundsTree({ strategy:0, maxLeafTris:16 });
           setTimeout(step, 60);
         })();
@@ -1275,11 +1395,20 @@ if(TUNE){
     { k:'fov',  label:'鏡頭視角 fov',       min:18,   max:75,  step:.5  },
     { k:'dist', label:'距離（推近拉遠）',   min:4,    max:90,  step:.2  }
   ];
+  const SHIP_SLIDERS = [
+    { k:'x',     label:'Ship X',       min:-30,  max:15,   step:.1  },
+    { k:'y',     label:'Ship Y',       min:-2,   max:18,   step:.1  },
+    { k:'z',     label:'Ship Z',       min:-24,  max:24,   step:.1  },
+    { k:'rx',    label:'Rotate X',     min:-3.2, max:3.2,  step:.01 },
+    { k:'ry',    label:'Rotate Y',     min:-3.2, max:3.2,  step:.01 },
+    { k:'rz',    label:'Rotate Z',     min:-3.2, max:3.2,  step:.01 },
+    { k:'scale', label:'Ship scale',   min:.2,   max:3.0,  step:.02 }
+  ];
 
   const panel = document.createElement('div');
   panel.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:20;background:rgba(16,24,34,.92);'
     + 'color:#dfe8f2;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;border-radius:9px;'
-    + 'width:400px;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
+    + 'width:420px;max-height:calc(100vh - 28px);overflow:auto;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
 
   const btn = (id,txt,primary)=>'<button id="'+id+'" style="font:inherit;cursor:pointer;padding:5px 9px;border-radius:5px;'
     + 'border:1px solid '+(primary?'#4a86bb':'#33465c')+';background:'+(primary?'#1d3550':'#16222f')+';color:#dfe8f2">'+txt+'</button>';
@@ -1294,6 +1423,16 @@ if(TUNE){
     + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
     +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製三段',1)
     +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
+    + '</div>'
+    + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +   '<b style="color:#f4c78a;font-weight:600">CARGO SHIP · SECTION 02</b>'
+    +   '<span id="shipStatus" style="opacity:.55">loading</span>'
+    + '</div>'
+    + '<div id="shipRows"></div>'
+    + '<div id="shipOut" style="white-space:pre;color:#f4c78a;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   btn('shipCopy','複製船參數',1) + btn('shipSurface','貼合地形') + btn('shipReset','重設船')
     + '</div>';
   document.body.appendChild(panel);
 
@@ -1311,6 +1450,26 @@ if(TUNE){
     inp.addEventListener('pointerdown', ()=>ui[sl.k].busy = true);
     addEventListener('pointerup',       ()=>ui[sl.k].busy = false);
     inp.addEventListener('input', ()=>write(sl.k, parseFloat(inp.value)));
+  });
+
+  const shipRows = panel.querySelector('#shipRows');
+  const shipUi = {};
+  SHIP_SLIDERS.forEach(sl=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:112px 1fr 46px;gap:8px;align-items:center;margin:2px 0';
+    row.innerHTML = '<span style="opacity:.72">'+sl.label+'</span>'
+      + '<input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" style="width:100%;accent-color:#d39557">'
+      + '<span style="text-align:right;color:#f4c78a"></span>';
+    shipRows.appendChild(row);
+    const inp = row.querySelector('input');
+    shipUi[sl.k] = { input:inp, val:row.querySelector('span:last-child'), spec:sl, busy:false };
+    inp.addEventListener('pointerdown', ()=>shipUi[sl.k].busy = true);
+    addEventListener('pointerup', ()=>shipUi[sl.k].busy = false);
+    inp.addEventListener('input', ()=>{
+      SHIP_CONFIG[sl.k] = parseFloat(inp.value);
+      applyShipConfig();
+      setShipOpacity(1);
+    });
   });
 
   const dirTmp = new THREE.Vector3();
@@ -1345,6 +1504,13 @@ if(TUNE){
     CHAPTERS[chapter].fov = +camera.fov.toFixed(1);
   };
   const flash = (b,t)=>{ const old = b.textContent; b.textContent = t; setTimeout(()=>b.textContent = old, 1100); };
+  const shipFmt = ()=>{
+    const n = x=>(+x).toFixed(2);
+    return 'const SHIP_CONFIG = {\n'
+      + '  x:'+n(SHIP_CONFIG.x)+', y:'+n(SHIP_CONFIG.y)+', z:'+n(SHIP_CONFIG.z)+',\n'
+      + '  rx:'+n(SHIP_CONFIG.rx)+', ry:'+n(SHIP_CONFIG.ry)+', rz:'+n(SHIP_CONFIG.rz)+',\n'
+      + '  scale:'+n(SHIP_CONFIG.scale)+'\n};';
+  };
 
   panel.querySelector('#tuneCopy').onclick = e=>{
     grab(); navigator.clipboard.writeText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
@@ -1354,8 +1520,23 @@ if(TUNE){
     navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
       .then(()=>flash(e.target,'已複製三段 ✓'));
   };
+  panel.querySelector('#shipCopy').onclick = e=>{
+    navigator.clipboard.writeText(shipFmt()).then(()=>flash(e.target,'已複製船參數 ✓'));
+  };
+  panel.querySelector('#shipSurface').onclick = e=>{
+    const y = snapShipToTerrain(.18);
+    setShipOpacity(1);
+    flash(e.target,y === null ? '找不到地形' : '已貼合地形 ✓');
+  };
+  panel.querySelector('#shipReset').onclick = e=>{
+    Object.assign(SHIP_CONFIG,SHIP_DEFAULTS);
+    applyShipConfig();
+    setShipOpacity(1);
+    flash(e.target,'已重設 ✓');
+  };
   const restore = ()=>{
     applyChapterTarget(chapter, true);
+    setSceneForChapter(chapter);
     if(controls){
       camera.position.copy(camPosT); controls.target.copy(camAimT);
       camera.fov = fovT; camera.updateProjectionMatrix(); controls.update();
@@ -1407,6 +1588,14 @@ if(TUNE){
       u.input.value = live[sl.k];
       u.val.textContent = live[sl.k].toFixed(sl.step < .05 ? 2 : 1);
     });
+    SHIP_SLIDERS.forEach(sl=>{
+      const u = shipUi[sl.k];
+      if(u.busy) return;
+      u.input.value = SHIP_CONFIG[sl.k];
+      u.val.textContent = SHIP_CONFIG[sl.k].toFixed(sl.step < .05 ? 2 : 1);
+    });
+    panel.querySelector('#shipStatus').textContent = shipReady ? 'ready' : 'loading';
+    panel.querySelector('#shipOut').textContent = shipFmt();
     panel.querySelector('#tuneWho').textContent = '第 ' + (chapter+1) + ' 段 · ' + CHAPTERS[chapter].eyebrow;
     const n = x=>(+x).toFixed(1);
     panel.querySelector('#tuneOut').textContent =
@@ -1418,7 +1607,8 @@ if(TUNE){
 
 /* expose for debugging / screenshots */
 window.viz = {
-  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, shipRoot, SHIP_CONFIG,
+  applyShipConfig, snapShipToTerrain, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){

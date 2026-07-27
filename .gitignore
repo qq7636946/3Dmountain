@@ -8,3 +8,7 @@ Thumbs.db
 # Original water source asset is kept locally and is not part of the current build.
 /water_waves/
 /water_waves.zip
+
+# Original cargo ship source is kept locally; deploy the optimized runtime copy.
+/cargo_ship/
+/cargo_ship.zip

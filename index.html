@@ -977,15 +977,14 @@ function tickTransition(dt){
 }
 
 /* input ---------------------------------------------------------------- */
-const freeScrollEl = document.getElementById('freeScroll');
 let freeMode = false;
 
-function enterFreeScroll(){
+function enterFreeScroll(initialDelta = 0){
   if(freeMode || busy || chapter !== CHAPTERS.length - 1) return;
   freeMode = true;
   document.body.classList.add('is-free-scroll');
   requestAnimationFrame(()=>{
-    scrollTo({ top:freeScrollEl.offsetTop, behavior:'smooth' });
+    if(initialDelta > 0) scrollBy({ top:initialDelta, left:0, behavior:'auto' });
   });
 }
 
@@ -996,8 +995,8 @@ function exitFreeScroll(){
   freeMode = false;
 }
 
-function goNext(){
-  if(chapter === CHAPTERS.length - 1) enterFreeScroll();
+function goNext(unlockDelta = 0){
+  if(chapter === CHAPTERS.length - 1) enterFreeScroll(unlockDelta);
   else goTo(chapter + 1);
 }
 
@@ -1012,7 +1011,10 @@ addEventListener('wheel', e=>{
   if(busy || now - wheelLock < 900) return;
   if(Math.abs(e.deltaY) < 14) return;
   wheelLock = now;
-  if(e.deltaY > 0) goNext();
+  const wheelDelta = e.deltaMode === 1 ? e.deltaY * 16
+    : e.deltaMode === 2 ? e.deltaY * innerHeight
+    : e.deltaY;
+  if(e.deltaY > 0) goNext(Math.max(0, wheelDelta));
   else goTo(chapter - 1);
 }, { passive:true });
 
@@ -1022,7 +1024,7 @@ addEventListener('touchmove', e=>{
   if(freeMode || touchY === null || busy) return;
   const dy = touchY - e.touches[0].clientY;
   if(Math.abs(dy) > 48){
-    if(dy > 0) goNext();
+    if(dy > 0) goNext(dy);
     else goTo(chapter - 1);
     touchY = null;
   }
@@ -1034,12 +1036,13 @@ addEventListener('keydown', e=>{
     if(scrollY <= 2 && (e.key === 'ArrowUp' || e.key === 'PageUp')) exitFreeScroll();
     return;
   }
-  if(e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') goNext();
+  if(e.key === 'ArrowDown') goNext(72);
+  if(e.key === 'PageDown' || e.key === ' ') goNext(innerHeight * .8);
   if(e.key === 'ArrowUp'   || e.key === 'PageUp')  goTo(chapter-1);
 });
 el.prev.addEventListener('click', ()=>goTo(chapter-1));
-el.next.addEventListener('click', goNext);
-document.getElementById('next').addEventListener('click', goNext);
+el.next.addEventListener('click', ()=>goNext(innerHeight * .18));
+document.getElementById('next').addEventListener('click', ()=>goNext(innerHeight * .18));
 document.getElementById('next').style.cursor = 'pointer';
 document.getElementById('next').style.pointerEvents = 'auto';
 document.getElementById('cta').addEventListener('click', e=>e.preventDefault());

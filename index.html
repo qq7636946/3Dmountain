@@ -25,6 +25,12 @@ body{
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
+body.is-water{
+  --ink:#eaf4f7;
+  --ink-dim:rgba(234,244,247,.66);
+  --hair:rgba(234,244,247,.34);
+  --accent:#f5fbfd;
+}
 body.is-free-scroll{overflow-x:hidden;overflow-y:auto;background:#eef2f5}
 canvas#gl{
   position:fixed;inset:0;width:100%;height:100%;display:block;
@@ -109,7 +115,7 @@ h1{
 .cta .txt{font-size:.72rem;letter-spacing:.24em;font-weight:500}
 .cta .circle{
   width:42px;height:42px;border-radius:50%;
-  border:1px solid rgba(47,95,138,.45);
+  border:1px solid var(--hair);
   display:grid;place-items:center;font-size:.8rem;
   transition:background .5s var(--ease),color .5s var(--ease),border-color .5s var(--ease),transform .5s var(--ease);
 }
@@ -121,7 +127,7 @@ h1{
 
 /* ---------- diamonds ---------- */
 .diamond{
-  position:absolute;width:46px;height:46px;border:1px solid rgba(47,95,138,.38);
+  position:absolute;width:46px;height:46px;border:1px solid var(--hair);
   transform:rotate(45deg);display:grid;place-items:center;
   transition:opacity .9s var(--ease),transform .9s var(--ease);
 }
@@ -143,13 +149,13 @@ h1{
 .controls{position:absolute;right:clamp(20px,3.2vw,54px);bottom:clamp(22px,4vh,54px);display:flex;flex-direction:column;gap:14px}
 .controls button{
   width:44px;height:44px;border-radius:50%;background:none;cursor:pointer;
-  border:1px solid rgba(47,95,138,.32);color:var(--ink);
+  border:1px solid var(--hair);color:var(--ink);
   display:grid;place-items:center;font-size:.85rem;font-family:inherit;
   transition:background .45s var(--ease),color .45s var(--ease),border-color .45s var(--ease),opacity .45s var(--ease);
 }
 .controls button:hover{background:var(--ink);color:#ffffff;border-color:var(--ink)}
 .controls button[disabled]{opacity:.28;cursor:default}
-.controls button[disabled]:hover{background:none;color:var(--ink);border-color:rgba(47,95,138,.32)}
+.controls button[disabled]:hover{background:none;color:var(--ink);border-color:var(--hair)}
 
 /* ---------- scroll hint ---------- */
 .hint{
@@ -160,7 +166,7 @@ h1{
 /* ---------- credit ---------- */
 .credit{
   position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
-  font-size:.55rem;letter-spacing:.14em;color:rgba(47,95,138,.38);
+  font-size:.55rem;letter-spacing:.14em;color:var(--ink-dim);opacity:.64;
 }
 
 /* ---------- loader ---------- */
@@ -297,7 +303,7 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
     <div class="name"><b id="tNextName">Montis Ventures</b></div>
   </div>
 
-  <div class="credit">3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC&nbsp;BY&nbsp;4.0</div>
+  <div class="credit" id="credit">3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC&nbsp;BY&nbsp;4.0</div>
 
   <div class="controls">
     <button id="btnPrev" title="Previous">&#8593;</button>
@@ -752,6 +758,8 @@ const cloudMat = new THREE.ShaderMaterial({
       float feather = smoothstep(.01, .78, density);
       float body = smoothstep(.18, .64, density);
       float alpha = mix(feather * .58, body, .68) * .94;
+      float waterChapter = 1. - smoothstep(.35,1.,abs(uChapter-2.));
+      alpha *= mix(1.,.16,waterChapter*(1.-thick));
 
       gl_FragColor = vec4(color, clamp(alpha, 0., 1.));
       #include <colorspace_fragment>
@@ -882,6 +890,70 @@ const mountainMat = new THREE.ShaderMaterial({
     }`
 });
 
+/* =====================================================================
+   WATER — lightweight runtime mesh + procedural motion
+   ===================================================================== */
+const waterRoot = new THREE.Group();
+waterRoot.visible = false;
+scene.add(waterRoot);
+
+const waterMat = new THREE.ShaderMaterial({
+  side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime,
+    uTransition:U.uTransition,
+    uDeep:{ value:new THREE.Color('#173846') },
+    uMid:{ value:new THREE.Color('#56869a') },
+    uLight:{ value:new THREE.Color('#d8e8ee') },
+    uSunDir:{ value:new THREE.Vector3(-.52,.78,.34).normalize() }
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    varying vec3 vWorld, vNrm;
+    varying float vHeight;
+    void main(){
+      float t = uTime * .72;
+      vec3 p = position;
+      float a = p.x*.034 + t;
+      float b = p.z*.041 - t*.82;
+      float c = (p.x+p.z)*.018 + t*.54;
+      p.y += (sin(a)*8. + cos(b)*6. + sin(c)*4.) * .52;
+
+      float dx = (.034*8.*cos(a) + .018*4.*cos(c)) * .52;
+      float dz = (-.041*6.*sin(b) + .018*4.*cos(c)) * .52;
+      vec3 waveN = normalize(normal + vec3(-dx,.08,-dz)*.62);
+
+      vec4 wp = modelMatrix * vec4(p,1.);
+      vWorld = wp.xyz;
+      vNrm = normalize(mat3(modelMatrix) * waveN);
+      vHeight = p.y;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uTransition;
+    uniform vec3 uDeep, uMid, uLight, uSunDir;
+    varying vec3 vWorld, vNrm;
+    varying float vHeight;
+    void main(){
+      vec3 n = normalize(vNrm);
+      vec3 v = normalize(cameraPosition - vWorld);
+      float fresnel = pow(1. - clamp(dot(n,v),0.,1.), 2.5);
+      float diffuse = max(dot(n,uSunDir),0.);
+      vec3 halfDir = normalize(uSunDir + v);
+      float sparkle = pow(max(dot(n,halfDir),0.), 72.);
+      float crest = smoothstep(4.,31.,vHeight);
+
+      vec3 col = mix(uDeep,uMid,.34 + diffuse*.34);
+      col = mix(col,uLight,clamp(fresnel*.72 + crest*.28,0.,1.));
+      col += uLight * sparkle * .72;
+      col = mix(col,uLight,smoothstep(.28,1.,uTransition)*.82);
+
+      gl_FragColor = vec4(col,1.);
+      #include <colorspace_fragment>
+    }`
+});
+
 /* --- cursor-highlight state (BVH raycast against the terrain) --- */
 const raycaster = new THREE.Raycaster();
 raycaster.firstHitOnly = true;
@@ -896,12 +968,12 @@ addEventListener('pointerenter', ()=>{ pointerInside = true; });
    ===================================================================== */
 const CHAPTERS = [
   { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',  cta:'MONTIS EXPEDITIONS',
-    cam:{ x:7.6, y:6.5, z:22.8, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04 },
+    cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 },
   { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
     cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
     exitCam:{ x:-10.6, y:9.0, z:0.0, tx:-10.6, ty:2.9, tz:0.0, rot:2.04, fov:40.0 } },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
-    cam:{ x:6.4, y:6.2, z:20.4, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16 },
+    cam:{ x:0.0, y:54.0, z:2.5, tx:0.0, ty:0.0, tz:0.0 }, rot:0.0, fov:40.0, scene:'water' },
   { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',      cta:'MONTIS VENTURES',
     cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 }
 ];
@@ -919,7 +991,8 @@ const el = {
   ui:document.getElementById('ui'),
   dots:document.getElementById('dots'),
   prev:document.getElementById('btnPrev'),
-  next:document.getElementById('btnNext')
+  next:document.getElementById('btnNext'),
+  credit:document.getElementById('credit')
 };
 
 CHAPTERS.forEach((c,i)=>{
@@ -940,7 +1013,17 @@ function paint(i){
   el.idx.textContent = c.idx;
   el.nextIdx.textContent = isLast ? '↓' : n.idx;
   el.nextName.textContent = isLast ? 'Continue to Montis' : n.eyebrow;
+  document.body.classList.toggle('is-water',c.scene === 'water');
+  el.credit.textContent = c.scene === 'water'
+    ? '3D model “water waves” by UJWAL — CC BY 4.0'
+    : '3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC BY 4.0';
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
+}
+
+function setSceneForChapter(i){
+  const showWater = CHAPTERS[i].scene === 'water' && waterReady;
+  waterRoot.visible = showWater;
+  modelRoot.visible = !showWater;
 }
 
 /* camera targets ------------------------------------------------------- */
@@ -1023,6 +1106,7 @@ function tickTransition(dt){
   U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
   if(!trans.swapped && t > .46){
     trans.swapped = true;
+    setSceneForChapter(chapter);
     paint(chapter);
     /* snap the masks back below the line without animating, then reveal */
     el.ui.classList.add('no-anim');
@@ -1157,8 +1241,24 @@ manager.onProgress = (url, loaded, total)=>{
   loadFill.style.transform = 'scaleX(' + (p/100) + ')';
   loadPct.textContent = p + '%';
 };
+let mountainReady = false;
+let waterReady = false;
+let waterSettled = false;
+let introStarted = false;
+
+function tryStartIntro(){
+  if(introStarted || !mountainReady || !waterSettled) return;
+  introStarted = true;
+  setSceneForChapter(chapter);
+  setTimeout(()=>{
+    loader.classList.add('is-done');
+    el.ui.classList.add('is-in');
+    intro = { on:true, t:0 };
+  }, 260);
+}
 
 const MODEL = 'snowy_mountain_v2_-_terrain/';
+const WATER_MODEL = 'water_waves_runtime/';
 const texLoader = new THREE.TextureLoader(manager);
 const mapTex = texLoader.load(MODEL + 'textures/Material.001_baseColor.png');
 const nrmTex = texLoader.load(MODEL + 'textures/Material.001_normal.png');
@@ -1189,12 +1289,8 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
   camera.position.copy(camPos);
   camera.lookAt(camAim);
 
-  // intro
-  setTimeout(()=>{
-    loader.classList.add('is-done');
-    el.ui.classList.add('is-in');
-    intro = { on:true, t:0 };
-  }, 260);
+  mountainReady = true;
+  tryStartIntro();
 
   /* build the raycast BVH once the intro is out of the way — a plain
      raycast against 600k+ triangles would stall the frame */
@@ -1214,6 +1310,35 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
       })
       .catch(err=>console.warn('hover highlight disabled (BVH unavailable):', err));
   }, 3200);
+});
+
+gltfLoader.load(WATER_MODEL + 'scene.gltf', gltf=>{
+  const m = gltf.scene;
+  m.traverse(o=>{
+    if(o.isMesh){
+      o.material = waterMat;
+      o.frustumCulled = false;
+    }
+  });
+
+  const box = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr = new THREE.Vector3(); box.getCenter(ctr);
+  const s = 82 / Math.max(size.x,size.z);
+  m.position.set(-ctr.x,-ctr.y,-ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(s);
+  waterRoot.add(holder);
+  waterReady = true;
+  waterSettled = true;
+  setSceneForChapter(chapter);
+  window.__water = { size:size.toArray(), scale:s };
+  tryStartIntro();
+}, undefined, err=>{
+  waterSettled = true;
+  console.warn('water scene unavailable:',err);
+  tryStartIntro();
 });
 
 /* =====================================================================
@@ -1277,7 +1402,7 @@ function update(dt){
 
   /* cursor highlight on the terrain */
   const hu = mountainMat.uniforms;
-  if(bvhReady && pointerInside && !busy){
+  if(bvhReady && pointerInside && !busy && modelRoot.visible){
     raycaster.setFromCamera(pointer, camera);
     const hit = raycaster.intersectObjects(hoverMeshes, false)[0];
     if(hit){ hoverTarget.copy(hit.point); hoverAim = 1; } else hoverAim = 0;
@@ -1451,12 +1576,13 @@ if(TUNE){
 
 /* expose for debugging / screenshots */
 window.viz = {
-  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, waterRoot, CHAPTERS, mountainMat, waterMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){
     const c = CHAPTERS[i];
     chapter = i; paint(i); applyChapterTarget(i, true);
+    setSceneForChapter(i);
     camera.position.set(c.cam.x, c.cam.y, c.cam.z);
     camera.lookAt(c.cam.tx, c.cam.ty, c.cam.tz || 0);
     spin.rotation.y = c.rot;

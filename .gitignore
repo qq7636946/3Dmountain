@@ -4,3 +4,7 @@
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+# Original water source asset is kept locally; deploy the optimized runtime copy.
+/water_waves/
+/water_waves.zip

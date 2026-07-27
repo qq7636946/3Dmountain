@@ -879,7 +879,8 @@ const CHAPTERS = [
   { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',  cta:'MONTIS EXPEDITIONS',
     cam:{ x:7.6, y:6.5, z:22.8, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04 },
   { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
-    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0 },
+    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    exitCam:{ x:-10.6, y:9.0, z:0.0, tx:-10.6, ty:2.9, tz:0.0, rot:2.04, fov:40.0 } },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
     cam:{ x:6.4, y:6.2, z:20.4, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16 },
   { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',      cta:'MONTIS VENTURES',
@@ -942,6 +943,12 @@ function applyChapterTarget(i, instant){
 
 /* transition ----------------------------------------------------------- */
 let trans = { on:false, t:0, dir:1, swapped:false };
+const cameraPush = {
+  on:false, t:0, duration:1.55,
+  fromPos:new THREE.Vector3(), toPos:new THREE.Vector3(),
+  fromAim:new THREE.Vector3(), toAim:new THREE.Vector3(),
+  fromFov:40, toFov:40, fromRot:0, toRot:0
+};
 
 function goTo(i){
   if(busy) return;
@@ -954,6 +961,39 @@ function goTo(i){
   el.ui.classList.add('is-out');
   trans = { on:true, t:0, swapped:false };
   applyChapterTarget(i);
+}
+
+function pushThenGoNext(){
+  const p = CHAPTERS[chapter].exitCam;
+  if(busy || !p) return;
+  busy = true;
+  cameraPush.on = true;
+  cameraPush.t = 0;
+  cameraPush.fromPos.copy(camPos);
+  cameraPush.toPos.set(p.x, p.y, p.z);
+  cameraPush.fromAim.copy(camAim);
+  cameraPush.toAim.set(p.tx, p.ty, p.tz || 0);
+  cameraPush.fromFov = camera.fov;
+  cameraPush.toFov = p.fov || 40;
+  cameraPush.fromRot = spin.rotation.y;
+  cameraPush.toRot = p.rot;
+}
+
+function tickCameraPush(dt){
+  if(!cameraPush.on) return false;
+  cameraPush.t += dt / cameraPush.duration;
+  const t = Math.min(cameraPush.t, 1);
+  const ease = t * t * (3 - 2 * t);
+  camPos.lerpVectors(cameraPush.fromPos, cameraPush.toPos, ease);
+  camAim.lerpVectors(cameraPush.fromAim, cameraPush.toAim, ease);
+  fovT = THREE.MathUtils.lerp(cameraPush.fromFov, cameraPush.toFov, ease);
+  spinT = THREE.MathUtils.lerp(cameraPush.fromRot, cameraPush.toRot, ease);
+  if(t >= 1){
+    cameraPush.on = false;
+    busy = false;
+    goTo(chapter + 1);
+  }
+  return true;
 }
 
 function tickTransition(dt){
@@ -997,6 +1037,7 @@ function exitFreeScroll(){
 
 function goNext(unlockDelta = 0){
   if(chapter === CHAPTERS.length - 1) enterFreeScroll(unlockDelta);
+  else if(CHAPTERS[chapter].exitCam) pushThenGoNext();
   else goTo(chapter + 1);
 }
 
@@ -1166,6 +1207,7 @@ function update(dt){
     if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
   }
   tickTransition(dt);
+  const isPushing = tickCameraPush(dt);
 
   const t = U.uTime.value;
 
@@ -1173,9 +1215,11 @@ function update(dt){
   if(controls){
     controls.update();
   } else {
-  const k = Math.min(1, dt * (trans.on ? 1.35 : 2.2));
-  camPos.lerp(camPosT, k);
-  camAim.lerp(camAimT, k);
+  if(!isPushing){
+    const k = Math.min(1, dt * (trans.on ? 1.35 : 2.2));
+    camPos.lerp(camPosT, k);
+    camAim.lerp(camAimT, k);
+  }
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
   camera.position.set(
     camPos.x + Math.sin(t*.11) * .35,

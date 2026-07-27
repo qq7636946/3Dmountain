@@ -776,6 +776,7 @@ const shipRoot = new THREE.Group();
 shipRoot.visible = false;
 scene.add(shipRoot);
 const SHIP_CONFIG = {
+  enabled:true,
   x:-7.8, y:3.6, z:0.0,
   rx:0.0, ry:1.57, rz:0.0,
   scale:.82
@@ -792,11 +793,12 @@ function applyShipConfig(){
 }
 
 function setShipOpacity(opacity){
-  shipRoot.visible = shipReady && opacity > .01;
+  const visibleOpacity = SHIP_CONFIG.enabled ? opacity : 0;
+  shipRoot.visible = shipReady && visibleOpacity > .01;
   shipMaterials.forEach(material=>{
-    material.opacity = opacity;
-    material.transparent = opacity < .999;
-    material.depthWrite = opacity > .82;
+    material.opacity = visibleOpacity;
+    material.transparent = visibleOpacity < .999;
+    material.depthWrite = visibleOpacity > .82;
   });
 }
 
@@ -804,6 +806,7 @@ const waterRoot = new THREE.Group();
 waterRoot.visible = false;
 scene.add(waterRoot);
 const WATER_CONFIG = {
+  enabled:true,
   x:-7.8, y:5.4, z:0.0,
   rx:0.0, ry:0.0, rz:0.0,
   scaleX:.44, scaleY:.34, scaleZ:1.45,
@@ -883,8 +886,9 @@ function applyWaterConfig(){
 }
 
 function setWaterOpacity(opacity){
-  waterRoot.visible = waterReady && opacity > .01;
-  waterMat.uniforms.uVisibility.value = opacity;
+  const visibleOpacity = WATER_CONFIG.enabled ? opacity : 0;
+  waterRoot.visible = waterReady && visibleOpacity > .01;
+  waterMat.uniforms.uVisibility.value = visibleOpacity;
 }
 
 function syncWaterToShip(){
@@ -1595,7 +1599,9 @@ if(TUNE){
     + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
     +   '<b style="color:#f4c78a;font-weight:600">CARGO SHIP · SECTION 02</b>'
-    +   '<span id="shipStatus" style="opacity:.55">loading</span>'
+    +   '<span style="display:flex;align-items:center;gap:9px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer">'
+    +     '<input id="shipEnabled" type="checkbox" style="accent-color:#d39557"> 顯示貨輪</label>'
+    +     '<span id="shipStatus" style="opacity:.55">loading</span></span>'
     + '</div>'
     + '<div id="shipRows"></div>'
     + '<div id="shipOut" style="white-space:pre-wrap;word-break:break-word;color:#f4c78a;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
@@ -1605,12 +1611,26 @@ if(TUNE){
     + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
     +   '<b style="color:#80e4f2;font-weight:600">WATER · SECTION 02</b>'
-    +   '<span id="waterStatus" style="opacity:.55">loading</span>'
+    +   '<span style="display:flex;align-items:center;gap:9px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer">'
+    +     '<input id="waterEnabled" type="checkbox" style="accent-color:#43c7d8"> 顯示水面</label>'
+    +     '<span id="waterStatus" style="opacity:.55">loading</span></span>'
     + '</div>'
     + '<div id="waterRows"></div>'
     + '<div id="waterOut" style="white-space:pre-wrap;word-break:break-word;color:#80e4f2;margin-top:8px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
     +   btn('waterCopy','複製水參數',1) + btn('waterFollow','跟隨貨輪') + btn('waterReset','重設水面')
+    + '</div>'
+    + '<div style="height:1px;background:#33465c;margin:12px 0 9px"></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +   '<b style="color:#b7f3c4;font-weight:600">FINAL SCENE CONFIG</b>'
+    +   '<span style="opacity:.55">可直接傳給製作端</span>'
+    + '</div>'
+    + '<div id="finalOut" style="white-space:pre-wrap;word-break:break-word;color:#b7f3c4;max-height:260px;overflow:auto;'
+    +   'padding:8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   btn('finalCopy','複製最終參數',1)
+    +   '<a id="finalDownload" href="#" download="montis-section-02-config.json" style="font:inherit;cursor:pointer;padding:5px 9px;'
+    +     'border-radius:5px;border:1px solid #4a86bb;background:#1d3550;color:#dfe8f2;text-decoration:none">下載 JSON</a>'
     + '</div>';
   document.body.appendChild(panel);
 
@@ -1670,6 +1690,19 @@ if(TUNE){
     });
   });
 
+  const shipEnabled = panel.querySelector('#shipEnabled');
+  const waterEnabled = panel.querySelector('#waterEnabled');
+  shipEnabled.checked = SHIP_CONFIG.enabled;
+  waterEnabled.checked = WATER_CONFIG.enabled;
+  shipEnabled.addEventListener('change', ()=>{
+    SHIP_CONFIG.enabled = shipEnabled.checked;
+    setShipOpacity(chapter === 1 ? 1 : 0);
+  });
+  waterEnabled.addEventListener('change', ()=>{
+    WATER_CONFIG.enabled = waterEnabled.checked;
+    setWaterOpacity(chapter === 1 ? 1 : 0);
+  });
+
   const dirTmp = new THREE.Vector3();
   function write(k, v){
     if(!controls) return;
@@ -1702,9 +1735,24 @@ if(TUNE){
     CHAPTERS[chapter].fov = +camera.fov.toFixed(1);
   };
   const flash = (b,t)=>{ const old = b.textContent; b.textContent = t; setTimeout(()=>b.textContent = old, 1100); };
+  const fallbackCopy = text=>{
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand('copy');
+    area.remove();
+  };
+  const copyText = text=>{
+    if(!navigator.clipboard?.writeText){ fallbackCopy(text);return Promise.resolve(); }
+    const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error('clipboard timeout')),450));
+    return Promise.race([navigator.clipboard.writeText(text),timeout]).catch(()=>fallbackCopy(text));
+  };
   const shipFmt = ()=>{
     const n = x=>(+x).toFixed(2);
     return 'const SHIP_CONFIG = {\n'
+      + '  enabled:'+SHIP_CONFIG.enabled+',\n'
       + '  x:'+n(SHIP_CONFIG.x)+', y:'+n(SHIP_CONFIG.y)+', z:'+n(SHIP_CONFIG.z)+',\n'
       + '  rx:'+n(SHIP_CONFIG.rx)+', ry:'+n(SHIP_CONFIG.ry)+', rz:'+n(SHIP_CONFIG.rz)+',\n'
       + '  scale:'+n(SHIP_CONFIG.scale)+'\n};';
@@ -1712,22 +1760,47 @@ if(TUNE){
   const waterFmt = ()=>{
     const n = x=>(+x).toFixed(2);
     return 'const WATER_CONFIG = {\n'
+      + '  enabled:'+WATER_CONFIG.enabled+',\n'
       + '  x:'+n(WATER_CONFIG.x)+', y:'+n(WATER_CONFIG.y)+', z:'+n(WATER_CONFIG.z)+',\n'
       + '  rx:'+n(WATER_CONFIG.rx)+', ry:'+n(WATER_CONFIG.ry)+', rz:'+n(WATER_CONFIG.rz)+',\n'
       + '  scaleX:'+n(WATER_CONFIG.scaleX)+', scaleY:'+n(WATER_CONFIG.scaleY)+', scaleZ:'+n(WATER_CONFIG.scaleZ)+',\n'
       + '  opacity:'+n(WATER_CONFIG.opacity)+', waveHeight:'+n(WATER_CONFIG.waveHeight)+', waveSpeed:'+n(WATER_CONFIG.waveSpeed)+'\n};';
   };
+  const finalSceneData = ()=>{
+    const isResearch = chapter === 1 && controls;
+    const c = CHAPTERS[1];
+    const position = isResearch ? camera.position : c.cam;
+    const target = isResearch ? controls.target : { x:c.cam.tx, y:c.cam.ty, z:c.cam.tz || 0 };
+    const rounded = value=>+Number(value).toFixed(3);
+    const cleanConfig = config=>Object.fromEntries(
+      Object.entries(config).map(([key,value])=>[key,typeof value === 'number' ? rounded(value) : value])
+    );
+    return {
+      formatVersion:1,
+      section:2,
+      chapter:'Montis Research',
+      camera:{
+        position:{ x:rounded(position.x), y:rounded(position.y), z:rounded(position.z) },
+        target:{ x:rounded(target.x), y:rounded(target.y), z:rounded(target.z) },
+        fov:rounded(isResearch ? camera.fov : (c.fov || 40)),
+        mountainRotation:rounded(isResearch ? spinT : c.rot)
+      },
+      cargoShip:cleanConfig(SHIP_CONFIG),
+      water:cleanConfig(WATER_CONFIG)
+    };
+  };
+  const finalFmt = ()=>JSON.stringify(finalSceneData(),null,2);
 
   panel.querySelector('#tuneCopy').onclick = e=>{
-    grab(); navigator.clipboard.writeText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
+    grab(); copyText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
   };
   panel.querySelector('#tuneCopyAll').onclick = e=>{
     grab();
-    navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
+    copyText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
       .then(()=>flash(e.target,'已複製三段 ✓'));
   };
   panel.querySelector('#shipCopy').onclick = e=>{
-    navigator.clipboard.writeText(shipFmt()).then(()=>flash(e.target,'已複製船參數 ✓'));
+    copyText(shipFmt()).then(()=>flash(e.target,'已複製船參數 ✓'));
   };
   panel.querySelector('#shipSurface').onclick = e=>{
     const y = snapShipToTerrain(.18);
@@ -1741,7 +1814,7 @@ if(TUNE){
     flash(e.target,'已重設 ✓');
   };
   panel.querySelector('#waterCopy').onclick = e=>{
-    navigator.clipboard.writeText(waterFmt()).then(()=>flash(e.target,'已複製水參數 ✓'));
+    copyText(waterFmt()).then(()=>flash(e.target,'已複製水參數 ✓'));
   };
   panel.querySelector('#waterFollow').onclick = e=>{
     syncWaterToShip();
@@ -1754,6 +1827,11 @@ if(TUNE){
     setWaterOpacity(1);
     flash(e.target,'已重設 ✓');
   };
+  panel.querySelector('#finalCopy').onclick = e=>{
+    copyText(finalFmt()).then(()=>flash(e.target,'已複製最終參數 ✓'));
+  };
+  const finalDownload = panel.querySelector('#finalDownload');
+  finalDownload.onclick = e=>flash(e.currentTarget,'JSON 已下載 ✓');
   const restore = ()=>{
     applyChapterTarget(chapter, true);
     setSceneForChapter(chapter);
@@ -1820,10 +1898,16 @@ if(TUNE){
       u.input.value = WATER_CONFIG[sl.k];
       u.val.textContent = WATER_CONFIG[sl.k].toFixed(sl.step < .05 ? 2 : 1);
     });
-    panel.querySelector('#shipStatus').textContent = shipReady ? 'ready' : 'loading';
+    shipEnabled.checked = SHIP_CONFIG.enabled;
+    waterEnabled.checked = WATER_CONFIG.enabled;
+    shipRows.style.opacity = SHIP_CONFIG.enabled ? 1 : .35;
+    waterRows.style.opacity = WATER_CONFIG.enabled ? 1 : .35;
+    panel.querySelector('#shipStatus').textContent = shipReady ? (SHIP_CONFIG.enabled ? 'ready' : 'off') : 'loading';
     panel.querySelector('#shipOut').textContent = shipFmt();
-    panel.querySelector('#waterStatus').textContent = waterReady ? 'ready' : 'loading';
+    panel.querySelector('#waterStatus').textContent = waterReady ? (WATER_CONFIG.enabled ? 'ready' : 'off') : 'loading';
     panel.querySelector('#waterOut').textContent = waterFmt();
+    panel.querySelector('#finalOut').textContent = finalFmt();
+    finalDownload.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(finalFmt());
     panel.querySelector('#tuneWho').textContent = '第 ' + (chapter+1) + ' 段 · ' + CHAPTERS[chapter].eyebrow;
     const n = x=>(+x).toFixed(1);
     panel.querySelector('#tuneOut').textContent =

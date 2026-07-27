@@ -521,7 +521,8 @@ const skyMat = new THREE.ShaderMaterial({
 
       f = cloudcover + cloudalpha*f*r;
 
-      vec3 color = mix(skycolour, clamp(skytint*skycolour + cloudcolour, 0.0, 1.0), clamp((f + c) * .5, 0.0, 1.0));
+      float cloudMix = pow(clamp((f + c) * .5, 0.0, 1.0), 1.28);
+      vec3 color = mix(skycolour, clamp(skytint*skycolour + cloudcolour, 0.0, 1.0), cloudMix);
 
       /* keep it nearly monochrome like the reference, with a cool cast */
       float lum = dot(color, vec3(.299, .587, .114));
@@ -608,7 +609,7 @@ const cloudMat = new THREE.ShaderMaterial({
 
       /* the deck hugs the mountain: thick low down, wisps at eye level,
          and it swells up over everything during a chapter transition */
-      float band = smoothstep(.62, .10, sUv.y - .10*(r - .5));
+      float band = 1.0 - smoothstep(.10, .62, sUv.y - .10*(r - .5));
       float thick = smoothstep(.15, .95, uTransition);
       density *= mix(band, 1., thick);
       density = clamp(density * (1. + 1.6*thick), 0., 1.);
@@ -616,7 +617,10 @@ const cloudMat = new THREE.ShaderMaterial({
       vec3 color = mix(uCloudDark, uCloudLight, clamp(clouddark + cloudlight*c + .35*density, 0., 1.));
       color = mix(color, uTransitionColor, thick * .5);
 
-      float alpha = smoothstep(.08, .60, density);
+      /* broad feather + denser inner body: thin wisps fade instead of clipping */
+      float feather = smoothstep(.01, .78, density);
+      float body = smoothstep(.18, .64, density);
+      float alpha = mix(feather * .58, body, .68) * .94;
 
       gl_FragColor = vec4(color, clamp(alpha, 0., 1.));
       #include <colorspace_fragment>

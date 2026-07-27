@@ -159,6 +159,24 @@ body.on-dark .credit{ color:rgba(255,255,255,.42) }
   font-size:.58rem;letter-spacing:.28em;color:var(--ink-dim);
 }
 
+/* ---------- cursor reticle ---------- */
+.reticle{
+  position:fixed;left:0;top:0;z-index:8;pointer-events:none;
+  width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+  border:1px solid rgba(47,95,138,.55);
+  transition:width .45s var(--ease),height .45s var(--ease),
+             margin .45s var(--ease),opacity .45s var(--ease),border-color .45s var(--ease);
+  opacity:0;
+}
+body.has-pointer .reticle{opacity:1}
+body.on-dark .reticle{border-color:rgba(255,255,255,.6)}
+.reticle.is-wide{width:54px;height:54px;margin:-27px 0 0 -27px;border-color:rgba(47,95,138,.28)}
+.reticle:after{
+  content:"";position:absolute;inset:50% auto auto 50%;width:2px;height:2px;
+  margin:-1px 0 0 -1px;border-radius:50%;background:currentColor;opacity:.5;
+}
+.cta .circle,.controls button{will-change:transform}
+
 /* ---------- credit ---------- */
 .credit{
   position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
@@ -193,6 +211,7 @@ body.on-dark .credit{ color:rgba(255,255,255,.42) }
 
 <canvas id="gl"></canvas>
 <div class="grain"></div>
+<div class="reticle" id="reticle"></div>
 
 <div class="ui" id="ui">
   <header>
@@ -766,6 +785,18 @@ const mountainMat = new THREE.ShaderMaterial({
       vec3 v = normalize(cameraPosition - vWorld);
       vec3 hv = normalize(uSunDir + v);
       col += uSunColor * snow * pow(max(dot(n, hv), 0.), 34.) * .22;
+
+      /* ice crystals: a sparse field of facets that flash as the view moves.
+         each crystal owns a random normal, so it only fires at one angle. */
+      vec3 cell = floor(vWorld * 5.5);
+      float h1 = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+      float h2 = fract(sin(dot(cell, vec3(269.5, 183.3, 246.1))) * 43758.5453);
+      float h3 = fract(sin(dot(cell, vec3(113.5, 271.9, 124.6))) * 43758.5453);
+      vec3 facet = normalize(n + (vec3(h1, h2, h3) - .5) * 1.7);
+      float glint = pow(max(dot(facet, hv), 0.), 220.);
+      glint *= step(.965, h1 + h2 * .04);                    /* only a few cells */
+      glint *= .5 + .5 * sin(uTime * 2.4 + h3 * 40.);        /* slow twinkle */
+      col += uSunColor * glint * snow * 2.6;
       float rim = pow(1. - clamp(dot(gn, v), 0., 1.), 3.5);
       col += uSunColor * rim * .12;
 
@@ -803,6 +834,36 @@ const mountainMat = new THREE.ShaderMaterial({
     }`
 });
 
+/* --- cursor reticle + magnetic buttons --- */
+const reticle = document.getElementById('reticle');
+const magnets = [...document.querySelectorAll('.cta .circle, .controls button')];
+const retPos = { x:innerWidth/2, y:innerHeight/2, tx:innerWidth/2, ty:innerHeight/2 };
+addEventListener('pointermove', e=>{
+  retPos.tx = e.clientX; retPos.ty = e.clientY;
+  document.body.classList.add('has-pointer');
+}, { passive:true });
+
+function tickPointerUI(){
+  /* the reticle trails the cursor a touch — the lag is what sells it */
+  retPos.x += (retPos.tx - retPos.x) * .18;
+  retPos.y += (retPos.ty - retPos.y) * .18;
+  reticle.style.transform = 'translate(' + retPos.x + 'px,' + retPos.y + 'px)';
+
+  let near = false;
+  for(const el of magnets){
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = retPos.tx - cx, dy = retPos.ty - cy;
+    const d = Math.hypot(dx, dy);
+    const pull = Math.max(0, 1 - d / 110);
+    el.style.transform = pull > 0
+      ? 'translate(' + (dx * pull * .34).toFixed(2) + 'px,' + (dy * pull * .34).toFixed(2) + 'px)'
+      : '';
+    if(pull > .25) near = true;
+  }
+  reticle.classList.toggle('is-wide', near);
+}
+
 /* --- cursor-highlight state (BVH raycast against the terrain) --- */
 const raycaster = new THREE.Raycaster();
 raycaster.firstHitOnly = true;
@@ -811,6 +872,171 @@ let hoverAim = 0, bvhReady = false, pointerInside = true;
 const hoverMeshes = [];
 addEventListener('pointerleave', ()=>{ pointerInside = false; });
 addEventListener('pointerenter', ()=>{ pointerInside = true; });
+
+/* =====================================================================
+   LIGHT PATHS — hairline arcs with a bright head running along them.
+   Same material serves the energy routes over the range and the
+   trade routes on the globe.
+   ===================================================================== */
+function makeLightMaterial(color, opts = {}){
+  return new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, depthTest:opts.depthTest !== false,
+    blending:THREE.AdditiveBlending,
+    uniforms:{
+      uTime:U.uTime,
+      uColor:{ value:new THREE.Color(color) },
+      uOpacity:{ value:0 },
+      uSpeed:{ value:opts.speed || .18 },
+      uHead:{ value:opts.head || .10 },
+      uTail:{ value:opts.tail || .055 }
+    },
+    vertexShader: /* glsl */`
+      attribute float aT;
+      attribute float aSeed;
+      varying float vT;
+      varying float vSeed;
+      void main(){
+        vT = aT; vSeed = aSeed;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+      }`,
+    fragmentShader: /* glsl */`
+      precision highp float;
+      uniform vec3 uColor;
+      uniform float uTime, uOpacity, uSpeed, uHead, uTail;
+      varying float vT;
+      varying float vSeed;
+      void main(){
+        /* the head runs from 0 to 1 along the path, one per seed offset */
+        float head = fract(uTime * uSpeed + vSeed);
+        float d = vT - head;
+        d -= floor(d + .5);                       /* wrap to -0.5..0.5 */
+
+        float trail = smoothstep(-uTail, 0., d) * smoothstep(uHead, 0., d);
+        float glow  = smoothstep(-uTail * 4., 0., d) * smoothstep(uHead * 3., 0., d) * .35;
+
+        /* the whole path stays faintly visible */
+        float base = .14 * smoothstep(0., .06, vT) * smoothstep(1., .94, vT);
+
+        float a = (base + trail + glow) * uOpacity;
+        gl_FragColor = vec4(uColor * (1. + trail * 1.6), a);
+      }`
+  });
+}
+
+/* a lifted arc between two points, as a hairline with a per-line phase */
+function makeArc(a, b, lift, seed, segments = 96){
+  const pts = [], ts = [], seeds = [];
+  const mid = a.clone().add(b).multiplyScalar(.5).normalize();
+  const sameSide = a.clone().normalize().dot(b.clone().normalize());
+  for(let i = 0; i <= segments; i++){
+    const t = i / segments;
+    const v = new THREE.Vector3().lerpVectors(a, b, t);
+    /* bulge outward: on a sphere follow the surface, otherwise lift in y */
+    if(lift.sphere){
+      v.copy(a).lerp(b, t).normalize()
+       .multiplyScalar(lift.r * (1 + lift.h * Math.sin(Math.PI * t) * (1.1 - sameSide * .4)));
+    } else {
+      v.y += lift.h * Math.sin(Math.PI * t);
+    }
+    pts.push(v.x, v.y, v.z);
+    ts.push(t);
+    seeds.push(seed);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  g.setAttribute('aT', new THREE.Float32BufferAttribute(ts, 1));
+  g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+  return g;
+}
+
+/* --- trade routes on the globe (chapter 5) --- */
+const globeRouteMat = makeLightMaterial('#bfe6ff', { speed:.09, head:.09, tail:.05 });
+const hubMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:0 }, uColor:{ value:new THREE.Color('#eaf6ff') } },
+  vertexShader: `
+    uniform float uTime;
+    attribute float aSeed;
+    varying float vPulse;
+    void main(){
+      vPulse = .6 + .4 * sin(uTime * 1.6 + aSeed * 30.);
+      vec4 mv = modelViewMatrix * vec4(position, 1.);
+      gl_PointSize = (5.5 + 3.5 * vPulse) * (60. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying float vPulse;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float core = smoothstep(.18, .0, d);
+      float ring = smoothstep(.5, .28, d) * .35;
+      gl_FragColor = vec4(uColor, (core + ring * vPulse) * uOpacity);
+    }`
+});
+
+/* --- energy routes threading over the range (chapters 3 - 4) --- */
+const routeMat = makeLightMaterial('#84d5ff', { speed:.13, head:.11, tail:.06 });
+const routes = new THREE.Group();
+routes.renderOrder = 4;
+spin.add(routes);
+(() => {
+  const nodes = [
+    new THREE.Vector3(-14,  3.4,  8), new THREE.Vector3(-4.5, 5.6, -1),
+    new THREE.Vector3( 5.5, 4.6,  6), new THREE.Vector3( 13,  3.2, -5),
+    new THREE.Vector3( 1.5, 6.2,-11), new THREE.Vector3(-9,   4.2, -9)
+  ];
+  const pairs = [[0,1],[1,2],[2,3],[1,4],[4,5],[5,0],[2,4]];
+  pairs.forEach(([i,j], k) => {
+    const g = makeArc(nodes[i], nodes[j], { h: 1.1 + (k % 3) * .55 }, k * .137);
+    routes.add(new THREE.Line(g, routeMat));
+  });
+})();
+
+/* --- drifting motes: fine specks that catch the light --- */
+const moteMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:.55 }, uColor:{ value:new THREE.Color('#ffffff') } },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    attribute float aSeed;
+    varying float vFade;
+    void main(){
+      vec3 pos = position;
+      pos.y += sin(uTime * .10 + aSeed * 6.28) * 1.6;
+      pos.x += cos(uTime * .07 + aSeed * 12.9) * 1.4;
+      vec4 mv = modelViewMatrix * vec4(pos, 1.);
+      vFade = smoothstep(90., 12., -mv.z) * smoothstep(4., 12., -mv.z);
+      gl_PointSize = (1.4 + 2.2 * aSeed) * (28. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying float vFade;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float a = smoothstep(.5, .0, d) * vFade * uOpacity;
+      gl_FragColor = vec4(uColor, a);
+    }`
+});
+(() => {
+  const N = 420, pos = [], seeds = [];
+  for(let i = 0; i < N; i++){
+    pos.push((Math.random() - .5) * 46, 1 + Math.random() * 16, (Math.random() - .5) * 46);
+    seeds.push(Math.random());
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+  const motes = new THREE.Points(g, moteMat);
+  motes.frustumCulled = false;
+  motes.renderOrder = 4;
+  scene.add(motes);
+})();
 
 /* =====================================================================
    EARTH  (chapter 5) — the water drop hands over to the globe:
@@ -823,7 +1049,8 @@ const earthRoot  = new THREE.Group();
 const earthSpin  = new THREE.Group();
 earthRoot.add(earthSpin);
 earthScene.add(earthRoot);
-let earthAmt = 0, earthT = 0, earthRadius = 1;
+let earthAmt = 0, earthT = 0, earthRadius = 1, routeAmt = 0;
+
 /* drag to spin the globe (with a little inertia, and it keeps drifting) */
 const earthDrag = { on:false, x:0, y:0, vy:0, vx:0 };
 addEventListener('pointerdown', e=>{
@@ -1140,6 +1367,31 @@ const postMat = new THREE.ShaderMaterial({
       float sh = smoothstep(1., 0., length((p - c0 - vec2(0., -R * 1.22)) / vec2(R * .95, R * .20)));
       col -= sh * .045 * amt;
 
+      /* ---- film treatment ------------------------------------------ */
+      /* soft bloom: five taps of whatever is already bright */
+      vec2 px = 1. / uResolution;
+      vec3 bloom = vec3(0.);
+      bloom += texture2D(tScene, vUv + vec2( 2.5, 1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv + vec2(-2.5, 1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv + vec2( 2.5,-1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv + vec2(-2.5,-1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv).rgb;
+      bloom *= .2;
+      bloom = max(bloom - .82, 0.) * 2.2;                  /* bright pass */
+      col += bloom * .28 * (1. - uCondense * .6);
+
+      /* chromatic aberration that only shows toward the edges */
+      float ca = dot(p, p) * .0016;
+      col.r = mix(col.r, texture2D(tScene, vUv + (vUv - .5) * ca).r, .55 * (1. - amt));
+      col.b = mix(col.b, texture2D(tScene, vUv - (vUv - .5) * ca).b, .55 * (1. - amt));
+
+      /* gentle S-curve, then grain that steps at ~18fps like film */
+      col = clamp(col, 0., 1.);
+      col = col * col * (3. - 2. * col) * .12 + col * .88;
+      float gt = floor(uTime * 18.);
+      float gr = fract(sin(dot(gl_FragCoord.xy + gt, vec2(12.9898, 78.233))) * 43758.5453);
+      col += (gr - .5) * .020;
+
       /* the cut itself — at the peak the screen is entirely the veil, so any
          camera or prop discontinuity underneath is never seen               */
       col = mix(col, uVeil, smoothstep(.30, .96, uWash));
@@ -1394,6 +1646,42 @@ gltfLoader.load('earth/scene.gltf', gltf=>{
     }
   });
   earthSpin.add(e);
+
+  /* trade routes between hubs, riding just above the surface */
+  const d2r = Math.PI / 180;
+  const onGlobe = (lat, lon, r) => new THREE.Vector3(
+    r * Math.cos(lat * d2r) * Math.cos(lon * d2r),
+    r * Math.sin(lat * d2r),
+    -r * Math.cos(lat * d2r) * Math.sin(lon * d2r)
+  );
+  const hubs = [
+    [ 49.6,   6.1], /* Luxembourg */
+    [ 46.8,   8.2], /* Switzerland */
+    [ 41.0,  28.9], /* Istanbul   */
+    [  1.3, 103.8], /* Singapore  */
+    [-33.9,  18.4], /* Cape Town  */
+    [ 35.7, 139.7]  /* Tokyo      */
+  ];
+  const links = [[0,1],[1,2],[2,3],[3,5],[2,4],[0,4]];
+  const R = earthRadius * 1.012;
+  links.forEach(([i,j], k) => {
+    const g = makeArc(onGlobe(hubs[i][0], hubs[i][1], R), onGlobe(hubs[j][0], hubs[j][1], R),
+                      { sphere:true, r:R, h:.16 }, k * .161, 120);
+    earthSpin.add(new THREE.Line(g, globeRouteMat));
+  });
+
+  /* a small dot on each hub */
+  const dotPos = [], dotSeeds = [];
+  hubs.forEach((h, i) => {
+    const v = onGlobe(h[0], h[1], R * 1.004);
+    dotPos.push(v.x, v.y, v.z); dotSeeds.push(i * .17);
+  });
+  const dg = new THREE.BufferGeometry();
+  dg.setAttribute('position', new THREE.Float32BufferAttribute(dotPos, 3));
+  dg.setAttribute('aSeed', new THREE.Float32BufferAttribute(dotSeeds, 1));
+  const dots = new THREE.Points(dg, hubMat);
+  dots.renderOrder = 6;
+  earthSpin.add(dots);
   earthSpin.rotation.z = .28;             /* axial tilt */
   earthSpin.rotation.y = 4.05;            /* land, not open ocean, facing us */
   window.__earth = earthSpin;
@@ -1546,13 +1834,22 @@ function update(dt){
     camAim.lerp(camAimT, k);
   }
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
+  /* handheld: three detuned sines per axis never repeat inside a session,
+     so it reads as an operator holding the camera rather than a loop */
+  const sway = (a, b, c, s) =>
+    Math.sin(t * a) * s + Math.sin(t * b + 1.7) * s * .55 + Math.sin(t * c + 4.1) * s * .3;
+  const hx = sway(.083, .151, .237, .16);
+  const hy = sway(.071, .129, .199, .10);
+  const hr = sway(.061, .113, .173, .0016);   /* a whisper of roll */
+
   camera.position.set(
-    camPos.x + pointerS.x * .55 + Math.sin(t*.09) * .22,
-    camPos.y - pointerS.y * .30 + Math.sin(t*.13) * .12,
+    camPos.x + pointerS.x * .55 + hx,
+    camPos.y - pointerS.y * .30 + hy,
     camPos.z + introPush
   );
   camera.up.copy(camUp);   /* the roll is switched under the veil, never on screen */
-  camera.lookAt(camAim.x, camAim.y + Math.sin(t*.11)*.06, camAim.z);
+  camera.lookAt(camAim.x + hx * .35, camAim.y + hy * .5, camAim.z);
+  camera.rotateZ(hr);
   }
 
   if(Math.abs(camera.fov - fovT) > .01){
@@ -1605,6 +1902,18 @@ function update(dt){
     waterMat.uniforms.uWaveHeight.value = waterNow.waveHeight;
     waterMat.uniforms.uWaveSpeed.value = waterNow.waveSpeed;
   }
+
+  tickPointerUI();
+
+  /* light paths: strongest on the energy chapter, gone under a wash */
+  const routeWants = (CHAPTERS[chapter].ship || CHAPTERS[chapter].idx === '4') ? 1 : 0;
+  routeAmt += (routeWants - routeAmt) * Math.min(1, dt * 1.6);
+  const veiled = 1 - smoothstep01(U.uTransition.value, .25, .9);
+  routeMat.uniforms.uOpacity.value = routeAmt * veiled * .9;
+  routes.visible = routeAmt > .01;
+  moteMat.uniforms.uOpacity.value = .5 * veiled * (1 - earthAmt);
+  globeRouteMat.uniforms.uOpacity.value = earthAmt * .95;
+  hubMat.uniforms.uOpacity.value = smoothstep01(earthAmt, .35, .9);
 
   /* chapter 5: the drop hands over to the globe.
      one eased clock drives the whole handover — an exponential lerp

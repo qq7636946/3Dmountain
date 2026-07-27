@@ -786,9 +786,9 @@ const SHIP_DEFAULTS = { ...SHIP_CONFIG };
 const SHIP_SECTION3_CONFIG = {
   section:3,
   enabled:true,
-  x:3.0, y:.9, z:-5.2,
-  rx:.02, ry:1.41, rz:.02,
-  scale:.4
+  x:-1.3, y:1.0, z:6.4,
+  rx:-.08, ry:-1.34, rz:0,
+  scale:.68
 };
 let shipReady = false;
 let shipAutoPlaced = false;
@@ -873,10 +873,10 @@ const WATER_DEFAULTS = { ...WATER_CONFIG };
 const WATER_SECTION3_CONFIG = {
   section:3,
   enabled:true,
-  x:3.5, y:1.0, z:-5.0,
-  rx:-.05, ry:-.001, rz:-.11,
-  scaleX:.42, scaleY:.27, scaleZ:1.02,
-  opacity:.5, waveHeight:0, waveSpeed:.5
+  x:-2.2, y:1.2, z:3.4,
+  rx:.05, ry:.23, rz:.02,
+  scaleX:.41, scaleY:.36, scaleZ:1.36,
+  opacity:.65, waveHeight:.48, waveSpeed:.64
 };
 let waterReady = false;
 let waterAutoPlaced = false;
@@ -1182,7 +1182,7 @@ const CHAPTERS = [
     cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
     credit:'Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · CC BY 4.0' },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
-    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
+    cam:{ x:-6.0, y:5.5, z:23.8, tx:-5.9, ty:1.0, tz:-9.8 }, rot:-1.00, fov:40.0,
     credit:'Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · CC BY 4.0' }
 ];
 let chapter = 0;                 // the Expeditions hero is the initial section
@@ -1307,20 +1307,21 @@ function updateScrollTimeline(force=false){
   if(TUNE) return;
   const p = clamp01(scrollY/visualRange());
   const cameraMix = smoothstep(.06,.34,p);
-  const a = CHAPTERS[0], b = CHAPTERS[1];
+  const thirdCameraMix = smoothstep(.50,.74,p);
+  const a = CHAPTERS[0], b = CHAPTERS[1], c = CHAPTERS[2];
   camPosT.set(
-    mix(a.cam.x,b.cam.x,cameraMix),
-    mix(a.cam.y,b.cam.y,cameraMix),
-    mix(a.cam.z,b.cam.z,cameraMix)
+    mix(mix(a.cam.x,b.cam.x,cameraMix),c.cam.x,thirdCameraMix),
+    mix(mix(a.cam.y,b.cam.y,cameraMix),c.cam.y,thirdCameraMix),
+    mix(mix(a.cam.z,b.cam.z,cameraMix),c.cam.z,thirdCameraMix)
   );
   camAimT.set(
-    mix(a.cam.tx,b.cam.tx,cameraMix),
-    mix(a.cam.ty,b.cam.ty,cameraMix),
-    mix(a.cam.tz||0,b.cam.tz||0,cameraMix)
+    mix(mix(a.cam.tx,b.cam.tx,cameraMix),c.cam.tx,thirdCameraMix),
+    mix(mix(a.cam.ty,b.cam.ty,cameraMix),c.cam.ty,thirdCameraMix),
+    mix(mix(a.cam.tz||0,b.cam.tz||0,cameraMix),c.cam.tz||0,thirdCameraMix)
   );
   camUpT.set(0,1-cameraMix,-cameraMix).normalize();
-  fovT = mix(a.fov||40,b.fov||40,cameraMix);
-  spinT = mix(a.rot,b.rot,cameraMix);
+  fovT = mix(mix(a.fov||40,b.fov||40,cameraMix),c.fov||40,thirdCameraMix);
+  spinT = mix(mix(a.rot,b.rot,cameraMix),c.rot,thirdCameraMix);
 
   /* Previous-version cloud wash, now driven continuously by native scroll. */
   const firstCloudWipe = cloudWipe(p,.10,.34);

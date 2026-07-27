@@ -5,6 +5,6 @@
 .DS_Store
 Thumbs.db
 
-# Original water source asset is kept locally; deploy the optimized runtime copy.
+# Original water source asset is kept locally and is not part of the current build.
 /water_waves/
 /water_waves.zip

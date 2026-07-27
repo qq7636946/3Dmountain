@@ -25,32 +25,42 @@ body{
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
-body.is-water{
-  --ink:#eaf4f7;
-  --ink-dim:rgba(234,244,247,.66);
-  --hair:rgba(234,244,247,.34);
-  --accent:#f5fbfd;
+body.is-free-scroll{
+  height:auto;min-height:100%;overflow:visible;background:#eef2f5;
 }
-body.is-free-scroll{overflow-x:hidden;overflow-y:auto;background:#eef2f5}
 canvas#gl{
-  position:fixed;inset:0;width:100%;height:100%;display:block;
-  transition:filter 1.4s var(--ease),transform 2.2s var(--ease);
+  position:fixed;left:0;top:0;z-index:0;width:100vw;height:100vh;display:block;
+  transition:opacity .9s var(--ease);
 }
-body.is-free-scroll canvas#gl{filter:saturate(.82) brightness(1.06);transform:scale(1.018)}
+.chapter-image{
+  position:fixed;left:0;top:0;z-index:1;width:100%;height:100vh;
+  background:url('b.jpg') center center/cover no-repeat;
+  opacity:0;transform:scale(1.018);pointer-events:none;
+  transition:opacity .9s var(--ease),transform 1.5s var(--ease);
+}
+.chapter-image:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(229,237,243,.56) 0,rgba(229,237,243,.20) 38%,rgba(229,237,243,0) 68%);
+}
+body.is-image canvas#gl{opacity:0}
+body.is-image .chapter-image{opacity:1;transform:none}
 
 /* ---------- overlay grain / vignette ---------- */
 .grain{
-  position:fixed;inset:0;pointer-events:none;z-index:3;
+  position:fixed;left:0;top:0;width:100%;height:100vh;pointer-events:none;z-index:3;
   background:
     radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(120,138,152,.30) 100%);
-  mix-blend-mode:multiply;opacity:.9;transition:opacity 1.2s var(--ease);
+  mix-blend-mode:multiply;opacity:.9;
 }
-body.is-free-scroll .grain{opacity:.58}
 
 /* ---------- shell ---------- */
-.ui{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity 1s var(--ease)}
+.ui{position:fixed;left:0;top:0;width:100%;height:100vh;z-index:4;pointer-events:none}
 .ui a,.ui button{pointer-events:auto}
-body.is-free-scroll .ui{opacity:0;pointer-events:none}
+body.is-free-scroll canvas#gl,
+body.is-free-scroll .chapter-image,
+body.is-free-scroll .grain,
+body.is-free-scroll .ui{position:absolute}
+body.is-free-scroll .ui{pointer-events:none}
 body.is-free-scroll .ui a,body.is-free-scroll .ui button{pointer-events:none}
 
 header{
@@ -182,40 +192,32 @@ h1{
 .loader .fill{display:block;height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s linear}
 .loader .pct{font-size:.6rem;letter-spacing:.24em;color:var(--ink-dim)}
 
-/* ---------- native free-scroll content after chapter four ---------- */
+/* ---------- native document content after the visual chapters ---------- */
 .free-scroll{
-  position:relative;z-index:6;margin-top:0;
-  background:linear-gradient(
-    180deg,
-    rgba(238,242,245,0) 0,
-    rgba(238,242,245,.08) 38vh,
-    rgba(238,242,245,.58) 92vh,
-    rgba(238,242,245,.94) 148vh,
-    #eef2f5 190vh
-  );
+  position:relative;z-index:6;margin-top:100vh;
+  background:#eef2f5;
   color:var(--ink);
   opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity 1.15s var(--ease);
 }
 body.is-free-scroll .free-scroll{opacity:1;visibility:visible;pointer-events:auto}
 .free-inner{width:min(1180px,calc(100% - 48px));margin:0 auto}
 .free-intro{
-  min-height:116vh;padding:38vh 0 clamp(90px,14vh,150px);
+  min-height:92vh;padding:clamp(90px,12vh,140px) 0;
   display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,.55fr);
-  align-items:end;gap:clamp(48px,8vw,120px);
+  align-items:start;gap:clamp(48px,8vw,120px);
   border-bottom:1px solid var(--hair);
 }
 .free-kicker{font-size:.64rem;letter-spacing:.3em;font-weight:500;margin-bottom:28px}
 .free-intro h2{
-  max-width:760px;font-size:clamp(2.5rem,5.4vw,5.6rem);line-height:.98;
+  max-width:720px;font-size:clamp(2.35rem,4.8vw,5rem);line-height:1;
   font-weight:200;letter-spacing:-.018em;text-transform:uppercase;
 }
 .free-intro p{max-width:360px;font-size:clamp(.92rem,1.15vw,1.08rem);line-height:1.8;color:var(--ink-dim)}
 .free-scroll [data-reveal]{
-  opacity:0;transform:translateY(42px);
-  transition:opacity 1.1s var(--ease),transform 1.25s var(--ease);
+  opacity:0;transform:translateY(28px);
+  transition:opacity 1.05s var(--ease),transform 1.2s var(--ease);
 }
-.free-scroll [data-reveal="soft"]{transform:translateY(24px);transition-delay:.12s}
+.free-scroll [data-reveal="soft"]{transform:translateY(18px);transition-delay:.1s}
 body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:none}
 .free-divisions{padding:clamp(90px,13vh,160px) 0}
 .free-heading{
@@ -255,8 +257,8 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
   .next .name{font-size:.82rem}
   .credit{display:none}
   .free-inner{width:min(100% - 36px,680px)}
-  .free-intro{grid-template-columns:1fr;align-content:end;min-height:112vh;padding-top:46vh}
-  .free-intro h2{font-size:clamp(2.45rem,12vw,4.8rem)}
+  .free-intro{grid-template-columns:1fr;align-content:start;min-height:90vh;padding-top:12vh}
+  .free-intro h2{font-size:clamp(2.35rem,11vw,4.5rem)}
   .division-card{grid-template-columns:44px 1fr;gap:12px 20px;padding:34px 0}
   .division-card:hover{padding:34px 14px}
   .division-card p{grid-column:2}
@@ -267,6 +269,7 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
 <body>
 
 <canvas id="gl"></canvas>
+<div class="chapter-image" id="chapterImage" aria-hidden="true"></div>
 <div class="grain"></div>
 
 <div class="ui" id="ui">
@@ -299,8 +302,8 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
   </div>
 
   <div class="next" id="next">
-    <div class="diamond"><span id="tNextIdx">4</span></div>
-    <div class="name"><b id="tNextName">Montis Ventures</b></div>
+    <div class="diamond"><span id="tNextIdx">2</span></div>
+    <div class="name"><b id="tNextName">Montis Research</b></div>
   </div>
 
   <div class="credit" id="credit">3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC&nbsp;BY&nbsp;4.0</div>
@@ -324,8 +327,8 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
   <div class="free-inner">
     <section class="free-intro">
       <div data-reveal>
-        <div class="free-kicker">BEYOND THE FOURTH CHAPTER</div>
-        <h2>ONE MOUNTAIN.<br>FOUR DIRECTIONS.</h2>
+        <div class="free-kicker">BEYOND THE VISUAL CHAPTERS</div>
+        <h2>ONE MOUNTAIN.<br>THREE DIRECTIONS.</h2>
       </div>
       <p data-reveal="soft">
         Continue through the Montis divisions at your own pace.
@@ -336,7 +339,7 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
     <section class="free-divisions">
       <div class="free-heading" data-reveal>
         <h3>Montis Divisions</h3>
-        <span>01 — 04</span>
+        <span>01 — 03</span>
       </div>
       <div class="division-list">
         <article class="division-card" data-reveal>
@@ -354,11 +357,6 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
           <h4>Montis Energy</h4>
           <p>Harnessing height, delivering power.</p>
         </article>
-        <article class="division-card" data-reveal>
-          <span class="num">04</span>
-          <h4>Montis Ventures</h4>
-          <p>Building what comes next.</p>
-        </article>
       </div>
     </section>
 
@@ -366,7 +364,7 @@ body.is-free-scroll .free-scroll [data-reveal].is-visible{opacity:1;transform:no
       <h3 data-reveal>The summit is only the beginning.</h3>
       <div class="free-footer" data-reveal="soft">
         <span>MONTIS</span>
-        <span>EXPEDITIONS · RESEARCH · ENERGY · VENTURES</span>
+        <span>EXPEDITIONS · RESEARCH · ENERGY</span>
       </div>
     </section>
   </div>
@@ -758,8 +756,6 @@ const cloudMat = new THREE.ShaderMaterial({
       float feather = smoothstep(.01, .78, density);
       float body = smoothstep(.18, .64, density);
       float alpha = mix(feather * .58, body, .68) * .94;
-      float waterChapter = 1. - smoothstep(.35,1.,abs(uChapter-2.));
-      alpha *= mix(1.,.16,waterChapter*(1.-thick));
 
       gl_FragColor = vec4(color, clamp(alpha, 0., 1.));
       #include <colorspace_fragment>
@@ -890,70 +886,6 @@ const mountainMat = new THREE.ShaderMaterial({
     }`
 });
 
-/* =====================================================================
-   WATER — lightweight runtime mesh + procedural motion
-   ===================================================================== */
-const waterRoot = new THREE.Group();
-waterRoot.visible = false;
-scene.add(waterRoot);
-
-const waterMat = new THREE.ShaderMaterial({
-  side:THREE.DoubleSide,
-  uniforms:{
-    uTime:U.uTime,
-    uTransition:U.uTransition,
-    uDeep:{ value:new THREE.Color('#173846') },
-    uMid:{ value:new THREE.Color('#56869a') },
-    uLight:{ value:new THREE.Color('#d8e8ee') },
-    uSunDir:{ value:new THREE.Vector3(-.52,.78,.34).normalize() }
-  },
-  vertexShader: /* glsl */`
-    uniform float uTime;
-    varying vec3 vWorld, vNrm;
-    varying float vHeight;
-    void main(){
-      float t = uTime * .72;
-      vec3 p = position;
-      float a = p.x*.034 + t;
-      float b = p.z*.041 - t*.82;
-      float c = (p.x+p.z)*.018 + t*.54;
-      p.y += (sin(a)*8. + cos(b)*6. + sin(c)*4.) * .52;
-
-      float dx = (.034*8.*cos(a) + .018*4.*cos(c)) * .52;
-      float dz = (-.041*6.*sin(b) + .018*4.*cos(c)) * .52;
-      vec3 waveN = normalize(normal + vec3(-dx,.08,-dz)*.62);
-
-      vec4 wp = modelMatrix * vec4(p,1.);
-      vWorld = wp.xyz;
-      vNrm = normalize(mat3(modelMatrix) * waveN);
-      vHeight = p.y;
-      gl_Position = projectionMatrix * viewMatrix * wp;
-    }`,
-  fragmentShader: /* glsl */`
-    precision highp float;
-    uniform float uTransition;
-    uniform vec3 uDeep, uMid, uLight, uSunDir;
-    varying vec3 vWorld, vNrm;
-    varying float vHeight;
-    void main(){
-      vec3 n = normalize(vNrm);
-      vec3 v = normalize(cameraPosition - vWorld);
-      float fresnel = pow(1. - clamp(dot(n,v),0.,1.), 2.5);
-      float diffuse = max(dot(n,uSunDir),0.);
-      vec3 halfDir = normalize(uSunDir + v);
-      float sparkle = pow(max(dot(n,halfDir),0.), 72.);
-      float crest = smoothstep(4.,31.,vHeight);
-
-      vec3 col = mix(uDeep,uMid,.34 + diffuse*.34);
-      col = mix(col,uLight,clamp(fresnel*.72 + crest*.28,0.,1.));
-      col += uLight * sparkle * .72;
-      col = mix(col,uLight,smoothstep(.28,1.,uTransition)*.82);
-
-      gl_FragColor = vec4(col,1.);
-      #include <colorspace_fragment>
-    }`
-});
-
 /* --- cursor-highlight state (BVH raycast against the terrain) --- */
 const raycaster = new THREE.Raycaster();
 raycaster.firstHitOnly = true;
@@ -970,12 +902,10 @@ const CHAPTERS = [
   { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',  cta:'MONTIS EXPEDITIONS',
     cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 },
   { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
-    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
-    exitCam:{ x:-10.6, y:9.0, z:0.0, tx:-10.6, ty:2.9, tz:0.0, rot:2.04, fov:40.0 } },
+    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0 },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
-    cam:{ x:0.0, y:54.0, z:2.5, tx:0.0, ty:0.0, tz:0.0 }, rot:0.0, fov:40.0, scene:'water' },
-  { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',      cta:'MONTIS VENTURES',
-    cam:{ x:9.6, y:7.3, z:27.0, tx:-11.1, ty:3.2, tz:0.0 }, rot:1.86 }
+    cam:{ x:-10.6, y:32.4, z:0.0, tx:-10.6, ty:2.9, tz:0.0 }, rot:1.86, fov:40.0,
+    scene:'image', credit:'MONTIS — ARCTIC PASSAGE' }
 ];
 let chapter = 0;                 // the Expeditions hero is the initial section
 let busy = true;
@@ -1005,7 +935,7 @@ CHAPTERS.forEach((c,i)=>{
 function paint(i){
   const c = CHAPTERS[i];
   const isLast = i === CHAPTERS.length - 1;
-  const n = CHAPTERS[(i+1)%CHAPTERS.length];
+  const n = CHAPTERS[Math.min(i+1,CHAPTERS.length-1)];
   el.eyebrow.textContent = c.eyebrow;
   el.l1.textContent = c.l1;
   el.l2.textContent = c.l2;
@@ -1013,17 +943,15 @@ function paint(i){
   el.idx.textContent = c.idx;
   el.nextIdx.textContent = isLast ? '↓' : n.idx;
   el.nextName.textContent = isLast ? 'Continue to Montis' : n.eyebrow;
-  document.body.classList.toggle('is-water',c.scene === 'water');
-  el.credit.textContent = c.scene === 'water'
-    ? '3D model “water waves” by UJWAL — CC BY 4.0'
-    : '3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC BY 4.0';
+  el.prev.disabled = i === 0;
+  el.credit.textContent = c.credit || '3D model “Snowy Mountain V2 — Terrain” by artfromheath — CC BY 4.0';
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
 }
 
 function setSceneForChapter(i){
-  const showWater = CHAPTERS[i].scene === 'water' && waterReady;
-  waterRoot.visible = showWater;
-  modelRoot.visible = !showWater;
+  const showImage = CHAPTERS[i].scene === 'image';
+  document.body.classList.toggle('is-image',showImage);
+  modelRoot.visible = !showImage;
 }
 
 /* camera targets ------------------------------------------------------- */
@@ -1045,63 +973,34 @@ function applyChapterTarget(i, instant){
 
 /* transition ----------------------------------------------------------- */
 let trans = { on:false, t:0, dir:1, swapped:false };
-const cameraPush = {
-  on:false, t:0, duration:1.55,
-  fromPos:new THREE.Vector3(), toPos:new THREE.Vector3(),
-  fromAim:new THREE.Vector3(), toAim:new THREE.Vector3(),
-  fromFov:40, toFov:40, fromRot:0, toRot:0
-};
 
 function goTo(i){
   if(busy) return;
   const n = CHAPTERS.length;
-  i = ((i % n) + n) % n;                    // divisions loop, like the reference
+  if(i < 0 || i >= n) return;
   if(i === chapter) return;
+  const fromPos = camPos.clone();
+  const fromAim = camAim.clone();
+  const fromFov = camera.fov;
+  const fromRot = spin.rotation.y;
   busy = true;
   chapter = i;
   el.ui.classList.remove('is-in');
   el.ui.classList.add('is-out');
-  trans = { on:true, t:0, swapped:false };
   applyChapterTarget(i);
-}
-
-function pushThenGoNext(){
-  const p = CHAPTERS[chapter].exitCam;
-  if(busy || !p) return;
-  busy = true;
-  cameraPush.on = true;
-  cameraPush.t = 0;
-  cameraPush.fromPos.copy(camPos);
-  cameraPush.toPos.set(p.x, p.y, p.z);
-  cameraPush.fromAim.copy(camAim);
-  cameraPush.toAim.set(p.tx, p.ty, p.tz || 0);
-  cameraPush.fromFov = camera.fov;
-  cameraPush.toFov = p.fov || 40;
-  cameraPush.fromRot = spin.rotation.y;
-  cameraPush.toRot = p.rot;
-}
-
-function tickCameraPush(dt){
-  if(!cameraPush.on) return false;
-  cameraPush.t += dt / cameraPush.duration;
-  const t = Math.min(cameraPush.t, 1);
-  const ease = t * t * (3 - 2 * t);
-  camPos.lerpVectors(cameraPush.fromPos, cameraPush.toPos, ease);
-  camAim.lerpVectors(cameraPush.fromAim, cameraPush.toAim, ease);
-  fovT = THREE.MathUtils.lerp(cameraPush.fromFov, cameraPush.toFov, ease);
-  spinT = THREE.MathUtils.lerp(cameraPush.fromRot, cameraPush.toRot, ease);
-  if(t >= 1){
-    cameraPush.on = false;
-    busy = false;
-    goTo(chapter + 1);
-  }
-  return true;
+  trans = { on:true, t:0, swapped:false, fromPos, fromAim, fromFov, fromRot };
 }
 
 function tickTransition(dt){
   if(!trans.on) return;
-  trans.t += dt / 1.9;                       // ~1.9s full wash
+  trans.t += dt / 1.75;
   const t = Math.min(trans.t, 1);
+  const ease = t*t*(3-2*t);
+  camPos.lerpVectors(trans.fromPos,camPosT,ease);
+  camAim.lerpVectors(trans.fromAim,camAimT,ease);
+  camera.fov = THREE.MathUtils.lerp(trans.fromFov,fovT,ease);
+  camera.updateProjectionMatrix();
+  spin.rotation.y = THREE.MathUtils.lerp(trans.fromRot,spinT,ease);
   U.uTransition.value = Math.sin(t * Math.PI);   // 0 -> 1 -> 0
   U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
   if(!trans.swapped && t > .46){
@@ -1116,7 +1015,10 @@ function tickTransition(dt){
     void el.ui.offsetWidth;
     el.ui.classList.add('is-in');
   }
-  if(t >= 1){ trans.on = false; U.uTransition.value = 0; busy = false; }
+  if(t >= 1){
+    camPos.copy(camPosT);camAim.copy(camAimT);spin.rotation.y=spinT;
+    trans.on = false;U.uTransition.value = 0;busy = false;
+  }
 }
 
 /* input ---------------------------------------------------------------- */
@@ -1156,7 +1058,6 @@ function exitFreeScroll(){
 
 function goNext(unlockDelta = 0){
   if(chapter === CHAPTERS.length - 1) enterFreeScroll(unlockDelta);
-  else if(CHAPTERS[chapter].exitCam) pushThenGoNext();
   else goTo(chapter + 1);
 }
 
@@ -1168,7 +1069,7 @@ addEventListener('wheel', e=>{
     return;
   }
   const now = performance.now();
-  if(busy || now - wheelLock < 900) return;
+  if(busy || now - wheelLock < 700) return;
   if(Math.abs(e.deltaY) < 14) return;
   wheelLock = now;
   const wheelDelta = e.deltaMode === 1 ? e.deltaY * 16
@@ -1242,12 +1143,11 @@ manager.onProgress = (url, loaded, total)=>{
   loadPct.textContent = p + '%';
 };
 let mountainReady = false;
-let waterReady = false;
-let waterSettled = false;
+let imageSettled = false;
 let introStarted = false;
 
 function tryStartIntro(){
-  if(introStarted || !mountainReady || !waterSettled) return;
+  if(introStarted || !mountainReady || !imageSettled) return;
   introStarted = true;
   setSceneForChapter(chapter);
   setTimeout(()=>{
@@ -1258,7 +1158,17 @@ function tryStartIntro(){
 }
 
 const MODEL = 'snowy_mountain_v2_-_terrain/';
-const WATER_MODEL = 'water_waves_runtime/';
+const chapterImagePreload = new Image();
+chapterImagePreload.onload = ()=>{
+  imageSettled = true;
+  tryStartIntro();
+};
+chapterImagePreload.onerror = ()=>{
+  imageSettled = true;
+  console.warn('chapter image unavailable');
+  tryStartIntro();
+};
+chapterImagePreload.src = 'b.jpg';
 const texLoader = new THREE.TextureLoader(manager);
 const mapTex = texLoader.load(MODEL + 'textures/Material.001_baseColor.png');
 const nrmTex = texLoader.load(MODEL + 'textures/Material.001_normal.png');
@@ -1312,35 +1222,6 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
   }, 3200);
 });
 
-gltfLoader.load(WATER_MODEL + 'scene.gltf', gltf=>{
-  const m = gltf.scene;
-  m.traverse(o=>{
-    if(o.isMesh){
-      o.material = waterMat;
-      o.frustumCulled = false;
-    }
-  });
-
-  const box = new THREE.Box3().setFromObject(m);
-  const size = new THREE.Vector3(); box.getSize(size);
-  const ctr = new THREE.Vector3(); box.getCenter(ctr);
-  const s = 82 / Math.max(size.x,size.z);
-  m.position.set(-ctr.x,-ctr.y,-ctr.z);
-  const holder = new THREE.Group();
-  holder.add(m);
-  holder.scale.setScalar(s);
-  waterRoot.add(holder);
-  waterReady = true;
-  waterSettled = true;
-  setSceneForChapter(chapter);
-  window.__water = { size:size.toArray(), scale:s };
-  tryStartIntro();
-}, undefined, err=>{
-  waterSettled = true;
-  console.warn('water scene unavailable:',err);
-  tryStartIntro();
-});
-
 /* =====================================================================
    LOOP
    ===================================================================== */
@@ -1367,7 +1248,6 @@ function update(dt){
     if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
   }
   tickTransition(dt);
-  const isPushing = tickCameraPush(dt);
 
   const t = U.uTime.value;
 
@@ -1375,21 +1255,22 @@ function update(dt){
   if(controls){
     controls.update();
   } else {
-  if(!isPushing){
-    const k = Math.min(1, dt * (trans.on ? 1.35 : 2.2));
-    camPos.lerp(camPosT, k);
-    camAim.lerp(camAimT, k);
+  if(!trans.on){
+    const k = Math.min(1,dt*2.2);
+    camPos.lerp(camPosT,k);
+    camAim.lerp(camAimT,k);
   }
+  const idle = chapter === 0 && !trans.on ? 1 : 0;
   const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
   camera.position.set(
-    camPos.x + Math.sin(t*.11) * .35,
-    camPos.y + Math.sin(t*.17) * .18,
+    camPos.x + Math.sin(t*.11) * .35 * idle,
+    camPos.y + Math.sin(t*.17) * .18 * idle,
     camPos.z + introPush
   );
-  camera.lookAt(camAim.x, camAim.y + Math.sin(t*.13)*.1, camAim.z);
+  camera.lookAt(camAim.x,camAim.y + Math.sin(t*.13)*.1*idle,camAim.z);
   }
 
-  if(Math.abs(camera.fov - fovT) > .01){
+  if(!trans.on && Math.abs(camera.fov - fovT) > .01){
     camera.fov += (fovT - camera.fov) * Math.min(1, dt*2.2);
     camera.updateProjectionMatrix();
   }
@@ -1397,8 +1278,7 @@ function update(dt){
   const fogAim = CHAPTERS[chapter].fogTop || 2.6;
   mountainMat.uniforms.uFogTop.value += (fogAim - mountainMat.uniforms.uFogTop.value) * Math.min(1, dt*1.2);
 
-  spin.rotation.y += (spinT - spin.rotation.y) * Math.min(1, dt*1.1);
-  spin.rotation.y += Math.sin(t*.07) * .00035;
+  if(!trans.on) spin.rotation.y += (spinT-spin.rotation.y)*Math.min(1,dt*1.1);
 
   /* cursor highlight on the terrain */
   const hu = mountainMat.uniforms;
@@ -1452,7 +1332,7 @@ if(TUNE){
     + '<div id="tuneRows"></div>'
     + '<div id="tuneOut" style="white-space:pre;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製四段',1)
+    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製三段',1)
     +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
     + '</div>';
   document.body.appendChild(panel);
@@ -1512,7 +1392,7 @@ if(TUNE){
   panel.querySelector('#tuneCopyAll').onclick = e=>{
     grab();
     navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
-      .then(()=>flash(e.target,'已複製四段 ✓'));
+      .then(()=>flash(e.target,'已複製三段 ✓'));
   };
   const restore = ()=>{
     applyChapterTarget(chapter, true);
@@ -1524,7 +1404,9 @@ if(TUNE){
   };
   const jump = d=>{
     grab();
-    chapter = (chapter + d + CHAPTERS.length) % CHAPTERS.length;
+    const next = chapter+d;
+    if(next < 0 || next >= CHAPTERS.length) return;
+    chapter = next;
     paint(chapter);
     restore();
   };
@@ -1576,7 +1458,7 @@ if(TUNE){
 
 /* expose for debugging / screenshots */
 window.viz = {
-  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, waterRoot, CHAPTERS, mountainMat, waterMat, update,
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){

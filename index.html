@@ -35,66 +35,6 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
   mix-blend-mode:multiply;opacity:.9;
 }
 
-/* ---------- scrolling story block (chapters 3 + 4) ---------- */
-#story{
-  position:fixed;inset:0;z-index:5;overflow-y:auto;overflow-x:hidden;
-  opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .8s var(--ease),visibility .8s;
-  background:rgba(240,244,247,.90);
-  -webkit-overflow-scrolling:touch;
-}
-#story.is-on{opacity:1;visibility:visible;pointer-events:auto}
-#story::-webkit-scrollbar{width:0}
-.story-row{
-  min-height:100vh;display:grid;grid-template-columns:1fr 1fr;
-  align-items:center;gap:clamp(30px,5vw,96px);
-  padding:clamp(60px,9vh,130px) clamp(26px,6vw,110px);
-}
-.story-row .fig{
-  margin:0;overflow:hidden;aspect-ratio:4/5;background:#e2e8ec;
-  clip-path:inset(0 0 100% 0);transition:clip-path 1.2s var(--ease);
-}
-.story-row.is-in .fig{clip-path:inset(0 0 0 0)}
-.story-row .fig img{
-  width:100%;height:100%;object-fit:cover;display:block;
-  filter:saturate(.35) contrast(1.02);
-  transform:scale(1.08);transition:transform 1.6s var(--ease);
-}
-.story-row.is-in .fig img{transform:scale(1)}
-.story-row.is-flip .fig{order:2}
-.s-eyebrow{font-size:clamp(.86rem,1.1vw,1rem);color:var(--ink);opacity:.9;margin-bottom:clamp(16px,2vw,26px);overflow:hidden}
-.s-title{
-  font-weight:200;font-size:clamp(1.7rem,3.2vw,3rem);line-height:1.14;
-  text-transform:uppercase;letter-spacing:.005em;margin-bottom:clamp(20px,2.6vw,34px);
-}
-.s-title span,.s-eyebrow span{display:block;transform:translateY(115%);transition:transform 1s var(--ease)}
-.s-title span{overflow:hidden}
-.is-in .s-title span,.is-in .s-eyebrow span{transform:none}
-.s-title span:nth-child(2){transition-delay:.08s}
-.s-body{
-  font-size:clamp(.92rem,1.05vw,1.02rem);line-height:1.9;color:var(--ink);opacity:0;
-  max-width:52ch;margin-bottom:clamp(14px,1.6vw,22px);
-  transition:opacity 1s var(--ease) .2s;
-}
-.is-in .s-body{opacity:.82}
-.s-link{
-  display:inline-flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink);
-  font-size:.72rem;letter-spacing:.24em;font-weight:500;margin-top:clamp(8px,1.4vw,18px);
-  opacity:0;transition:opacity .9s var(--ease) .35s;
-}
-.is-in .s-link{opacity:1}
-.s-link i{
-  font-style:normal;width:38px;height:38px;border-radius:50%;
-  border:1px solid rgba(47,95,138,.45);display:grid;place-items:center;
-  transition:background .45s var(--ease),color .45s var(--ease),transform .45s var(--ease);
-}
-.s-link:hover i{background:var(--ink);color:#fff;transform:translateX(4px)}
-@media (max-width:860px){
-  .story-row{grid-template-columns:1fr;gap:26px;min-height:auto;padding:14vh 26px}
-  .story-row.is-flip .fig{order:0}
-  .story-row .fig{aspect-ratio:4/3}
-}
-
 /* ---------- shell ---------- */
 .ui{position:fixed;inset:0;z-index:4;pointer-events:none}
 .ui a,.ui button{pointer-events:auto}
@@ -253,34 +193,6 @@ body.on-dark .credit{ color:rgba(255,255,255,.42) }
 
 <canvas id="gl"></canvas>
 <div class="grain"></div>
-
-<section id="story" aria-label="Montis divisions">
-  <article class="story-row">
-    <figure class="fig">
-      <img src="https://images.unsplash.com/photo-1454789548928-9efd52dc4031?auto=format&fit=crop&w=1400&q=80" alt="">
-    </figure>
-    <div class="copy">
-      <p class="s-eyebrow"><span>Montis Energy</span></p>
-      <h2 class="s-title"><span>HARNESSING HEIGHT,</span><span>DELIVERING POWER.</span></h2>
-      <p class="s-body">高山是天然的位能。我們在海拔之間布建抽蓄與微水力機組，把季節性的融雪轉換成穩定的基載電力，再以最短的路徑送到需要它的城市。</p>
-      <p class="s-body">從選址、環評到併網，每一座場站都以「不改變地貌」為前提設計——設備順著既有的溪谷走，發電之後，水回到原本的河道。</p>
-      <a class="s-link" href="#">MONTIS ENERGY <i>&#8594;</i></a>
-    </div>
-  </article>
-
-  <article class="story-row is-flip">
-    <figure class="fig">
-      <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1400&q=80" alt="">
-    </figure>
-    <div class="copy">
-      <p class="s-eyebrow"><span>Montis Ventures</span></p>
-      <h2 class="s-title"><span>BUILDING WHAT</span><span>COMES NEXT.</span></h2>
-      <p class="s-body">我們投資早期的能源與物流技術團隊，從儲能材料、極地運輸到碳流追蹤，陪他們走過第一座示範場的驗證。</p>
-      <p class="s-body">資本只是其中一環。真正稀缺的是把一項技術放進真實環境裡運轉的機會——那正是我們既有的場站與航線能提供的。</p>
-      <a class="s-link" href="#">MONTIS VENTURES <i>&#8594;</i></a>
-    </div>
-  </article>
-</section>
 
 <div class="ui" id="ui">
   <header>
@@ -891,22 +803,6 @@ const mountainMat = new THREE.ShaderMaterial({
     }`
 });
 
-/* --- the scrolling story block owns one chapter --- */
-const storyEl = document.getElementById('story');
-let storyPrimed = false, storyFromBelow = false;
-
-const storyRows = [...storyEl.querySelectorAll('.story-row')];
-const storyIO = new IntersectionObserver(es=>{
-  es.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('is-in'); });
-}, { root:storyEl, threshold:.25 });
-storyRows.forEach(r=>storyIO.observe(r));
-
-/* true while the panel still has somewhere to scroll in that direction */
-function storyHasRunway(down){
-  const max = storyEl.scrollHeight - storyEl.clientHeight;
-  return down ? storyEl.scrollTop < max - 2 : storyEl.scrollTop > 2;
-}
-
 /* --- cursor-highlight state (BVH raycast against the terrain) --- */
 const raycaster = new THREE.Raycaster();
 raycaster.firstHitOnly = true;
@@ -1283,7 +1179,9 @@ const CHAPTERS = [
     cam:{ x:-10.3, y:30.6, z:0.0, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16, fov:40.0, flat:.82, deck:.45 },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
     cam:{ x:-5.96, y:5.53, z:23.76, tx:-5.87, ty:0.95, tz:-9.85 }, rot:-1.00, fov:40.0,
-    ship:SHIP_S3, water:WATER_S3, story:true },
+    ship:SHIP_S3, water:WATER_S3 },
+  { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',       cta:'MONTIS VENTURES',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, },
   { idx:'5', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
     cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
     earth:true, dark:true }
@@ -1329,10 +1227,6 @@ function paint(i){
   el.nextName.textContent = n.eyebrow;
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
   document.body.classList.toggle('on-dark', CHAPTERS[i].dark === true);
-  const story = CHAPTERS[i].story === true;
-  document.querySelector('.stage').style.opacity = story ? '0' : '';
-  document.querySelector('.stage').style.pointerEvents = story ? 'none' : '';
-  document.getElementById('dIdx').style.opacity = story ? '0' : '';
 }
 
 /* camera targets ------------------------------------------------------- */
@@ -1372,7 +1266,6 @@ function goTo(i){
   i = Math.max(0, Math.min(n - 1, i));      // the sequence ends on the globe
   if(i === chapter) return;
   busy = true;
-  storyFromBelow = i < chapter;
   camPosFrom.copy(camPos);
   camAimFrom.copy(camAim);
   chapter = i;
@@ -1408,11 +1301,6 @@ function tickTransition(dt){
 let wheelLock = 0;
 addEventListener('wheel', e=>{
   if(TUNE) return;
-
-  /* inside the story block the page scrolls normally; only at the very
-     top or bottom does the wheel go back to changing chapters        */
-  if(CHAPTERS[chapter].story && !trans.on && !busy && storyHasRunway(e.deltaY > 0)) return;
-
   const now = performance.now();
   if(busy || now - wheelLock < 900) return;
   if(Math.abs(e.deltaY) < 14) return;
@@ -1717,16 +1605,6 @@ function update(dt){
     waterMat.uniforms.uWaveHeight.value = waterNow.waveHeight;
     waterMat.uniforms.uWaveSpeed.value = waterNow.waveSpeed;
   }
-
-  /* the story block: a real scrolling panel, not a jacked chapter */
-  const wantsStory = CHAPTERS[chapter].story === true;
-  const storyOn = wantsStory && !trans.on;
-  storyEl.classList.toggle('is-on', storyOn);
-  if(storyOn && !storyPrimed){
-    storyEl.scrollTop = storyFromBelow ? storyEl.scrollHeight : 0;
-    storyPrimed = true;
-  }
-  if(!wantsStory) storyPrimed = false;
 
   /* chapter 5: the drop hands over to the globe.
      one eased clock drives the whole handover — an exponential lerp

@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MONTIS — Divisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2f5f8a;
+  --ink-dim:rgba(47,95,138,.62);
+  --hair:rgba(47,95,138,.30);
+  --accent:#4a86bb;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:#e8ecef;
+  color:var(--ink);
+  font-family:'Jost',"Helvetica Neue",Arial,sans-serif;
+  font-weight:300;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+canvas#slider-gl{
+  position:fixed;inset:0;width:100%;height:100%;display:block;z-index:2;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .85s var(--ease),visibility .85s;
+}
+canvas#slider-gl.is-on{opacity:1;visibility:visible;pointer-events:auto;cursor:grab}
+canvas#slider-gl.is-drag{cursor:grabbing}
+
+/* ---------- overlay grain / vignette ---------- */
+.grain{
+  position:fixed;inset:0;pointer-events:none;z-index:3;
+  background:
+    radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(150,165,178,.20) 100%);
+  mix-blend-mode:multiply;opacity:.9;
+}
+
+/* ---------- shell ---------- */
+.ui{position:fixed;inset:0;z-index:4;pointer-events:none}
+.ui a,.ui button{pointer-events:auto}
+
+header{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:clamp(20px,2.4vw,38px) clamp(20px,3.2vw,54px);
+}
+.brand{font-size:.82rem;letter-spacing:.42em;font-weight:400;text-indent:.42em}
+.menu{display:flex;align-items:center;gap:14px;font-size:.66rem;letter-spacing:.24em;font-weight:400;color:var(--ink-dim)}
+.menu i{display:block;width:26px;height:1px;background:var(--hair);position:relative}
+.menu i:after{content:"";position:absolute;left:0;top:5px;width:18px;height:1px;background:var(--hair)}
+
+/* ---------- left chapter rail ---------- */
+.rail{
+  position:absolute;left:clamp(20px,3.2vw,54px);top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:18px;
+}
+.rail .dots{display:flex;flex-direction:column;gap:26px;align-items:center}
+.rail .dot{
+  width:4px;height:4px;border-radius:50%;background:var(--hair);
+  transition:all .6s var(--ease);cursor:pointer;pointer-events:auto;
+  position:relative;
+}
+.rail .dot:before{content:"";position:absolute;inset:-9px;border-radius:50%}
+.rail .dot.is-on{background:var(--accent);transform:scale(1.6)}
+.rail .bar{width:1px;height:26px;background:var(--ink);opacity:.85;transition:transform .9s var(--ease)}
+.rail .label{font-size:.6rem;letter-spacing:.26em;color:var(--accent);font-weight:400}
+
+/* ---------- main block ---------- */
+.stage{
+  position:absolute;inset:0;
+  display:flex;align-items:center;
+  padding-left:clamp(64px,15vw,300px);
+  padding-right:clamp(24px,6vw,80px);
+}
+.block{max-width:min(760px,64vw)}
+.eyebrow{font-size:clamp(.86rem,1.1vw,1.05rem);letter-spacing:.02em;color:var(--ink);opacity:.92;margin-bottom:clamp(22px,3vw,44px)}
+h1{
+  font-weight:200;
+  font-size:clamp(2rem,4.6vw,4.5rem);
+  line-height:1.12;
+  letter-spacing:.005em;
+  text-transform:uppercase;
+  margin-bottom:clamp(30px,4vw,58px);
+}
+.mask{display:block;overflow:hidden}
+.mask > i{
+  display:block;font-style:normal;
+  transform:translateY(112%);
+  opacity:0;
+  transition:transform 1.05s var(--ease),opacity .8s var(--ease);
+  transition-delay:var(--d,0s);
+}
+.is-in .mask > i{transform:none;opacity:1}
+.is-out .mask > i{transform:translateY(-112%);opacity:0;transition-duration:.62s,.4s;transition-delay:var(--do,0s)}
+.no-anim .mask > i,.no-anim .rule,.no-anim .diamond,.no-anim .next{transition:none!important}
+
+/* over the globe the page flips to white type */
+body.on-dark{ --ink:#ffffff; --ink-dim:rgba(255,255,255,.70); --hair:rgba(255,255,255,.38); --accent:#bcd9f5 }
+.brand,.menu,.eyebrow,h1,.cta,.next .name,.diamond span,.credit,.rail .label{
+  transition:color .9s var(--ease);
+}
+.rule,.menu i,.menu i:after,.rail .dot,.rail .bar{ transition:background .9s var(--ease),transform .6s var(--ease) }
+.diamond,.controls button,.cta .circle{ transition:border-color .9s var(--ease),background .5s var(--ease),color .5s var(--ease) }
+body.on-dark .diamond,body.on-dark .controls button,body.on-dark .cta .circle{ border-color:rgba(255,255,255,.45) }
+body.on-dark .credit{ color:rgba(255,255,255,.42) }
+
+.cta{
+  display:inline-flex;align-items:center;gap:clamp(18px,2vw,34px);
+  text-decoration:none;color:var(--ink);
+}
+.cta .txt{font-size:.72rem;letter-spacing:.24em;font-weight:500}
+.cta .circle{
+  width:42px;height:42px;border-radius:50%;
+  border:1px solid rgba(47,95,138,.45);
+  display:grid;place-items:center;font-size:.8rem;
+  transition:background .5s var(--ease),color .5s var(--ease),border-color .5s var(--ease),transform .5s var(--ease);
+}
+.cta:hover .circle{background:var(--ink);color:#ffffff;border-color:var(--ink);transform:translateX(4px)}
+.rule{height:1px;background:var(--hair);width:min(300px,34vw);margin-top:clamp(22px,2.4vw,38px);
+  transform:scaleX(0);transform-origin:0 50%;transition:transform 1.2s var(--ease) .35s}
+.is-in .rule{transform:scaleX(1)}
+.is-out .rule{transform:scaleX(0);transform-origin:100% 50%;transition-duration:.5s;transition-delay:0s}
+
+/* ---------- diamonds ---------- */
+.diamond{
+  position:absolute;width:46px;height:46px;border:1px solid rgba(47,95,138,.38);
+  transform:rotate(45deg);display:grid;place-items:center;
+  transition:opacity .9s var(--ease),transform .9s var(--ease);
+}
+.diamond span{transform:rotate(-45deg);font-size:.6rem;letter-spacing:.1em;color:var(--ink-dim)}
+.diamond.is-idx{left:clamp(30px,8.2vw,168px);top:calc(50% - clamp(150px,17vh,210px))}
+.is-out .diamond,.is-out .next{opacity:0}
+
+/* ---------- next chapter teaser ---------- */
+.next{
+  position:absolute;left:50%;bottom:clamp(22px,4vh,54px);transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.4vh,30px);
+  transition:opacity .9s var(--ease);
+}
+.next .diamond{position:relative;left:auto;top:auto}
+.next .name{font-size:.95rem;letter-spacing:.02em;color:var(--ink);opacity:.9}
+.next .name b{font-weight:300}
+
+/* ---------- bottom right controls ---------- */
+.controls{position:absolute;right:clamp(20px,3.2vw,54px);bottom:clamp(22px,4vh,54px);display:flex;flex-direction:column;gap:14px}
+.controls button{
+  width:44px;height:44px;border-radius:50%;background:none;cursor:pointer;
+  border:1px solid rgba(47,95,138,.32);color:var(--ink);
+  display:grid;place-items:center;font-size:.85rem;font-family:inherit;
+  transition:background .45s var(--ease),color .45s var(--ease),border-color .45s var(--ease),opacity .45s var(--ease);
+}
+.controls button:hover{background:var(--ink);color:#ffffff;border-color:var(--ink)}
+.controls button[disabled]{opacity:.28;cursor:default}
+.controls button[disabled]:hover{background:none;color:var(--ink);border-color:rgba(47,95,138,.32)}
+
+/* ---------- scroll hint ---------- */
+.hint{
+  position:absolute;left:50%;top:calc(50% + clamp(190px,26vh,300px));transform:translateX(-50%);
+  font-size:.58rem;letter-spacing:.28em;color:var(--ink-dim);
+}
+
+/* ---------- credit ---------- */
+.credit{
+  position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
+  font-size:.55rem;letter-spacing:.14em;color:rgba(47,95,138,.38);
+}
+
+/* ---------- loader ---------- */
+.loader{
+  position:fixed;inset:0;z-index:9;background:#e8ecef;
+  display:grid;place-items:center;gap:0;
+  transition:opacity 1.1s var(--ease),visibility 1.1s;
+}
+.loader.is-done{opacity:0;visibility:hidden}
+.loader .in{display:flex;flex-direction:column;align-items:center;gap:22px}
+.loader .lg{font-size:.82rem;letter-spacing:.42em;text-indent:.42em;color:var(--ink)}
+.loader .track{width:min(220px,44vw);height:1px;background:rgba(47,95,138,.20);overflow:hidden}
+.loader .fill{display:block;height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s linear}
+.loader .pct{font-size:.6rem;letter-spacing:.24em;color:var(--ink-dim)}
+
+@media (max-width:860px){
+  .rail{display:none}
+  .stage{padding-left:clamp(22px,7vw,60px);align-items:flex-end;padding-bottom:26vh}
+  .block{max-width:none}
+  .diamond.is-idx{left:clamp(22px,7vw,60px);top:auto;bottom:calc(26vh + 330px)}
+  .next{align-items:flex-start;left:clamp(22px,7vw,60px);transform:none;bottom:clamp(18px,3vh,30px)}
+  .next .name{font-size:.82rem}
+  .credit{display:none}
+}
+</style>
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+<canvas id="slider-gl"></canvas>
+<div class="grain"></div>
+
+<div class="ui" id="ui">
+  <header>
+    <div class="brand">MONTIS</div>
+    <div class="menu"><span>MENU</span><i></i></div>
+  </header>
+
+  <div class="rail">
+    <div class="dots" id="dots"></div>
+    <div class="bar"></div>
+    <div class="label">WHAT WE DO</div>
+  </div>
+
+  <div class="diamond is-idx" id="dIdx"><span>3</span></div>
+
+  <div class="stage">
+    <div class="block">
+      <p class="eyebrow"><span class="mask"><i id="tEyebrow">Montis Energy</i></span></p>
+      <h1>
+        <span class="mask" style="--d:.08s;--do:.06s"><i id="tL1">HARNESSING HEIGHT,</i></span>
+        <span class="mask" style="--d:.17s;--do:0s"><i id="tL2">DELIVERING POWER.</i></span>
+      </h1>
+      <a class="cta" href="#" id="cta">
+        <span class="mask" style="--d:.3s;--do:0s"><i class="txt" id="tCta">MONTIS ENERGY</i></span>
+        <span class="circle">&#8594;</span>
+      </a>
+      <div class="rule"></div>
+    </div>
+  </div>
+
+  <div class="next" id="next">
+    <div class="diamond"><span id="tNextIdx">4</span></div>
+    <div class="name"><b id="tNextName">Montis Ventures</b></div>
+  </div>
+
+  <div class="credit">Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · Drop: furret · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
+
+  <div class="controls">
+    <button id="btnPrev" title="Previous">&#8593;</button>
+    <button id="btnNext" title="Next">&#8595;</button>
+  </div>
+
+</div>
+
+<div class="loader" id="loader">
+  <div class="in">
+    <div class="lg">MONTIS</div>
+    <div class="track"><span class="fill" id="loadFill"></span></div>
+    <div class="pct" id="loadPct">0%</div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* =====================================================================
+   PALETTE  (dawn above the cloud sea — warm amber / dusk violet)
+   ===================================================================== */
+const P = {
+  skyDark      : '#c1c9d1',   // sky, high up
+  skyLight     : '#e8ecef',   // sky, toward the horizon
+  cloudDark    : '#ccd2d7',   // cloud shadow
+  cloudLight   : '#ffffff',   // cloud highlight
+  sun          : '#ffffff',
+  rockDark     : '#39424c',   // crevices / exposed rock
+  rockLight    : '#818b95',
+  snow         : '#ffffff',
+  snowShade    : '#9fb3c6',   // blue shadow side of the snow
+  transition   : '#f2f5f8'
+};
+const C = k => new THREE.Color(P[k]);
+
+/* =====================================================================
+   RENDERER / SCENES
+   ===================================================================== */
+const canvas   = document.querySelector('#gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false, powerPreference:'high-performance' });
+renderer.setClearColor(0x241d2c, 1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.autoClear = false;
+
+const scene    = new THREE.Scene();
+const camera   = new THREE.PerspectiveCamera(40, 1, .1, 500);
+const quadCam  = new THREE.Camera();
+const quadGeo  = new THREE.PlaneGeometry(2,2);
+const skyScene = new THREE.Scene();
+const fogScene = new THREE.Scene();
+const mouseScene = new THREE.Scene();
+
+/* shared uniforms ------------------------------------------------------ */
+const U = {
+  uTime          : { value: 0 },
+  uChapter       : { value: 0 },
+  uTransition    : { value: 1 },
+  uResolution    : { value: new THREE.Vector2(1,1) },
+  uAspect        : { value: 1 },
+  uMouse         : { value: new THREE.Vector2(0,0) },
+  uMouseVelocity : { value: new THREE.Vector2(0,0) },
+  tNoise         : { value: null },
+  tPerlin        : { value: null },
+  uDeck          : { value: 1 },
+  uFlat          : { value: 0 },
+  uFlatColor     : { value: new THREE.Color('#edf1f5') },
+  tMouse         : { value: null },
+  uDark          : { value: C('skyDark') },
+  uLight         : { value: C('skyLight') },
+  uCloudDark     : { value: C('cloudDark') },
+  uCloudLight    : { value: C('cloudLight') },
+  uSun           : { value: C('sun') },
+  uTransitionColor:{ value: C('transition') }
+};
+
+/* =====================================================================
+   PROCEDURAL TILEABLE NOISE  (stands in for montfort's noise assets)
+   ===================================================================== */
+function makeNoise(size, seed, bands){
+  const data = new Uint8Array(size*size*4);
+  const lattice = {};
+  const rnd = s => { let x = Math.sin(s*127.1 + seed*311.7) * 43758.5453; return x - Math.floor(x); };
+  const grid = p => {
+    if(lattice[p]) return lattice[p];
+    const g = new Float32Array(p*p);
+    for(let i=0;i<p*p;i++) g[i] = rnd(i + p*7919);
+    lattice[p] = g; return g;
+  };
+  const smooth = t => t*t*t*(t*(t*6-15)+10);
+  const val = (u,v,p) => {
+    const g = grid(p);
+    const x = u*p, y = v*p;
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = smooth(x-xi), yf = smooth(y-yi);
+    const w = (i,j)=> g[(((j%p)+p)%p)*p + (((i%p)+p)%p)];
+    const a = w(xi,yi),  b = w(xi+1,yi);
+    const c = w(xi,yi+1), d = w(xi+1,yi+1);
+    return (a+(b-a)*xf) + ((c+(d-c)*xf) - (a+(b-a)*xf))*yf;
+  };
+  const fbm = (u,v,base) => {
+    let amp=.5, f=base, sum=0, norm=0;
+    for(let o=0;o<6 && f<=size/2;o++){ sum += amp*val(u,v,f); norm += amp; amp*=.55; f*=2; }
+    return sum/norm;
+  };
+  let i=0;
+  for(let y=0;y<size;y++){
+    const v = y/size;
+    for(let x=0;x<size;x++){
+      const u = x/size;
+      data[i++] = fbm(u,v,bands[0])*255;
+      data[i++] = fbm(u,v,bands[1])*255;
+      data[i++] = fbm(u,v,bands[2])*255;
+      data[i++] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = true;
+  tex.needsUpdate = true;
+  return tex;
+}
+U.tNoise.value  = makeNoise(512, 1.0, [8, 16, 32]);
+U.tPerlin.value = makeNoise(256, 7.3, [12, 24, 6]);
+
+/* =====================================================================
+   MOUSE TRAIL FBO  (port of montfort's remanence pass)
+   ===================================================================== */
+const rtOpts = { format:THREE.RGBAFormat, type:THREE.UnsignedByteType, depthBuffer:false };
+let rtA = new THREE.WebGLRenderTarget(256,256,rtOpts);
+let rtB = new THREE.WebGLRenderTarget(256,256,rtOpts);
+
+const quadVert = /* glsl */`
+  varying vec2 vUv;
+  void main(){ vUv = uv; gl_Position = vec4(position.xy, 1.0, 1.0); }
+`;
+
+/* simplex-value noise + fbm from the "2D Clouds" shader (shadertoy 4tdSWr) */
+const CLOUD_LIB = /* glsl */`
+  const mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+
+  vec2 hash( vec2 p ){
+    p = vec2(dot(p, vec2(127.1,311.7)), dot(p, vec2(269.5,183.3)));
+    return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+  }
+  float snoise( in vec2 p ){
+    const float K1 = 0.366025404;
+    const float K2 = 0.211324865;
+    vec2 i = floor(p + (p.x+p.y)*K1);
+    vec2 a = p - i + (i.x+i.y)*K2;
+    vec2 o = (a.x>a.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+    vec2 b = a - o + K2;
+    vec2 c = a - 1.0 + 2.0*K2;
+    vec3 h = max(0.5 - vec3(dot(a,a), dot(b,b), dot(c,c)), 0.0);
+    vec3 n = h*h*h*h*vec3(dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0)));
+    return dot(n, vec3(70.0));
+  }
+  float fbm(vec2 n){
+    float total = 0.0, amplitude = 0.1;
+    for (int i = 0; i < 6; i++){
+      total += snoise(n) * amplitude;
+      n = m * n;
+      amplitude *= 0.4;
+    }
+    return total;
+  }
+`;
+
+const mouseMat = new THREE.ShaderMaterial({
+  uniforms:{ uTime:U.uTime, uMouse:U.uMouse, uMouseVelocity:U.uMouseVelocity, tNoise:U.tNoise, tLast:{ value:rtB.texture } },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uTime;
+    uniform vec2 uMouse, uMouseVelocity;
+    uniform sampler2D tNoise, tLast;
+    varying vec2 vUv;
+    const float propagationFactor = .15;
+    const float remananceFactor   = .985;
+    const float velocityFactor    = .005;
+    void main(){
+      vec2 uv = vUv;
+      vec2 mouseUv = uMouse * .5 + .5;
+      vec2 velocityOffset = uMouseVelocity * velocityFactor;
+      float d = length(uv - mouseUv);
+      float circle        = smoothstep(.05,0.,d);
+      float smoothcircle  = smoothstep(.10,0.,d);
+      float smoothercircle= smoothstep(.15,0.,d);
+      float noise = texture2D(tNoise, uv*.5 + uTime*.01).r * 2. - 1.;
+      vec4 remanance = vec4(0.);
+      remanance += texture2D(tLast, vUv + vec2( noise*propagationFactor, 0.) - velocityOffset)*.25;
+      remanance += texture2D(tLast, vUv + vec2(-noise*propagationFactor, 0.) - velocityOffset)*.25;
+      remanance += texture2D(tLast, vUv + vec2(0.,  noise*propagationFactor) - velocityOffset)*.25;
+      remanance += texture2D(tLast, vUv + vec2(0., -noise*propagationFactor) - velocityOffset)*.25;
+      remanance.b *= .99;
+      vec4 color = vec4(0.);
+      color.r = 1.  * circle;
+      color.g = .4  * smoothcircle;
+      color.b = .07 * smoothercircle;
+      color += remanance * remananceFactor;
+      color.a = 1.;
+      gl_FragColor = color;
+    }`
+});
+mouseScene.add(new THREE.Mesh(quadGeo, mouseMat));
+U.tMouse.value = rtA.texture;
+
+/* =====================================================================
+   SKY  (background pass)
+   ===================================================================== */
+const skyMat = new THREE.ShaderMaterial({
+  depthTest:false, depthWrite:false,
+  uniforms:U,
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMouse;
+    uniform vec2 uResolution;
+    uniform float uTime, uChapter, uTransition, uAspect;
+    uniform vec3 uDark, uLight, uCloudDark, uCloudLight, uTransitionColor, uFlatColor;
+    uniform float uFlat;
+    varying vec2 vUv;
+    ` + CLOUD_LIB + /* glsl */`
+
+    const float cloudscale = 1.1;
+    const float speed      = 0.012;
+    const float clouddark  = 0.5;
+    const float cloudlight = 0.3;
+    const float cloudcover = 0.02;
+    const float cloudalpha = 8.0;
+    const float skytint    = 0.5;
+
+    void main(){
+      vec2 p  = vUv;
+      vec2 sUv = gl_FragCoord.xy / uResolution;
+      float mouse = clamp(texture2D(tMouse, sUv).r, 0., 1.);
+
+      vec2 uv = p * vec2(uAspect, 1.0);
+      uv += 0.03 * mouse;                       /* clouds bulge around the cursor */
+      vec2 uvSave = uv;
+
+      float time = uTime * speed;
+      float q = fbm(uv * cloudscale * 0.5);
+
+      /* ridged noise shape */
+      float r = 0.0;
+      uv *= cloudscale;
+      uv -= q + time;
+      float weight = 0.8;
+      for (int i=0; i<7; i++){
+        r += abs(weight * snoise(uv));
+        uv = m*uv - time;
+        weight *= 0.7;
+      }
+
+      /* noise shape */
+      float f = 0.0;
+      uv = uvSave;
+      uv *= cloudscale;
+      uv -= q + time;
+      weight = 0.7;
+      for (int i=0; i<7; i++){
+        f += weight * snoise(uv);
+        uv = m*uv - time;
+        weight *= 0.6;
+      }
+      f *= r + f;
+
+      /* noise colour */
+      float c = 0.0;
+      time = uTime * speed * -2.0;
+      uv = uvSave;
+      uv *= cloudscale * 2.0;
+      uv -= q - time;
+      weight = 0.4;
+      for (int i=0; i<6; i++){
+        c += weight * snoise(uv);
+        uv = m*uv + time;
+        weight *= 0.6;
+      }
+
+      /* noise ridge colour */
+      float c1 = 0.0;
+      time = uTime * speed * -3.0;
+      uv = uvSave;
+      uv *= cloudscale * 3.0;
+      uv -= q - time;
+      weight = 0.4;
+      for (int i=0; i<6; i++){
+        c1 += abs(weight * snoise(uv));
+        uv = m*uv + time;
+        weight *= 0.6;
+      }
+      c += c1;
+
+      vec3 skycolour   = mix(uLight, uDark, p.y);
+      vec3 cloudcolour = uCloudLight * clamp(clouddark + cloudlight*c, 0.0, 1.0);
+
+      f = cloudcover + cloudalpha*f*r;
+
+      /* a wide, gamma-softened ramp: cloud edges feather out instead of
+         cutting off, which is most of what reads as "quality" here      */
+      float cover = clamp((f + c) * .5, 0.0, 1.0);
+      cover = smoothstep(-.04, .86, cover);
+      cover = pow(cover, 1.10);
+      vec3 color = mix(skycolour, clamp(skytint*skycolour + cloudcolour, 0.0, 1.0), cover);
+
+      /* nearly neutral white-grey, only a whisper of cool left in */
+      float lum = dot(color, vec3(.299, .587, .114));
+      color = mix(color, vec3(lum), .70);
+
+      /* some chapters sit on a flat, almost-white panel */
+      color = mix(color, uFlatColor * (.985 + .03 * p.y), uFlat);
+
+      /* chapter wash */
+      float transition = smoothstep(0., .25, uTransition);
+      color = mix(color, uTransitionColor, transition * .75);
+
+      gl_FragColor = vec4(color, 1.);
+      #include <colorspace_fragment>
+    }`
+});
+skyScene.add(new THREE.Mesh(quadGeo, skyMat));
+
+/* =====================================================================
+   FOREGROUND CLOUDS — same 2D-cloud field, drawn in front of the peaks
+   so the massif sits *inside* the cloud deck rather than behind it
+   ===================================================================== */
+const cloudMat = new THREE.ShaderMaterial({
+  transparent:true, depthTest:false, depthWrite:false,
+  uniforms:U,
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec2 vUv;
+    uniform vec2 uResolution;
+    uniform sampler2D tMouse;
+    uniform float uChapter, uTime, uTransition, uAspect, uDeck;
+    uniform vec3 uCloudDark, uCloudLight, uTransitionColor;
+    ` + CLOUD_LIB + /* glsl */`
+
+    const float cloudscale = 1.45;
+    const float speed      = 0.026;
+    const float clouddark  = 0.5;
+    const float cloudlight = 0.32;
+    const float cloudalpha = 7.0;
+
+    void main(){
+      vec2 p   = vUv;
+      vec2 sUv = gl_FragCoord.xy / uResolution;
+
+      vec4 mouseSample = texture2D(tMouse, sUv);
+      float mouse = clamp(mouseSample.r*.8 + mouseSample.g*.2, 0., 1.);
+
+      vec2 uv = p * vec2(uAspect, 1.0) + vec2(0., .12);
+      uv += 0.05 * mouse;
+      vec2 uvSave = uv;
+
+      float time = uTime * speed;
+      float q = fbm(uv * cloudscale * 0.5);
+
+      float r = 0.0;
+      uv *= cloudscale;
+      uv -= q + time;
+      float weight = 0.8;
+      for (int i=0; i<7; i++){
+        r += abs(weight * snoise(uv));
+        uv = m*uv - time;
+        weight *= 0.7;
+      }
+
+      float f = 0.0;
+      uv = uvSave;
+      uv *= cloudscale;
+      uv -= q + time;
+      weight = 0.7;
+      for (int i=0; i<6; i++){
+        f += weight * snoise(uv);
+        uv = m*uv - time;
+        weight *= 0.6;
+      }
+      f *= r + f;
+
+      float c = 0.0;
+      float t2 = uTime * speed * -2.0;
+      uv = uvSave;
+      uv *= cloudscale * 2.0;
+      uv -= q - t2;
+      weight = 0.4;
+      for (int i=0; i<5; i++){
+        c += weight * snoise(uv);
+        uv = m*uv + t2;
+        weight *= 0.6;
+      }
+
+      float density = clamp((cloudalpha*f*r + c) * .5, 0., 1.);
+
+      /* fine wisps riding on top — the frayed edge detail of real cloud */
+      float wisp = fbm(uvSave * cloudscale * 5.5 + vec2(time * 2.2, -time * 1.4));
+      density += .16 * wisp * smoothstep(.02, .45, density);
+
+      /* the deck hugs the mountain: thick low down, wisps at eye level,
+         and it swells up over everything during a chapter transition.
+         the band edge is deliberately very wide so nothing has a seam. */
+      float band = smoothstep(.78, -.05, sUv.y - .14*(r - .5) - .06*wisp);
+      float thick = smoothstep(.15, .95, uTransition);
+      density *= mix(band, 1., thick);
+      density = clamp(density * (1.30 + 1.6*thick), 0., 1.);
+
+      vec3 color = mix(uCloudDark, uCloudLight, clamp(clouddark + cloudlight*c + .35*density, 0., 1.));
+      /* self-shadowing: the thick middle of a puff sits a touch darker */
+      color *= 1. - .10 * smoothstep(.35, .95, density) * (1. - thick);
+      color = mix(color, uTransitionColor, thick * .5);
+      float clum = dot(color, vec3(.299, .587, .114));
+      color = mix(color, vec3(clum), .55);
+
+      /* long, gamma-shaped falloff = feathered edges instead of a cut */
+      float alpha = smoothstep(-.06, .72, density);
+      alpha = pow(alpha, 1.12);
+      alpha *= uDeck * .5;   /* white cloud deck runs at 50% — you see through it */
+
+      gl_FragColor = vec4(color, clamp(alpha, 0., 1.));
+      #include <colorspace_fragment>
+    }`
+});
+fogScene.add(new THREE.Mesh(quadGeo, cloudMat));
+
+/* =====================================================================
+   MOUNTAIN
+   ===================================================================== */
+const modelRoot = new THREE.Group();
+scene.add(modelRoot);
+
+/* only the cargo ship is lit conventionally — the terrain and sky are
+   hand-written shaders and ignore these entirely */
+const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+sun.position.set(-14, 16, 12);
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xdfe6ec, 0x8d99a3, 1.35));
+
+const shipRoot  = new THREE.Group();
+const waterRoot = new THREE.Group();
+shipRoot.visible = waterRoot.visible = false;
+scene.add(shipRoot, waterRoot);
+let shipAmt = 0;
+const shipMats = [];
+const spin = new THREE.Group();
+modelRoot.add(spin);
+
+const mountainMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:true, side:THREE.FrontSide,
+  uniforms:{
+    tMap:{ value:null }, tNormal:{ value:null },
+    tNoise:U.tNoise, uTime:U.uTime, uTransition:U.uTransition, uChapter:U.uChapter,
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() },
+    uSunColor:{ value:C('sun') },
+    uRockDark:{ value:C('rockDark') },
+    uRockLight:{ value:C('rockLight') },
+    uSnow:{ value:C('snow') },
+    uSnowShade:{ value:C('snowShade') },
+    uSkyColor:{ value:C('skyLight') },
+    uNormalScale:{ value:.85 },
+    uFogColor:{ value:C('cloudLight') },
+    uFogBottom:{ value:0.0 },
+    uFogTop:{ value:2.6 },
+    uFogDensity:{ value:.016 },
+    /* cursor highlight */
+    uHoverPos:{ value:new THREE.Vector3(0,-999,0) },
+    uHoverStrength:{ value:0 },
+    uHoverRadius:{ value:3.4 },
+    uHoverColor:{ value:new THREE.Color('#bfe4ff') }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vWorld, vNrm, vTan, vBit;
+    varying float vDepth, vEdge;
+    attribute vec4 tangent;
+    void main(){
+      vUv = uv;
+      vEdge = max(abs(position.x), abs(position.y)) / 10.0;   /* tile is +-10 in its own space */
+      vec4 wp = modelMatrix * vec4(position,1.);
+      vWorld = wp.xyz;
+      mat3 nm = mat3(modelMatrix);
+      vNrm = normalize(nm * normal);
+      vTan = normalize(nm * tangent.xyz);
+      vBit = normalize(cross(vNrm, vTan) * tangent.w);
+      vec4 mv = viewMatrix * wp;
+      vDepth = -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap, tNormal, tNoise;
+    uniform vec3 uSunDir, uSunColor, uRockDark, uRockLight, uSnow, uSnowShade, uSkyColor, uFogColor;
+    uniform float uFogBottom, uFogTop, uFogDensity, uTime, uTransition, uNormalScale;
+    uniform vec3 uHoverPos, uHoverColor;
+    uniform float uHoverStrength, uHoverRadius;
+    varying vec2 vUv;
+    varying vec3 vWorld, vNrm, vTan, vBit;
+    varying float vDepth, vEdge;
+
+    void main(){
+      float g = texture2D(tMap, vUv).r;          /* white = snow, grey = exposed rock */
+
+      /* tangent-space normal map -> world normal */
+      vec3 nTex = texture2D(tNormal, vUv).xyz * 2. - 1.;
+      nTex.xy *= uNormalScale;
+      vec3 n = normalize(mat3(normalize(vTan), normalize(vBit), normalize(vNrm)) * nTex);
+      vec3 gn = normalize(vNrm);
+
+      float snow = smoothstep(.66, .97, g);
+      vec3 rock  = mix(uRockDark, uRockLight, smoothstep(.30, .90, g));
+      vec3 albedo = mix(rock, uSnow, snow);
+
+      /* key sun + cool sky fill, snow shadows go blue */
+      float ndl  = max(dot(n, uSunDir), 0.);
+      float soft = clamp(dot(gn, uSunDir)*.5 + .5, 0., 1.);
+      float sky  = clamp(n.y*.5 + .5, 0., 1.);
+
+      vec3 ambCol = uSkyColor * mix(vec3(1.), uSnowShade*1.35, .85);
+      vec3 col  = albedo * ambCol * (.40 + .26*sky);
+      col += albedo * uSunColor * (ndl*.72 + soft*.10);
+
+      /* sun sparkle on the snow faces + rim on the ridges */
+      vec3 v = normalize(cameraPosition - vWorld);
+      vec3 hv = normalize(uSunDir + v);
+      col += uSunColor * snow * pow(max(dot(n, hv), 0.), 34.) * .22;
+      float rim = pow(1. - clamp(dot(gn, v), 0., 1.), 3.5);
+      col += uSunColor * rim * .12;
+
+      /* ---- cursor highlight: a soft pool of light that trails the pointer ---- */
+      if(uHoverStrength > .001){
+        float hd = distance(vWorld, uHoverPos) / uHoverRadius;
+        float gl = exp(-hd * hd * 4.6);                       /* tighter, crisper pool */
+        float sheen = texture2D(tNoise, vWorld.xz*.055 + vec2(.02*uTime, -.015*uTime)).r;
+        gl *= .74 + .52*sheen;
+        gl = clamp(gl, 0., 1.) * uHoverStrength;
+        col = mix(col, mix(col*1.10, uHoverColor, .40), gl);
+        col += uHoverColor * pow(gl, 2.2) * .26;
+        col += uSunColor * rim * gl * .45;
+      }
+
+      /* dissolve into the cloud sea */
+      float wisp  = texture2D(tNoise, vWorld.xz*.020 + vec2(.008*uTime, .004*uTime)).r - .5;
+      float wisp2 = texture2D(tNoise, vWorld.xz*.075 + vec2(-.02*uTime, .012*uTime)).g - .5;
+      float h = vWorld.y + wisp*2.2 + wisp2*1.0;
+
+      /* aerial perspective — far ridges wash out into the sky */
+      float haze = 1. - exp(-uFogDensity * max(vDepth - 10., 0.));
+      col = mix(col, uSkyColor, haze * .9);
+
+      /* fog pooling in the valleys */
+      float valley = smoothstep(uFogTop, uFogBottom, h);
+      col = mix(col, uFogColor, valley * .92);
+
+      float f = clamp(max(valley, haze*.65) + smoothstep(.25, 1., uTransition), 0., 1.);
+      float alpha = 1. - smoothstep(.45, .92, f);
+      alpha *= 1. - smoothstep(.86, 1., vEdge);   /* tile border melts into the cloud */
+
+      gl_FragColor = vec4(col, alpha);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* --- the OGL slider that owns one section --- */
+const sliderCanvas = document.getElementById('slider-gl');
+let slider = null, sliderAmt = 0, sliderLoading = false, sliderPrimed = false, sliderFromBelow = false;
+
+function ensureSlider(){
+  if(slider || sliderLoading) return;
+  sliderLoading = true;
+  import('./slider.js')
+    .then(m=>{ slider = m.createSlider(sliderCanvas, { base:[0.945,0.955,0.965] }); })
+    .catch(err=>{ console.warn('slider unavailable:', err); });
+}
+
+/* drag / horizontal wheel drive it; vertical wheel still changes section */
+let dragX = null;
+sliderCanvas.addEventListener('pointerdown', e=>{ dragX = e.clientX; sliderCanvas.classList.add('is-drag'); });
+addEventListener('pointerup',   ()=>{ dragX = null; sliderCanvas.classList.remove('is-drag'); });
+addEventListener('pointermove', e=>{
+  if(dragX === null || !slider) return;
+  slider.addScroll((e.clientX - dragX) * 6);
+  dragX = e.clientX;
+});
+sliderCanvas.addEventListener('wheel', e=>{
+  if(!slider) return;
+  if(Math.abs(e.deltaX) > Math.abs(e.deltaY)){ e.preventDefault(); slider.addScroll(-e.deltaX * 4); }
+}, { passive:false });
+
+/* --- cursor-highlight state (BVH raycast against the terrain) --- */
+const raycaster = new THREE.Raycaster();
+raycaster.firstHitOnly = true;
+const hoverTarget = new THREE.Vector3(0,-999,0);
+let hoverAim = 0, bvhReady = false, pointerInside = true;
+const hoverMeshes = [];
+addEventListener('pointerleave', ()=>{ pointerInside = false; });
+addEventListener('pointerenter', ()=>{ pointerInside = true; });
+
+/* =====================================================================
+   EARTH  (chapter 5) — the water drop hands over to the globe:
+   same place on screen, same size, so one becomes the other
+   ===================================================================== */
+const earthScene = new THREE.Scene();
+const earthCam   = new THREE.PerspectiveCamera(38, 1, .01, 100);
+earthCam.position.set(0, 0, 6);
+const earthRoot  = new THREE.Group();
+const earthSpin  = new THREE.Group();
+earthRoot.add(earthSpin);
+earthScene.add(earthRoot);
+let earthAmt = 0, earthT = 0, earthRadius = 1;
+const smoothstep01 = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t*t*(3 - 2*t); };
+const smootherstep = t => { t = Math.min(1, Math.max(0, t)); return t*t*t*(t*(t*6 - 15) + 10); };
+
+const earthMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{
+    tMap:{ value:null },
+    uOpacity:{ value:0 },
+    uSunDir:{ value:new THREE.Vector3(-.55,.35,.76).normalize() },
+    uSea:{ value:new THREE.Color('#6d8598') },
+    uLand:{ value:new THREE.Color('#e6ecf1') },
+    uNight:{ value:new THREE.Color('#7d8b98') },
+    uAtmo:{ value:new THREE.Color('#eaf2f8') }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vUv = uv;
+      vN = normalize(mat3(modelMatrix) * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap;
+    uniform vec3 uSunDir, uSea, uLand, uNight, uAtmo;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vec3 tex = texture2D(tMap, vUv).rgb;
+
+      /* keep the continents, drop the postcard colours */
+      float l = dot(tex, vec3(.299, .587, .114));
+      l = pow(l, .82);
+      float land = smoothstep(.09, .32, l);        /* the map's oceans are dark — go low */
+      vec3 albedo = mix(uSea, uLand, land);
+      albedo = mix(albedo, vec3(clamp(l*1.25, 0., 1.)), .30);   /* keep the coastline detail */
+
+      vec3 n = normalize(vN);
+      float ndl = dot(n, uSunDir);
+      float day = smoothstep(-.22, .38, ndl);      /* soft terminator */
+
+      vec3 col = albedo * mix(uNight * .45, vec3(1.06), day);
+
+      /* atmosphere */
+      vec3 v = normalize(cameraPosition - vW);
+      float rim = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
+      col = mix(col, uAtmo, rim * .55);
+      col += uAtmo * pow(rim, 5.) * .35;
+
+      gl_FragColor = vec4(col, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   CARGO SHIP — the asset is painted bright red; strip it back to the
+   site palette (slate-blue hull, cool white upperworks)
+   ===================================================================== */
+const shipMatBase = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{
+    tMap:{ value:null },
+    uOpacity:{ value:0 },
+    uHull:{ value:new THREE.Color('#262c33') },
+    uMid:{ value:new THREE.Color('#78828d') },
+    uTop:{ value:new THREE.Color('#f4f7fa') },
+    uSkyCol:{ value:C('skyLight') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vUv = uv;
+      vN = normalize(mat3(modelMatrix) * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap;
+    uniform vec3 uHull, uMid, uTop, uSkyCol, uSunDir;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vec4 tex = texture2D(tMap, vUv);
+      if(tex.a < .35) discard;
+
+      /* throw the hue away, keep only the painted值 (light/dark) */
+      float l = dot(tex.rgb, vec3(.299, .587, .114));
+      vec3 albedo = mix(uHull, uMid, smoothstep(.14, .55, l));
+      albedo = mix(albedo, uTop, smoothstep(.58, .88, l));
+
+      vec3 n = normalize(vN);
+      float ndl = max(dot(n, uSunDir), 0.);
+      float sky = clamp(n.y * .5 + .5, 0., 1.);
+      vec3 col = albedo * (uSkyCol * (.50 + .34 * sky) + vec3(1.) * ndl * .78);
+
+      vec3 v = normalize(cameraPosition - vW);
+      col += pow(max(dot(normalize(uSunDir + v), n), 0.), 34.) * .12;
+
+      gl_FragColor = vec4(col, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   WATER  — flat translucent surface with a slow shimmer
+   ===================================================================== */
+const waterMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime,
+    tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uWaveHeight:{ value:0 },
+    uWaveSpeed:{ value:.5 },
+    uHalf:{ value:new THREE.Vector2(1,1) },
+    uDeep:{ value:new THREE.Color('#6a93ad') },
+    uShallow:{ value:new THREE.Color('#cfe4f1') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime, uWaveHeight, uWaveSpeed;
+    uniform vec2 uHalf;
+    varying vec3 vW, vN;
+    varying vec2 vUv;
+    varying vec2 vLocal;
+    void main(){
+      vUv = uv;
+      vLocal = position.xz / uHalf;
+      vec3 pos = position;
+      float t = uTime * uWaveSpeed;
+      pos.y += uWaveHeight * (sin(pos.x*.08 + t) * .6 + sin(pos.z*.11 - t*1.3) * .4);
+      vec4 wp = modelMatrix * vec4(pos, 1.);
+      vW = wp.xyz;
+      vN = normalize(mat3(modelMatrix) * normal);
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise;
+    uniform vec3 uDeep, uShallow, uSunDir;
+    uniform float uTime, uOpacity, uWaveSpeed;
+    varying vec3 vW, vN;
+    varying vec2 vUv;
+    varying vec2 vLocal;
+    void main(){
+      float t = uTime * uWaveSpeed;
+      float rip = texture2D(tNoise, vW.xz * .08 + vec2(t*.012, -t*.008)).r;
+      float rip2 = texture2D(tNoise, vW.xz * .21 + vec2(-t*.02, t*.014)).g;
+      vec3 n = normalize(vN + vec3((rip-.5)*.5, 0., (rip2-.5)*.5));
+
+      vec3 v = normalize(cameraPosition - vW);
+      float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.2);
+
+      vec3 col = mix(uDeep, uShallow, .35 + .35*rip + .3*fres);
+      vec3 h = normalize(uSunDir + v);
+      col += pow(max(dot(n, h), 0.), 48.) * .55;
+
+      /* feather the sheet so it never shows a cut rectangle */
+      float edge = smoothstep(1., .80, abs(vLocal.x)) * smoothstep(1., .80, abs(vLocal.y));
+      edge *= .90 + .2 * rip;
+
+      gl_FragColor = vec4(col, uOpacity * (.86 + .14*fres) * edge);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   CONDENSE  (chapter 3) — the whole frame collapses into a water drop
+   ===================================================================== */
+const sceneRT = new THREE.WebGLRenderTarget(1, 1, { depthBuffer:true });
+sceneRT.texture.colorSpace = THREE.SRGBColorSpace;
+sceneRT.texture.minFilter = THREE.LinearFilter;
+sceneRT.texture.magFilter = THREE.LinearFilter;
+
+const postScene = new THREE.Scene();
+const postMat = new THREE.ShaderMaterial({
+  depthTest:false, depthWrite:false,
+  uniforms:{
+    tScene:{ value:sceneRT.texture },
+    uResolution:U.uResolution,
+    uTime:U.uTime,
+    uCondense:{ value:0 },
+    uEarth:{ value:0 },
+    uWash:{ value:0 },
+    uVeil:{ value:new THREE.Color('#f3f6f9') },
+    uBgTop:{ value:new THREE.Color('#f4f7f9') },
+    uBgBottom:{ value:new THREE.Color('#ecf0f3') }
+  },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tScene;
+    uniform vec2 uResolution;
+    uniform float uTime, uCondense, uEarth, uWash;
+    uniform vec3 uBgTop, uBgBottom, uVeil;
+    varying vec2 vUv;
+    ` + CLOUD_LIB + /* glsl */`
+
+    /* one droplet: returns rgb, w = coverage */
+    vec4 droplet(vec2 p, vec2 centre, float radius, float aspect, float R0, float amt, float seed){
+      vec2 d2 = p - centre;
+      float ang = atan(d2.y, d2.x);
+      float wob = fbm(vec2(ang * 1.7 + seed, uTime * .10 + seed)) * .55;
+      float rad = radius * (1. + .045 * wob);
+      float r = length(d2) / rad;
+      if(r > 1.06) return vec4(0.);
+
+      float rr = clamp(r, 0., 1.);
+      float z  = sqrt(max(1. - rr*rr, 1e-4));
+      vec3  n  = vec3(normalize(d2 + 1e-6) * rr, z);
+
+      /* the whole frame squeezed into this disc, bent like a lens.
+         at amt=0 the mapping is the identity (nothing happens);
+         at amt=1 the entire 16:9 frame is packed inside the circle    */
+      /* isotropic all the way: x and y are always scaled by the same factor,
+         so nothing inside the drop is ever squashed — the frame is cropped
+         left/right instead of being squeezed into the circle */
+      float bend = 1. + amt * (.16 * rr * rr - .04);
+      vec2 q = (d2 / rad) * bend;
+      float k = mix(R0, .5, amt);
+      vec2 srcUv = vec2(.5 + .07 * amt, .5) + q * k / vec2(aspect, 1.);
+
+      /* water moving inside */
+      float rip = fbm(q * 3.4 + vec2(uTime * .05, -uTime * .035) + seed);
+      srcUv += (rip - .5) * .014 * amt;
+
+      /* mid-morph the lens can reach past the frame — mirror it back in
+         so the glass continues smoothly instead of smearing the edge row */
+      vec2 ov = max(abs(srcUv - .5) - .5, 0.);
+      vec2 mUv = 1. - abs(1. - mod(srcUv, 2.));
+
+      vec3 c;
+      c.r = texture2D(tScene, 1. - abs(1. - mod(srcUv + n.xy * .005 * amt, 2.))).r;
+      c.g = texture2D(tScene, mUv).g;
+      c.b = texture2D(tScene, 1. - abs(1. - mod(srcUv - n.xy * .005 * amt, 2.))).b;
+
+      /* and let the mirrored part read as dense glass */
+      c = mix(c, vec3(.95, .965, .975), smoothstep(0., .12, max(ov.x, ov.y)) * .55);
+
+      /* glass: rim brightening, a hot ring, two speculars */
+      float fres = pow(1. - z, 2.3);
+      c = mix(c, vec3(1.), fres * .30 * amt);
+      float ring = smoothstep(.80, .985, rr) * smoothstep(1.03, .985, rr);
+      c += ring * (.30 + .35 * fbm(vec2(ang * 3., uTime * .2))) * amt;
+      c += pow(max(dot(n, normalize(vec3(-.42, .58, .70))), 0.), 70.) * .85 * amt;
+      c += pow(max(dot(n, normalize(vec3( .48,-.40, .78))), 0.), 26.) * .10 * amt;
+
+      float cover = smoothstep(1.02, .985, r);
+      return vec4(c, cover);
+    }
+
+    void main(){
+      float aspect = uResolution.x / uResolution.y;
+      vec2 p = (vUv - .5) * vec2(aspect, 1.);
+      float R0 = length(vec2(aspect, 1.)) * .5 * 1.18;   /* circumscribes the screen */
+      float amt = uCondense;
+
+      /* studio backdrop the drop hangs in */
+      vec3 bg = mix(uBgBottom, uBgTop, vUv.y);
+      bg *= 1. - .09 * smoothstep(.25, 1.05, length(p));
+
+      /* the frame eases in a little as the wash sweeps through */
+      p *= 1. - .045 * uWash;
+
+      float R = mix(R0, R0 * .27, amt);
+      /* as it forms, the drop drifts clear of the headline */
+      vec2 c0 = vec2(.30 * amt, .02 * amt);
+      vec4 main_ = droplet(p, c0, R, aspect, R0, amt, 0.);
+      /* as the globe arrives the drop gives up its body, leaving a thin shell */
+      main_.w *= 1. - smoothstep(.04, .80, uEarth) * .92;
+      vec3 col = mix(bg, main_.rgb, main_.w);
+
+      /* satellite droplets flung off as it forms */
+      if(amt > .02){
+        vec2 o1 = vec2( R * 1.18,  R * .30) + vec2(sin(uTime*.5)*.006, cos(uTime*.42)*.006);
+        vec2 o2 = vec2(-R * 1.24,  R * .06) + vec2(cos(uTime*.37)*.006, sin(uTime*.51)*.006);
+        vec2 o3 = vec2( R *  .72, -R * 1.05) + vec2(sin(uTime*.31)*.005, cos(uTime*.6)*.005);
+        vec4 s1 = droplet(p, c0 + o1 * amt, R * .055 * amt, aspect, R0, amt, 3.7);
+        vec4 s2 = droplet(p, c0 + o2 * amt, R * .038 * amt, aspect, R0, amt, 8.1);
+        vec4 s3 = droplet(p, c0 + o3 * amt, R * .028 * amt, aspect, R0, amt, 5.3);
+        col = mix(col, s1.rgb, s1.w);
+        col = mix(col, s2.rgb, s2.w);
+        col = mix(col, s3.rgb, s3.w);
+      }
+
+      /* soft contact shadow under the drop */
+      float sh = smoothstep(1., 0., length((p - c0 - vec2(0., -R * 1.22)) / vec2(R * .95, R * .20)));
+      col -= sh * .045 * amt;
+
+      /* the cut itself — at the peak the screen is entirely the veil, so any
+         camera or prop discontinuity underneath is never seen               */
+      col = mix(col, uVeil, smoothstep(.30, .96, uWash));
+
+      gl_FragColor = vec4(col, 1.);
+      #include <colorspace_fragment>
+    }`
+});
+postScene.add(new THREE.Mesh(quadGeo, postMat));
+let condense = 0;
+
+/* placements exported from the tuning panel (formatVersion 2).
+   each section carries its own, and they glide from one to the next   */
+const SHIP_S3  = { x:-1.30, y:1.00, z:6.40, rx:-0.08, ry:-1.34, rz:0.00, scale:0.68 };
+const WATER_S3 = { x:-2.20, y:1.20, z:3.40, rx:0.05, ry:0.23, rz:0.02,
+                   scaleX:0.41, scaleY:0.36, scaleZ:1.36,
+                   opacity:0.65, waveHeight:0.48, waveSpeed:0.64 };
+const SHIP_S4  = { x:-2.60, y:8.90, z:0.60, rx:-0.23, ry:-1.56, rz:-0.39, scale:0.72 };
+const WATER_S4 = { x:0.70, y:8.20, z:0.30, rx:0.00, ry:-1.72, rz:0.00,
+                   scaleX:2.00, scaleY:0.34, scaleZ:1.45,
+                   opacity:0.72, waveHeight:0.70, waveSpeed:0.55 };
+const shipNow  = Object.assign({}, SHIP_S3);
+const waterNow = Object.assign({}, WATER_S3);
+const lerpCfg = (now, target, k)=>{ for(const key in target) now[key] += (target[key] - now[key]) * k; };
+
+/* =====================================================================
+   CHAPTERS
+   ===================================================================== */
+const CHAPTERS = [
+  /* 1 — the frame condenses into a water drop
+     2 — straight down over the range
+     3 — the exported pose, with the cargo ship on the water
+     4 — back out to the ground-level wide shot                */
+  { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',   cta:'MONTIS EXPEDITIONS',
+    cam:{ x:7.60, y:6.50, z:22.80, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, condense:true },
+  { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
+    cam:{ x:-10.3, y:30.6, z:0.0, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16, fov:40.0, flat:.82, deck:.45 },
+  { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
+    cam:{ x:-5.96, y:5.53, z:23.76, tx:-5.87, ty:0.95, tz:-9.85 }, rot:-1.00, fov:40.0,
+    ship:SHIP_S3, water:WATER_S3 },
+  { idx:'4', eyebrow:'Montis Portfolio',   l1:'A PORTFOLIO',       l2:'IN MOTION.',        cta:'MONTIS PORTFOLIO',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    slider:true },
+  { idx:'5', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',       cta:'MONTIS VENTURES',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, },
+  { idx:'6', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    earth:true, dark:true }
+];
+
+let chapter = 0;                 // the page opens on section 1
+let busy = true;
+
+const el = {
+  eyebrow:document.getElementById('tEyebrow'),
+  l1:document.getElementById('tL1'),
+  l2:document.getElementById('tL2'),
+  cta:document.getElementById('tCta'),
+  idx:document.querySelector('#dIdx span'),
+  nextIdx:document.getElementById('tNextIdx'),
+  nextName:document.getElementById('tNextName'),
+  ui:document.getElementById('ui'),
+  dots:document.getElementById('dots'),
+  prev:document.getElementById('btnPrev'),
+  next:document.getElementById('btnNext')
+};
+
+CHAPTERS.forEach((c,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===chapter?' is-on':'');
+  d.addEventListener('click', ()=>goTo(i));
+  el.dots.appendChild(d);
+});
+
+function paint(i){
+  const last = i === CHAPTERS.length - 1;
+  const c = CHAPTERS[i], n = CHAPTERS[Math.min(i+1, CHAPTERS.length-1)];
+  document.getElementById('next').style.opacity = last ? '0' : '';
+  document.getElementById('next').style.pointerEvents = last ? 'none' : 'auto';
+  el.next.disabled = last;
+  el.prev.disabled = i === 0;
+  el.eyebrow.textContent = c.eyebrow;
+  el.l1.textContent = c.l1;
+  el.l2.textContent = c.l2;
+  el.cta.textContent = c.cta;
+  el.idx.textContent = c.idx;
+  el.nextIdx.textContent = n.idx;
+  el.nextName.textContent = n.eyebrow;
+  [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
+  document.body.classList.toggle('on-dark', CHAPTERS[i].dark === true);
+}
+
+/* camera targets ------------------------------------------------------- */
+const camPos     = new THREE.Vector3();
+const camAim     = new THREE.Vector3();
+const camPosFrom = new THREE.Vector3();
+const camAimFrom = new THREE.Vector3();
+/* looking straight down is a degenerate case for lookAt — pin the roll,
+   otherwise anything placed in world space lands somewhere unpredictable */
+const camUp  = new THREE.Vector3(0, 1, 0);
+const camUpT = new THREE.Vector3(0, 1, 0);
+const easeInOut  = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+const camPosT = new THREE.Vector3();
+const camAimT = new THREE.Vector3();
+let spinT = 0;
+let fovT = 40;
+
+function applyChapterTarget(i, instant){
+  const c = CHAPTERS[i];
+  camPosT.set(c.cam.x, c.cam.y, c.cam.z);
+  camAimT.set(c.cam.tx, c.cam.ty, c.cam.tz || 0);
+  fovT = c.fov || 40;
+  const look = camPosT.clone().sub(camAimT);
+  const vertical = Math.abs(look.y) / Math.max(look.length(), 1e-4) > .95;
+  camUpT.set(0, vertical ? 0 : 1, vertical ? -1 : 0);
+  if(instant){ camUp.copy(camUpT); camera.up.copy(camUpT); }
+  spinT = c.rot;
+  if(instant){ camPos.copy(camPosT); camAim.copy(camAimT); spin.rotation.y = spinT; }
+}
+
+/* transition ----------------------------------------------------------- */
+let trans = { on:false, t:0, dir:1, swapped:false };
+
+function goTo(i){
+  if(busy) return;
+  const n = CHAPTERS.length;
+  i = Math.max(0, Math.min(n - 1, i));      // the sequence ends on the globe
+  if(i === chapter) return;
+  busy = true;
+  sliderFromBelow = i < chapter;
+  camPosFrom.copy(camPos);
+  camAimFrom.copy(camAim);
+  chapter = i;
+  el.ui.classList.remove('is-in');
+  el.ui.classList.add('is-out');
+  trans = { on:true, t:0, swapped:false };
+  applyChapterTarget(i);
+}
+
+function tickTransition(dt){
+  if(!trans.on) return;
+  trans.t += dt / 1.45;                      // ~1.45s, a quick clean cut
+  const t = Math.min(trans.t, 1);
+  U.uTransition.value = Math.sin(t * Math.PI);         // peaks at a full cover
+  U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
+  if(!trans.swapped && t > .46){
+    trans.swapped = true;
+    paint(chapter);
+    /* snap the masks back below the line without animating, then reveal */
+    el.ui.classList.add('no-anim');
+    el.ui.classList.remove('is-out');
+    void el.ui.offsetWidth;
+    el.ui.classList.remove('no-anim');
+    void el.ui.offsetWidth;
+    el.ui.classList.add('is-in');
+  }
+  if(t >= 1){ trans.on = false; U.uTransition.value = 0; busy = false; }
+}
+
+/* input ---------------------------------------------------------------- */
+let wheelLock = 0;
+addEventListener('wheel', e=>{
+  if(TUNE) return;
+  if(Math.abs(e.deltaY) < 6) return;
+
+  /* while the slider owns the screen, the wheel scrolls the strip.
+     only once it has run out of runway does the page move on.      */
+  if(slider && CHAPTERS[chapter].slider && !trans.on && !busy){
+    if(slider.scrollBy(-e.deltaY * 9)) return;
+  }
+
+  const now = performance.now();
+  if(busy || now - wheelLock < 700) return;
+  if(Math.abs(e.deltaY) < 14) return;
+  wheelLock = now;
+  goTo(chapter + (e.deltaY > 0 ? 1 : -1));
+}, { passive:true });
+
+let touchY = null;
+addEventListener('touchstart', e=>{ touchY = e.touches[0].clientY; }, { passive:true });
+addEventListener('touchmove', e=>{
+  if(touchY === null || busy) return;
+  const dy = touchY - e.touches[0].clientY;
+  if(Math.abs(dy) > 48){ goTo(chapter + (dy > 0 ? 1 : -1)); touchY = null; }
+}, { passive:true });
+
+addEventListener('keydown', e=>{
+  if(TUNE) return;
+  if(e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') goTo(chapter+1);
+  if(e.key === 'ArrowUp'   || e.key === 'PageUp')  goTo(chapter-1);
+});
+el.prev.addEventListener('click', ()=>goTo(chapter-1));
+el.next.addEventListener('click', ()=>goTo(chapter+1));
+document.getElementById('next').addEventListener('click', ()=>goTo(chapter+1));
+document.getElementById('next').style.cursor = 'pointer';
+document.getElementById('next').style.pointerEvents = 'auto';
+document.getElementById('cta').addEventListener('click', e=>e.preventDefault());
+
+/* pointer -------------------------------------------------------------- */
+const pointer = new THREE.Vector2(0,0);
+const pointerS = new THREE.Vector2(0,0);
+let lastPointer = new THREE.Vector2(0,0);
+addEventListener('pointermove', e=>{
+  pointer.set((e.clientX/innerWidth)*2 - 1, -(e.clientY/innerHeight)*2 + 1);
+});
+
+/* =====================================================================
+   RESIZE
+   ===================================================================== */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 1.5);   // the fbm cloud field is fill-rate hungry
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  U.uResolution.value.set(w*dpr, h*dpr);
+  U.uAspect.value = w/h;
+  sceneRT.setSize(Math.round(w*dpr), Math.round(h*dpr));
+  earthCam.aspect = w/h;
+  earthCam.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+/* =====================================================================
+   LOAD
+   ===================================================================== */
+const loader     = document.getElementById('loader');
+const loadFill   = document.getElementById('loadFill');
+const loadPct    = document.getElementById('loadPct');
+const manager    = new THREE.LoadingManager();
+manager.onProgress = (url, loaded, total)=>{
+  const p = Math.round(loaded/total*100);
+  loadFill.style.transform = 'scaleX(' + (p/100) + ')';
+  loadPct.textContent = p + '%';
+};
+
+const MODEL = 'snowy_mountain_v2_-_terrain/';
+const texLoader = new THREE.TextureLoader(manager);
+const mapTex = texLoader.load(MODEL + 'textures/Material.001_baseColor.png');
+const nrmTex = texLoader.load(MODEL + 'textures/Material.001_normal.png');
+[mapTex, nrmTex].forEach(t=>{ t.colorSpace = THREE.NoColorSpace; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.anisotropy = 8; });
+mountainMat.uniforms.tMap.value    = mapTex;
+mountainMat.uniforms.tNormal.value = nrmTex;
+
+const gltfLoader = new GLTFLoader(manager);
+
+/* the globe */
+gltfLoader.load('earth/scene.gltf', gltf=>{
+  const e = gltf.scene;
+  const box = new THREE.Box3().setFromObject(e);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  e.position.sub(ctr);
+  earthRadius = Math.max(size.x, size.y, size.z) * .5;
+  e.traverse(o=>{
+    if(o.isMesh){
+      earthMat.uniforms.tMap.value = o.material.map;
+      o.material = earthMat;
+      o.frustumCulled = false;
+    }
+  });
+  earthSpin.add(e);
+  earthSpin.rotation.z = .28;             /* axial tilt */
+  earthSpin.rotation.y = 4.05;            /* land, not open ocean, facing us */
+  window.__earth = earthSpin;
+});
+
+/* cargo ship — normalised to 7.2 units long, then the exported transform */
+gltfLoader.load('cargo_ship_runtime/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box  = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.set(-ctr.x, -box.min.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(7.2 / Math.max(size.x, size.z));
+  shipRoot.add(holder);
+  shipRoot.renderOrder = 3;
+  m.traverse(o=>{
+    if(o.isMesh){
+      /* the asset's own PBR material, lit by the scene lights */
+      o.material.transparent = true;
+      o.material.opacity = 0;
+      o.material.depthWrite = false;
+      o.frustumCulled = false;
+      o.renderOrder = 3;
+      shipMats.push(o.material);
+    }
+  });
+});
+
+/* water surface — normalised to 14 units across, then the exported transform */
+gltfLoader.load('river_water_runtime/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box  = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.set(-ctr.x, -ctr.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(14 / Math.max(size.x, size.z));
+  waterRoot.add(holder);
+  waterRoot.renderOrder = 2;
+  waterMat.uniforms.uHalf.value.set(Math.max(size.x, 1e-3) * .5, Math.max(size.z, 1e-3) * .5);
+  m.traverse(o=>{ if(o.isMesh){ o.material = waterMat; o.frustumCulled = false; o.renderOrder = 2; } });
+});
+
+gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
+  const m = gltf.scene;
+  m.traverse(o=>{ if(o.isMesh){ o.material = mountainMat; o.frustumCulled = false; hoverMeshes.push(o); } });
+
+  // normalise: centre on XZ, base at y = 0, terrain ~ 34 units across
+  const box = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  const s = 34 / Math.max(size.x, size.z);
+  m.position.set(-ctr.x, -box.min.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(s);
+  spin.add(holder);
+  window.__terrain = { size:size.toArray(), scale:s, height:size.y*s };
+
+  applyChapterTarget(chapter, true);
+  paint(chapter);
+  camera.position.copy(camPos);
+  camera.lookAt(camAim);
+
+  // intro
+  setTimeout(()=>{
+    loader.classList.add('is-done');
+    el.ui.classList.add('is-in');
+    intro = { on:true, t:0 };
+  }, 260);
+
+  /* build the raycast BVH once the intro is out of the way — a plain
+     raycast against 600k+ triangles would stall the frame */
+  setTimeout(()=>{
+    import('https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js')
+      .then(bvh=>{
+        THREE.BufferGeometry.prototype.computeBoundsTree = bvh.computeBoundsTree;
+        THREE.BufferGeometry.prototype.disposeBoundsTree = bvh.disposeBoundsTree;
+        THREE.Mesh.prototype.raycast = bvh.acceleratedRaycast;
+        /* build one chunk per tick so the page never freezes for a whole second */
+        let i = 0;
+        (function step(){
+          if(i >= hoverMeshes.length){ bvhReady = true; return; }
+          hoverMeshes[i++].geometry.computeBoundsTree({ strategy:0, maxLeafTris:16 });
+          setTimeout(step, 60);
+        })();
+      })
+      .catch(err=>console.warn('hover highlight disabled (BVH unavailable):', err));
+  }, 3200);
+});
+
+/* =====================================================================
+   LOOP
+   ===================================================================== */
+let intro = { on:false, t:0 };
+const clock = new THREE.Clock();
+
+/* ?tune — drag the camera around and read the pose back out */
+const TUNE = new URLSearchParams(location.search).has('tune');
+let controls = null;
+
+function frame(){
+  requestAnimationFrame(frame);
+  update(Math.min(clock.getDelta(), .05));
+}
+
+function update(dt){
+  U.uTime.value += dt;
+
+  /* intro wash: clouds part, camera settles */
+  if(intro.on){
+    intro.t += dt/2.4;
+    const t = Math.min(intro.t, 1);
+    U.uTransition.value = Math.pow(1 - t, 1.6);
+    if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
+  }
+  tickTransition(dt);
+
+  /* pointer smoothing + mouse fbo */
+  lastPointer.copy(pointerS);
+  pointerS.lerp(pointer, Math.min(1, dt*6));
+  U.uMouse.value.copy(pointerS);
+  U.uMouseVelocity.value.set((pointerS.x-lastPointer.x)/Math.max(dt,.001), (pointerS.y-lastPointer.y)/Math.max(dt,.001));
+
+  mouseMat.uniforms.tLast.value = rtB.texture;
+  renderer.setRenderTarget(rtA);
+  renderer.render(mouseScene, quadCam);
+  renderer.setRenderTarget(null);
+  U.tMouse.value = rtA.texture;
+  const swap = rtA; rtA = rtB; rtB = swap;
+
+  const t = U.uTime.value;
+
+  /* camera: chapter target + parallax + idle drift */
+  if(controls){
+    controls.update();
+  } else {
+  if(trans.on){
+    /* one eased ride from the old pose to the new one, spread over the
+       whole wash — no exponential snap, no overshoot */
+    const e = easeInOut(Math.min(trans.t, 1));
+    camPos.copy(camPosFrom).lerp(camPosT, e);
+    camAim.copy(camAimFrom).lerp(camAimT, e);
+  } else {
+    const k = Math.min(1, dt * 2.2);
+    camPos.lerp(camPosT, k);
+    camAim.lerp(camAimT, k);
+  }
+  const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
+  camera.position.set(
+    camPos.x + pointerS.x * .55 + Math.sin(t*.09) * .22,
+    camPos.y - pointerS.y * .30 + Math.sin(t*.13) * .12,
+    camPos.z + introPush
+  );
+  camUp.lerp(camUpT, Math.min(1, dt * 2.0)).normalize();
+  camera.up.copy(camUp);
+  camera.lookAt(camAim.x, camAim.y + Math.sin(t*.11)*.06, camAim.z);
+  }
+
+  if(Math.abs(camera.fov - fovT) > .01){
+    camera.fov += (fovT - camera.fov) * Math.min(1, dt*2.2);
+    camera.updateProjectionMatrix();
+  }
+
+  const fogAim = CHAPTERS[chapter].fogTop || 2.6;
+  mountainMat.uniforms.uFogTop.value += (fogAim - mountainMat.uniforms.uFogTop.value) * Math.min(1, dt*1.2);
+
+  spin.rotation.y += (spinT - spin.rotation.y) * Math.min(1, dt*1.1);
+  spin.rotation.y += Math.sin(t*.07) * .00035;
+
+  /* cursor highlight on the terrain */
+  const hu = mountainMat.uniforms;
+  if(bvhReady && pointerInside && !busy){
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(hoverMeshes, false)[0];
+    if(hit){ hoverTarget.copy(hit.point); hoverAim = 1; } else hoverAim = 0;
+  } else hoverAim = 0;
+  if(hu.uHoverStrength.value < .002 && hoverAim === 1) hu.uHoverPos.value.copy(hoverTarget);
+  hu.uHoverPos.value.lerp(hoverTarget, Math.min(1, dt*9));
+  hu.uHoverStrength.value += (hoverAim - hu.uHoverStrength.value) * Math.min(1, dt*4.5);
+
+  /* the cargo ship and its water belong to the sections that declare them */
+  const cfgS = CHAPTERS[chapter].ship, cfgW = CHAPTERS[chapter].water;
+  const shipAim = (cfgS && !trans.on) ? 1 : 0;
+  shipAmt += (shipAim - shipAmt) * Math.min(1, dt * 2.0);
+  const shipOn = shipAmt > .004;
+  if(cfgS && cfgW){
+    /* hidden -> snap into place, visible -> glide from the previous pose */
+    const kc = shipAmt < .03 ? 1 : Math.min(1, dt * 1.6);
+    lerpCfg(shipNow, cfgS, kc);
+    lerpCfg(waterNow, cfgW, kc);
+  }
+  const flatAim = CHAPTERS[chapter].flat || 0;
+  U.uFlat.value += (flatAim - U.uFlat.value) * Math.min(1, dt * 1.8);
+  const deckAim = (CHAPTERS[chapter].deck !== undefined ? CHAPTERS[chapter].deck : 1) - .62 * shipAmt;
+  U.uDeck.value += (deckAim - U.uDeck.value) * Math.min(1, dt * 1.8);
+  shipRoot.visible = waterRoot.visible = shipOn;
+  if(shipOn){
+    shipRoot.position.set(shipNow.x, shipNow.y, shipNow.z);
+    shipRoot.rotation.set(shipNow.rx, shipNow.ry, shipNow.rz);
+    shipRoot.scale.setScalar(shipNow.scale);
+    waterRoot.position.set(waterNow.x, waterNow.y, waterNow.z);
+    waterRoot.rotation.set(waterNow.rx, waterNow.ry, waterNow.rz);
+    waterRoot.scale.set(waterNow.scaleX, waterNow.scaleY, waterNow.scaleZ);
+    for(let i = 0; i < shipMats.length; i++) shipMats[i].opacity = shipAmt;
+    waterMat.uniforms.uOpacity.value = waterNow.opacity * shipAmt;
+    waterMat.uniforms.uWaveHeight.value = waterNow.waveHeight;
+    waterMat.uniforms.uWaveSpeed.value = waterNow.waveSpeed;
+  }
+
+  /* the slider section */
+  const wantsSlider = CHAPTERS[chapter].slider === true;
+  if(wantsSlider) ensureSlider();
+  if(slider && wantsSlider && !sliderPrimed){ slider.reset(sliderFromBelow); sliderPrimed = true; }
+  if(!wantsSlider) sliderPrimed = false;
+  const sliderAim = (wantsSlider && !trans.on) ? 1 : 0;
+  sliderAmt += (sliderAim - sliderAmt) * Math.min(1, dt * (sliderAim ? 2.2 : 3.6));
+  sliderCanvas.classList.toggle('is-on', sliderAim === 1);
+  if(slider && sliderAmt > .01) slider.frame(U.uTime.value * 1000, dt);
+
+  /* chapter 5: the drop hands over to the globe.
+     one eased clock drives the whole handover — an exponential lerp
+     front-loads the motion and makes it feel like a snap             */
+  const earthWants = CHAPTERS[chapter].earth === true;
+  const earthOpen  = earthWants && (!trans.on || trans.t > .20);
+  earthT = earthOpen ? Math.min(1, earthT + dt / 3.8)
+                     : Math.max(0, earthT - dt / 1.2);
+  /* smootherstep: no perceptible change of acceleration anywhere */
+  earthAmt = smootherstep(earthT);
+  earthMat.uniforms.uOpacity.value = smoothstep01(earthT, .01, .34);
+  postMat.uniforms.uEarth.value = earthAmt;
+  if(earthAmt > .002){
+    /* it starts exactly as the drop, then swells until it fills the frame */
+    const aspect = Math.max(U.uAspect.value, .0001);
+    const R0 = Math.sqrt(aspect*aspect + 1) * .5 * 1.18;
+    const halfH = earthCam.position.z * Math.tan(earthCam.fov * Math.PI / 360);
+
+    /* still growing after it is fully opaque, so the motion never stops dead */
+    const grow = smootherstep(earthT);
+    const breathe = 1 + Math.sin(U.uTime.value * .12) * .012 * earthT;
+    const rHH  = THREE.MathUtils.lerp(1.34, 2.05, grow);   /* half-heights */
+    const cx   = THREE.MathUtils.lerp(0.21, 0.16, grow);
+    const cy   = THREE.MathUtils.lerp(-0.46, -0.78, grow);
+
+    earthRoot.scale.setScalar(rHH * halfH / earthRadius * breathe);
+    earthRoot.position.set(cx * halfH * aspect, cy * halfH, 0);
+    earthSpin.rotation.y += dt * .022;
+  }
+
+  /* chapter 3: the frame condenses into a drop */
+  const wantsDrop   = CHAPTERS[chapter].condense === true;
+  const condenseAim = wantsDrop ? (trans.on ? (trans.t > .55 ? 1 : 0) : 1) : 0;
+  const condenseRate = CHAPTERS[chapter].earth === true ? 1.7 : 1.25;
+  condense += (condenseAim - condense) * Math.min(1, dt * (condenseAim ? condenseRate : 2.4));
+  postMat.uniforms.uCondense.value = condense;
+  postMat.uniforms.uWash.value = U.uTransition.value;
+
+  /* draw: scene to a buffer, then the drop pass to the screen */
+  renderer.setRenderTarget(sceneRT);
+  renderer.clear();
+  renderer.render(skyScene, quadCam);
+  renderer.clearDepth();
+  renderer.render(scene, camera);
+  renderer.render(fogScene, quadCam);
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  renderer.render(postScene, quadCam);
+  if(earthAmt > .002){
+    renderer.clearDepth();
+    renderer.render(earthScene, earthCam);
+  }
+}
+frame();
+
+/* =====================================================================
+   ?tune  — drag to orbit, wheel to dolly, then copy the pose out
+   ===================================================================== */
+if(TUNE){
+  const SLIDERS = [
+    { k:'x',    label:'鏡頭 X（左右）',     min:-60,  max:60,  step:.1  },
+    { k:'y',    label:'鏡頭 Y（高度）',     min:-5,   max:40,  step:.1  },
+    { k:'z',    label:'鏡頭 Z（前後）',     min:-60,  max:80,  step:.1  },
+    { k:'tx',   label:'注視點 X',           min:-40,  max:40,  step:.1  },
+    { k:'ty',   label:'注視點 Y',           min:-8,   max:20,  step:.1  },
+    { k:'tz',   label:'注視點 Z',           min:-40,  max:40,  step:.1  },
+    { k:'rot',  label:'山體自轉 rad',       min:-3.2, max:3.2, step:.01 },
+    { k:'fov',  label:'鏡頭視角 fov',       min:18,   max:75,  step:.5  },
+    { k:'dist', label:'距離（推近拉遠）',   min:4,    max:90,  step:.2  }
+  ];
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:20;background:rgba(16,24,34,.92);'
+    + 'color:#dfe8f2;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;border-radius:9px;'
+    + 'width:400px;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
+
+  const btn = (id,txt,primary)=>'<button id="'+id+'" style="font:inherit;cursor:pointer;padding:5px 9px;border-radius:5px;'
+    + 'border:1px solid '+(primary?'#4a86bb':'#33465c')+';background:'+(primary?'#1d3550':'#16222f')+';color:#dfe8f2">'+txt+'</button>';
+
+  panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +   '<b id="tuneWho" style="color:#9fd3ff;font-weight:600"></b>'
+    +   '<span style="opacity:.55">也可直接拖曳／滾輪</span>'
+    + '</div>'
+    + '<div id="tuneRows"></div>'
+    + '<div id="tuneOut" style="white-space:pre;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製四段',1)
+    +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
+    + '</div>';
+  document.body.appendChild(panel);
+
+  const rows = panel.querySelector('#tuneRows');
+  const ui = {};
+  SLIDERS.forEach(sl=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:112px 1fr 46px;gap:8px;align-items:center;margin:2px 0';
+    row.innerHTML = '<span style="opacity:.72">'+sl.label+'</span>'
+      + '<input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" style="width:100%;accent-color:#4a86bb">'
+      + '<span style="text-align:right;color:#9fd3ff"></span>';
+    rows.appendChild(row);
+    const inp = row.querySelector('input');
+    ui[sl.k] = { input:inp, val:row.querySelector('span:last-child'), spec:sl, busy:false };
+    inp.addEventListener('pointerdown', ()=>ui[sl.k].busy = true);
+    addEventListener('pointerup',       ()=>ui[sl.k].busy = false);
+    inp.addEventListener('input', ()=>write(sl.k, parseFloat(inp.value)));
+  });
+
+  const dirTmp = new THREE.Vector3();
+  function write(k, v){
+    if(!controls) return;
+    if(k === 'x' || k === 'y' || k === 'z') camera.position[k] = v;
+    else if(k === 'tx') controls.target.x = v;
+    else if(k === 'ty') controls.target.y = v;
+    else if(k === 'tz') controls.target.z = v;
+    else if(k === 'rot'){ spinT = v; spin.rotation.y = v; }
+    else if(k === 'fov'){ fovT = v; camera.fov = v; camera.updateProjectionMatrix(); }
+    else if(k === 'dist'){
+      dirTmp.copy(camera.position).sub(controls.target).normalize().multiplyScalar(v);
+      camera.position.copy(controls.target).add(dirTmp);
+    }
+    controls.update();
+  }
+
+  const fmt = (i)=>{
+    const c = CHAPTERS[i], n = x=>(+x).toFixed(1);
+    return '    cam:{ x:' + n(c.cam.x) + ', y:' + n(c.cam.y) + ', z:' + n(c.cam.z)
+         + ', tx:' + n(c.cam.tx) + ', ty:' + n(c.cam.ty) + ', tz:' + n(c.cam.tz || 0)
+         + ' }, rot:' + (+c.rot).toFixed(2) + ', fov:' + (+(c.fov || 40)).toFixed(1);
+  };
+  const grab = ()=>{
+    if(!controls) return;
+    CHAPTERS[chapter].cam = {
+      x:+camera.position.x.toFixed(2), y:+camera.position.y.toFixed(2), z:+camera.position.z.toFixed(2),
+      tx:+controls.target.x.toFixed(2), ty:+controls.target.y.toFixed(2), tz:+controls.target.z.toFixed(2)
+    };
+    CHAPTERS[chapter].rot = +spinT.toFixed(3);
+    CHAPTERS[chapter].fov = +camera.fov.toFixed(1);
+  };
+  const flash = (b,t)=>{ const old = b.textContent; b.textContent = t; setTimeout(()=>b.textContent = old, 1100); };
+
+  panel.querySelector('#tuneCopy').onclick = e=>{
+    grab(); navigator.clipboard.writeText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
+  };
+  panel.querySelector('#tuneCopyAll').onclick = e=>{
+    grab();
+    navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
+      .then(()=>flash(e.target,'已複製四段 ✓'));
+  };
+  const restore = ()=>{
+    applyChapterTarget(chapter, true);
+    if(controls){
+      camera.position.copy(camPosT); controls.target.copy(camAimT);
+      camera.fov = fovT; camera.updateProjectionMatrix(); controls.update();
+    }
+    spinT = CHAPTERS[chapter].rot; spin.rotation.y = spinT;
+  };
+  const jump = d=>{
+    grab();
+    chapter = (chapter + d + CHAPTERS.length) % CHAPTERS.length;
+    paint(chapter);
+    restore();
+  };
+  panel.querySelector('#tunePrev').onclick  = ()=>jump(-1);
+  panel.querySelector('#tuneNext').onclick  = ()=>jump(1);
+  panel.querySelector('#tuneReset').onclick = restore;
+
+  addEventListener('keydown', e=>{
+    if(e.target.tagName === 'INPUT') return;
+    if(e.key === 'q' || e.key === 'Q'){ spinT -= .03; spin.rotation.y = spinT; }
+    if(e.key === 'e' || e.key === 'E'){ spinT += .03; spin.rotation.y = spinT; }
+  });
+
+  import('three/addons/controls/OrbitControls.js').then(({ OrbitControls })=>{
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .08;
+    controls.rotateSpeed = .45;
+    controls.zoomSpeed = .7;
+    const sync = ()=>{
+      if(!window.__terrain){ setTimeout(sync, 200); return; }
+      restore();
+    };
+    sync();
+  });
+
+  /* keep sliders and the readout in step with whatever moved the camera */
+  setInterval(()=>{
+    if(!controls) return;
+    const live = {
+      x:camera.position.x, y:camera.position.y, z:camera.position.z,
+      tx:controls.target.x, ty:controls.target.y, tz:controls.target.z,
+      rot:spinT, fov:camera.fov, dist:camera.position.distanceTo(controls.target)
+    };
+    SLIDERS.forEach(sl=>{
+      const u = ui[sl.k];
+      if(u.busy) return;
+      u.input.value = live[sl.k];
+      u.val.textContent = live[sl.k].toFixed(sl.step < .05 ? 2 : 1);
+    });
+    panel.querySelector('#tuneWho').textContent = '第 ' + (chapter+1) + ' 段 · ' + CHAPTERS[chapter].eyebrow;
+    const n = x=>(+x).toFixed(1);
+    panel.querySelector('#tuneOut').textContent =
+      '    cam:{ x:' + n(live.x) + ', y:' + n(live.y) + ', z:' + n(live.z)
+      + ', tx:' + n(live.tx) + ', ty:' + n(live.ty) + ', tz:' + n(live.tz)
+      + ' }, rot:' + live.rot.toFixed(2) + ', fov:' + live.fov.toFixed(1);
+  }, 100);
+}
+
+/* expose for debugging / screenshots */
+window.viz = {
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
+  goTo:i=>{ busy=false; goTo(i); },
+  postMat, setCondense(v){ condense = v; postMat.uniforms.uCondense.value = v; },
+  /* jump straight to a chapter's resting pose (used for stills) */
+  pose(i){
+    const c = CHAPTERS[i];
+    chapter = i; paint(i); applyChapterTarget(i, true);
+    camera.position.set(c.cam.x, c.cam.y, c.cam.z);
+    camera.up.copy(camUpT);
+    camera.lookAt(c.cam.tx, c.cam.ty, c.cam.tz || 0);
+    spin.rotation.y = c.rot;
+    U.uChapter.value = i; U.uTransition.value = 0;
+    intro.on = false; trans.on = false; busy = false;
+  },
+  draw(){
+    renderer.setRenderTarget(sceneRT);
+    renderer.clear();
+    renderer.render(skyScene, quadCam);
+    renderer.clearDepth();
+    renderer.render(scene, camera);
+    renderer.render(fogScene, quadCam);
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(postScene, quadCam);
+    if(earthAmt > .002){ renderer.clearDepth(); renderer.render(earthScene, earthCam); }
+  }
+};
+</script>
+</body>
+</html>

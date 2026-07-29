@@ -1,0 +1,9 @@
+# files GitHub will not accept (>100MB) or that are just working copies
+3D/sk3/textures/*.psd
+3Dmountain/water_waves/
+*.zip
+
+# local tooling / caches
+node_modules/
+.DS_Store
+Thumbs.db

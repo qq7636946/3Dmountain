@@ -1,0 +1,11 @@
+Model Information:
+* title:	Boeing 747-100
+* source:	https://sketchfab.com/3d-models/boeing-747-100-6ef67f9995d345ddaee9ec845ac10b69
+* author:	Marine (https://sketchfab.com/rd.palaciosdeleon26)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Boeing 747-100" (https://sketchfab.com/3d-models/boeing-747-100-6ef67f9995d345ddaee9ec845ac10b69) by Marine (https://sketchfab.com/rd.palaciosdeleon26) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

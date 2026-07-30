@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"G:/我的雲端硬碟/demo/3Dmountain\")"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "montis",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "-l", "5178", "."],
+      "port": 5178
+    },
+    {
+      "name": "montis-verify",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "."],
+      "autoPort": true
+    }
+  ]
+}

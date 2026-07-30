@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"G:/我的雲端硬碟/demo\" && ls -d */ 2>/dev/null | head -60)",
+      "Bash(awk '{print $6, $8}')"
+    ]
+  }
+}

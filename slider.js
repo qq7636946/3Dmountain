@@ -376,6 +376,8 @@ export function createSlider(canvas, opts = {}) {
     },
     reset(atEnd) { travel = atEnd ? 1 : 0; },
     get progress() { return travel; },
+    /* the host waits on this so the section is never cut away mid fly-in */
+    get introDone() { return !intro.on; },
     replayIntro() { intro = { on: true, t: 0 }; }
   };
 }

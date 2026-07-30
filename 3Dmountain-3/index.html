@@ -18,7 +18,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{
-  background:#e8ecef;
+  background:#e8edf2;
   color:var(--ink);
   font-family:'Jost',"Helvetica Neue",Arial,sans-serif;
   font-weight:300;
@@ -92,7 +92,8 @@ h1{
 }
 .is-in .mask > i{transform:none;opacity:1}
 .is-out .mask > i{transform:translateY(-112%);opacity:0;transition-duration:.62s,.4s;transition-delay:var(--do,0s)}
-.no-anim .mask > i,.no-anim .rule,.no-anim .diamond,.no-anim .next{transition:none!important}
+.no-anim .mask > i,.no-anim .rule,.no-anim .diamond,.no-anim .next,
+.no-anim .cta .circle{transition:none!important}
 
 /* over the globe the page flips to white type */
 body.on-dark{ --ink:#ffffff; --ink-dim:rgba(255,255,255,.70); --hair:rgba(255,255,255,.38); --accent:#bcd9f5 }
@@ -113,7 +114,15 @@ body.on-dark .credit{ color:rgba(255,255,255,.42) }
   width:42px;height:42px;border-radius:50%;
   border:1px solid rgba(47,95,138,.45);
   display:grid;place-items:center;font-size:.8rem;
-  transition:background .5s var(--ease),color .5s var(--ease),border-color .5s var(--ease),transform .5s var(--ease);
+  opacity:0;transform:scale(.76);
+  transition:background .5s var(--ease),color .5s var(--ease),border-color .5s var(--ease),
+             transform .72s var(--ease) .22s,opacity .55s var(--ease) .22s;
+}
+.is-in .cta .circle{opacity:1;transform:none}
+.is-out .cta .circle{
+  opacity:0;transform:scale(.72);
+  transition-duration:.3s,.3s,.3s,.38s,.28s;
+  transition-delay:0s;
 }
 .cta:hover .circle{background:var(--ink);color:#ffffff;border-color:var(--ink);transform:translateX(4px)}
 .rule{height:1px;background:var(--hair);width:min(300px,34vw);margin-top:clamp(22px,2.4vw,38px);
@@ -177,6 +186,38 @@ body.on-dark .reticle{border-color:rgba(255,255,255,.6)}
 }
 .cta .circle,.controls button{will-change:transform}
 
+/* ---------- specimen plate + instrument HUD -------------------------- */
+.plate{
+  position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;
+  transition:opacity 1.4s var(--ease);
+  background-image:radial-gradient(rgba(47,95,138,.22) 1px,transparent 1px);
+  background-size:38px 38px;background-position:center;
+  -webkit-mask-image:radial-gradient(125% 95% at 50% 50%,#000 26%,transparent 76%);
+          mask-image:radial-gradient(125% 95% at 50% 50%,#000 26%,transparent 76%);
+}
+body.on-spec .plate{opacity:.55}
+.plate:after{
+  content:"AC 08 / 2   ·   MONTIS ARCHIVE   ·   CORE 04";
+  position:absolute;left:-4vw;top:56%;
+  font:400 clamp(2.4rem,6vw,5.6rem)/1 ui-monospace,Menlo,Consolas,monospace;
+  letter-spacing:.06em;color:rgba(47,95,138,.055);white-space:nowrap;
+}
+.spec{
+  position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;
+  transition:opacity 1s var(--ease);
+  font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  font-size:.6rem;letter-spacing:.15em;line-height:1.7;
+  color:var(--ink);text-transform:uppercase;
+}
+body.on-spec .spec{opacity:1}
+.spec svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.spec .tag{position:absolute;white-space:nowrap;transition:opacity .8s var(--ease)}
+.spec .tag em{font-style:normal;opacity:.55;display:block}
+.spec .tag.r{text-align:right;transform:translateX(-100%)}
+.spec .go{cursor:pointer;pointer-events:auto}
+.spec .go:hover{opacity:.6}
+body.spec-lit .spec .tag{opacity:1}
+
 /* ---------- credit ---------- */
 .credit{
   position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
@@ -185,7 +226,7 @@ body.on-dark .reticle{border-color:rgba(255,255,255,.6)}
 
 /* ---------- loader ---------- */
 .loader{
-  position:fixed;inset:0;z-index:9;background:#e8ecef;
+  position:fixed;inset:0;z-index:9;background:#e8edf2;
   display:grid;place-items:center;gap:0;
   transition:opacity 1.1s var(--ease),visibility 1.1s;
 }
@@ -210,8 +251,29 @@ body.on-dark .reticle{border-color:rgba(255,255,255,.6)}
 <body>
 
 <canvas id="gl"></canvas>
+<div class="plate" id="plate"></div>
 <div class="grain"></div>
 <div class="reticle" id="reticle"></div>
+
+<div class="spec" id="spec">
+  <svg>
+    <g fill="none" stroke="currentColor" stroke-width="1" opacity=".6">
+      <polyline id="lnA"></polyline>
+      <polyline id="lnB"></polyline>
+      <polyline id="lnC"></polyline>
+    </g>
+    <g fill="none" stroke="currentColor" stroke-width="1" opacity=".34" id="spokes">
+      <polyline id="spkA"></polyline>
+      <polyline id="spkB"></polyline>
+      <polyline id="spkC"></polyline>
+    </g>
+    <g stroke="currentColor" stroke-width="1" opacity=".5" id="marks"></g>
+    <circle id="scan" fill="none" stroke="currentColor" stroke-width="1" opacity="0"></circle>
+  </svg>
+  <div class="tag" id="tagA"><em>SPECIMEN_CO_04</em><span>WATER ORB</span></div>
+  <div class="tag r" id="tagB"><em>TEMP <span id="specTemp">-34.72</span></em><span id="specDelta">+01.51</span></div>
+  <div class="tag r go" id="tagC"><em>D 01.02.2026</em><span>CLICK TO EXPLORE</span></div>
+</div>
 
 <div class="ui" id="ui">
   <header>
@@ -247,7 +309,7 @@ body.on-dark .reticle{border-color:rgba(255,255,255,.6)}
     <div class="name"><b id="tNextName">Montis Ventures</b></div>
   </div>
 
-  <div class="credit">Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · Drop: furret · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
+  <div class="credit">Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · Drop: furret · Specimen: tamminen · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
 
   <div class="controls">
     <button id="btnPrev" title="Previous">&#8593;</button>
@@ -279,16 +341,17 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
    PALETTE  (dawn above the cloud sea — warm amber / dusk violet)
    ===================================================================== */
 const P = {
-  skyDark      : '#c1c9d1',   // sky, high up
-  skyLight     : '#e8ecef',   // sky, toward the horizon
-  cloudDark    : '#ccd2d7',   // cloud shadow
-  cloudLight   : '#ffffff',   // cloud highlight
+  /* brighter and a touch cooler than grey — the whole page shares this */
+  skyDark      : '#cbd6df',   // sky, high up
+  skyLight     : '#e8edf2',   // sky, toward the horizon
+  cloudDark    : '#d4dde5',   // cloud shadow
+  cloudLight   : '#f5f7f9',   // cloud highlight
   sun          : '#ffffff',
   rockDark     : '#39424c',   // crevices / exposed rock
   rockLight    : '#818b95',
   snow         : '#ffffff',
   snowShade    : '#9fb3c6',   // blue shadow side of the snow
-  transition   : '#f2f5f8'
+  transition   : '#edf2f5'
 };
 const C = k => new THREE.Color(P[k]);
 
@@ -693,10 +756,10 @@ scene.add(modelRoot);
 
 /* only the cargo ship is lit conventionally — the terrain and sky are
    hand-written shaders and ignore these entirely */
-const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+const sun = new THREE.DirectionalLight(0xffffff, 1.9);
 sun.position.set(-14, 16, 12);
 scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xdfe6ec, 0x8d99a3, 1.35));
+scene.add(new THREE.HemisphereLight(0xdfe6ec, 0x8d99a3, 1.22));
 
 const shipRoot  = new THREE.Group();
 const waterRoot = new THREE.Group();
@@ -732,7 +795,9 @@ const mountainMat = new THREE.ShaderMaterial({
     uLineDensity:{ value:3.2 },     /* contour bands per world unit  */
     uLinePx:{ value:.62 },          /* hairline half-width in pixels */
     uLineGain:{ value:1.15 },       /* how hot the lines burn         */
-    uRippleSpeed:{ value:.34 }
+    uRippleSpeed:{ value:.34 },
+    /* the archive section clears the range away and keeps only the sky */
+    uOrbFade:{ value:0 }
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -759,7 +824,7 @@ const mountainMat = new THREE.ShaderMaterial({
     uniform float uFogBottom, uFogTop, uFogDensity, uTime, uTransition, uNormalScale;
     uniform vec3 uHoverPos, uHoverColor;
     uniform float uHoverStrength, uHoverRadius;
-    uniform float uLineDensity, uLinePx, uLineGain, uRippleSpeed;
+    uniform float uLineDensity, uLinePx, uLineGain, uRippleSpeed, uOrbFade;
     varying vec2 vUv;
     varying vec3 vWorld, vNrm, vTan, vBit;
     varying float vDepth, vEdge;
@@ -886,8 +951,10 @@ const mountainMat = new THREE.ShaderMaterial({
       float f = clamp(max(valley, haze*.65) + smoothstep(.25, 1., uTransition), 0., 1.);
       float alpha = 1. - smoothstep(.45, .92, f);
       alpha *= 1. - smoothstep(.86, 1., vEdge);   /* tile border melts into the cloud */
+      /* the specimen section keeps the sky and lets the range dissolve */
+      alpha *= 1. - uOrbFade;
 
-      gl_FragColor = vec4(col, alpha);
+      gl_FragColor = vec4(col * .92, alpha);
       #include <colorspace_fragment>
     }`
 });
@@ -919,7 +986,7 @@ function tickPointerUI(){
       : '';
     if(pull > .25) near = true;
   }
-  reticle.classList.toggle('is-wide', near);
+  reticle.classList.toggle('is-wide', near || specHover);
 }
 
 /* --- cursor-highlight state (BVH raycast against the terrain) --- */
@@ -1107,7 +1174,7 @@ const earthRoot  = new THREE.Group();
 const earthSpin  = new THREE.Group();
 earthRoot.add(earthSpin);
 earthScene.add(earthRoot);
-let earthAmt = 0, earthT = 0, earthRadius = 1, routeAmt = 0;
+let earthAmt = 0, earthT = 0, earthGrowAmt = 0, earthRadius = 1, routeAmt = 0;
 
 /* drag to spin the globe (with a little inertia, and it keeps drifting) */
 const earthDrag = { on:false, x:0, y:0, vy:0, vx:0 };
@@ -1129,6 +1196,16 @@ addEventListener('pointermove', e=>{
   earthSpin.rotation.x = Math.max(-.6, Math.min(.6, earthSpin.rotation.x + earthDrag.vx));
 });
 const smoothstep01 = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t*t*(3 - 2*t); };
+/* quintic: zero velocity AND zero acceleration at both ends. smoothstep
+   only flattens the velocity, so its acceleration steps at the ends — that
+   step is what still read as a small kick at the start/finish of a move  */
+const smootherstep01 = (x, a, b) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t*t*t*(t*(t*6 - 15) + 10);
+};
+/* reaches 1 with one damped overshoot — how a drop of water settles */
+const settleOut = x => x >= 1 ? 1 : 1 - Math.exp(-5.2 * x) * Math.cos(x * 7.4);
+let calmAmt = 1;
 
 const earthMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:false,
@@ -1180,10 +1257,394 @@ const earthMat = new THREE.ShaderMaterial({
       col = mix(col, uAtmo, rim * .55);
       col += uAtmo * pow(rim, 5.) * .35;
 
-      gl_FragColor = vec4(col, uOpacity);
+      gl_FragColor = vec4(col * .92, uOpacity);
       #include <colorspace_fragment>
     }`
 });
+
+/* =====================================================================
+   SPECIMEN  (the archive section) — the orb hangs in its own overlay
+   scene, in front of a terrain that has washed out to a flat plate, so
+   it reads as a sample on an instrument table. Same trick as the globe.
+   ===================================================================== */
+const orbScene = new THREE.Scene();
+const orbCam   = new THREE.PerspectiveCamera(34, 1, .01, 100);
+orbCam.position.set(0, 0, 6);
+const orbRoot  = new THREE.Group();     /* placement + float */
+const orbSpin  = new THREE.Group();     /* rotation only     */
+orbRoot.add(orbSpin);
+orbScene.add(orbRoot);
+let orbAmt = 0, orbT = 0, orbRadius = 1, orbLit = 0, orbPulse = 0;
+/* framing, in half-heights of the viewport — tunable from ?true */
+/* tuned in the ?true panel and pasted straight back in */
+const ORB_T = {
+  size:0.33, x:0.00, y:0.02, spin:0.42, tilt:-0.90,
+  /* shape stays exactly as tuned in the panel */
+  round:0.50, coreRound:0.26,
+  waveH:0.175, waveF:3.95, waveS:2.00,
+  /* only the MATERIAL moves toward the hand-off glass: thinner body, a
+     softer edge and far less water colour, so it reads as clear glass
+     rather than a tinted shell */
+  ice:1.00, glassA:0.22, rim:1.60, reflect:2.00, refract:0.070,
+  specP:190, specI:2.10, tint:0.36,
+  env:0.78, strip:1.20,
+  core:1.20, coreRefl:0.80, coreOn:0.00,
+  coreSize:1.23, coreOffX:0.17, coreOffY:0.08, coreSpin:0.21,
+  coreWobH:0.210, coreWobF:4.70, coreRough:0.34, coreRim:2.00,
+  coreTint:0.30
+};
+
+/* two smaller drops keeping it company, in half-heights like the main one.
+   they share its material, so anything tuned above carries across      */
+const ORB_SATS = [
+  { size:0.10, x: 0.62, y: 0.34, spin: 0.55, phase:0.0, drift:1.00 },
+  { size:0.05, x: 0.34, y:-0.52, spin:-0.42, phase:2.1, drift:1.35 }
+];
+const orbSats = [];
+const orbCoreMeshes = [];
+let coreSpinAcc = 0;
+
+/* the sky the glass reflects — the same cloud sea the rest of the page
+   sits in, built procedurally so no environment map is needed.
+   uEnv opens up the sky/ground contrast, uStrip adds the soft overhead
+   bar that makes anything polished read as polished                  */
+const ENV_LIB = /* glsl */`
+  vec3 envSky(vec3 d, vec3 sunDir, vec3 hi, vec3 lo, vec3 sun, float env, float strip){
+    float up = clamp(d.y * .5 + .5, 0., 1.);
+    vec3 c = mix(lo, hi, pow(up, mix(1.25, .42, env)));
+    c *= mix(1., .86, smoothstep(.22, -.75, d.y) * env);   /* the ground side */
+    c = mix(c, hi * 1.05, exp(-abs(d.y) * 6.5) * .55);     /* the cloud deck  */
+
+    /* studio strip light, high and long */
+    float bar = smoothstep(.52, .96, d.y) * smoothstep(.46, .06, abs(d.x));
+    c += sun * bar * strip;
+
+    float s = max(dot(d, sunDir), 0.);
+    c += sun * pow(s, 340.) * 2.40;                        /* the sun itself  */
+    c += sun * pow(s, 16.)  * .16;                         /* and its haze    */
+    return c;
+  }`;
+
+/* the skin the specimen is suspended in: water, not glass. the surface
+   itself travels — the geometry rides a sum of sines and the normal is
+   read back off the displaced surface, so every crest carries its own
+   highlight and the body stays see-through                            */
+const orbWaterMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime, tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uSkin:{ value:new THREE.Color('#f2f8ff') },      /* crest / meniscus */
+    uDeep:{ value:new THREE.Color('#a8c2d6') },      /* the water body   */
+    uLight:{ value:C('cloudLight') },
+    uSkyHi:{ value:new THREE.Color('#ffffff') },     /* what it mirrors  */
+    uSkyLo:{ value:new THREE.Color('#c3ccd4') },
+    uSunDir:{ value:new THREE.Vector3(-.48,.62,.62).normalize() },
+    uResolution:U.uResolution,
+    tScene:{ value:null },                           /* set once the RT exists */
+    uRefract:{ value:.055 },
+    uWaveH:{ value:.085 },
+    uWaveF:{ value:2.40 },
+    uWaveS:{ value:.55 },
+    uRound:{ value:0 },
+    uRadius:{ value:1 },
+    uGlassA:{ value:.26 },
+    uRim:{ value:1 },
+    uReflect:{ value:1 },
+    uSpecP:{ value:150 },
+    uSpecI:{ value:1.7 },
+    uTint:{ value:.12 },
+    uEnv:{ value:.60 },
+    uStrip:{ value:.55 },
+    uPulse:{ value:0 }
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime, uWaveH, uWaveF, uWaveS, uPulse, uRound, uRadius;
+    varying vec3 vN, vW, vL;
+    varying float vWave;
+
+    /* four crossing swells: nothing in it repeats on a short loop */
+    float swell(vec3 p){
+      float t = uTime * uWaveS;
+      float w = sin(p.y * uWaveF        + t * 1.30)
+              + sin(p.x * uWaveF * 1.30 - t * 1.05) * .80
+              + sin((p.z + p.x * .6) * uWaveF * .85 + t * .90) * .62
+              + sin(length(p.xz) * uWaveF * 2.10 - t * 1.70) * .45;
+      return w * .26;
+    }
+
+    void main(){
+      /* uRound draws the sculpted blob out into a true sphere */
+      vec3 base = mix(position, normalize(position) * uRadius, uRound);
+      vL = base;
+      float w = swell(base);
+      vWave = w;
+      /* the click sends one taller ring out through the surface */
+      w += smoothstep(.10, 0., abs(length(base) - uPulse * 1.30)) * (1. - uPulse) * .55;
+      vec3 p = base * (1. + w * uWaveH);
+      vN = normalize(mat3(modelMatrix) * normalize(mix(normal, normalize(position), uRound)));
+      vec4 wp = modelMatrix * vec4(p, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise, tScene;
+    uniform vec2 uResolution;
+    uniform vec3 uSkin, uDeep, uLight, uSunDir, uSkyHi, uSkyLo;
+    uniform float uOpacity, uTime, uPulse, uRefract, uGlassA, uRim, uReflect,
+                  uSpecP, uSpecI, uTint, uEnv, uStrip;
+    varying vec3 vN, vW, vL;
+    varying float vWave;
+    ` + ENV_LIB + /* glsl */`
+    void main(){
+      /* the true normal of the displaced surface — this is what makes the
+         swell read as moving water rather than a wobbling ball */
+      vec3 gn = normalize(cross(dFdx(vW), dFdy(vW)));
+      if(dot(gn, vN) < 0.) gn = -gn;
+      vec3 n = normalize(mix(normalize(vN), gn, .90));
+      if(!gl_FrontFacing) n = -n;
+
+      vec3 v = normalize(cameraPosition - vW);
+      /* Schlick: almost all refraction head-on, almost all mirror at the rim */
+      float fres = clamp(pow(1. - clamp(dot(n, v), 0., 1.), 5.) * uRim, 0., 1.);
+      float F = clamp((.04 + .96 * fres) * uReflect, 0., 1.);
+
+      /* --- what you see THROUGH the glass: the frame behind it, bent by
+             the surface, with a touch of dispersion at the edges --- */
+      vec2 sUv = gl_FragCoord.xy / uResolution;
+      vec2 off = n.xy * uRefract * (1. - .45 * fres);
+      vec3 thru;
+      thru.r = texture2D(tScene, clamp(sUv + off * 1.07, .001, .999)).r;
+      thru.g = texture2D(tScene, clamp(sUv + off,        .001, .999)).g;
+      thru.b = texture2D(tScene, clamp(sUv + off * .93,  .001, .999)).b;
+      thru = mix(thru, uDeep, uTint);               /* the faintest water body */
+
+      /* --- and what it REFLECTS: the cloud sea and the sun --- */
+      vec3 refl = envSky(reflect(-v, n), uSunDir, uSkyHi, uSkyLo, uLight, uEnv, uStrip);
+
+      vec3 col = mix(thru, refl, F);
+
+      /* crests pick up the light; a hard glint where the sun lands square */
+      float crest = smoothstep(.30, .66, vWave);
+      col += uLight * crest * .14;
+      col += uLight * pow(max(dot(normalize(uSunDir + v), n), 0.), uSpecP) * uSpecI;
+      col += uSkin  * pow(max(dot(normalize(vec3(.52,-.34,.78) + v), n), 0.), 26.) * .14;
+
+      /* the meniscus: a bright hairline right at the silhouette */
+      col += uSkin * pow(fres, 1.6) * .45 * uRim;
+
+      /* a slow caustic shimmer travelling under the surface */
+      float caus = texture2D(tNoise, vL.xz * .8 + vec2(uTime * .035, -uTime * .026)).r;
+      col += uLight * smoothstep(.66, .94, caus) * .12;
+
+      /* the ring the click sends out */
+      float band = smoothstep(.07, 0., abs(length(vL) - uPulse * 1.30)) * (1. - uPulse);
+      col += uLight * band * 1.3;
+
+      /* glass is barely there face-on and almost solid at the rim */
+      float a = uOpacity * (uGlassA + .70 * fres + crest * .14 + band * .55);
+      gl_FragColor = vec4(col * .92, clamp(a, 0., 1.));
+      #include <colorspace_fragment>
+    }`
+});
+
+/* the specimen inside: the asset ships as near-black polished metal.
+   keep the polish, lose the black — it mirrors the same cloud sea the
+   water does, so the two read as one object                          */
+const orbCoreMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:true,
+  uniforms:{
+    uTime:U.uTime, tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uBase:{ value:new THREE.Color('#93a7b8') },      /* the polish's tint */
+    uHi:{ value:new THREE.Color('#ffffff') },
+    uSkyHi:{ value:new THREE.Color('#ffffff') },
+    uSkyLo:{ value:new THREE.Color('#99a8b6') },
+    uSky:{ value:C('skyLight') },
+    uSunDir:{ value:new THREE.Vector3(-.48,.62,.62).normalize() },
+    uGain:{ value:1 },
+    uRound:{ value:0 },
+    uRadius:{ value:1 },
+    uRefl:{ value:1 },
+    uEnv:{ value:.60 },
+    uStrip:{ value:.55 },
+    uWobH:{ value:0 },
+    uWobF:{ value:2.2 },
+    uRough:{ value:0 },
+    uRim:{ value:1 },
+    uTintAmt:{ value:1 }
+  },
+  vertexShader: /* glsl */`
+    uniform float uRound, uRadius, uWobH, uWobF, uTime;
+    varying vec3 vN, vW, vL;
+    varying float vWob;
+    void main(){
+      /* uRound draws it out into a true sphere; uWobH lets it breathe */
+      vec3 p = mix(position, normalize(position) * uRadius, uRound);
+      float t = uTime * .34;
+      float w = sin(p.y * uWobF + t * 1.1)
+              + sin(p.x * uWobF * 1.25 - t * .9) * .75
+              + sin((p.z + p.y * .5) * uWobF * .9 + t * 1.3) * .55;
+      w *= .30;
+      vWob = w;
+      p *= 1. + w * uWobH;
+      vN = normalize(mat3(modelMatrix) * normalize(mix(normal, normalize(position), uRound)));
+      vL = p;
+      vec4 wp = modelMatrix * vec4(p, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise;
+    uniform vec3 uBase, uHi, uSky, uSkyHi, uSkyLo, uSunDir;
+    uniform float uOpacity, uTime, uGain, uRefl, uEnv, uStrip,
+                  uWobH, uRough, uRim, uTintAmt;
+    varying vec3 vN, vW, vL;
+    varying float vWob;
+    ` + ENV_LIB + /* glsl */`
+    void main(){
+      /* when it breathes, take the normal off the deformed surface */
+      vec3 n = normalize(vN);
+      if(uWobH > .002){
+        vec3 gn = normalize(cross(dFdx(vW), dFdy(vW)));
+        if(dot(gn, n) < 0.) gn = -gn;
+        /* eased in gently — going fully geometric shows the triangles */
+        n = normalize(mix(n, gn, clamp(uWobH * 2.2, 0., .60)));
+      }
+      vec3 v = normalize(cameraPosition - vW);
+      float fres = pow(1. - clamp(dot(n, v), 0., 1.), 3.4);
+      vec3 base = mix(vec3(1.), uBase, uTintAmt);
+
+      /* a polished surface: what it shows IS the sky, tinted by the metal.
+         uRough trades the mirror for a soft, normal-direction lookup */
+      vec3 sharp = envSky(reflect(-v, n), uSunDir, uSkyHi, uSkyLo, uHi, uEnv, uStrip);
+      vec3 soft  = envSky(n,              uSunDir, uSkyHi, uSkyLo, uHi, uEnv * .5, uStrip * .35);
+      vec3 refl  = mix(sharp, soft, uRough);
+      vec3 col = mix(base * uSky, refl * mix(base, vec3(1.), .30 + .70 * fres), uRefl);
+
+      /* the faintest grain so the polish isn't glassy-perfect */
+      float grain = texture2D(tNoise, vL.xz * 1.4 + vL.y * .5).r;
+      col *= .94 + .12 * grain;
+
+      /* a hard sun glint and a cold rim to lift it off the water */
+      col += uHi  * pow(max(dot(normalize(uSunDir + v), n), 0.), mix(120., 26., uRough))
+                  * 1.30 * (1. - uRough * .75);
+      col += uSky * pow(1. - clamp(dot(n, v), 0., 1.), 2.6) * .30 * uRim;
+
+      gl_FragColor = vec4(col * uGain * .92, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* ---- the instrument HUD around it ----------------------------------- */
+const sp = {
+  root:document.getElementById('spec'),
+  plate:document.getElementById('plate'),
+  lnA:document.getElementById('lnA'), lnB:document.getElementById('lnB'), lnC:document.getElementById('lnC'),
+  spkA:document.getElementById('spkA'), spkB:document.getElementById('spkB'), spkC:document.getElementById('spkC'),
+  marks:document.getElementById('marks'), scan:document.getElementById('scan'),
+  tagA:document.getElementById('tagA'), tagB:document.getElementById('tagB'), tagC:document.getElementById('tagC'),
+  temp:document.getElementById('specTemp'), delta:document.getElementById('specDelta')
+};
+/* four little crosses that sit on the object's own axes */
+const specMarks = [0,1,2,3].map(()=>{
+  const mk = ()=>{ const l = document.createElementNS('http://www.w3.org/2000/svg','line'); sp.marks.appendChild(l); return l; };
+  return { h:mk(), v:mk() };
+});
+const orbNdc = new THREE.Vector3();
+const orbEdge = new THREE.Vector3();
+let specHover = false, specScreen = { x:0, y:0, r:120 };
+const orbDrag = { on:false, moved:0, x:0, y:0, vx:0, vy:0 };
+
+const poly = (el, pts)=>el.setAttribute('points', pts.map(p=>p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
+const cross = (m, x, y, s)=>{
+  m.h.setAttribute('x1', x - s); m.h.setAttribute('y1', y); m.h.setAttribute('x2', x + s); m.h.setAttribute('y2', y);
+  m.v.setAttribute('x1', x); m.v.setAttribute('y1', y - s); m.v.setAttribute('x2', x); m.v.setAttribute('y2', y + s);
+};
+
+/* everything on screen is measured from the object's projected centre, so
+   the labels breathe with it instead of sitting on a fixed grid */
+function layoutSpec(){
+  const w = innerWidth, h = innerHeight;
+  orbNdc.set(0,0,0).applyMatrix4(orbRoot.matrixWorld).project(orbCam);
+  orbEdge.set(orbRadius, 0, 0).applyMatrix4(orbRoot.matrixWorld).project(orbCam);
+  const cx = (orbNdc.x * .5 + .5) * w, cy = (-orbNdc.y * .5 + .5) * h;
+  const R  = Math.max(40, Math.abs(orbEdge.x - orbNdc.x) * .5 * w);
+  specScreen = { x:cx, y:cy, r:R };
+
+  const place = (el, x, y)=>{ el.style.left = x.toFixed(1) + 'px'; el.style.top = y.toFixed(1) + 'px'; };
+  const boxOf = el => el.getBoundingClientRect();
+  /* labels sit off a floor radius: a small specimen must not pull the
+     readouts onto its own glass, the leader lines still land on it */
+  const L = Math.max(R, 172);
+
+  /* 01 — the identity plate, up and to the left */
+  const ax = cx - L * 1.72, ay = cy - L * 1.34;
+  place(sp.tagA, ax, ay);
+  const ab = boxOf(sp.tagA);
+  poly(sp.lnA, [[ax, ay + ab.height + 5], [ax + ab.width, ay + ab.height + 5], [cx - R * .40, cy - R * .40]]);
+
+  /* 02 — the readout, out to the right */
+  const bx = cx + L * 1.10, by = cy - L * .62;
+  place(sp.tagB, bx, by);
+  const bb = boxOf(sp.tagB);
+  poly(sp.lnB, [[bx - 8, by + bb.height * .5], [bx - L * .30, by + bb.height * .5], [cx + R * .52, cy - R * .16]]);
+
+  /* 03 — the invitation, lower right */
+  const ccx = cx + L * .96, ccy = cy + L * .86;
+  place(sp.tagC, ccx, ccy);
+  const cb = boxOf(sp.tagC);
+  poly(sp.lnC, [[ccx - 8, ccy + cb.height - 6], [ccx - L * .34, ccy + cb.height - 6], [cx + R * .22, cy + R * .60]]);
+
+  /* the survey spokes: thin whiskers off the object with a tick at the end */
+  poly(sp.spkA, [[cx - R * .70, cy - R * .18], [cx - L * 1.34, cy - L * .52]]);
+  poly(sp.spkB, [[cx - R * .62, cy - R * .30], [cx - L * 1.22, cy - L * .06]]);
+  poly(sp.spkC, [[cx + R * .40, cy + R * .82], [cx + L * .74, cy + L * 1.24]]);
+  cross(specMarks[0], cx - L * 1.36, cy - L * .53, 4);
+  cross(specMarks[1], cx - L * 1.24, cy - L * .05, 3);
+  cross(specMarks[2], cx + L * .76, cy + L * 1.26, 4);
+  cross(specMarks[3], cx + L * 1.02, cy + L * .10, 3);
+
+  sp.scan.setAttribute('cx', cx.toFixed(1));
+  sp.scan.setAttribute('cy', cy.toFixed(1));
+  sp.scan.setAttribute('r', (R * (.35 + orbPulse * 1.5)).toFixed(1));
+  /* the ring only exists while a scan is running */
+  sp.scan.setAttribute('opacity', (orbPulse > 0 ? (1 - orbPulse) * .55 : 0).toFixed(3));
+}
+
+/* drag to turn it over; a click without a drag runs a scan through the ice */
+addEventListener('pointerdown', e=>{
+  if(orbAmt < .35) return;
+  const dx = e.clientX - specScreen.x, dy = e.clientY - specScreen.y;
+  if(Math.hypot(dx, dy) > specScreen.r * 1.15) return;
+  orbDrag.on = true; orbDrag.moved = 0;
+  orbDrag.x = e.clientX; orbDrag.y = e.clientY;
+  orbDrag.vx = orbDrag.vy = 0;
+  document.body.style.cursor = 'grabbing';
+});
+addEventListener('pointermove', e=>{
+  if(orbAmt > .35){
+    const dx = e.clientX - specScreen.x, dy = e.clientY - specScreen.y;
+    specHover = Math.hypot(dx, dy) < specScreen.r * 1.15;
+  } else specHover = false;
+  if(!orbDrag.on) return;
+  const dx = (e.clientX - orbDrag.x) / innerWidth;
+  const dy = (e.clientY - orbDrag.y) / innerHeight;
+  orbDrag.x = e.clientX; orbDrag.y = e.clientY;
+  orbDrag.moved += Math.abs(dx) + Math.abs(dy);
+  orbDrag.vy = dx * 3.0;
+  orbDrag.vx = dy * 1.9;
+  orbSpin.rotation.y += orbDrag.vy;
+  orbSpin.rotation.x = Math.max(-.7, Math.min(.7, orbSpin.rotation.x + orbDrag.vx));
+});
+addEventListener('pointerup', ()=>{
+  if(orbDrag.on && orbDrag.moved < .008 && orbPulse === 0) orbPulse = .001;   /* a tap = a scan */
+  orbDrag.on = false;
+  document.body.style.cursor = '';
+});
+sp.tagC.addEventListener('click', ()=>{ if(orbAmt > .35 && orbPulse === 0) orbPulse = .001; });
 
 /* =====================================================================
    CARGO SHIP — the asset is painted bright red; strip it back to the
@@ -1234,7 +1695,7 @@ const shipMatBase = new THREE.ShaderMaterial({
       vec3 v = normalize(cameraPosition - vW);
       col += pow(max(dot(normalize(uSunDir + v), n), 0.), 34.) * .12;
 
-      gl_FragColor = vec4(col, uOpacity);
+      gl_FragColor = vec4(col * .92, uOpacity);
       #include <colorspace_fragment>
     }`
 });
@@ -1410,7 +1871,7 @@ const waterMat = new THREE.ShaderMaterial({
       float edge = smoothstep(1., .80, abs(vLocal.x)) * smoothstep(1., .80, abs(vLocal.y));
       edge *= .90 + .2 * rip;
 
-      gl_FragColor = vec4(col, uOpacity * (.86 + .14*fres) * edge);
+      gl_FragColor = vec4(col * .92, uOpacity * (.86 + .14*fres) * edge);
       #include <colorspace_fragment>
     }`
 });
@@ -1420,6 +1881,8 @@ const waterMat = new THREE.ShaderMaterial({
    ===================================================================== */
 const sceneRT = new THREE.WebGLRenderTarget(1, 1, { depthBuffer:true });
 sceneRT.texture.colorSpace = THREE.SRGBColorSpace;
+/* the water glass refracts whatever the frame already holds */
+orbWaterMat.uniforms.tScene.value = sceneRT.texture;
 sceneRT.texture.minFilter = THREE.LinearFilter;
 sceneRT.texture.magFilter = THREE.LinearFilter;
 
@@ -1431,19 +1894,32 @@ const postMat = new THREE.ShaderMaterial({
     uResolution:U.uResolution,
     uTime:U.uTime,
     uCondense:{ value:0 },
+    /* 4 → 5: the live mountain frame is physically gathered into the
+       archive water body instead of disappearing behind a white cut */
+    uArchiveMorph:{ value:0 },
+    uDropCentre:{ value:new THREE.Vector2(0.00, 0.02) },
+    uDropRadius:{ value:0.33 },
+    /* how much of the 2D water body has already been given to the mesh */
+    uArchiveHand:{ value:0 },
+    uCleanHandoff:{ value:0 },
     uEarth:{ value:0 },
+    uOrb:{ value:0 },
     uWash:{ value:0 },
-    uVeil:{ value:new THREE.Color('#f3f6f9') },
-    uBgTop:{ value:new THREE.Color('#f4f7f9') },
-    uBgBottom:{ value:new THREE.Color('#ecf0f3') }
+    /* the grey-blue the archive section is graded toward */
+    uArchiveTint:{ value:new THREE.Color('#b7c6d6') },
+    uVeil:{ value:new THREE.Color('#edf2f5') },
+    uBgTop:{ value:new THREE.Color('#eef3f6') },
+    uBgBottom:{ value:new THREE.Color('#dce5eb') }
   },
   vertexShader: quadVert,
   fragmentShader: /* glsl */`
     precision highp float;
     uniform sampler2D tScene;
     uniform vec2 uResolution;
-    uniform float uTime, uCondense, uEarth, uWash;
-    uniform vec3 uBgTop, uBgBottom, uVeil;
+    uniform float uTime, uCondense, uArchiveMorph, uDropRadius, uArchiveHand,
+                  uCleanHandoff, uEarth, uOrb, uWash;
+    uniform vec2 uDropCentre;
+    uniform vec3 uBgTop, uBgBottom, uVeil, uArchiveTint;
     varying vec2 vUv;
     ` + CLOUD_LIB + /* glsl */`
 
@@ -1452,7 +1928,11 @@ const postMat = new THREE.ShaderMaterial({
       vec2 d2 = p - centre;
       float ang = atan(d2.y, d2.x);
       float wob = fbm(vec2(ang * 1.7 + seed, uTime * .10 + seed)) * .55;
-      float rad = radius * (1. + .045 * wob);
+      /* the wobble has to fade out with the drop itself: with no drop the
+         lens must be an exact pass-through, or this 4% breathing zoom
+         fights the chromatic aberration below and fringes the whole
+         frame green/magenta                                          */
+      float rad = radius * (1. + .045 * wob * amt);
       float r = length(d2) / rad;
       if(r > 1.06) return vec4(0.);
 
@@ -1504,17 +1984,23 @@ const postMat = new THREE.ShaderMaterial({
       float aspect = uResolution.x / uResolution.y;
       vec2 p = (vUv - .5) * vec2(aspect, 1.);
       float R0 = length(vec2(aspect, 1.)) * .5 * 1.18;   /* circumscribes the screen */
+      /* Keep the original full-frame lens isolated from the archive hand-off.
+         Packing the mountain into this lens creates a second giant bubble and
+         severe RGB separation; the archive now uses a local water impulse. */
       float amt = uCondense;
 
       /* studio backdrop the drop hangs in */
       vec3 bg = mix(uBgBottom, uBgTop, vUv.y);
       bg *= 1. - .09 * smoothstep(.25, 1.05, length(p));
+      /* The globe needs a dark field before it grows across the frame;
+         otherwise the white Global typography vanishes on the archive sky. */
+      vec3 earthBg = mix(vec3(.15, .21, .28), vec3(.27, .35, .42), vUv.y);
+      bg = mix(bg, earthBg, smoothstep(.12, .78, uEarth));
 
       /* the frame eases in a little as the wash sweeps through */
       p *= 1. - .045 * uWash;
 
       float R = mix(R0, R0 * .27, amt);
-      /* as it forms, the drop drifts clear of the headline */
       vec2 c0 = vec2(.30 * amt, .02 * amt);
       vec4 main_ = droplet(p, c0, R, aspect, R0, amt, 0.);
       /* as the globe arrives the drop gives up its body, leaving a thin shell */
@@ -1534,11 +2020,116 @@ const postMat = new THREE.ShaderMaterial({
         col = mix(col, s3.rgb, s3.w);
       }
 
+      /* 4 → 5: the range does not fade — it is DRAWN DOWN into the drop.
+         the whole live frame contracts toward one point with a slow swirl,
+         surface tension rounds the gathered body off, and the 2D body then
+         hands over to the real water mesh at the same centre and radius. */
+      if(uArchiveMorph > .001){
+        float m = clamp(uArchiveMorph, 0., 1.);
+        vec2  c = uDropCentre;
+        vec2  d = p - c;
+        float rl = length(d);
+
+        /* -- the drain: sampling farther out shrinks the image inward -- */
+        float gather = smoothstep(.00, .66, m);
+        float k = mix(1., .17, gather * gather);          /* 1 -> 0.17      */
+        float swirl = gather * 0.62 * (1. - smoothstep(0., 1.15, rl));
+        float a0 = atan(d.y, d.x) + swirl;
+        vec2  srcP = c + vec2(cos(a0), sin(a0)) * (rl / max(k, .02));
+        vec2  srcUv = srcP / vec2(aspect, 1.) + .5;
+
+        /* solid rock does not pour: warp the sampling as it goes down, and
+           the range shears into fluid on the way in */
+        float fluid = smoothstep(.08, .72, m);
+        vec2 warp = vec2(fbm(srcUv * 3.1 + uTime * .13),
+                         fbm(srcUv * 3.1 + 11.3 - uTime * .11)) - .5;
+        srcUv += warp * .052 * fluid;
+
+        /* anything drawn from beyond the frame edge would streak: let it
+           dissolve into the plate well before it gets there */
+        float inset = min(min(srcUv.x, 1. - srcUv.x), min(srcUv.y, 1. - srcUv.y));
+        float offFrame = 1. - smoothstep(.0, .07, inset);
+        vec3  gathered = texture2D(tScene, clamp(srcUv, .002, .998)).rgb;
+        gathered = mix(gathered, bg, offFrame);
+
+        /* -- outside the body: the drained frame gives way to the plate,
+              then back to the live sky so the end of the move is seamless
+              with the section that follows                              */
+        /* only hand back to the live frame once the range has actually gone
+           from it, otherwise the mountains reappear behind the drop */
+        vec3 plate = mix(bg, texture2D(tScene, vUv).rgb, smoothstep(.82, 1., m));
+        vec3 outside = mix(gathered, plate, smoothstep(.10, .70, m));
+
+        /* -- the water body: tall while it forms, rounding as it fills,
+              its edge held by surface tension (wobbling, not noisy) --   */
+        float grow   = smoothstep(.06, .82, m);
+        /* barely oval while it forms — it must read as a circle growing,
+           never as something squeezed on one axis */
+        float squash = mix(.90, 1., grow);
+        float bodyR  = uDropRadius * mix(.05, 1., grow);
+        vec2  dq = vec2(d.x / squash, d.y * squash);
+        float ang = atan(dq.y, dq.x);
+        /* surface tension: irregular while forming, and it must NOT grow as
+           the hand-off runs or the body reads bigger than the mesh */
+        float tension = (fbm(vec2(ang * 2.1, uTime * .55)) - .5)
+                      * .16 * (1. - grow * .55);
+        float rr = length(dq) / max(bodyR * (1. + tension), 1e-4);
+        /* and the outline melts as the mesh takes over, so the two silhouettes
+           are never both crisp at the same time — that swap was the last
+           place the change of state could be caught */
+        /* softens INWARD only — the outer edge stays put, so the body never
+           appears to swell as it melts into the mesh */
+        float soft = .045 + .20 * uArchiveHand;
+        float cover = (1. - smoothstep(1. - soft, 1.005, rr))
+                    * (1. - uArchiveHand * uArchiveHand);
+
+        /* -- inside it: the gathered frame, read through water -- */
+        float rc = min(rr, 1.);
+        float z  = sqrt(max(1. - rc * rc, 1e-4));
+        vec3  nn = vec3(normalize(dq + 1e-6) * rc, z);
+        vec2  lens = nn.xy * (.055 * (1. - z));
+        vec3  inside = texture2D(tScene, clamp(srcUv - lens, .001, .999)).rgb;
+        inside = mix(inside, bg, offFrame);
+        inside = mix(inside, vec3(.90, .95, .99), .08 + .34 * pow(1. - z, 3.0));
+        /* the mesh brings its own glints — fade these out or the highlight
+           doubles up during the hand-off */
+        float specFade = 1. - uArchiveHand;
+        inside += pow(max(dot(nn, normalize(vec3(-.42, .58, .70))), 0.), 90.) * .70 * specFade;
+        inside += pow(max(dot(nn, normalize(vec3( .48, -.40, .78))), 0.), 26.) * .08 * specFade;
+
+        /* the meniscus where the body meets the plate — a hairline, not a
+           soap-bubble outline */
+        float lip = (1. - smoothstep(.93, 1.01, rr)) * smoothstep(.84, .98, rr);
+        inside += vec3(.20, .26, .31) * lip * .30;
+
+        col = mix(outside, inside, cover);
+
+        /* one thin splash ring left where the last of the frame landed —
+           kept faint and gone before the hand-off, so it never competes
+           with the object's own outline */
+        float land = smoothstep(.40, .58, m) * (1. - smoothstep(.52, .70, m));
+        float ringR = uDropRadius * mix(1.0, 2.2, smoothstep(.40, .70, m));
+        float ring = 1. - smoothstep(.0, .020, abs(rl - ringR));
+        col = mix(col, vec3(.78, .86, .93), ring * land * .09);
+      }
+
       /* soft contact shadow under the drop */
       float sh = smoothstep(1., 0., length((p - c0 - vec2(0., -R * 1.22)) / vec2(R * .95, R * .20)));
       col -= sh * .045 * amt;
 
+
       /* ---- film treatment ------------------------------------------ */
+      /* chromatic aberration comes FIRST: it replaces most of red and blue
+         with fresh taps of the scene, so anything added before it (the
+         bloom) would survive in green only and cast the frame green */
+      float ca = dot(p, p) * .0016;
+      float caMix = .55 * (1. - amt)
+        * (1. - smoothstep(.00, .12, uArchiveMorph))
+        * (1. - smoothstep(.02, .20, uEarth))
+        * (1. - uCleanHandoff);
+      col.r = mix(col.r, texture2D(tScene, vUv + (vUv - .5) * ca).r, caMix);
+      col.b = mix(col.b, texture2D(tScene, vUv - (vUv - .5) * ca).b, caMix);
+
       /* soft bloom: five taps of whatever is already bright */
       vec2 px = 1. / uResolution;
       vec3 bloom = vec3(0.);
@@ -1549,12 +2140,7 @@ const postMat = new THREE.ShaderMaterial({
       bloom += texture2D(tScene, vUv).rgb;
       bloom *= .2;
       bloom = max(bloom - .82, 0.) * 2.2;                  /* bright pass */
-      col += bloom * .28 * (1. - uCondense * .6);
-
-      /* chromatic aberration that only shows toward the edges */
-      float ca = dot(p, p) * .0016;
-      col.r = mix(col.r, texture2D(tScene, vUv + (vUv - .5) * ca).r, .55 * (1. - amt));
-      col.b = mix(col.b, texture2D(tScene, vUv - (vUv - .5) * ca).b, .55 * (1. - amt));
+      col += bloom * .28 * (1. - uCondense * .6) * (1. - uOrb * .30);
 
       /* gentle S-curve, then grain that steps at ~18fps like film */
       col = clamp(col, 0., 1.);
@@ -1562,6 +2148,18 @@ const postMat = new THREE.ShaderMaterial({
       float gt = floor(uTime * 18.);
       float gr = fract(sin(dot(gl_FragCoord.xy + gt, vec2(12.9898, 78.233))) * 43758.5453);
       col += (gr - .5) * .020;
+
+      /* the archive section loses the range, and with it the grey-blue mass
+         that gives the other sections their tone — the bare cloud field
+         reads flat and 15 levels brighter. graded LAST, after bloom and the
+         S-curve, or those simply wash it back out                        */
+      if(uOrb > .001){
+        vec3 archive = col * vec3(.885, .910, .940);
+        archive = mix(archive, uArchiveTint, .06);
+        /* the lower half sits deeper, the way the range used to weigh it */
+        archive *= 1. - .06 * smoothstep(.80, .0, vUv.y);
+        col = mix(col, archive, uOrb);
+      }
 
       /* the cut itself — at the peak the screen is entirely the veil, so any
          camera or prop discontinuity underneath is never seen               */
@@ -1587,7 +2185,9 @@ const WATER_S4 = { x:0.70, y:8.20, z:0.30, rx:0.00, ry:-1.72, rz:0.00,
 const shipNow  = Object.assign({}, SHIP_S3);
 const waterNow = Object.assign({}, WATER_S3);
 /* the globe's opening and resting framing (chapter 5), in half-heights */
-const EARTH_T = { r0:1.42, r1:2.05, x0:0.20, x1:0.16, y0:-0.50, y1:-0.78, drift:0.022 };
+/* The first globe frame occupies the water orb's exact screen-space pose.
+   Only after the coastlines resolve does it grow into the global view. */
+const EARTH_T = { r0:0.33, r1:2.05, x0:0.00, x1:0.16, y0:0.02, y1:-0.78, drift:0.022 };
 const lerpCfg = (now, target, k)=>{ for(const key in target) now[key] += (target[key] - now[key]) * k; };
 
 /* =====================================================================
@@ -1607,7 +2207,10 @@ const CHAPTERS = [
     ship:SHIP_S3, water:WATER_S3 },
   { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',       cta:'MONTIS VENTURES',
     cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, },
-  { idx:'5', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
+  { idx:'5', eyebrow:'Montis Archive',     l1:'ONE CORE SAMPLE,',  l2:'A CENTURY OF ICE.', cta:'MONTIS ARCHIVE',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    orb:true },
+  { idx:'6', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
     cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
     earth:true, dark:true }
 ];
@@ -1663,7 +2266,10 @@ const camAimFrom = new THREE.Vector3();
    otherwise anything placed in world space lands somewhere unpredictable */
 const camUp  = new THREE.Vector3(0, 1, 0);
 const camUpT = new THREE.Vector3(0, 1, 0);
-const easeInOut  = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+/* was a piecewise cubic, which reverses its acceleration at the halfway
+   point — a small kick right in the middle of every move. the quintic has
+   no such join, so camera rides and object arrivals read continuous     */
+const easeInOut  = t => smootherstep01(t, 0, 1);
 const camPosT = new THREE.Vector3();
 const camAimT = new THREE.Vector3();
 let spinT = 0;
@@ -1683,30 +2289,54 @@ function applyChapterTarget(i, instant){
 }
 
 /* transition ----------------------------------------------------------- */
-let trans = { on:false, t:0, dir:1, swapped:false };
+const transitionKind = (from, to)=>{
+  if((from === 3 && to === 4) || (from === 4 && to === 3)) return 'liquefy';
+  if((from === 4 && to === 5) || (from === 5 && to === 4)) return 'planet';
+  return 'mist';
+};
+let trans = { on:false, t:0, dir:1, from:0, to:0, kind:'mist', duration:2.3, swapped:false };
 
 function goTo(i){
   if(busy) return;
   const n = CHAPTERS.length;
   i = Math.max(0, Math.min(n - 1, i));      // the sequence ends on the globe
   if(i === chapter) return;
+  const from = chapter;
+  const kind = transitionKind(from, i);
   busy = true;
   camPosFrom.copy(camPos);
   camAimFrom.copy(camAim);
   chapter = i;
   el.ui.classList.remove('is-in');
   el.ui.classList.add('is-out');
-  trans = { on:true, t:0, swapped:false };
+  trans = {
+    on:true, t:0, from, to:i, kind,
+    dir:i > from ? 1 : -1,
+    duration:kind === 'planet' ? 3.05 : (kind === 'liquefy' ? 2.75 : 2.3),
+    swapped:false
+  };
   applyChapterTarget(i);
 }
 
 function tickTransition(dt){
   if(!trans.on) return;
-  trans.t += dt / 2.3;                       // ~2.3s, unhurried
+  trans.t += dt / trans.duration;
   const t = Math.min(trans.t, 1);
-  U.uTransition.value = Math.sin(t * Math.PI);         // peaks at a full cover
+  const arc = Math.sin(t * Math.PI);
+  /* The bespoke hand-offs stay visible. Mist is now connective tissue,
+     not an opaque edit hiding the object change. */
+  const veil = trans.kind === 'mist' ? 1 : (trans.kind === 'liquefy' ? .30 : .16);
+  U.uTransition.value = arc * veil;
+  postMat.uniforms.uCleanHandoff.value = trans.kind === 'mist' ? 0 : 1;
+  if(trans.kind === 'liquefy'){
+    /* the shader shapes its own phases, so hand it a linear clock */
+    postMat.uniforms.uArchiveMorph.value = trans.dir > 0 ? t : 1 - t;
+  } else {
+    postMat.uniforms.uArchiveMorph.value = 0;
+  }
   U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
-  if(!trans.swapped && t > .46){
+  const swapAt = trans.kind === 'planet' && trans.dir < 0 ? .68 : .46;
+  if(!trans.swapped && t > swapAt){
     trans.swapped = true;
     paint(chapter);
     camUp.copy(camUpT);        /* straight-down views need a different roll */
@@ -1719,7 +2349,14 @@ function tickTransition(dt){
     void el.ui.offsetWidth;
     el.ui.classList.add('is-in');
   }
-  if(t >= 1){ trans.on = false; U.uTransition.value = 0; busy = false; }
+  if(t >= 1){
+    trans.on = false;
+    U.uTransition.value = 0;
+    postMat.uniforms.uArchiveMorph.value = 0;
+    postMat.uniforms.uArchiveHand.value = 0;
+    postMat.uniforms.uCleanHandoff.value = 0;
+    busy = false;
+  }
 }
 
 /* input ---------------------------------------------------------------- */
@@ -1776,6 +2413,8 @@ function resize(){
   sceneRT.setSize(Math.round(w*dpr), Math.round(h*dpr));
   earthCam.aspect = w/h;
   earthCam.updateProjectionMatrix();
+  orbCam.aspect = w/h;
+  orbCam.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
 resize();
@@ -1802,6 +2441,56 @@ mountainMat.uniforms.tMap.value    = mapTex;
 mountainMat.uniforms.tNormal.value = nrmTex;
 
 const gltfLoader = new GLTFLoader(manager);
+
+/* the specimen in its water */
+gltfLoader.load('water_orb/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.sub(ctr);                                  /* pivot at its middle */
+  orbRadius = Math.max(size.x, size.y, size.z) * .5;
+  /* the shell is the one transmissive material in the file — everything
+     else is the body of the specimen */
+  m.traverse(o=>{
+    if(!o.isMesh) return;
+    const mat = o.material || {};
+    const shell = mat.transmission > 0 || mat.transparent === true;
+    o.material = shell ? orbWaterMat : orbCoreMat;
+    o.renderOrder = shell ? 2 : 1;
+    o.frustumCulled = false;
+    if(!shell){ o.userData.p0 = o.position.clone(); orbCoreMeshes.push(o); }
+    /* each part morphs toward a sphere of its own size, so the shape slider
+       never changes how the two nest inside each other. the mean vertex
+       distance, not the bounding sphere — a few spikes must not decide it */
+    const pos = o.geometry.attributes.position;
+    let sum = 0, n = 0;
+    for(let i = 0; i < pos.count; i += 7){
+      sum += Math.hypot(pos.getX(i), pos.getY(i), pos.getZ(i)); n++;
+    }
+    o.material.uniforms.uRadius.value = sum / Math.max(n, 1);
+  });
+  orbSpin.add(m);
+  orbSpin.rotation.set(ORB_T.tilt, .6, -.08);
+
+  /* the two companions: same geometry, same materials, own rigs */
+  ORB_SATS.forEach((cfg, i)=>{
+    const root = new THREE.Group(), spin = new THREE.Group();
+    root.add(spin);
+    const cm = m.clone(true);
+    cm.traverse(o=>{
+      if(!o.isMesh) return;
+      o.frustumCulled = false;
+      if(o.material === orbCoreMat){ o.userData.p0 = o.position.clone(); orbCoreMeshes.push(o); }
+    });
+    spin.add(cm);
+    spin.rotation.set(ORB_T.tilt + (i ? -.5 : .35), i ? 2.2 : .9, 0);
+    orbScene.add(root);
+    orbSats.push({ root, spin, cfg });
+  });
+
+  window.__orb = orbSpin;
+});
 
 /* the globe */
 gltfLoader.load('earth/scene.gltf', gltf=>{
@@ -2141,33 +2830,250 @@ function update(dt){
   const veiled = 1 - smoothstep01(U.uTransition.value, .25, .9);
   routeMat.uniforms.uOpacity.value = routeAmt * veiled * .9;
   routes.visible = routeAmt > .01;
-  moteMat.uniforms.uOpacity.value = .5 * veiled * (1 - earthAmt);
-  globeRouteMat.uniforms.uOpacity.value = earthAmt * .95;
-  hubMat.uniforms.uOpacity.value = smoothstep01(earthAmt, .35, .9);
+  moteMat.uniforms.uOpacity.value = .5 * veiled * (1 - earthAmt) * (1 - orbAmt * .8);
+  const networkReveal = smootherstep01(earthGrowAmt, .24, .82);
+  globeRouteMat.uniforms.uOpacity.value = earthAmt * networkReveal * .95;
+  hubMat.uniforms.uOpacity.value = smootherstep01(earthGrowAmt, .42, .92);
 
-  /* chapter 5: the drop hands over to the globe.
+  /* 5 <-> 6 is one object changing state. The water first rounds off and
+     calms; its loose droplets are then pulled into the same centre where
+     the globe begins. Reversing navigation reverses the choreography. */
+  const planetForward  = trans.on && trans.kind === 'planet' && trans.dir > 0;
+  const planetBackward = trans.on && trans.kind === 'planet' && trans.dir < 0;
+  const archiveForward  = trans.on && trans.kind === 'liquefy' && trans.dir > 0;
+  const archiveBackward = trans.on && trans.kind === 'liquefy' && trans.dir < 0;
+  const planetShape = (planetForward || planetBackward)
+    ? (planetForward
+        ? smootherstep01(trans.t, .04, .44)
+        : 1 - smootherstep01(trans.t, .50, .94))
+    : 0;
+  /* Keep the material hand-off still: the old travelling surface pulse
+     fought the geometry cross-fade and read as a camera shake. */
+  const planetRing = 0;
+  /* Idle motion (float, breathing, parallax, spin) is stilled while an
+     object changes state and RECOVERS on an eased state of its own. Reading
+     it straight off trans.t made it snap back to full the frame the
+     transition ended — that step was the jitter.                        */
+  const calmAim = planetForward ? 0 : (planetBackward ? smootherstep01(trans.t, .70, .98) : 1);
+  calmAmt += (calmAim - calmAmt) * Math.min(1, dt * (calmAim < calmAmt ? 4.2 : 1.4));
+  const planetMotion = calmAmt;
+  /* the water body lands with one damped wobble instead of easing dead */
+  const archiveForm = archiveForward
+    ? settleOut(smootherstep01(trans.t, .50, 1.0))
+    : (archiveBackward ? 1 - smootherstep01(trans.t, .14, .80) : 1);
+  const orbFloatY = Math.sin(U.uTime.value * .47) * .026 * planetMotion;
+  /* Keep the post-process lens locked to the live mesh, including its
+     pointer drift and breathing float. */
+  postMat.uniforms.uDropCentre.value.set(
+    ORB_T.x + pointerS.x * .018 * planetMotion,
+    ORB_T.y + pointerS.y * .013 * planetMotion + orbFloatY
+  );
+  /* the 2D body must be the mesh's TRUE silhouette, not its bounding box,
+     or the hand-off swaps between two slightly different sized circles.
+     the globe's opening radius is derived the same way further down.   */
+  postMat.uniforms.uDropRadius.value =
+    ORB_T.size * (orbWaterMat.uniforms.uRadius.value / orbRadius);
+
+  /* the archive section: the terrain sinks into a plate and the specimen
+     rises in front of it, turning slowly under its instruments */
+  const orbWants = CHAPTERS[chapter].orb === true;
+  const orbRevealAt = planetBackward ? .46 : .24;
+  const orbOpen  = (orbWants && (!trans.on || trans.t > orbRevealAt))
+                || (planetForward && trans.t < .44);
+  const orbRiseTime = planetBackward ? .44 : 2.2;
+  const orbFallTime = planetForward ? .42 : 1.1;
+  if(archiveForward){
+    /* the mesh takes over from the 2D body on one shared clock, so the
+       water is handed across without ever being drawn twice */
+    orbT = smootherstep01(trans.t, .56, .94);
+  } else if(archiveBackward){
+    orbT = 1 - smootherstep01(trans.t, .04, .42);
+  } else {
+    orbT = orbOpen ? Math.min(1, orbT + dt / orbRiseTime)
+                   : Math.max(0, orbT - dt / orbFallTime);
+  }
+  orbAmt = easeInOut(orbT);
+  postMat.uniforms.uArchiveHand.value = (archiveForward || archiveBackward) ? orbT : 0;
+  postMat.uniforms.uOrb.value = orbAmt;
+  /* the range dissolves so the specimen has the sky to itself — but NOT
+     before the gather has finished feeding on it: the drop is made of that
+     live frame, so the terrain has to stay in the buffer until the mesh
+     has taken over                                                     */
+  const archiveTerrainFade = archiveForward
+    ? smootherstep01(trans.t, .52, .84)
+    : (archiveBackward ? 1 - smootherstep01(trans.t, .05, .40) : orbAmt);
+  mountainMat.uniforms.uOrbFade.value = Math.max(archiveTerrainFade, earthAmt) * .995;
+  /* nothing left to see: stop pushing 600k triangles through the shader */
+  spin.visible = mountainMat.uniforms.uOrbFade.value < .985;
+  const wu = orbWaterMat.uniforms, cu = orbCoreMat.uniforms;
+  /* 5 -> 6 must never show two outlines at once: the water skin gives up
+     its rim and body early, and the globe is already solid by then, so the
+     read is one object gaining geography rather than two discs sliding */
+  const waterHandoffOpacity = planetForward
+    ? 1 - smootherstep01(trans.t, .05, .28)
+    : (planetBackward ? smootherstep01(trans.t, .62, .90) : 1);
+  /* spread over the whole hand-off rather than its first third: the mesh
+     fading in over 0.4s was the one remaining steep ramp */
+  wu.uOpacity.value = smootherstep01(orbT, .00, .66) * ORB_T.ice * waterHandoffOpacity;
+  wu.uWaveH.value = THREE.MathUtils.lerp(ORB_T.waveH, .004, planetShape);
+  wu.uWaveF.value = THREE.MathUtils.lerp(ORB_T.waveF, 2.20, planetShape);
+  wu.uWaveS.value = THREE.MathUtils.lerp(ORB_T.waveS, .06, planetShape);
+  wu.uRound.value = THREE.MathUtils.lerp(ORB_T.round, 1.00, planetShape);
+  wu.uRefract.value = ORB_T.refract;
+  wu.uGlassA.value = THREE.MathUtils.lerp(ORB_T.glassA, .18, planetShape);
+  /* the rim IS the outline — let it go first */
+  wu.uRim.value = THREE.MathUtils.lerp(ORB_T.rim, .30, planetShape);
+  wu.uReflect.value = ORB_T.reflect;
+  wu.uSpecP.value = ORB_T.specP;   wu.uSpecI.value  = ORB_T.specI;
+  wu.uTint.value = THREE.MathUtils.lerp(ORB_T.tint, .24, planetShape);
+  wu.uEnv.value = ORB_T.env;       wu.uStrip.value  = ORB_T.strip;
+  cu.uOpacity.value = smootherstep01(orbT, .00, .32) * ORB_T.coreOn;
+  cu.uGain.value = ORB_T.core;     cu.uRefl.value   = ORB_T.coreRefl;
+  cu.uRound.value = ORB_T.coreRound;
+  cu.uEnv.value = ORB_T.env;       cu.uStrip.value  = ORB_T.strip;
+  cu.uWobH.value = ORB_T.coreWobH; cu.uWobF.value   = ORB_T.coreWobF;
+  cu.uRough.value = ORB_T.coreRough;
+  cu.uRim.value = ORB_T.coreRim;   cu.uTintAmt.value = ORB_T.coreTint;
+  /* the specimen's own size, drift and turn inside the drop; at coreOn 0
+     it stops drawing altogether rather than just going transparent */
+  coreSpinAcc += dt * ORB_T.coreSpin;
+  for(let i = 0; i < orbCoreMeshes.length; i++){
+    const o = orbCoreMeshes[i];
+    o.visible = ORB_T.coreOn > .002;
+    o.scale.setScalar(ORB_T.coreSize);
+    o.position.set(o.userData.p0.x + ORB_T.coreOffX,
+                   o.userData.p0.y + ORB_T.coreOffY,
+                   o.userData.p0.z);
+    o.rotation.y = coreSpinAcc;
+  }
+  const specVisibility = planetForward
+    ? 1 - smootherstep01(trans.t, .12, .42)
+    : (planetBackward
+        ? smootherstep01(trans.t, .48, .76)
+        : (archiveBackward ? 1 - smootherstep01(trans.t, .03, .18) : archiveTerrainFade));
+  document.body.classList.toggle('on-spec', specVisibility > .30);
+  /* the rig is posed EVERY frame, visible or not. gating this on opacity
+     meant the first frame after it opened jumped in from a stale pose —
+     that single-frame step was most of the “抖動”                       */
+  {
+    const aspect = Math.max(U.uAspect.value, .0001);
+    const halfH  = orbCam.position.z * Math.tan(orbCam.fov * Math.PI / 360);
+
+    /* 4 → 5 begins as a tiny upright nucleus after the range contracts;
+       it rounds out as the two companion droplets separate from it. */
+    const grow    = .90 + .10 * orbAmt;
+    const breathe = 1 + Math.sin(U.uTime.value * .34) * .009 * planetMotion;
+    /* it inherits the 2D body's size, then wobbles once as it settles —
+       archiveForm overshoots 1, so the jelly squash comes for free */
+    /* the settle is a UNIFORM overshoot — it stays a circle throughout and
+       never squashes on one axis. tied to how present the mesh is, so a
+       collapsed pose can never be left behind for the next entry */
+    const wob = (archiveForm - 1) * orbT;
+    const baseScale = ORB_T.size * halfH / orbRadius * grow * breathe
+                    * (1 - .14 * (1 - Math.min(archiveForm, 1)) * orbT);
+    orbRoot.scale.setScalar(baseScale * (1 + wob * .40));
+    /* dead centre, with only a breath of float and pointer parallax */
+    orbRoot.position.set(
+      (ORB_T.x + pointerS.x * .018 * planetMotion) * halfH * aspect,
+      (ORB_T.y + pointerS.y * .013 * planetMotion + orbFloatY) * halfH,
+      0
+    );
+
+    if(!orbDrag.on){
+      orbDrag.vy *= .94; orbDrag.vx *= .94;
+      if(Math.abs(orbDrag.vy) < 1e-4) orbDrag.vy = 0;
+      if(Math.abs(orbDrag.vx) < 1e-4) orbDrag.vx = 0;
+      orbSpin.rotation.y += (orbDrag.vy + dt * ORB_T.spin) * planetMotion;
+      const nod = ORB_T.tilt + Math.sin(U.uTime.value * .26) * .09 * planetMotion;
+      orbSpin.rotation.x += orbDrag.vx * planetMotion
+        + (nod - orbSpin.rotation.x) * Math.min(1, dt * .40);
+    }
+
+    /* the two companions: same rig, own size, drift and lazier float */
+    for(let i = 0; i < orbSats.length; i++){
+      const s = orbSats[i], c = s.cfg;
+      const release = 1 - smootherstep01(planetShape, .08, .88);
+      /* they are thrown off the body only once it has landed */
+      const archiveScatter = archiveForward
+        ? smootherstep01(trans.t, .70, 1.0)
+        : (archiveBackward ? 1 - smootherstep01(trans.t, .00, .30) : 1);
+      const satSpread = release * archiveScatter;
+      s.root.visible = satSpread > .012;
+      s.root.scale.setScalar(c.size * satSpread * halfH / orbRadius * grow * breathe);
+      s.root.position.set(
+        (THREE.MathUtils.lerp(ORB_T.x, c.x, satSpread)
+          + pointerS.x * .018 * c.drift * satSpread * planetMotion) * halfH * aspect,
+        (THREE.MathUtils.lerp(ORB_T.y, c.y, satSpread)
+          + pointerS.y * .013 * c.drift * satSpread * planetMotion) * halfH
+          + Math.sin(U.uTime.value * .47 * c.drift + c.phase)
+            * .040 * halfH * satSpread * planetMotion,
+        0
+      );
+      s.spin.rotation.y += dt * c.spin * planetMotion;
+    }
+
+    if(orbPulse > 0){ orbPulse += dt * .52; if(orbPulse >= 1) orbPulse = 0; }
+    orbWaterMat.uniforms.uPulse.value = Math.max(orbPulse, planetRing);
+  }
+  /* only the HUD work — which costs a layout pass — waits for visibility */
+  if(orbAmt > .002){
+    orbRoot.updateMatrixWorld(true);
+    layoutSpec();
+
+    /* the readouts drift the way a real probe's would */
+    const tt = U.uTime.value;
+    sp.temp.textContent  = (-34.72 + Math.sin(tt * .53) * .09).toFixed(2);
+    sp.delta.textContent = '+' + (1.51 + Math.sin(tt * .81) * .06).toFixed(2).padStart(5, '0');
+  } else specHover = false;
+
+  /* chapter 6: the drop hands over to the globe.
      one eased clock drives the whole handover — an exponential lerp
      front-loads the motion and makes it feel like a snap             */
   const earthWants = CHAPTERS[chapter].earth === true;
-  const earthOpen  = earthWants && (!trans.on || trans.t > .28);
-  earthT = earthOpen ? Math.min(1, earthT + dt / 3.4)
-                     : Math.max(0, earthT - dt / 1.3);
+  const earthOpen  = (earthWants && (!trans.on || trans.t > .03))
+                  || (planetBackward && trans.t < .58);
+  /* solid before the water has finished leaving, so there is no frame in
+     which neither of them is the object */
+  const earthRiseTime = planetForward ? .48 : 3.4;
+  const earthFallTime = planetBackward ? .50 : 1.3;
+  earthT = earthOpen ? Math.min(1, earthT + dt / earthRiseTime)
+                     : Math.max(0, earthT - dt / earthFallTime);
   earthAmt = easeInOut(earthT);
-  earthMat.uniforms.uOpacity.value = smoothstep01(earthT, .00, .30);
+  /* Resolve the planet at the water orb's size first. Only after the water
+     skin has gone does the globe grow into its final framing. */
+  if(planetForward){
+    earthGrowAmt = smootherstep01(trans.t, .50, .94);
+  } else if(planetBackward){
+    earthGrowAmt = 1 - smootherstep01(trans.t, .06, .52);
+  } else {
+    const earthGrowAim = earthWants ? 1 : 0;
+    earthGrowAmt += (earthGrowAim - earthGrowAmt) * Math.min(1, dt * 1.8);
+  }
+  earthMat.uniforms.uOpacity.value = smootherstep01(earthT, .00, .30);
   postMat.uniforms.uEarth.value = earthAmt;
-  if(earthAmt > .002){
-    /* it starts exactly as the drop, then swells until it fills the frame */
+  {
+    /* posed every frame for the same reason the specimen is */
     const aspect = Math.max(U.uAspect.value, .0001);
     const R0 = Math.sqrt(aspect*aspect + 1) * .5 * 1.18;
     const halfH = earthCam.position.z * Math.tan(earthCam.fov * Math.PI / 360);
 
     /* still growing after it is fully opaque, so the motion never stops dead */
-    const grow = easeInOut(earthT);
-    const breathe = 1 + Math.sin(U.uTime.value * .12) * .012 * earthT;
-    /* it is already a globe when the veil lifts — no circle stage */
-    const rHH  = THREE.MathUtils.lerp(EARTH_T.r0, EARTH_T.r1, grow);   /* half-heights */
-    const cx   = THREE.MathUtils.lerp(EARTH_T.x0, EARTH_T.x1, grow);
-    const cy   = THREE.MathUtils.lerp(EARTH_T.y0, EARTH_T.y1, grow);
+    const grow = earthGrowAmt;
+    const earthMotion = (planetForward || planetBackward) ? planetMotion : 1;
+    const breathe = 1 + Math.sin(U.uTime.value * .12) * .004 * earthT * earthMotion;
+    /* it is already a globe when the veil lifts — no circle stage.
+       during the hand-off it must OPEN at the water's own rendered
+       silhouette and centre, so the two are never a few pixels apart:
+       the mesh is scaled off its bounding box but reads at its mean
+       radius, hence the correction                                    */
+    const handing = planetForward || planetBackward;
+    const orbSilhouette = ORB_T.size * (orbWaterMat.uniforms.uRadius.value / orbRadius);
+    const r0 = handing ? orbSilhouette : EARTH_T.r0;
+    const x0 = handing ? ORB_T.x : EARTH_T.x0;
+    const y0 = handing ? ORB_T.y : EARTH_T.y0;
+    const rHH  = THREE.MathUtils.lerp(r0, EARTH_T.r1, grow);   /* half-heights */
+    const cx   = THREE.MathUtils.lerp(x0, EARTH_T.x1, grow);
+    const cy   = THREE.MathUtils.lerp(y0, EARTH_T.y1, grow);
 
     earthRoot.scale.setScalar(rHH * halfH / earthRadius * breathe);
     earthRoot.position.set(cx * halfH * aspect, cy * halfH, 0);
@@ -2177,8 +3083,11 @@ function update(dt){
       earthDrag.vy *= .94; earthDrag.vx *= .94;
       if(Math.abs(earthDrag.vy) < 1e-4) earthDrag.vy = 0;
       if(Math.abs(earthDrag.vx) < 1e-4) earthDrag.vx = 0;
-      earthSpin.rotation.y += earthDrag.vy + dt * EARTH_T.drift;   /* inertia + slow drift */
-      earthSpin.rotation.x = Math.max(-.6, Math.min(.6, earthSpin.rotation.x + earthDrag.vx));
+      earthSpin.rotation.y += (earthDrag.vy + dt * EARTH_T.drift) * earthMotion;
+      earthSpin.rotation.x = Math.max(
+        -.6,
+        Math.min(.6, earthSpin.rotation.x + earthDrag.vx * earthMotion)
+      );
     }
   }
 
@@ -2200,9 +3109,15 @@ function update(dt){
   renderer.setRenderTarget(null);
   renderer.clear();
   renderer.render(postScene, quadCam);
+  /* While both exist, draw the planet first and keep the transparent water
+     skin above it. The geography therefore appears inside the same drop. */
   if(earthAmt > .002){
     renderer.clearDepth();
     renderer.render(earthScene, earthCam);
+  }
+  if(orbAmt > .002){
+    renderer.clearDepth();
+    renderer.render(orbScene, orbCam);
   }
 }
 frame();
@@ -2254,6 +3169,52 @@ if(TUNE){
     { k:'waveHeight', label:'波浪高度',        min:0,    max:3.0, step:.02 },
     { k:'waveSpeed',  label:'波浪速度',        min:0,    max:3.0, step:.02 }
   ];
+  const ORB_SLIDERS = [
+    /* 外觀 / 位置 */
+    { k:'size',      label:'標本大小',      min:.15,  max:1.4,  step:.01 },
+    { k:'x',         label:'位置 X',        min:-1.2, max:1.2,  step:.01 },
+    { k:'y',         label:'位置 Y',        min:-1.2, max:1.2,  step:.01 },
+    { k:'round',     label:'外觀圓度→球',   min:0,    max:1.0,  step:.01 },
+    { k:'coreRound', label:'核心圓度→球',   min:0,    max:1.0,  step:.01 },
+    { k:'spin',      label:'自轉速度',      min:0,    max:1.0,  step:.01 },
+    { k:'tilt',      label:'傾角',          min:-1.2, max:1.2,  step:.01 },
+    /* 水 */
+    { k:'waveH',     label:'波浪起伏',      min:0,    max:.30,  step:.005 },
+    { k:'waveF',     label:'波浪密度',      min:.4,   max:7.0,  step:.05 },
+    { k:'waveS',     label:'波浪速度',      min:0,    max:2.0,  step:.02 },
+    /* 玻璃質感 */
+    { k:'ice',       label:'整體濃度',      min:0,    max:1.0,  step:.01 },
+    { k:'glassA',    label:'玻璃厚度',      min:0,    max:.90,  step:.01 },
+    { k:'refract',   label:'折射強度',      min:0,    max:.20,  step:.002 },
+    { k:'tint',      label:'水色濃度',      min:0,    max:.60,  step:.01 },
+    { k:'rim',       label:'邊緣亮邊',      min:0,    max:2.5,  step:.02 },
+    { k:'reflect',   label:'反光強度',      min:0,    max:2.0,  step:.02 },
+    { k:'specI',     label:'高光強度',      min:0,    max:4.0,  step:.05 },
+    { k:'specP',     label:'高光銳利',      min:8,    max:400,  step:2   },
+    /* 環境光 */
+    { k:'env',       label:'環境對比',      min:0,    max:1.0,  step:.01 },
+    { k:'strip',     label:'棚燈亮度',      min:0,    max:1.6,  step:.02 },
+    /* 兩顆小球 */
+    { k:'s1size',    label:'小球1 大小',    min:0,    max:.6,   step:.005 },
+    { k:'s1x',       label:'小球1 X',       min:-1.4, max:1.4,  step:.01 },
+    { k:'s1y',       label:'小球1 Y',       min:-1.2, max:1.2,  step:.01 },
+    { k:'s2size',    label:'小球2 大小',    min:0,    max:.6,   step:.005 },
+    { k:'s2x',       label:'小球2 X',       min:-1.4, max:1.4,  step:.01 },
+    { k:'s2y',       label:'小球2 Y',       min:-1.2, max:1.2,  step:.01 },
+    /* 核心：開關 + 形象 */
+    { k:'coreOn',    label:'核心顯示 0=關', min:0,    max:1.0,  step:.01 },
+    { k:'coreSize',  label:'核心大小',      min:.15,  max:1.8,  step:.01 },
+    { k:'coreOffX',  label:'核心偏移 X',    min:-.6,  max:.6,   step:.01 },
+    { k:'coreOffY',  label:'核心偏移 Y',    min:-.6,  max:.6,   step:.01 },
+    { k:'coreSpin',  label:'核心自轉',      min:0,    max:1.5,  step:.01 },
+    { k:'coreWobH',  label:'核心蠕動起伏',  min:0,    max:.35,  step:.005 },
+    { k:'coreWobF',  label:'核心蠕動密度',  min:.4,   max:7.0,  step:.05 },
+    { k:'coreRough', label:'核心霧面←→鏡面',min:0,    max:1.0,  step:.01 },
+    { k:'coreTint',  label:'核心染色',      min:0,    max:1.0,  step:.01 },
+    { k:'coreRim',   label:'核心邊緣光',    min:0,    max:2.0,  step:.02 },
+    { k:'core',      label:'核心亮度',      min:.3,   max:2.0,  step:.02 },
+    { k:'coreRefl',  label:'核心反光',      min:0,    max:1.6,  step:.02 }
+  ];
   const EARTH_SLIDERS = [
     { k:'r0',    label:'地球起始半徑',      min:.4,   max:3.2, step:.01 },
     { k:'r1',    label:'地球結束半徑',      min:.4,   max:3.6, step:.01 },
@@ -2294,16 +3255,16 @@ if(TUNE){
     +   '<b id="tuneWho" style="color:#9fd3ff;font-weight:600"></b>'
     +   '<span style="opacity:.55">也可直接拖曳／滾輪</span>'
     + '</div>'
-    + '<div style="position:sticky;top:-12px;z-index:5;display:grid;grid-template-columns:repeat(5,1fr);gap:5px;'
+    + '<div style="position:sticky;top:-12px;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);gap:5px;'
     +   'margin:0 -4px 9px;padding:10px 4px 8px;background:linear-gradient(#172433 78%,rgba(23,36,51,0))">'
     +   btn('navCamera','鏡頭',1) + btn('navShip','貨輪') + btn('navWater','水面')
-    +   btn('navEarth','地球') + btn('navHover','游標')
+    +   btn('navOrb','標本') + btn('navEarth','地球') + btn('navHover','游標')
     + '</div>'
     + '<div id="tuneCameraAnchor" style="scroll-margin-top:54px"></div>'
     + '<div id="tuneRows"></div>'
     + '<div id="tuneOut" style="white-space:pre-wrap;word-break:break-word;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
     + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
-    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製五段',1)
+    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製全部段落',1)
     +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
     + '</div>'
     + head('tuneShipAnchor','CARGO SHIP','#f4c78a', check('shipEnabled','本段顯示貨輪','#d39557'))
@@ -2317,6 +3278,12 @@ if(TUNE){
     + out('waterOut','#80e4f2')
     + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
     +   btn('waterCopy','複製水面參數',1) + btn('waterFollow','移到貨輪下方') + btn('waterReset','重設水面')
+    + '</div>'
+    + head('tuneOrbAnchor','SPECIMEN / ORB','#e3c9f5', check('orbEnabled','本段顯示標本','#b98fd6'))
+    + '<div id="orbRows"></div>'
+    + out('orbOut','#e3c9f5')
+    + '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   btn('orbCopy','複製標本參數',1) + btn('orbScan','跑一次掃描') + btn('orbReset','重設標本')
     + '</div>'
     + head('tuneEarthAnchor','EARTH / GLOBE','#b7f3c4', check('earthEnabled','本段顯示地球','#6fd68c'))
     + '<div id="earthRows"></div>'
@@ -2346,6 +3313,7 @@ if(TUNE){
   panel.querySelector('#navCamera').onclick = ()=>jumpTo('#tuneCameraAnchor');
   panel.querySelector('#navShip').onclick   = ()=>jumpTo('#tuneShipAnchor');
   panel.querySelector('#navWater').onclick  = ()=>jumpTo('#tuneWaterAnchor');
+  panel.querySelector('#navOrb').onclick    = ()=>jumpTo('#tuneOrbAnchor');
   panel.querySelector('#navEarth').onclick  = ()=>jumpTo('#tuneEarthAnchor');
   panel.querySelector('#navHover').onclick  = ()=>jumpTo('#tuneHoverAnchor');
 
@@ -2402,11 +3370,14 @@ if(TUNE){
     water: CHAPTERS.map(c=>c.water ? Object.assign({}, c.water) : null),
     earth: CHAPTERS.map(c=>c.earth === true),
     earthT:Object.assign({}, EARTH_T),
+    orbT:Object.assign({}, ORB_T),
+    orbSats:ORB_SATS.map(c=>Object.assign({}, c)),
     hover: HOVER_SLIDERS.reduce((o,sl)=>(o[sl.k] = mountainMat.uniforms[sl.k].value, o), {})
   };
 
   const shipEnabled  = panel.querySelector('#shipEnabled');
   const earthEnabled = panel.querySelector('#earthEnabled');
+  const orbEnabled   = panel.querySelector('#orbEnabled');
 
   /* a section only shows the ship and its water when it declares them, so
      the sliders hand the current section a set of numbers to own          */
@@ -2424,6 +3395,11 @@ if(TUNE){
     (k,v)=>{ ensureProps().ship[k] = v; shipNow[k] = v; }, k=>shipNow[k]);
   const waterGroup = makeGroup('#waterRows', WATER_SLIDERS, '#43c7d8', '#80e4f2',
     (k,v)=>{ ensureProps().water[k] = v; waterNow[k] = v; }, k=>waterNow[k]);
+  /* s1x / s2size … address the companion drops, everything else is ORB_T */
+  const satKey = k => k.match(/^s([12])(size|x|y)$/);
+  const orbGroup = makeGroup('#orbRows', ORB_SLIDERS, '#b98fd6', '#e3c9f5',
+    (k,v)=>{ const s = satKey(k); if(s) ORB_SATS[+s[1]-1][s[2]] = v; else ORB_T[k] = v; },
+    k=>{ const s = satKey(k); return s ? ORB_SATS[+s[1]-1][s[2]] : ORB_T[k]; });
   const earthGroup = makeGroup('#earthRows', EARTH_SLIDERS, '#6fd68c', '#b7f3c4',
     (k,v)=>{ EARTH_T[k] = v; }, k=>EARTH_T[k]);
   const hoverGroup = makeGroup('#hoverRows', HOVER_SLIDERS, '#7fb6e6', '#cfe6ff',
@@ -2438,6 +3414,7 @@ if(TUNE){
     }
   };
   earthEnabled.onchange = ()=>{ CHAPTERS[chapter].earth = earthEnabled.checked ? true : false; };
+  orbEnabled.onchange   = ()=>{ CHAPTERS[chapter].orb   = orbEnabled.checked ? true : false; };
 
   const n2 = x=>(+x).toFixed(2);
   const shipText = ()=>'{ x:' + n2(shipNow.x) + ', y:' + n2(shipNow.y) + ', z:' + n2(shipNow.z)
@@ -2448,6 +3425,27 @@ if(TUNE){
     + '  scaleX:' + n2(waterNow.scaleX) + ', scaleY:' + n2(waterNow.scaleY) + ', scaleZ:' + n2(waterNow.scaleZ) + ',\n'
     + '  opacity:' + n2(waterNow.opacity) + ', waveHeight:' + n2(waterNow.waveHeight)
     + ', waveSpeed:' + n2(waterNow.waveSpeed) + ' }';
+  /* the whole specimen block, ready to paste back over ORB_T */
+  const orbText = ()=>{
+    const f = k => (k === 'specP' ? String(Math.round(ORB_T[k]))
+                  : (k === 'refract' || k === 'waveH' || k === 'coreWobH') ? (+ORB_T[k]).toFixed(3)
+                  : n2(ORB_T[k]));
+    const line = keys => '  ' + keys.map(k=>k + ':' + f(k)).join(', ');
+    return 'const ORB_T = {\n'
+      + line(['size','x','y','spin','tilt']) + ',\n'
+      + line(['round','coreRound']) + ',\n'
+      + line(['waveH','waveF','waveS']) + ',\n'
+      + line(['ice','glassA','rim','reflect','refract']) + ',\n'
+      + line(['specP','specI','tint']) + ',\n'
+      + line(['env','strip']) + ',\n'
+      + line(['core','coreRefl','coreOn']) + ',\n'
+      + line(['coreSize','coreOffX','coreOffY','coreSpin']) + ',\n'
+      + line(['coreWobH','coreWobF','coreRough','coreRim','coreTint']) + '\n};\n'
+      + 'const ORB_SATS = [\n'
+      + ORB_SATS.map(c=>'  { size:' + (+c.size).toFixed(3) + ', x:' + n2(c.x) + ', y:' + n2(c.y)
+          + ', spin:' + n2(c.spin) + ', phase:' + n2(c.phase) + ', drift:' + n2(c.drift) + ' }').join(',\n')
+      + '\n];';
+  };
   const earthText = ()=>'const EARTH_T = { r0:' + n2(EARTH_T.r0) + ', r1:' + n2(EARTH_T.r1)
     + ', x0:' + n2(EARTH_T.x0) + ', x1:' + n2(EARTH_T.x1)
     + ', y0:' + n2(EARTH_T.y0) + ', y1:' + n2(EARTH_T.y1)
@@ -2478,7 +3476,7 @@ if(TUNE){
   panel.querySelector('#tuneCopyAll').onclick = e=>{
     grab();
     navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
-      .then(()=>flash(e.target,'已複製四段 ✓'));
+      .then(()=>flash(e.target,'已複製 ' + CHAPTERS.length + ' 段 ✓'));
   };
   const restore = ()=>{
     applyChapterTarget(chapter, true);
@@ -2504,6 +3502,7 @@ if(TUNE){
   };
   copyBtn('#shipCopy',  ()=>'const SHIP_S'  + (chapter+1) + '  = ' + shipText()  + ';');
   copyBtn('#waterCopy', ()=>'const WATER_S' + (chapter+1) + ' = ' + waterText() + ';');
+  copyBtn('#orbCopy',   orbText);
   copyBtn('#earthCopy', earthText);
   copyBtn('#hoverCopy', hoverText);
   copyBtn('#allCopy',   ()=>allJSON());
@@ -2525,6 +3524,11 @@ if(TUNE){
     c.water.y = +(shipNow.y - .1).toFixed(2);
     Object.assign(waterNow, { x:c.water.x, y:c.water.y, z:c.water.z });
   };
+  panel.querySelector('#orbReset').onclick   = ()=>{
+    Object.assign(ORB_T, ORIG.orbT);
+    ORB_SATS.forEach((c,i)=>Object.assign(c, ORIG.orbSats[i]));
+  };
+  panel.querySelector('#orbScan').onclick    = ()=>{ orbPulse = .001; };
   panel.querySelector('#earthReset').onclick = ()=>{ Object.assign(EARTH_T, ORIG.earthT); };
   panel.querySelector('#hoverReset').onclick = ()=>{
     for(const k in ORIG.hover) mountainMat.uniforms[k].value = ORIG.hover[k];
@@ -2547,6 +3551,7 @@ if(TUNE){
     } : null,
     ship:CHAPTERS[chapter].ship ? Object.assign({}, shipNow) : null,
     water:CHAPTERS[chapter].water ? Object.assign({}, waterNow) : null,
+    specimen:Object.assign({ shown:CHAPTERS[chapter].orb === true }, ORB_T),
     earth:Object.assign({ shown:CHAPTERS[chapter].earth === true }, EARTH_T),
     cursorSurvey:HOVER_SLIDERS.reduce((o,sl)=>(o[sl.k] = +(+mountainMat.uniforms[sl.k].value).toFixed(3), o), {})
   }, null, 2);
@@ -2593,9 +3598,11 @@ if(TUNE){
         + ' }, rot:' + live.rot.toFixed(2) + ', fov:' + live.fov.toFixed(1);
     }
 
-    shipGroup.sync(); waterGroup.sync(); earthGroup.sync(); hoverGroup.sync();
+    shipGroup.sync(); waterGroup.sync(); orbGroup.sync(); earthGroup.sync(); hoverGroup.sync();
     if(document.activeElement !== shipEnabled)  shipEnabled.checked  = !!CHAPTERS[chapter].ship;
     if(document.activeElement !== earthEnabled) earthEnabled.checked = CHAPTERS[chapter].earth === true;
+    if(document.activeElement !== orbEnabled)   orbEnabled.checked   = CHAPTERS[chapter].orb === true;
+    panel.querySelector('#orbOut').textContent   = orbText();
     panel.querySelector('#shipOut').textContent  = 'SHIP_S'  + (chapter+1) + '  = ' + shipText();
     panel.querySelector('#waterOut').textContent = 'WATER_S' + (chapter+1) + ' = ' + waterText();
     panel.querySelector('#earthOut').textContent = earthText();
@@ -2610,6 +3617,12 @@ window.viz = {
   renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   postMat, setCondense(v){ condense = v; postMat.uniforms.uCondense.value = v; },
+  orbScene, orbCam, orbRoot, orbSpin, orbWaterMat, orbCoreMat, ORB_T,
+  orbState:()=>({ t:orbT, amt:orbAmt, pulse:orbPulse, radius:orbRadius }),
+  orbScan(){ orbPulse = .001; },
+  EARTH_T, earthRoot, earthSpin,
+  transState:()=>({ on:trans.on, t:trans.t, kind:trans.kind, dir:trans.dir,
+                    orb:orbAmt, earth:earthAmt, grow:earthGrowAmt }),
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){
     const c = CHAPTERS[i];
@@ -2632,6 +3645,7 @@ window.viz = {
     renderer.clear();
     renderer.render(postScene, quadCam);
     if(earthAmt > .002){ renderer.clearDepth(); renderer.render(earthScene, earthCam); }
+    if(orbAmt > .002){ renderer.clearDepth(); renderer.render(orbScene, orbCam); }
   }
 };
 </script>

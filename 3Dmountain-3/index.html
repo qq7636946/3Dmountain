@@ -309,7 +309,7 @@ body.spec-lit .spec .tag{opacity:1}
     <div class="name"><b id="tNextName">Montis Ventures</b></div>
   </div>
 
-  <div class="credit">Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · Drop: furret · Specimen: tamminen · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
+  <div class="credit">Terrain: artfromheath · Water: UJWAL · Drop: furret · Specimen: tamminen · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
 
   <div class="controls">
     <button id="btnPrev" title="Previous">&#8593;</button>
@@ -2547,72 +2547,6 @@ gltfLoader.load('earth/scene.gltf', gltf=>{
   earthSpin.rotation.z = .28;             /* axial tilt */
   earthSpin.rotation.y = 4.05;            /* land, not open ocean, facing us */
   window.__earth = earthSpin;
-});
-
-/* cargo ship — normalised to 7.2 units long, then the exported transform */
-gltfLoader.load('cargo_ship_runtime/scene.gltf', gltf=>{
-  const m = gltf.scene;
-  const box  = new THREE.Box3().setFromObject(m);
-  const size = new THREE.Vector3(); box.getSize(size);
-  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
-  m.position.set(-ctr.x, -box.min.y, -ctr.z);
-  const holder = new THREE.Group();
-  holder.add(m);
-  holder.scale.setScalar(7.2 / Math.max(size.x, size.z));
-  shipRoot.add(holder);
-  shipRoot.renderOrder = 3;
-  /* --- wake, plume and lights, sized from the hull --- */
-  const L = Math.max(size.x, size.z) * (7.2 / Math.max(size.x, size.z));  /* = 7.2 */
-  const alongX = size.x >= size.z;
-
-  const wakeGeo = new THREE.PlaneGeometry(L * 1.5, L * 4.2, 1, 24);
-  wakeGeo.rotateX(-Math.PI / 2);
-  const wake = new THREE.Mesh(wakeGeo, wakeMat);
-  wake.position.set(alongX ? -L * 2.4 : 0, .06, alongX ? 0 : -L * 2.4);
-  if(!alongX) wake.rotation.y = Math.PI / 2;
-  wake.rotation.y += Math.PI;                 /* v = 0 at the stern */
-  wake.frustumCulled = false;
-  wake.renderOrder = 2;
-  shipRoot.add(wake);
-
-  const puffs = 26, pp = [], ps = [];
-  for(let i = 0; i < puffs; i++){
-    pp.push(alongX ? L * .12 : 0, L * .42, alongX ? 0 : L * .12);
-    ps.push(i / puffs);
-  }
-  const pg = new THREE.BufferGeometry();
-  pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
-  pg.setAttribute('aSeed', new THREE.Float32BufferAttribute(ps, 1));
-  const plume = new THREE.Points(pg, plumeMat);
-  plume.frustumCulled = false;
-  plume.renderOrder = 5;
-  shipRoot.add(plume);
-
-  const lampPos = [], lampCol = [], lampBlink = [];
-  const put = (x, y, z, c, blink) => { lampPos.push(x, y, z); lampCol.push(c[0], c[1], c[2]); lampBlink.push(blink); };
-  put(alongX ?  L * .46 : .22, L * .12, alongX ? .22 : L * .46, [1.0, .25, .22], 0);  /* port  */
-  put(alongX ?  L * .46 : -.22, L * .12, alongX ? -.22 : L * .46, [.25, 1.0, .45], 0); /* stbd  */
-  put(alongX ?  L * .05 : 0, L * .50, alongX ? 0 : L * .05, [1.0, .95, .85], 1);       /* mast  */
-  const lg = new THREE.BufferGeometry();
-  lg.setAttribute('position', new THREE.Float32BufferAttribute(lampPos, 3));
-  lg.setAttribute('aColor', new THREE.Float32BufferAttribute(lampCol, 3));
-  lg.setAttribute('aBlink', new THREE.Float32BufferAttribute(lampBlink, 1));
-  const lamps = new THREE.Points(lg, navMat);
-  lamps.frustumCulled = false;
-  lamps.renderOrder = 7;
-  shipRoot.add(lamps);
-
-  m.traverse(o=>{
-    if(o.isMesh){
-      /* the asset's own PBR material, lit by the scene lights */
-      o.material.transparent = true;
-      o.material.opacity = 0;
-      o.material.depthWrite = false;
-      o.frustumCulled = false;
-      o.renderOrder = 3;
-      shipMats.push(o.material);
-    }
-  });
 });
 
 /* water surface — normalised to 14 units across, then the exported transform */

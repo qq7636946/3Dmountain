@@ -1120,16 +1120,22 @@ function makeLightMaterial(color, opts = {}){
 /* a lifted arc between two points, as a hairline with a per-line phase */
 function makeArc(a, b, lift, seed, segments = 96){
   const pts = [], ts = [], seeds = [];
-  const mid = a.clone().add(b).multiplyScalar(.5).normalize();
-  const sameSide = a.clone().normalize().dot(b.clone().normalize());
+  /* on a sphere, walk the great circle — a straight lerp collapses toward
+     the centre once the two hubs sit far apart */
+  const na = a.clone().normalize(), nb = b.clone().normalize();
+  const span = Math.acos(Math.max(-1, Math.min(1, na.dot(nb))));
+  const sinSpan = Math.sin(span);
+  const v = new THREE.Vector3();
   for(let i = 0; i <= segments; i++){
     const t = i / segments;
-    const v = new THREE.Vector3().lerpVectors(a, b, t);
     /* bulge outward: on a sphere follow the surface, otherwise lift in y */
     if(lift.sphere){
-      v.copy(a).lerp(b, t).normalize()
-       .multiplyScalar(lift.r * (1 + lift.h * Math.sin(Math.PI * t) * (1.1 - sameSide * .4)));
+      if(sinSpan < 1e-4) v.copy(na);
+      else v.copy(na).multiplyScalar(Math.sin((1 - t) * span) / sinSpan)
+            .addScaledVector(nb, Math.sin(t * span) / sinSpan);
+      v.multiplyScalar(lift.r * (1 + lift.h * Math.sin(Math.PI * t)));
     } else {
+      v.lerpVectors(a, b, t);
       v.y += lift.h * Math.sin(Math.PI * t);
     }
     pts.push(v.x, v.y, v.z);
@@ -1143,6 +1149,28 @@ function makeArc(a, b, lift, seed, segments = 96){
   return g;
 }
 
+/* fold a set of arc strips into one LineSegments buffer — the whole network
+   then draws in a single call instead of one per link */
+function mergeArcs(geos){
+  const pos = [], ts = [], seeds = [];
+  geos.forEach(g => {
+    const p = g.attributes.position.array;
+    const t = g.attributes.aT.array;
+    const s = g.attributes.aSeed.array;
+    for(let i = 0; i < t.length - 1; i++){
+      pos.push(p[i*3], p[i*3+1], p[i*3+2], p[i*3+3], p[i*3+4], p[i*3+5]);
+      ts.push(t[i], t[i+1]);
+      seeds.push(s[i], s[i+1]);
+    }
+    g.dispose();
+  });
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute('aT', new THREE.Float32BufferAttribute(ts, 1));
+  out.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+  return out;
+}
+
 /* --- trade routes on the globe (chapter 5) --- */
 const globeRouteMat = makeLightMaterial('#bfe6ff', { speed:.09, head:.09, tail:.05 });
 const hubMat = new THREE.ShaderMaterial({
@@ -1151,11 +1179,14 @@ const hubMat = new THREE.ShaderMaterial({
   vertexShader: `
     uniform float uTime;
     attribute float aSeed;
+    attribute float aScale;      /* 0 = leaf node, 1 = the busiest hub */
     varying float vPulse;
+    varying float vScale;
     void main(){
       vPulse = .6 + .4 * sin(uTime * 1.6 + aSeed * 30.);
+      vScale = aScale;
       vec4 mv = modelViewMatrix * vec4(position, 1.);
-      gl_PointSize = (5.5 + 3.5 * vPulse) * (60. / max(-mv.z, 1.));
+      gl_PointSize = (3.8 + 2.6 * aScale + 3.2 * vPulse) * (60. / max(-mv.z, 1.));
       gl_Position = projectionMatrix * mv;
     }`,
   fragmentShader: `
@@ -1163,11 +1194,15 @@ const hubMat = new THREE.ShaderMaterial({
     uniform vec3 uColor;
     uniform float uOpacity;
     varying float vPulse;
+    varying float vScale;
     void main(){
       float d = length(gl_PointCoord - .5);
       float core = smoothstep(.18, .0, d);
       float ring = smoothstep(.5, .28, d) * .35;
-      gl_FragColor = vec4(uColor, (core + ring * vPulse) * uOpacity);
+      /* the busy hubs also throw a thin outward ping */
+      float ping = smoothstep(.5, .34, d) * smoothstep(.26, .34, d)
+                 * vScale * (1. - vPulse) * .9;
+      gl_FragColor = vec4(uColor, (core + ring * vPulse + ping) * uOpacity);
     }`
 });
 
@@ -2583,7 +2618,7 @@ gltfLoader.load('earth/scene.gltf', gltf=>{
   });
   earthSpin.add(e);
 
-  /* trade routes between hubs, riding just above the surface */
+  /* the network: hubs wired to each other, light running down every link */
   const d2r = Math.PI / 180;
   const onGlobe = (lat, lon, r) => new THREE.Vector3(
     r * Math.cos(lat * d2r) * Math.cos(lon * d2r),
@@ -2591,30 +2626,60 @@ gltfLoader.load('earth/scene.gltf', gltf=>{
     -r * Math.cos(lat * d2r) * Math.sin(lon * d2r)
   );
   const hubs = [
-    [ 49.6,   6.1], /* Luxembourg */
-    [ 46.8,   8.2], /* Switzerland */
-    [ 41.0,  28.9], /* Istanbul   */
-    [  1.3, 103.8], /* Singapore  */
-    [-33.9,  18.4], /* Cape Town  */
-    [ 35.7, 139.7]  /* Tokyo      */
+    [ 49.6,    6.1], /*  0 Luxembourg  */
+    [ 46.8,    8.2], /*  1 Switzerland */
+    [ 51.5,   -0.1], /*  2 London      */
+    [ 40.4,   -3.7], /*  3 Madrid      */
+    [ 41.0,   28.9], /*  4 Istanbul    */
+    [ 25.2,   55.3], /*  5 Dubai       */
+    [ 19.1,   72.9], /*  6 Mumbai      */
+    [  1.3,  103.8], /*  7 Singapore   */
+    [ 22.3,  114.2], /*  8 Hong Kong   */
+    [ 31.2,  121.5], /*  9 Shanghai    */
+    [ 35.7,  139.7], /* 10 Tokyo       */
+    [-33.9,   18.4], /* 11 Cape Town   */
+    [ -6.2,  106.8], /* 12 Jakarta     */
+    [-33.9,  151.2], /* 13 Sydney      */
+    [ 40.7,  -74.0], /* 14 New York    */
+    [ 33.8, -118.3], /* 15 Los Angeles */
+    [-23.6,  -46.6], /* 16 Sao Paulo   */
+    [ -1.3,   36.8]  /* 17 Nairobi     */
   ];
-  const links = [[0,1],[1,2],[2,3],[3,5],[2,4],[0,4]];
+  const links = [
+    [0,1],[0,2],[0,4],[1,4],[2,3],[2,14],[3,16],[4,5],[4,6],[5,6],
+    [5,11],[5,17],[6,7],[7,8],[7,12],[7,13],[8,9],[9,10],[9,15],
+    [10,13],[10,15],[11,16],[11,17],[12,13],[14,15],[14,16]
+  ];
   const R = earthRadius * 1.012;
-  links.forEach(([i,j], k) => {
-    const g = makeArc(onGlobe(hubs[i][0], hubs[i][1], R), onGlobe(hubs[j][0], hubs[j][1], R),
-                      { sphere:true, r:R, h:.16 }, k * .161, 120);
-    earthSpin.add(new THREE.Line(g, globeRouteMat));
-  });
 
-  /* a small dot on each hub */
-  const dotPos = [], dotSeeds = [];
+  /* long hops arc higher, so the mesh reads as depth rather than clutter */
+  const arcs = links.map(([i,j], k) => {
+    const a = onGlobe(hubs[i][0], hubs[i][1], R);
+    const b = onGlobe(hubs[j][0], hubs[j][1], R);
+    const span = Math.acos(Math.max(-1, Math.min(1,
+      a.clone().normalize().dot(b.clone().normalize()))));
+    return makeArc(a, b, { sphere:true, r:R, h:.045 + span / Math.PI * .34 },
+                   (k * .3819) % 1, 96);
+  });
+  const net = new THREE.LineSegments(mergeArcs(arcs), globeRouteMat);
+  net.renderOrder = 5;
+  earthSpin.add(net);
+
+  /* a dot on each hub, sized by how much of the network it carries */
+  const degree = hubs.map(() => 0);
+  links.forEach(([i,j]) => { degree[i]++; degree[j]++; });
+  const busiest = Math.max(...degree);
+  const dotPos = [], dotSeeds = [], dotScale = [];
   hubs.forEach((h, i) => {
     const v = onGlobe(h[0], h[1], R * 1.004);
-    dotPos.push(v.x, v.y, v.z); dotSeeds.push(i * .17);
+    dotPos.push(v.x, v.y, v.z);
+    dotSeeds.push(i * .17);
+    dotScale.push((degree[i] - 1) / Math.max(1, busiest - 1));
   });
   const dg = new THREE.BufferGeometry();
   dg.setAttribute('position', new THREE.Float32BufferAttribute(dotPos, 3));
   dg.setAttribute('aSeed', new THREE.Float32BufferAttribute(dotSeeds, 1));
+  dg.setAttribute('aScale', new THREE.Float32BufferAttribute(dotScale, 1));
   const dots = new THREE.Points(dg, hubMat);
   dots.renderOrder = 6;
   earthSpin.add(dots);

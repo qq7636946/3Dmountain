@@ -1,0 +1,11 @@
+Model Information:
+* title:	Water Droplet
+* source:	https://sketchfab.com/3d-models/water-droplet-d9166374296a47a79cb4fe14f5a0d9cb
+* author:	Calfan (https://sketchfab.com/Calfan)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Water Droplet" (https://sketchfab.com/3d-models/water-droplet-d9166374296a47a79cb4fe14f5a0d9cb) by Calfan (https://sketchfab.com/Calfan) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

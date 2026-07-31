@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MONTIS — Divisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2f5f8a;
+  --ink-dim:rgba(47,95,138,.62);
+  --hair:rgba(47,95,138,.30);
+  --accent:#4a86bb;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:#e8ecef;
+  color:var(--ink);
+  font-family:'Jost',"Helvetica Neue",Arial,sans-serif;
+  font-weight:300;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;transition:opacity .9s var(--ease)}
+.tiles-frame{
+  position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2;
+  opacity:0;visibility:hidden;pointer-events:none;background:#000;
+  transition:opacity .9s var(--ease),visibility .9s;
+}
+body.on-tiles canvas#gl{opacity:0}
+body.on-tiles .tiles-frame{opacity:1;visibility:visible;pointer-events:auto}
+body.on-tiles .grain{opacity:.32}
+body.on-tiles .tune-panel{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(12px)}
+
+/* ---------- overlay grain / vignette ---------- */
+.grain{
+  position:fixed;inset:0;pointer-events:none;z-index:3;
+  background:
+    radial-gradient(120% 80% at 50% 45%, rgba(0,0,0,0) 42%, rgba(150,165,178,.20) 100%);
+  mix-blend-mode:multiply;opacity:.9;transition:opacity .9s var(--ease);
+}
+
+/* ---------- shell ---------- */
+.ui{position:fixed;inset:0;z-index:4;pointer-events:none}
+.ui a,.ui button{pointer-events:auto}
+
+header{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:clamp(20px,2.4vw,38px) clamp(20px,3.2vw,54px);
+}
+.brand{font-size:.82rem;letter-spacing:.42em;font-weight:400;text-indent:.42em}
+.menu{display:flex;align-items:center;gap:14px;font-size:.66rem;letter-spacing:.24em;font-weight:400;color:var(--ink-dim)}
+.menu i{display:block;width:26px;height:1px;background:var(--hair);position:relative}
+.menu i:after{content:"";position:absolute;left:0;top:5px;width:18px;height:1px;background:var(--hair)}
+
+/* ---------- left chapter rail ---------- */
+.rail{
+  position:absolute;left:clamp(20px,3.2vw,54px);top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:18px;
+}
+.rail .dots{display:flex;flex-direction:column;gap:26px;align-items:center}
+.rail .dot{
+  width:4px;height:4px;border-radius:50%;background:var(--hair);
+  transition:all .6s var(--ease);cursor:pointer;pointer-events:auto;
+  position:relative;
+}
+.rail .dot:before{content:"";position:absolute;inset:-9px;border-radius:50%}
+.rail .dot.is-on{background:var(--accent);transform:scale(1.6)}
+.rail .bar{width:1px;height:26px;background:var(--ink);opacity:.85;transition:transform .9s var(--ease)}
+.rail .label{font-size:.6rem;letter-spacing:.26em;color:var(--accent);font-weight:400}
+
+/* ---------- main block ---------- */
+.stage{
+  position:absolute;inset:0;
+  display:flex;align-items:center;
+  padding-left:clamp(64px,15vw,300px);
+  padding-right:clamp(24px,6vw,80px);
+}
+.block{max-width:min(760px,64vw)}
+.eyebrow{font-size:clamp(.86rem,1.1vw,1.05rem);letter-spacing:.02em;color:var(--ink);opacity:.92;margin-bottom:clamp(22px,3vw,44px)}
+h1{
+  font-weight:200;
+  font-size:clamp(2rem,4.6vw,4.5rem);
+  line-height:1.12;
+  letter-spacing:.005em;
+  text-transform:uppercase;
+  margin-bottom:clamp(30px,4vw,58px);
+}
+.mask{display:block;overflow:hidden}
+.mask > i{
+  display:block;font-style:normal;
+  transform:translateY(112%);
+  opacity:0;
+  transition:transform 1.05s var(--ease),opacity .8s var(--ease);
+  transition-delay:var(--d,0s);
+}
+.is-in .mask > i{transform:none;opacity:1}
+.is-out .mask > i{transform:translateY(-112%);opacity:0;transition-duration:.62s,.4s;transition-delay:var(--do,0s)}
+.no-anim .mask > i,.no-anim .rule,.no-anim .diamond,.no-anim .next{transition:none!important}
+
+/* over the globe the page flips to white type */
+body.on-dark{ --ink:#ffffff; --ink-dim:rgba(255,255,255,.70); --hair:rgba(255,255,255,.38); --accent:#bcd9f5 }
+.brand,.menu,.eyebrow,h1,.cta,.next .name,.diamond span,.credit,.rail .label{
+  transition:color .9s var(--ease);
+}
+.rule,.menu i,.menu i:after,.rail .dot,.rail .bar{ transition:background .9s var(--ease),transform .6s var(--ease) }
+.diamond,.controls button,.cta .circle{ transition:border-color .9s var(--ease),background .5s var(--ease),color .5s var(--ease) }
+body.on-dark .diamond,body.on-dark .controls button,body.on-dark .cta .circle{ border-color:rgba(255,255,255,.45) }
+body.on-dark .credit{ color:rgba(255,255,255,.42) }
+
+.cta{
+  display:inline-flex;align-items:center;gap:clamp(18px,2vw,34px);
+  text-decoration:none;color:var(--ink);
+}
+.cta .txt{font-size:.72rem;letter-spacing:.24em;font-weight:500}
+.cta .circle{
+  width:42px;height:42px;border-radius:50%;
+  border:1px solid rgba(47,95,138,.45);
+  display:grid;place-items:center;font-size:.8rem;
+  transition:background .5s var(--ease),color .5s var(--ease),border-color .5s var(--ease),transform .5s var(--ease);
+}
+.cta:hover .circle{background:var(--ink);color:#ffffff;border-color:var(--ink);transform:translateX(4px)}
+.rule{height:1px;background:var(--hair);width:min(300px,34vw);margin-top:clamp(22px,2.4vw,38px);
+  transform:scaleX(0);transform-origin:0 50%;transition:transform 1.2s var(--ease) .35s}
+.is-in .rule{transform:scaleX(1)}
+.is-out .rule{transform:scaleX(0);transform-origin:100% 50%;transition-duration:.5s;transition-delay:0s}
+
+/* ---------- diamonds ---------- */
+.diamond{
+  position:absolute;width:46px;height:46px;border:1px solid rgba(47,95,138,.38);
+  transform:rotate(45deg);display:grid;place-items:center;
+  transition:opacity .9s var(--ease),transform .9s var(--ease);
+}
+.diamond span{transform:rotate(-45deg);font-size:.6rem;letter-spacing:.1em;color:var(--ink-dim)}
+.diamond.is-idx{left:clamp(30px,8.2vw,168px);top:calc(50% - clamp(150px,17vh,210px))}
+.is-out .diamond,.is-out .next{opacity:0}
+
+/* ---------- next chapter teaser ---------- */
+.next{
+  position:absolute;left:50%;bottom:clamp(22px,4vh,54px);transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.4vh,30px);
+  transition:opacity .9s var(--ease);
+}
+.next .diamond{position:relative;left:auto;top:auto}
+.next .name{font-size:.95rem;letter-spacing:.02em;color:var(--ink);opacity:.9}
+.next .name b{font-weight:300}
+
+/* ---------- bottom right controls ---------- */
+.controls{position:absolute;right:clamp(20px,3.2vw,54px);bottom:clamp(22px,4vh,54px);display:flex;flex-direction:column;gap:14px}
+.controls button{
+  width:44px;height:44px;border-radius:50%;background:none;cursor:pointer;
+  border:1px solid rgba(47,95,138,.32);color:var(--ink);
+  display:grid;place-items:center;font-size:.85rem;font-family:inherit;
+  transition:background .45s var(--ease),color .45s var(--ease),border-color .45s var(--ease),opacity .45s var(--ease);
+}
+.controls button:hover{background:var(--ink);color:#ffffff;border-color:var(--ink)}
+.controls button[disabled]{opacity:.28;cursor:default}
+.controls button[disabled]:hover{background:none;color:var(--ink);border-color:rgba(47,95,138,.32)}
+
+/* ---------- scroll hint ---------- */
+.hint{
+  position:absolute;left:50%;top:calc(50% + clamp(190px,26vh,300px));transform:translateX(-50%);
+  font-size:.58rem;letter-spacing:.28em;color:var(--ink-dim);
+}
+
+/* ---------- cursor reticle ---------- */
+.reticle{
+  position:fixed;left:0;top:0;z-index:8;pointer-events:none;
+  width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+  border:1px solid rgba(47,95,138,.55);
+  transition:width .45s var(--ease),height .45s var(--ease),
+             margin .45s var(--ease),opacity .45s var(--ease),border-color .45s var(--ease);
+  opacity:0;
+}
+body.has-pointer .reticle{opacity:1}
+body.on-dark .reticle{border-color:rgba(255,255,255,.6)}
+.reticle.is-wide{width:54px;height:54px;margin:-27px 0 0 -27px;border-color:rgba(47,95,138,.28)}
+.reticle:after{
+  content:"";position:absolute;inset:50% auto auto 50%;width:2px;height:2px;
+  margin:-1px 0 0 -1px;border-radius:50%;background:currentColor;opacity:.5;
+}
+.cta .circle,.controls button{will-change:transform}
+
+/* ---------- credit ---------- */
+.credit{
+  position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
+  font-size:.55rem;letter-spacing:.14em;color:rgba(47,95,138,.38);
+}
+
+/* ---------- loader ---------- */
+.loader{
+  position:fixed;inset:0;z-index:9;background:#e8ecef;
+  display:grid;place-items:center;gap:0;
+  transition:opacity 1.1s var(--ease),visibility 1.1s;
+}
+.loader.is-done{opacity:0;visibility:hidden}
+.loader .in{display:flex;flex-direction:column;align-items:center;gap:22px}
+.loader .lg{font-size:.82rem;letter-spacing:.42em;text-indent:.42em;color:var(--ink)}
+.loader .track{width:min(220px,44vw);height:1px;background:rgba(47,95,138,.20);overflow:hidden}
+.loader .fill{display:block;height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s linear}
+.loader .pct{font-size:.6rem;letter-spacing:.24em;color:var(--ink-dim)}
+
+@media (max-width:860px){
+  .rail{display:none}
+  .stage{padding-left:clamp(22px,7vw,60px);align-items:flex-end;padding-bottom:26vh}
+  .block{max-width:none}
+  .diamond.is-idx{left:clamp(22px,7vw,60px);top:auto;bottom:calc(26vh + 330px)}
+  .next{align-items:flex-start;left:clamp(22px,7vw,60px);transform:none;bottom:clamp(18px,3vh,30px)}
+  .next .name{font-size:.82rem}
+  .credit{display:none}
+}
+</style>
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+<iframe
+  class="tiles-frame"
+  id="tilesFrame"
+  data-src="https://threejs.org/examples/webgl_loader_3dtiles.html"
+  title="Tokyo photorealistic 3D tiles and volumetric clouds"
+  allow="fullscreen"
+></iframe>
+<div class="grain"></div>
+<div class="reticle" id="reticle"></div>
+
+<div class="ui" id="ui">
+  <header>
+    <div class="brand">MONTIS</div>
+    <div class="menu"><span>MENU</span><i></i></div>
+  </header>
+
+  <div class="rail">
+    <div class="dots" id="dots"></div>
+    <div class="bar"></div>
+    <div class="label">WHAT WE DO</div>
+  </div>
+
+  <div class="diamond is-idx" id="dIdx"><span>3</span></div>
+
+  <div class="stage">
+    <div class="block">
+      <p class="eyebrow"><span class="mask"><i id="tEyebrow">Montis Energy</i></span></p>
+      <h1>
+        <span class="mask" style="--d:.08s;--do:.06s"><i id="tL1">HARNESSING HEIGHT,</i></span>
+        <span class="mask" style="--d:.17s;--do:0s"><i id="tL2">DELIVERING POWER.</i></span>
+      </h1>
+      <a class="cta" href="#" id="cta">
+        <span class="mask" style="--d:.3s;--do:0s"><i class="txt" id="tCta">MONTIS ENERGY</i></span>
+        <span class="circle">&#8594;</span>
+      </a>
+      <div class="rule"></div>
+    </div>
+  </div>
+
+  <div class="next" id="next">
+    <div class="diamond"><span id="tNextIdx">4</span></div>
+    <div class="name"><b id="tNextName">Montis Ventures</b></div>
+  </div>
+
+  <div class="credit">Terrain: artfromheath · Ship: hungry_drifter · Water: UJWAL · Drop: Calfan (CC BY-NC 4.0) · Earth: Alan Zimmerman</div>
+
+  <div class="controls">
+    <button id="btnPrev" title="Previous">&#8593;</button>
+    <button id="btnNext" title="Next">&#8595;</button>
+  </div>
+
+</div>
+
+<div class="loader" id="loader">
+  <div class="in">
+    <div class="lg">MONTIS</div>
+    <div class="track"><span class="fill" id="loadFill"></span></div>
+    <div class="pct" id="loadPct">0%</div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* =====================================================================
+   PALETTE  (dawn above the cloud sea — warm amber / dusk violet)
+   ===================================================================== */
+const P = {
+  skyDark      : '#c1c9d1',   // sky, high up
+  skyLight     : '#e8ecef',   // sky, toward the horizon
+  cloudDark    : '#ccd2d7',   // cloud shadow
+  cloudLight   : '#ffffff',   // cloud highlight
+  sun          : '#ffffff',
+  rockDark     : '#39424c',   // crevices / exposed rock
+  rockLight    : '#818b95',
+  snow         : '#ffffff',
+  snowShade    : '#9fb3c6',   // blue shadow side of the snow
+  transition   : '#f2f5f8'
+};
+const C = k => new THREE.Color(P[k]);
+
+/* =====================================================================
+   RENDERER / SCENES
+   ===================================================================== */
+const canvas   = document.querySelector('#gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false, powerPreference:'high-performance' });
+renderer.setClearColor(0x241d2c, 1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.autoClear = false;
+
+const scene    = new THREE.Scene();
+const camera   = new THREE.PerspectiveCamera(40, 1, .1, 500);
+const quadCam  = new THREE.Camera();
+const quadGeo  = new THREE.PlaneGeometry(2,2);
+const skyScene = new THREE.Scene();
+const fogScene = new THREE.Scene();
+const mouseScene = new THREE.Scene();
+
+/* shared uniforms ------------------------------------------------------ */
+const U = {
+  uTime          : { value: 0 },
+  uChapter       : { value: 0 },
+  uTransition    : { value: 1 },
+  uResolution    : { value: new THREE.Vector2(1,1) },
+  uAspect        : { value: 1 },
+  uMouse         : { value: new THREE.Vector2(0,0) },
+  uMouseVelocity : { value: new THREE.Vector2(0,0) },
+  tNoise         : { value: null },
+  tPerlin        : { value: null },
+  uDeck          : { value: 1 },
+  uFlat          : { value: 0 },
+  uFlatColor     : { value: new THREE.Color('#edf1f5') },
+  tMouse         : { value: null },
+  uDark          : { value: C('skyDark') },
+  uLight         : { value: C('skyLight') },
+  uCloudDark     : { value: C('cloudDark') },
+  uCloudLight    : { value: C('cloudLight') },
+  uSun           : { value: C('sun') },
+  uTransitionColor:{ value: C('transition') }
+};
+
+/* =====================================================================
+   PROCEDURAL TILEABLE NOISE  (stands in for montfort's noise assets)
+   ===================================================================== */
+function makeNoise(size, seed, bands){
+  const data = new Uint8Array(size*size*4);
+  const lattice = {};
+  const rnd = s => { let x = Math.sin(s*127.1 + seed*311.7) * 43758.5453; return x - Math.floor(x); };
+  const grid = p => {
+    if(lattice[p]) return lattice[p];
+    const g = new Float32Array(p*p);
+    for(let i=0;i<p*p;i++) g[i] = rnd(i + p*7919);
+    lattice[p] = g; return g;
+  };
+  const smooth = t => t*t*t*(t*(t*6-15)+10);
+  const val = (u,v,p) => {
+    const g = grid(p);
+    const x = u*p, y = v*p;
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = smooth(x-xi), yf = smooth(y-yi);
+    const w = (i,j)=> g[(((j%p)+p)%p)*p + (((i%p)+p)%p)];
+    const a = w(xi,yi),  b = w(xi+1,yi);
+    const c = w(xi,yi+1), d = w(xi+1,yi+1);
+    return (a+(b-a)*xf) + ((c+(d-c)*xf) - (a+(b-a)*xf))*yf;
+  };
+  const fbm = (u,v,base) => {
+    let amp=.5, f=base, sum=0, norm=0;
+    for(let o=0;o<6 && f<=size/2;o++){ sum += amp*val(u,v,f); norm += amp; amp*=.55; f*=2; }
+    return sum/norm;
+  };
+  let i=0;
+  for(let y=0;y<size;y++){
+    const v = y/size;
+    for(let x=0;x<size;x++){
+      const u = x/size;
+      data[i++] = fbm(u,v,bands[0])*255;
+      data[i++] = fbm(u,v,bands[1])*255;
+      data[i++] = fbm(u,v,bands[2])*255;
+      data[i++] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = true;
+  tex.needsUpdate = true;
+  return tex;
+}
+U.tNoise.value  = makeNoise(512, 1.0, [8, 16, 32]);
+U.tPerlin.value = makeNoise(256, 7.3, [12, 24, 6]);
+
+/* =====================================================================
+   MOUSE TRAIL FBO  (port of montfort's remanence pass)
+   ===================================================================== */
+const rtOpts = { format:THREE.RGBAFormat, type:THREE.UnsignedByteType, depthBuffer:false };
+let rtA = new THREE.WebGLRenderTarget(256,256,rtOpts);
+let rtB = new THREE.WebGLRenderTarget(256,256,rtOpts);
+
+const quadVert = /* glsl */`
+  varying vec2 vUv;
+  void main(){ vUv = uv; gl_Position = vec4(position.xy, 1.0, 1.0); }
+`;
+
+/* simplex-value noise + fbm from the "2D Clouds" shader (shadertoy 4tdSWr) */
+const CLOUD_LIB = /* glsl */`
+  const mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+
+  vec2 hash( vec2 p ){
+    p = vec2(dot(p, vec2(127.1,311.7)), dot(p, vec2(269.5,183.3)));
+    return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+  }
+  float snoise( in vec2 p ){
+    const float K1 = 0.366025404;
+    const float K2 = 0.211324865;
+    vec2 i = floor(p + (p.x+p.y)*K1);
+    vec2 a = p - i + (i.x+i.y)*K2;
+    vec2 o = (a.x>a.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+    vec2 b = a - o + K2;
+    vec2 c = a - 1.0 + 2.0*K2;
+    vec3 h = max(0.5 - vec3(dot(a,a), dot(b,b), dot(c,c)), 0.0);
+    vec3 n = h*h*h*h*vec3(dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0)));
+    return dot(n, vec3(70.0));
+  }
+  float fbm(vec2 n){
+    float total = 0.0, amplitude = 0.1;
+    for (int i = 0; i < 6; i++){
+      total += snoise(n) * amplitude;
+      n = m * n;
+      amplitude *= 0.4;
+    }
+    return total;
+  }
+`;
+
+const mouseMat = new THREE.ShaderMaterial({
+  uniforms:{ uTime:U.uTime, uMouse:U.uMouse, uMouseVelocity:U.uMouseVelocity, tNoise:U.tNoise, tLast:{ value:rtB.texture } },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uTime;
+    uniform vec2 uMouse, uMouseVelocity;
+    uniform sampler2D tNoise, tLast;
+    varying vec2 vUv;
+    const float propagationFactor = .15;
+    const float remananceFactor   = .985;
+    const float velocityFactor    = .005;
+    void main(){
+      vec2 uv = vUv;
+      vec2 mouseUv = uMouse * .5 + .5;
+      vec2 velocityOffset = uMouseVelocity * velocityFactor;
+      float d = length(uv - mouseUv);
+      float circle        = smoothstep(.05,0.,d);
+      float smoothcircle  = smoothstep(.10,0.,d);
+      float smoothercircle= smoothstep(.15,0.,d);
+      float noise = texture2D(tNoise, uv*.5 + uTime*.01).r * 2. - 1.;
+      vec4 remanance = vec4(0.);
+      remanance += texture2D(tLast, vUv + vec2( noise*propagationFactor, 0.) - velocityOffset)*.25;
+      remanance += texture2D(tLast, vUv + vec2(-noise*propagationFactor, 0.) - velocityOffset)*.25;
+      remanance += texture2D(tLast, vUv + vec2(0.,  noise*propagationFactor) - velocityOffset)*.25;
+      remanance += texture2D(tLast, vUv + vec2(0., -noise*propagationFactor) - velocityOffset)*.25;
+      remanance.b *= .99;
+      vec4 color = vec4(0.);
+      color.r = 1.  * circle;
+      color.g = .4  * smoothcircle;
+      color.b = .07 * smoothercircle;
+      color += remanance * remananceFactor;
+      color.a = 1.;
+      gl_FragColor = color;
+    }`
+});
+mouseScene.add(new THREE.Mesh(quadGeo, mouseMat));
+U.tMouse.value = rtA.texture;
+
+/* =====================================================================
+   SKY  (background pass)
+   ===================================================================== */
+const skyMat = new THREE.ShaderMaterial({
+  depthTest:false, depthWrite:false,
+  uniforms:U,
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMouse;
+    uniform vec2 uResolution;
+    uniform float uTime, uChapter, uTransition, uAspect;
+    uniform vec3 uDark, uLight, uCloudDark, uCloudLight, uTransitionColor, uFlatColor;
+    uniform float uFlat;
+    varying vec2 vUv;
+    ` + CLOUD_LIB + /* glsl */`
+
+    const float cloudscale = 1.1;
+    const float speed      = 0.012;
+    const float clouddark  = 0.5;
+    const float cloudlight = 0.3;
+    const float cloudcover = 0.02;
+    const float cloudalpha = 8.0;
+    const float skytint    = 0.5;
+
+    void main(){
+      vec2 p  = vUv;
+      vec2 sUv = gl_FragCoord.xy / uResolution;
+      float mouse = clamp(texture2D(tMouse, sUv).r, 0., 1.);
+
+      vec2 uv = p * vec2(uAspect, 1.0);
+      uv += 0.03 * mouse;                       /* clouds bulge around the cursor */
+      vec2 uvSave = uv;
+
+      float time = uTime * speed;
+      float q = fbm(uv * cloudscale * 0.5);
+
+      /* ridged noise shape */
+      float r = 0.0;
+      uv *= cloudscale;
+      uv -= q + time;
+      float weight = 0.8;
+      for (int i=0; i<7; i++){
+        r += abs(weight * snoise(uv));
+        uv = m*uv - time;
+        weight *= 0.7;
+      }
+
+      /* noise shape */
+      float f = 0.0;
+      uv = uvSave;
+      uv *= cloudscale;
+      uv -= q + time;
+      weight = 0.7;
+      for (int i=0; i<7; i++){
+        f += weight * snoise(uv);
+        uv = m*uv - time;
+        weight *= 0.6;
+      }
+      f *= r + f;
+
+      /* noise colour */
+      float c = 0.0;
+      time = uTime * speed * -2.0;
+      uv = uvSave;
+      uv *= cloudscale * 2.0;
+      uv -= q - time;
+      weight = 0.4;
+      for (int i=0; i<6; i++){
+        c += weight * snoise(uv);
+        uv = m*uv + time;
+        weight *= 0.6;
+      }
+
+      /* noise ridge colour */
+      float c1 = 0.0;
+      time = uTime * speed * -3.0;
+      uv = uvSave;
+      uv *= cloudscale * 3.0;
+      uv -= q - time;
+      weight = 0.4;
+      for (int i=0; i<6; i++){
+        c1 += abs(weight * snoise(uv));
+        uv = m*uv + time;
+        weight *= 0.6;
+      }
+      c += c1;
+
+      vec3 skycolour   = mix(uLight, uDark, p.y);
+      vec3 cloudcolour = uCloudLight * clamp(clouddark + cloudlight*c, 0.0, 1.0);
+
+      f = cloudcover + cloudalpha*f*r;
+
+      /* a wide, gamma-softened ramp: cloud edges feather out instead of
+         cutting off, which is most of what reads as "quality" here      */
+      float cover = clamp((f + c) * .5, 0.0, 1.0);
+      cover = smoothstep(-.04, .86, cover);
+      cover = pow(cover, 1.10);
+      vec3 color = mix(skycolour, clamp(skytint*skycolour + cloudcolour, 0.0, 1.0), cover);
+
+      /* nearly neutral white-grey, only a whisper of cool left in */
+      float lum = dot(color, vec3(.299, .587, .114));
+      color = mix(color, vec3(lum), .70);
+
+      /* some chapters sit on a flat, almost-white panel */
+      color = mix(color, uFlatColor * (.985 + .03 * p.y), uFlat);
+
+      /* chapter wash */
+      float transition = smoothstep(0., .25, uTransition);
+      color = mix(color, uTransitionColor, transition * .75);
+
+      gl_FragColor = vec4(color, 1.);
+      #include <colorspace_fragment>
+    }`
+});
+skyScene.add(new THREE.Mesh(quadGeo, skyMat));
+
+/* =====================================================================
+   FOREGROUND CLOUDS — same 2D-cloud field, drawn in front of the peaks
+   so the massif sits *inside* the cloud deck rather than behind it
+   ===================================================================== */
+const cloudMat = new THREE.ShaderMaterial({
+  transparent:true, depthTest:false, depthWrite:false,
+  uniforms:U,
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec2 vUv;
+    uniform vec2 uResolution;
+    uniform sampler2D tMouse;
+    uniform float uChapter, uTime, uTransition, uAspect, uDeck;
+    uniform vec3 uCloudDark, uCloudLight, uTransitionColor;
+    ` + CLOUD_LIB + /* glsl */`
+
+    const float cloudscale = 1.45;
+    const float speed      = 0.026;
+    const float clouddark  = 0.5;
+    const float cloudlight = 0.32;
+    const float cloudalpha = 7.0;
+
+    void main(){
+      vec2 p   = vUv;
+      vec2 sUv = gl_FragCoord.xy / uResolution;
+
+      vec4 mouseSample = texture2D(tMouse, sUv);
+      float mouse = clamp(mouseSample.r*.8 + mouseSample.g*.2, 0., 1.);
+
+      vec2 uv = p * vec2(uAspect, 1.0) + vec2(0., .12);
+      uv += 0.05 * mouse;
+      vec2 uvSave = uv;
+
+      float time = uTime * speed;
+      float q = fbm(uv * cloudscale * 0.5);
+
+      float r = 0.0;
+      uv *= cloudscale;
+      uv -= q + time;
+      float weight = 0.8;
+      for (int i=0; i<7; i++){
+        r += abs(weight * snoise(uv));
+        uv = m*uv - time;
+        weight *= 0.7;
+      }
+
+      float f = 0.0;
+      uv = uvSave;
+      uv *= cloudscale;
+      uv -= q + time;
+      weight = 0.7;
+      for (int i=0; i<6; i++){
+        f += weight * snoise(uv);
+        uv = m*uv - time;
+        weight *= 0.6;
+      }
+      f *= r + f;
+
+      float c = 0.0;
+      float t2 = uTime * speed * -2.0;
+      uv = uvSave;
+      uv *= cloudscale * 2.0;
+      uv -= q - t2;
+      weight = 0.4;
+      for (int i=0; i<5; i++){
+        c += weight * snoise(uv);
+        uv = m*uv + t2;
+        weight *= 0.6;
+      }
+
+      float density = clamp((cloudalpha*f*r + c) * .5, 0., 1.);
+
+      /* fine wisps riding on top — the frayed edge detail of real cloud */
+      float wisp = fbm(uvSave * cloudscale * 5.5 + vec2(time * 2.2, -time * 1.4));
+      density += .16 * wisp * smoothstep(.02, .45, density);
+
+      /* the deck hugs the mountain: thick low down, wisps at eye level,
+         and it swells up over everything during a chapter transition.
+         the band edge is deliberately very wide so nothing has a seam. */
+      float band = smoothstep(.78, -.05, sUv.y - .14*(r - .5) - .06*wisp);
+      /* saturates well before the wash peaks, so there is a real plateau of
+         full cover to hide the cut in rather than a single instant */
+      float thick = smoothstep(.12, .80, uTransition);
+      density *= mix(band, 1., thick);
+      density = clamp(density * (1.30 + 1.6*thick), 0., 1.);
+
+      vec3 color = mix(uCloudDark, uCloudLight, clamp(clouddark + cloudlight*c + .35*density, 0., 1.));
+      /* self-shadowing: the thick middle of a puff sits a touch darker */
+      color *= 1. - .10 * smoothstep(.35, .95, density) * (1. - thick);
+      color = mix(color, uTransitionColor, thick * .5);
+      float clum = dot(color, vec3(.299, .587, .114));
+      color = mix(color, vec3(clum), .55);
+
+      /* long, gamma-shaped falloff = feathered edges instead of a cut */
+      float alpha = smoothstep(-.06, .72, density);
+      alpha = pow(alpha, 1.12);
+      /* 50% at rest — you see through the deck — but it closes right up
+         while a wash is running so nothing swaps in plain sight */
+      alpha *= uDeck * (.5 + .5 * thick);
+
+      gl_FragColor = vec4(color, clamp(alpha, 0., 1.));
+      #include <colorspace_fragment>
+    }`
+});
+fogScene.add(new THREE.Mesh(quadGeo, cloudMat));
+
+/* =====================================================================
+   MOUNTAIN
+   ===================================================================== */
+const modelRoot = new THREE.Group();
+scene.add(modelRoot);
+
+/* only the cargo ship is lit conventionally — the terrain and sky are
+   hand-written shaders and ignore these entirely */
+const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+sun.position.set(-14, 16, 12);
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xdfe6ec, 0x8d99a3, 1.35));
+
+const shipRoot  = new THREE.Group();
+const waterRoot = new THREE.Group();
+const dropletRoot = new THREE.Group();
+const dropletTrailRoot = new THREE.Group();
+const dropletDripRoot = new THREE.Group();
+shipRoot.visible = waterRoot.visible = false;
+dropletRoot.visible = dropletTrailRoot.visible = dropletDripRoot.visible = false;
+scene.add(shipRoot, waterRoot, dropletRoot, dropletTrailRoot, dropletDripRoot);
+let shipAmt = 0;
+let dropletAmt = 0;
+let dropletFallT = 0;
+let dropletReady = false;
+let dropletGlass = null;
+let dropletRipple = null;
+const dropletTrail = [];
+const dropletDrips = [];
+const dropletHome = new THREE.Vector3(5.7, 4.8, 2.2);
+/* the deck the sections ask for, kept apart from the uniform: a wash always
+   gets a full deck on top of it, whatever the section wanted */
+let deckNow = 1;
+const shipMats = [];
+const spin = new THREE.Group();
+modelRoot.add(spin);
+
+const mountainMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:true, side:THREE.FrontSide,
+  uniforms:{
+    tMap:{ value:null }, tNormal:{ value:null },
+    tNoise:U.tNoise, uTime:U.uTime, uTransition:U.uTransition, uChapter:U.uChapter,
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() },
+    uSunColor:{ value:C('sun') },
+    uRockDark:{ value:C('rockDark') },
+    uRockLight:{ value:C('rockLight') },
+    uSnow:{ value:C('snow') },
+    uSnowShade:{ value:C('snowShade') },
+    uSkyColor:{ value:C('skyLight') },
+    uNormalScale:{ value:.85 },
+    uFogColor:{ value:C('cloudLight') },
+    uFogBottom:{ value:0.0 },
+    uFogTop:{ value:2.6 },
+    uFogDensity:{ value:.016 },
+    /* cursor highlight */
+    uHoverPos:{ value:new THREE.Vector3(0,-999,0) },
+    uHoverStrength:{ value:0 },
+    uHoverRadius:{ value:3.4 },
+    uHoverColor:{ value:new THREE.Color('#bfe4ff') },
+    uModelOpacity:{ value:1 }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vWorld, vNrm, vTan, vBit;
+    varying float vDepth, vEdge;
+    attribute vec4 tangent;
+    void main(){
+      vUv = uv;
+      vEdge = max(abs(position.x), abs(position.y)) / 10.0;   /* tile is +-10 in its own space */
+      vec4 wp = modelMatrix * vec4(position,1.);
+      vWorld = wp.xyz;
+      mat3 nm = mat3(modelMatrix);
+      vNrm = normalize(nm * normal);
+      vTan = normalize(nm * tangent.xyz);
+      vBit = normalize(cross(vNrm, vTan) * tangent.w);
+      vec4 mv = viewMatrix * wp;
+      vDepth = -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap, tNormal, tNoise;
+    uniform vec3 uSunDir, uSunColor, uRockDark, uRockLight, uSnow, uSnowShade, uSkyColor, uFogColor;
+    uniform float uFogBottom, uFogTop, uFogDensity, uTime, uTransition, uNormalScale, uModelOpacity;
+    uniform vec3 uHoverPos, uHoverColor;
+    uniform float uHoverStrength, uHoverRadius;
+    varying vec2 vUv;
+    varying vec3 vWorld, vNrm, vTan, vBit;
+    varying float vDepth, vEdge;
+
+    void main(){
+      float g = texture2D(tMap, vUv).r;          /* white = snow, grey = exposed rock */
+
+      /* tangent-space normal map -> world normal */
+      vec3 nTex = texture2D(tNormal, vUv).xyz * 2. - 1.;
+      nTex.xy *= uNormalScale;
+      vec3 n = normalize(mat3(normalize(vTan), normalize(vBit), normalize(vNrm)) * nTex);
+      vec3 gn = normalize(vNrm);
+
+      float snow = smoothstep(.66, .97, g);
+      vec3 rock  = mix(uRockDark, uRockLight, smoothstep(.30, .90, g));
+      vec3 albedo = mix(rock, uSnow, snow);
+
+      /* key sun + cool sky fill, snow shadows go blue */
+      float ndl  = max(dot(n, uSunDir), 0.);
+      float soft = clamp(dot(gn, uSunDir)*.5 + .5, 0., 1.);
+      float sky  = clamp(n.y*.5 + .5, 0., 1.);
+
+      vec3 ambCol = uSkyColor * mix(vec3(1.), uSnowShade*1.35, .85);
+      vec3 col  = albedo * ambCol * (.40 + .26*sky);
+      col += albedo * uSunColor * (ndl*.72 + soft*.10);
+
+      /* sun sparkle on the snow faces + rim on the ridges */
+      vec3 v = normalize(cameraPosition - vWorld);
+      vec3 hv = normalize(uSunDir + v);
+      col += uSunColor * snow * pow(max(dot(n, hv), 0.), 34.) * .22;
+
+      /* ice crystals: a sparse field of facets that flash as the view moves.
+         each crystal owns a random normal, so it only fires at one angle. */
+      vec3 cell = floor(vWorld * 5.5);
+      float h1 = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+      float h2 = fract(sin(dot(cell, vec3(269.5, 183.3, 246.1))) * 43758.5453);
+      float h3 = fract(sin(dot(cell, vec3(113.5, 271.9, 124.6))) * 43758.5453);
+      vec3 facet = normalize(n + (vec3(h1, h2, h3) - .5) * 1.7);
+      float glint = pow(max(dot(facet, hv), 0.), 220.);
+      glint *= step(.965, h1 + h2 * .04);                    /* only a few cells */
+      glint *= .5 + .5 * sin(uTime * 2.4 + h3 * 40.);        /* slow twinkle */
+      col += uSunColor * glint * snow * 2.6;
+      float rim = pow(1. - clamp(dot(gn, v), 0., 1.), 3.5);
+      col += uSunColor * rim * .12;
+
+      /* ---- cursor highlight: a soft pool of light that trails the pointer ---- */
+      if(uHoverStrength > .001){
+        float hd = distance(vWorld, uHoverPos) / uHoverRadius;
+        float gl = exp(-hd * hd * 4.6);                       /* tighter, crisper pool */
+        float sheen = texture2D(tNoise, vWorld.xz*.055 + vec2(.02*uTime, -.015*uTime)).r;
+        gl *= .74 + .52*sheen;
+        gl = clamp(gl, 0., 1.) * uHoverStrength;
+        col = mix(col, mix(col*1.10, uHoverColor, .40), gl);
+        col += uHoverColor * pow(gl, 2.2) * .26;
+        col += uSunColor * rim * gl * .45;
+      }
+
+      /* dissolve into the cloud sea */
+      float wisp  = texture2D(tNoise, vWorld.xz*.020 + vec2(.008*uTime, .004*uTime)).r - .5;
+      float wisp2 = texture2D(tNoise, vWorld.xz*.075 + vec2(-.02*uTime, .012*uTime)).g - .5;
+      float h = vWorld.y + wisp*2.2 + wisp2*1.0;
+
+      /* aerial perspective — far ridges wash out into the sky, and the
+         haze glows where you are looking toward the sun (in-scatter) */
+      float haze = 1. - exp(-uFogDensity * max(vDepth - 10., 0.));
+      float toSun = max(dot(-v, uSunDir), 0.);
+      vec3 hazeCol = mix(uSkyColor, uSunColor, pow(toSun, 3.) * .45);
+      col = mix(col, hazeCol, haze * .9);
+
+      /* thin snow on a ridge lets a little light through from behind */
+      float back = pow(max(dot(-n, uSunDir), 0.), 2.2);
+      col += uSunColor * back * snow * .10 * (1. - haze);
+
+      /* fog pooling in the valleys */
+      float valley = smoothstep(uFogTop, uFogBottom, h);
+      col = mix(col, uFogColor, valley * .92);
+
+      float f = clamp(max(valley, haze*.65) + smoothstep(.25, 1., uTransition), 0., 1.);
+      float alpha = 1. - smoothstep(.45, .92, f);
+      alpha *= 1. - smoothstep(.86, 1., vEdge);   /* tile border melts into the cloud */
+      alpha *= uModelOpacity;
+
+      gl_FragColor = vec4(col, alpha);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* --- cursor reticle + magnetic buttons --- */
+const reticle = document.getElementById('reticle');
+const magnets = [...document.querySelectorAll('.cta .circle, .controls button')];
+const retPos = { x:innerWidth/2, y:innerHeight/2, tx:innerWidth/2, ty:innerHeight/2 };
+addEventListener('pointermove', e=>{
+  retPos.tx = e.clientX; retPos.ty = e.clientY;
+  document.body.classList.add('has-pointer');
+}, { passive:true });
+
+function tickPointerUI(){
+  /* the reticle trails the cursor a touch — the lag is what sells it */
+  retPos.x += (retPos.tx - retPos.x) * .18;
+  retPos.y += (retPos.ty - retPos.y) * .18;
+  reticle.style.transform = 'translate(' + retPos.x + 'px,' + retPos.y + 'px)';
+
+  let near = false;
+  for(const el of magnets){
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = retPos.tx - cx, dy = retPos.ty - cy;
+    const d = Math.hypot(dx, dy);
+    const pull = Math.max(0, 1 - d / 110);
+    el.style.transform = pull > 0
+      ? 'translate(' + (dx * pull * .34).toFixed(2) + 'px,' + (dy * pull * .34).toFixed(2) + 'px)'
+      : '';
+    if(pull > .25) near = true;
+  }
+  reticle.classList.toggle('is-wide', near);
+}
+
+/* --- cursor-highlight state (BVH raycast against the terrain) --- */
+const raycaster = new THREE.Raycaster();
+raycaster.firstHitOnly = true;
+const hoverTarget = new THREE.Vector3(0,-999,0);
+let hoverAim = 0, bvhReady = false, pointerInside = true;
+const hoverMeshes = [];
+addEventListener('pointerleave', ()=>{ pointerInside = false; });
+addEventListener('pointerenter', ()=>{ pointerInside = true; });
+
+/* =====================================================================
+   LIGHT PATHS — hairline arcs with a bright head running along them.
+   Same material serves the energy routes over the range and the
+   trade routes on the globe.
+   ===================================================================== */
+function makeLightMaterial(color, opts = {}){
+  return new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, depthTest:opts.depthTest !== false,
+    blending:THREE.AdditiveBlending,
+    uniforms:{
+      uTime:U.uTime,
+      uColor:{ value:new THREE.Color(color) },
+      uOpacity:{ value:0 },
+      uSpeed:{ value:opts.speed || .18 },
+      uHead:{ value:opts.head || .10 },
+      uTail:{ value:opts.tail || .055 }
+    },
+    vertexShader: /* glsl */`
+      attribute float aT;
+      attribute float aSeed;
+      varying float vT;
+      varying float vSeed;
+      void main(){
+        vT = aT; vSeed = aSeed;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+      }`,
+    fragmentShader: /* glsl */`
+      precision highp float;
+      uniform vec3 uColor;
+      uniform float uTime, uOpacity, uSpeed, uHead, uTail;
+      varying float vT;
+      varying float vSeed;
+      void main(){
+        /* the head runs from 0 to 1 along the path, one per seed offset */
+        float head = fract(uTime * uSpeed + vSeed);
+        float d = vT - head;
+        d -= floor(d + .5);                       /* wrap to -0.5..0.5 */
+
+        float trail = smoothstep(-uTail, 0., d) * smoothstep(uHead, 0., d);
+        float glow  = smoothstep(-uTail * 4., 0., d) * smoothstep(uHead * 3., 0., d) * .35;
+
+        /* the whole path stays faintly visible */
+        float base = .14 * smoothstep(0., .06, vT) * smoothstep(1., .94, vT);
+
+        float a = (base + trail + glow) * uOpacity;
+        gl_FragColor = vec4(uColor * (1. + trail * 1.6), a);
+      }`
+  });
+}
+
+/* a lifted arc between two points, as a hairline with a per-line phase */
+function makeArc(a, b, lift, seed, segments = 96){
+  const pts = [], ts = [], seeds = [];
+  const mid = a.clone().add(b).multiplyScalar(.5).normalize();
+  const sameSide = a.clone().normalize().dot(b.clone().normalize());
+  for(let i = 0; i <= segments; i++){
+    const t = i / segments;
+    const v = new THREE.Vector3().lerpVectors(a, b, t);
+    /* bulge outward: on a sphere follow the surface, otherwise lift in y */
+    if(lift.sphere){
+      v.copy(a).lerp(b, t).normalize()
+       .multiplyScalar(lift.r * (1 + lift.h * Math.sin(Math.PI * t) * (1.1 - sameSide * .4)));
+    } else {
+      v.y += lift.h * Math.sin(Math.PI * t);
+    }
+    pts.push(v.x, v.y, v.z);
+    ts.push(t);
+    seeds.push(seed);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  g.setAttribute('aT', new THREE.Float32BufferAttribute(ts, 1));
+  g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+  return g;
+}
+
+/* --- trade routes on the globe (chapter 5) --- */
+const globeRouteMat = makeLightMaterial('#bfe6ff', { speed:.09, head:.09, tail:.05 });
+const hubMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:0 }, uColor:{ value:new THREE.Color('#eaf6ff') } },
+  vertexShader: `
+    uniform float uTime;
+    attribute float aSeed;
+    varying float vPulse;
+    void main(){
+      vPulse = .6 + .4 * sin(uTime * 1.6 + aSeed * 30.);
+      vec4 mv = modelViewMatrix * vec4(position, 1.);
+      gl_PointSize = (5.5 + 3.5 * vPulse) * (60. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying float vPulse;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float core = smoothstep(.18, .0, d);
+      float ring = smoothstep(.5, .28, d) * .35;
+      gl_FragColor = vec4(uColor, (core + ring * vPulse) * uOpacity);
+    }`
+});
+
+/* --- energy routes threading over the range (chapters 3 - 4) --- */
+const routeMat = makeLightMaterial('#84d5ff', { speed:.13, head:.11, tail:.06 });
+const routes = new THREE.Group();
+routes.renderOrder = 4;
+spin.add(routes);
+(() => {
+  const nodes = [
+    new THREE.Vector3(-14,  3.4,  8), new THREE.Vector3(-4.5, 5.6, -1),
+    new THREE.Vector3( 5.5, 4.6,  6), new THREE.Vector3( 13,  3.2, -5),
+    new THREE.Vector3( 1.5, 6.2,-11), new THREE.Vector3(-9,   4.2, -9)
+  ];
+  const pairs = [[0,1],[1,2],[2,3],[1,4],[4,5],[5,0],[2,4]];
+  pairs.forEach(([i,j], k) => {
+    const g = makeArc(nodes[i], nodes[j], { h: 1.1 + (k % 3) * .55 }, k * .137);
+    routes.add(new THREE.Line(g, routeMat));
+  });
+})();
+
+/* --- drifting motes: fine specks that catch the light --- */
+const moteMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:.55 }, uColor:{ value:new THREE.Color('#ffffff') } },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    attribute float aSeed;
+    varying float vFade;
+    void main(){
+      vec3 pos = position;
+      pos.y += sin(uTime * .10 + aSeed * 6.28) * 1.6;
+      pos.x += cos(uTime * .07 + aSeed * 12.9) * 1.4;
+      vec4 mv = modelViewMatrix * vec4(pos, 1.);
+      vFade = smoothstep(90., 12., -mv.z) * smoothstep(4., 12., -mv.z);
+      gl_PointSize = (1.4 + 2.2 * aSeed) * (28. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying float vFade;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float a = smoothstep(.5, .0, d) * vFade * uOpacity;
+      gl_FragColor = vec4(uColor, a);
+    }`
+});
+(() => {
+  const N = 420, pos = [], seeds = [];
+  for(let i = 0; i < N; i++){
+    pos.push((Math.random() - .5) * 46, 1 + Math.random() * 16, (Math.random() - .5) * 46);
+    seeds.push(Math.random());
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+  const motes = new THREE.Points(g, moteMat);
+  motes.frustumCulled = false;
+  motes.renderOrder = 4;
+  scene.add(motes);
+})();
+
+/* =====================================================================
+   EARTH  (chapter 5) — the water drop hands over to the globe:
+   same place on screen, same size, so one becomes the other
+   ===================================================================== */
+const earthScene = new THREE.Scene();
+const earthCam   = new THREE.PerspectiveCamera(38, 1, .01, 100);
+earthCam.position.set(0, 0, 6);
+const earthRoot  = new THREE.Group();
+const earthSpin  = new THREE.Group();
+earthRoot.add(earthSpin);
+earthScene.add(earthRoot);
+let earthAmt = 0, earthT = 0, earthRadius = 1, routeAmt = 0;
+
+/* drag to spin the globe (with a little inertia, and it keeps drifting) */
+const earthDrag = { on:false, x:0, y:0, vy:0, vx:0 };
+addEventListener('pointerdown', e=>{
+  if(earthAmt < .35) return;
+  earthDrag.on = true; earthDrag.x = e.clientX; earthDrag.y = e.clientY;
+  earthDrag.vy = earthDrag.vx = 0;
+  document.body.style.cursor = 'grabbing';
+});
+addEventListener('pointerup', ()=>{ earthDrag.on = false; document.body.style.cursor = ''; });
+addEventListener('pointermove', e=>{
+  if(!earthDrag.on) return;
+  const dx = (e.clientX - earthDrag.x) / innerWidth;
+  const dy = (e.clientY - earthDrag.y) / innerHeight;
+  earthDrag.x = e.clientX; earthDrag.y = e.clientY;
+  earthDrag.vy = dx * 3.4;
+  earthDrag.vx = dy * 2.2;
+  earthSpin.rotation.y += earthDrag.vy;
+  earthSpin.rotation.x = Math.max(-.6, Math.min(.6, earthSpin.rotation.x + earthDrag.vx));
+});
+const smoothstep01 = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t*t*(3 - 2*t); };
+
+const earthMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{
+    tMap:{ value:null },
+    uOpacity:{ value:0 },
+    uSunDir:{ value:new THREE.Vector3(-.55,.35,.76).normalize() },
+    uSea:{ value:new THREE.Color('#6d8598') },
+    uLand:{ value:new THREE.Color('#e6ecf1') },
+    uNight:{ value:new THREE.Color('#7d8b98') },
+    uAtmo:{ value:new THREE.Color('#eaf2f8') }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vUv = uv;
+      vN = normalize(mat3(modelMatrix) * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap;
+    uniform vec3 uSunDir, uSea, uLand, uNight, uAtmo;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vec3 tex = texture2D(tMap, vUv).rgb;
+
+      /* keep the continents, drop the postcard colours */
+      float l = dot(tex, vec3(.299, .587, .114));
+      l = pow(l, .82);
+      float land = smoothstep(.09, .32, l);        /* the map's oceans are dark — go low */
+      vec3 albedo = mix(uSea, uLand, land);
+      albedo = mix(albedo, vec3(clamp(l*1.25, 0., 1.)), .30);   /* keep the coastline detail */
+
+      vec3 n = normalize(vN);
+      float ndl = dot(n, uSunDir);
+      float day = smoothstep(-.22, .38, ndl);      /* soft terminator */
+
+      vec3 col = albedo * mix(uNight * .45, vec3(1.06), day);
+
+      /* atmosphere */
+      vec3 v = normalize(cameraPosition - vW);
+      float rim = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
+      col = mix(col, uAtmo, rim * .55);
+      col += uAtmo * pow(rim, 5.) * .35;
+
+      gl_FragColor = vec4(col, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   CARGO SHIP — the asset is painted bright red; strip it back to the
+   site palette (slate-blue hull, cool white upperworks)
+   ===================================================================== */
+const shipMatBase = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{
+    tMap:{ value:null },
+    uOpacity:{ value:0 },
+    uHull:{ value:new THREE.Color('#262c33') },
+    uMid:{ value:new THREE.Color('#78828d') },
+    uTop:{ value:new THREE.Color('#f4f7fa') },
+    uSkyCol:{ value:C('skyLight') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vUv = uv;
+      vN = normalize(mat3(modelMatrix) * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.);
+      vW = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tMap;
+    uniform vec3 uHull, uMid, uTop, uSkyCol, uSunDir;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying vec3 vN, vW;
+    void main(){
+      vec4 tex = texture2D(tMap, vUv);
+      if(tex.a < .35) discard;
+
+      /* throw the hue away, keep only the painted值 (light/dark) */
+      float l = dot(tex.rgb, vec3(.299, .587, .114));
+      vec3 albedo = mix(uHull, uMid, smoothstep(.14, .55, l));
+      albedo = mix(albedo, uTop, smoothstep(.58, .88, l));
+
+      vec3 n = normalize(vN);
+      float ndl = max(dot(n, uSunDir), 0.);
+      float sky = clamp(n.y * .5 + .5, 0., 1.);
+      vec3 col = albedo * (uSkyCol * (.50 + .34 * sky) + vec3(1.) * ndl * .78);
+
+      vec3 v = normalize(cameraPosition - vW);
+      col += pow(max(dot(normalize(uSunDir + v), n), 0.), 34.) * .12;
+
+      gl_FragColor = vec4(col, uOpacity);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   SHIP EXTRAS — a wake that spreads astern, a cold funnel plume and
+   three navigation lights. All ride inside shipRoot, so they inherit
+   the exported placement and the swell it sits on.
+   ===================================================================== */
+const wakeMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime, tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uFoam:{ value:new THREE.Color('#ffffff') },
+    uChurn:{ value:new THREE.Color('#6f93a8') }
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise;
+    uniform vec3 uFoam, uChurn;
+    uniform float uTime, uOpacity;
+    varying vec2 vUv;
+    void main(){
+      /* v runs astern, u across the wake */
+      float v = vUv.y, u = vUv.x * 2. - 1.;
+
+      /* two churned bands that spread as they travel back */
+      float spread = .18 + v * .95;
+      float band = smoothstep(spread, spread * .35, abs(u));
+      float edge = smoothstep(spread * 1.05, spread * .75, abs(u))
+                 - smoothstep(spread * .78, spread * .45, abs(u));
+
+      float n  = texture2D(tNoise, vec2(u * .5 + .5, v * 1.6 - uTime * .06)).r;
+      float n2 = texture2D(tNoise, vec2(u * 1.3 + .5, v * 3.1 - uTime * .11)).g;
+
+      /* the churned lane reads as displaced water; the crests as foam */
+      float lane = band * (.30 + .45 * n);
+      float crest = edge * (.5 + .5 * n2) * 1.35 + band * pow(n, 3.) * .8;
+      float fade = smoothstep(0., .06, v) * smoothstep(1., .30, v);
+      lane *= fade; crest *= fade;
+
+      vec3 col = mix(uChurn, uFoam, clamp(crest * 1.6, 0., 1.));
+      float a = clamp(lane * .55 + crest, 0., 1.) * uOpacity * .9;
+      gl_FragColor = vec4(col, a);
+      #include <colorspace_fragment>
+    }`
+});
+
+const plumeMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:0 }, uColor:{ value:new THREE.Color('#b9c8d2') } },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    attribute float aSeed;
+    varying float vLife;
+    void main(){
+      /* each puff climbs, drifts downwind and expands, then restarts */
+      float life = fract(uTime * .09 + aSeed);
+      vLife = life;
+      vec3 pos = position;
+      pos.y += life * 5.2;
+      pos.x += life * life * 3.4 + sin(life * 9.4 + aSeed * 30.) * .35;
+      pos.z += sin(life * 6.1 + aSeed * 17.) * .5;
+      vec4 mv = modelViewMatrix * vec4(pos, 1.);
+      gl_PointSize = (10. + 46. * life) * (26. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying float vLife;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float a = smoothstep(.5, .05, d);
+      a *= smoothstep(0., .12, vLife) * smoothstep(1., .45, vLife);
+      gl_FragColor = vec4(uColor, a * .55 * uOpacity);
+    }`
+});
+
+const navMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, depthTest:false, blending:THREE.AdditiveBlending,
+  uniforms:{ uTime:U.uTime, uOpacity:{ value:0 } },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    attribute vec3 aColor;
+    attribute float aBlink;
+    varying vec3 vColor;
+    varying float vOn;
+    void main(){
+      vColor = aColor;
+      /* the masthead light blinks, the side lights burn steady */
+      vOn = aBlink > .5 ? step(.62, fract(uTime * .55)) : 1.;
+      vec4 mv = modelViewMatrix * vec4(position, 1.);
+      gl_PointSize = 7. * (34. / max(-mv.z, 1.));
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uOpacity;
+    varying vec3 vColor;
+    varying float vOn;
+    void main(){
+      float d = length(gl_PointCoord - .5);
+      float core = smoothstep(.22, .0, d);
+      float halo = smoothstep(.5, .1, d) * .4;
+      gl_FragColor = vec4(vColor, (core + halo) * vOn * uOpacity);
+    }`
+});
+
+/* =====================================================================
+   WATER  — flat translucent surface with a slow shimmer
+   ===================================================================== */
+const waterMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{
+    uTime:U.uTime,
+    tNoise:U.tNoise,
+    uOpacity:{ value:0 },
+    uWaveHeight:{ value:0 },
+    uWaveSpeed:{ value:.5 },
+    uHalf:{ value:new THREE.Vector2(1,1) },
+    uDeep:{ value:new THREE.Color('#6a93ad') },
+    uShallow:{ value:new THREE.Color('#cfe4f1') },
+    uSunDir:{ value:new THREE.Vector3(-.62,.55,.56).normalize() }
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime, uWaveHeight, uWaveSpeed;
+    uniform vec2 uHalf;
+    varying vec3 vW, vN;
+    varying vec2 vUv;
+    varying vec2 vLocal;
+    void main(){
+      vUv = uv;
+      vLocal = position.xz / uHalf;
+      vec3 pos = position;
+      float t = uTime * uWaveSpeed;
+      pos.y += uWaveHeight * (sin(pos.x*.08 + t) * .6 + sin(pos.z*.11 - t*1.3) * .4);
+      vec4 wp = modelMatrix * vec4(pos, 1.);
+      vW = wp.xyz;
+      vN = normalize(mat3(modelMatrix) * normal);
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }`,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tNoise;
+    uniform vec3 uDeep, uShallow, uSunDir;
+    uniform float uTime, uOpacity, uWaveSpeed;
+    varying vec3 vW, vN;
+    varying vec2 vUv;
+    varying vec2 vLocal;
+    void main(){
+      float t = uTime * uWaveSpeed;
+      float rip = texture2D(tNoise, vW.xz * .08 + vec2(t*.012, -t*.008)).r;
+      float rip2 = texture2D(tNoise, vW.xz * .21 + vec2(-t*.02, t*.014)).g;
+      vec3 n = normalize(vN + vec3((rip-.5)*.5, 0., (rip2-.5)*.5));
+
+      vec3 v = normalize(cameraPosition - vW);
+      float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.2);
+
+      vec3 col = mix(uDeep, uShallow, .35 + .35*rip + .3*fres);
+      vec3 h = normalize(uSunDir + v);
+      col += pow(max(dot(n, h), 0.), 48.) * .55;
+
+      /* feather the sheet so it never shows a cut rectangle */
+      float edge = smoothstep(1., .80, abs(vLocal.x)) * smoothstep(1., .80, abs(vLocal.y));
+      edge *= .90 + .2 * rip;
+
+      gl_FragColor = vec4(col, uOpacity * (.86 + .14*fres) * edge);
+      #include <colorspace_fragment>
+    }`
+});
+
+/* =====================================================================
+   CONDENSE  (chapter 3) — the whole frame collapses into a water drop
+   ===================================================================== */
+const sceneRT = new THREE.WebGLRenderTarget(1, 1, { depthBuffer:true });
+sceneRT.texture.colorSpace = THREE.SRGBColorSpace;
+sceneRT.texture.minFilter = THREE.LinearFilter;
+sceneRT.texture.magFilter = THREE.LinearFilter;
+
+const postScene = new THREE.Scene();
+const postMat = new THREE.ShaderMaterial({
+  depthTest:false, depthWrite:false,
+  uniforms:{
+    tScene:{ value:sceneRT.texture },
+    uResolution:U.uResolution,
+    uTime:U.uTime,
+    uCondense:{ value:0 },
+    uEarth:{ value:0 },
+    uWash:{ value:0 },
+    uBeads:{ value:0 },
+    uVeil:{ value:new THREE.Color('#f3f6f9') },
+    uBgTop:{ value:new THREE.Color('#f4f7f9') },
+    uBgBottom:{ value:new THREE.Color('#ecf0f3') }
+  },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform sampler2D tScene;
+    uniform vec2 uResolution;
+    uniform float uTime, uCondense, uEarth, uWash, uBeads;
+    uniform vec3 uBgTop, uBgBottom, uVeil;
+    varying vec2 vUv;
+    ` + CLOUD_LIB + /* glsl */`
+
+    float hash21(vec2 p){
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    /* beads of condensation sitting on the lens: each one is a tiny
+       lens of its own, and they creep downward and leave a trail      */
+    void lensBeads(vec2 uv, float aspect, float t, float amt,
+                   out float mask, out vec2 off, out float rim, out float trail){
+      mask = 0.; off = vec2(0.); rim = 0.; trail = 0.;
+      if(amt < .01) return;
+
+      for(int i = 0; i < 2; i++){
+        float big = i == 0 ? 1. : .48;
+        float sc  = i == 0 ? 8.5 : 16.;
+        vec2 g  = uv * vec2(aspect, 1.) * sc;
+        vec2 id = floor(g);
+        vec2 f  = fract(g) - .5;
+
+        float r1 = hash21(id + float(i) * 37.1);
+        float r2 = hash21(id + float(i) * 91.7);
+        float r3 = hash21(id + float(i) * 13.3);
+
+        /* only some cells hold a bead */
+        if(r3 < .78) continue;
+
+        /* it creeps down, pausing and slipping — never a constant speed */
+        float sp = .012 + .05 * r1;
+        float ph = fract(t * sp + r2);
+        float slip = smoothstep(.0, .35, fract(ph * 3. + r1)) * .12;
+        vec2 c = vec2((r1 - .5) * .55, (ph - .5) * .9 - slip);
+
+        float rad = (.09 + .14 * r2) * big;
+        float d = length((f - c) * vec2(1., 1.12));
+
+        float body = smoothstep(rad, rad * .62, d);
+        mask += body;
+
+        /* a bead inverts and shrinks what is behind it */
+        off += (f - c) * body * (1.8 + 1.2 * r1) / sc * -1.6;
+
+        /* bright meniscus, dark contact edge */
+        float lit = smoothstep(-.4, .9, dot(normalize(f - c + 1e-5), vec2(-.55, .84)));
+        rim += (smoothstep(rad * 1.0, rad * .86, d) - smoothstep(rad * .88, rad * .66, d)) * lit * (.5 + .5 * r2);
+
+        /* the wet path it has already travelled */
+        float lane = smoothstep(.055 * big, 0., abs(f.x - c.x));
+        trail += lane * smoothstep(c.y, c.y + .55, f.y) * .30 * big;
+      }
+      mask  = clamp(mask, 0., 1.) * amt;
+      rim   = clamp(rim, 0., 1.) * amt;
+      trail = clamp(trail, 0., 1.) * amt;
+      off  *= amt;
+    }
+
+    /* one droplet: returns rgb, w = coverage */
+    vec4 droplet(vec2 p, vec2 centre, float radius, float aspect, float R0, float amt, float seed){
+      vec2 d2 = p - centre;
+      float ang = atan(d2.y, d2.x);
+      float wob = fbm(vec2(ang * 1.7 + seed, uTime * .10 + seed)) * .55;
+      float rad = radius * (1. + .045 * wob);
+      float r = length(d2) / rad;
+      if(r > 1.06) return vec4(0.);
+
+      float rr = clamp(r, 0., 1.);
+      float z  = sqrt(max(1. - rr*rr, 1e-4));
+      vec3  n  = vec3(normalize(d2 + 1e-6) * rr, z);
+
+      /* the whole frame squeezed into this disc, bent like a lens.
+         at amt=0 the mapping is the identity (nothing happens);
+         at amt=1 the entire 16:9 frame is packed inside the circle    */
+      /* isotropic all the way: x and y are always scaled by the same factor,
+         so nothing inside the drop is ever squashed — the frame is cropped
+         left/right instead of being squeezed into the circle */
+      float bend = 1. + amt * (.16 * rr * rr - .04);
+      vec2 q = (d2 / rad) * bend;
+      float k = mix(R0, .5, amt);
+      vec2 srcUv = vec2(.5 + .07 * amt, .5) + q * k / vec2(aspect, 1.);
+
+      /* water moving inside */
+      float rip = fbm(q * 3.4 + vec2(uTime * .05, -uTime * .035) + seed);
+      srcUv += (rip - .5) * .014 * amt;
+
+      /* mid-morph the lens can reach past the frame — mirror it back in
+         so the glass continues smoothly instead of smearing the edge row */
+      vec2 ov = max(abs(srcUv - .5) - .5, 0.);
+      vec2 mUv = 1. - abs(1. - mod(srcUv, 2.));
+
+      vec3 c;
+      c.r = texture2D(tScene, 1. - abs(1. - mod(srcUv + n.xy * .005 * amt, 2.))).r;
+      c.g = texture2D(tScene, mUv).g;
+      c.b = texture2D(tScene, 1. - abs(1. - mod(srcUv - n.xy * .005 * amt, 2.))).b;
+
+      /* and let the mirrored part read as dense glass */
+      c = mix(c, vec3(.95, .965, .975), smoothstep(0., .12, max(ov.x, ov.y)) * .55);
+
+      /* glass: rim brightening, a hot ring, two speculars */
+      float fres = pow(1. - z, 2.3);
+      c = mix(c, vec3(1.), fres * .30 * amt);
+      float ring = smoothstep(.80, .985, rr) * smoothstep(1.03, .985, rr);
+      c += ring * (.30 + .35 * fbm(vec2(ang * 3., uTime * .2))) * amt;
+      c += pow(max(dot(n, normalize(vec3(-.42, .58, .70))), 0.), 70.) * .85 * amt;
+      c += pow(max(dot(n, normalize(vec3( .48,-.40, .78))), 0.), 26.) * .10 * amt;
+
+      float cover = smoothstep(1.02, .985, r);
+      return vec4(c, cover);
+    }
+
+    void main(){
+      float aspect = uResolution.x / uResolution.y;
+      vec2 p = (vUv - .5) * vec2(aspect, 1.);
+      float R0 = length(vec2(aspect, 1.)) * .5 * 1.18;   /* circumscribes the screen */
+      float amt = uCondense;
+
+      /* studio backdrop the drop hangs in */
+      vec3 bg = mix(uBgBottom, uBgTop, vUv.y);
+      bg *= 1. - .09 * smoothstep(.25, 1.05, length(p));
+
+      /* the frame eases in a little as the wash sweeps through */
+      p *= 1. - .045 * uWash;
+
+      float R = mix(R0, R0 * .27, amt);
+      /* as it forms, the drop drifts clear of the headline */
+      vec2 c0 = vec2(.30 * amt, .02 * amt);
+      vec4 main_ = droplet(p, c0, R, aspect, R0, amt, 0.);
+      /* as the globe arrives the drop gives up its body, leaving a thin shell */
+      main_.w *= 1. - smoothstep(.06, .72, uEarth) * .92;
+      vec3 col = mix(bg, main_.rgb, main_.w);
+
+      /* satellite droplets flung off as it forms */
+      if(amt > .02){
+        vec2 o1 = vec2( R * 1.18,  R * .30) + vec2(sin(uTime*.5)*.006, cos(uTime*.42)*.006);
+        vec2 o2 = vec2(-R * 1.24,  R * .06) + vec2(cos(uTime*.37)*.006, sin(uTime*.51)*.006);
+        vec2 o3 = vec2( R *  .72, -R * 1.05) + vec2(sin(uTime*.31)*.005, cos(uTime*.6)*.005);
+        vec4 s1 = droplet(p, c0 + o1 * amt, R * .055 * amt, aspect, R0, amt, 3.7);
+        vec4 s2 = droplet(p, c0 + o2 * amt, R * .038 * amt, aspect, R0, amt, 8.1);
+        vec4 s3 = droplet(p, c0 + o3 * amt, R * .028 * amt, aspect, R0, amt, 5.3);
+        col = mix(col, s1.rgb, s1.w);
+        col = mix(col, s2.rgb, s2.w);
+        col = mix(col, s3.rgb, s3.w);
+      }
+
+      /* soft contact shadow under the drop */
+      float sh = smoothstep(1., 0., length((p - c0 - vec2(0., -R * 1.22)) / vec2(R * .95, R * .20)));
+      col -= sh * .045 * amt;
+
+      /* ---- film treatment ------------------------------------------ */
+      /* soft bloom: five taps of whatever is already bright */
+      vec2 px = 1. / uResolution;
+      vec3 bloom = vec3(0.);
+      bloom += texture2D(tScene, vUv + vec2( 2.5, 1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv + vec2(-2.5, 1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv + vec2( 2.5,-1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv + vec2(-2.5,-1.5) * px * 6.).rgb;
+      bloom += texture2D(tScene, vUv).rgb;
+      bloom *= .2;
+      bloom = max(bloom - .82, 0.) * 2.2;                  /* bright pass */
+      col += bloom * .28 * (1. - uCondense * .6);
+
+      /* chromatic aberration that only shows toward the edges */
+      float ca = dot(p, p) * .0016;
+      col.r = mix(col.r, texture2D(tScene, vUv + (vUv - .5) * ca).r, .55 * (1. - amt));
+      col.b = mix(col.b, texture2D(tScene, vUv - (vUv - .5) * ca).b, .55 * (1. - amt));
+
+      /* gentle S-curve, then grain that steps at ~18fps like film */
+      col = clamp(col, 0., 1.);
+      col = col * col * (3. - 2. * col) * .12 + col * .88;
+      float gt = floor(uTime * 18.);
+      float gr = fract(sin(dot(gl_FragCoord.xy + gt, vec2(12.9898, 78.233))) * 43758.5453);
+      col += (gr - .5) * .020;
+
+      /* ---- condensation on the lens -------------------------------- */
+      {
+        float bmask, brim, btrail; vec2 boff;
+        lensBeads(vUv, aspect, uTime, uBeads * (1. - amt), bmask, boff, brim, btrail);
+        if(bmask > .001 || btrail > .001){
+          vec3 lens = texture2D(tScene, clamp(vUv + boff, .002, .998)).rgb;
+          /* the wet trail just softens and brightens the plate slightly */
+          col = mix(col, mix(col, lens, .55) * 1.02, btrail);
+          col = mix(col, lens, bmask * .80);
+          col += brim * .075;                   /* meniscus catching the sky */
+          col -= bmask * .010;                  /* the bead's own shadow     */
+        }
+      }
+
+
+      /* the cut itself: a drop lands and spreads across the glass, then
+         draws back. Any discontinuity underneath happens while it covers. */
+      {
+        vec2 hit = vec2(.22, .12);                     /* where it lands */
+        vec2 q = (p - hit) / (R0 * 1.25);
+        float ang = atan(q.y, q.x);
+        float wob = fbm(vec2(ang * 1.6, uTime * .25)) * .22
+                  + fbm(vec2(ang * 3.7, uTime * .17)) * .10;
+        float grow = smoothstep(0., .88, uWash) * 1.95;
+        float edge = grow + wob * grow;
+        float spread = smoothstep(edge, edge - .10 - .12 * grow, length(q));
+
+        /* droplets thrown ahead of the front */
+        float sat = 0.;
+        for(int k = 0; k < 5; k++){
+          float fk = float(k);
+          vec2 sp = hit + vec2(cos(fk * 2.4 + 1.1), sin(fk * 1.7 + .4)) * (edge * .78 * R0);
+          float sr = (.035 + .02 * fract(fk * .37)) * R0 * smoothstep(.05, .5, uWash);
+          sat += smoothstep(sr, sr * .5, length(p - sp));
+        }
+
+        float veil = clamp(spread + sat, 0., 1.) * smoothstep(0., .12, uWash);
+        col = mix(col, uVeil, veil);
+      }
+
+      gl_FragColor = vec4(col, 1.);
+      #include <colorspace_fragment>
+    }`
+});
+postScene.add(new THREE.Mesh(quadGeo, postMat));
+let condense = 0;
+
+/* placements exported from the tuning panel (formatVersion 2).
+   each section carries its own, and they glide from one to the next   */
+const SHIP_S3  = { x:-1.30, y:1.00, z:6.40, rx:-0.08, ry:-1.34, rz:0.00, scale:0.68 };
+const WATER_S3 = { x:-2.20, y:1.20, z:3.40, rx:0.05, ry:0.23, rz:0.02,
+                   scaleX:0.41, scaleY:0.36, scaleZ:1.36,
+                   opacity:0.65, waveHeight:0.48, waveSpeed:0.64 };
+const SHIP_S4  = { x:-2.60, y:8.90, z:0.60, rx:-0.23, ry:-1.56, rz:-0.39, scale:0.72 };
+const WATER_S4 = { x:0.70, y:8.20, z:0.30, rx:0.00, ry:-1.72, rz:0.00,
+                   scaleX:2.00, scaleY:0.34, scaleZ:1.45,
+                   opacity:0.72, waveHeight:0.70, waveSpeed:0.55 };
+const shipNow  = Object.assign({}, SHIP_S3);
+const waterNow = Object.assign({}, WATER_S3);
+const lerpCfg = (now, target, k)=>{ for(const key in target) now[key] += (target[key] - now[key]) * k; };
+
+/* =====================================================================
+   CHAPTERS
+   ===================================================================== */
+const CHAPTERS = [
+  /* 1 — the frame condenses into a water drop
+     2 — straight down over the range
+     3 — the exported pose, with the cargo ship on the water
+     4 — back out to the ground-level wide shot                */
+  { idx:'1', eyebrow:'Montis Expeditions', l1:'CLIMBING HIGHER,',  l2:'SEEING FURTHER.',   cta:'MONTIS EXPEDITIONS',
+    cam:{ x:7.60, y:6.50, z:22.80, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, condense:true },
+  { idx:'2', eyebrow:'Montis Research',    l1:'READING THE',       l2:'MOUNTAIN’S PULSE.', cta:'MONTIS RESEARCH',
+    cam:{ x:-10.3, y:30.6, z:0.0, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16, fov:40.0, flat:.82, deck:.45 },
+  { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
+    cam:{ x:-5.96, y:5.53, z:23.76, tx:-5.87, ty:0.95, tz:-9.85 }, rot:-1.00, fov:40.0,
+    ship:SHIP_S3, water:WATER_S3 },
+  { idx:'4', eyebrow:'Montis Ventures',    l1:'BUILDING WHAT',     l2:'COMES NEXT.',       cta:'MONTIS VENTURES',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0, },
+  { idx:'5', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    earth:true, dark:true },
+  { idx:'6', eyebrow:'Montis Water',       l1:'SHAPED BY WATER,',  l2:'BUILT FOR CHANGE.', cta:'MONTIS WATER',
+    cam:{ x:5.80, y:6.40, z:5.40, tx:5.70, ty:4.80, tz:2.20 }, rot:-0.67, fov:35.0,
+    droplet:true, deck:.28 },
+  { idx:'7', eyebrow:'Montis Atmosphere',  l1:'CITIES IN MOTION,', l2:'CLOUDS IN LIGHT.',   cta:'MONTIS ATMOSPHERE',
+    cam:{ x:5.80, y:6.40, z:5.40, tx:5.70, ty:4.80, tz:2.20 }, rot:-0.67, fov:35.0,
+    tiles:true, dark:true, deck:0 }
+];
+
+const sectionParam = Number.parseInt(new URLSearchParams(location.search).get('section'), 10);
+let chapter = Number.isFinite(sectionParam)
+  ? Math.max(0, Math.min(CHAPTERS.length - 1, sectionParam - 1))
+  : 0;
+let busy = true;
+
+const el = {
+  eyebrow:document.getElementById('tEyebrow'),
+  l1:document.getElementById('tL1'),
+  l2:document.getElementById('tL2'),
+  cta:document.getElementById('tCta'),
+  idx:document.querySelector('#dIdx span'),
+  nextIdx:document.getElementById('tNextIdx'),
+  nextName:document.getElementById('tNextName'),
+  ui:document.getElementById('ui'),
+  dots:document.getElementById('dots'),
+  prev:document.getElementById('btnPrev'),
+  next:document.getElementById('btnNext')
+};
+
+CHAPTERS.forEach((c,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===chapter?' is-on':'');
+  d.addEventListener('click', ()=>goTo(i));
+  el.dots.appendChild(d);
+});
+
+function paint(i){
+  const last = i === CHAPTERS.length - 1;
+  const c = CHAPTERS[i], n = CHAPTERS[Math.min(i+1, CHAPTERS.length-1)];
+  const tilesFrame = document.getElementById('tilesFrame');
+  const showTiles = c.tiles === true;
+  document.body.classList.toggle('on-tiles', showTiles);
+  if(showTiles && tilesFrame.dataset.loaded !== '1') {
+    tilesFrame.src = tilesFrame.dataset.src;
+    tilesFrame.dataset.loaded = '1';
+  } else if(!showTiles && tilesFrame.dataset.loaded === '1') {
+    tilesFrame.src = 'about:blank';
+    delete tilesFrame.dataset.loaded;
+  }
+  document.getElementById('next').style.opacity = last ? '0' : '';
+  document.getElementById('next').style.pointerEvents = last ? 'none' : 'auto';
+  el.next.disabled = last;
+  el.prev.disabled = i === 0;
+  el.eyebrow.textContent = c.eyebrow;
+  el.l1.textContent = c.l1;
+  el.l2.textContent = c.l2;
+  el.cta.textContent = c.cta;
+  el.idx.textContent = c.idx;
+  el.nextIdx.textContent = n.idx;
+  el.nextName.textContent = n.eyebrow;
+  [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
+  document.body.classList.toggle('on-dark', CHAPTERS[i].dark === true);
+}
+
+/* camera targets ------------------------------------------------------- */
+const camPos     = new THREE.Vector3();
+const camAim     = new THREE.Vector3();
+const camPosFrom = new THREE.Vector3();
+const camAimFrom = new THREE.Vector3();
+/* looking straight down is a degenerate case for lookAt — pin the roll,
+   otherwise anything placed in world space lands somewhere unpredictable */
+const camUp  = new THREE.Vector3(0, 1, 0);
+const camUpT = new THREE.Vector3(0, 1, 0);
+const easeInOut  = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+const camPosT = new THREE.Vector3();
+const camAimT = new THREE.Vector3();
+let spinT = 0;
+let fovT = 40;
+/* the massif's yaw is kept apart from its slow idle drift, so a transition
+   can drive the yaw on the same eased clock as the camera without wiping
+   the drift that has accumulated since the page loaded */
+let spinBase = 0, spinDrift = 0, spinFrom = 0;
+
+function applyChapterTarget(i, instant){
+  const c = CHAPTERS[i];
+  camPosT.set(c.cam.x, c.cam.y, c.cam.z);
+  camAimT.set(c.cam.tx, c.cam.ty, c.cam.tz || 0);
+  fovT = c.fov || 40;
+  const look = camPosT.clone().sub(camAimT);
+  const vertical = Math.abs(look.y) / Math.max(look.length(), 1e-4) > .95;
+  camUpT.set(0, vertical ? 0 : 1, vertical ? -1 : 0);
+  if(instant){ camUp.copy(camUpT); camera.up.copy(camUpT); }
+  spinT = c.rot;
+  if(instant){
+    camPos.copy(camPosT); camAim.copy(camAimT);
+    spinBase = spinT; spinDrift = 0; spin.rotation.y = spinT;
+  }
+}
+
+/* transition ----------------------------------------------------------- */
+let trans = { on:false, t:0, dir:1, swapped:false };
+const TRANS_BASE = 2.3;                      // ~2.3s, unhurried
+let transDur = TRANS_BASE;
+
+function goTo(i){
+  if(busy) return;
+  const n = CHAPTERS.length;
+  i = Math.max(0, Math.min(n - 1, i));      // the sequence ends on the globe
+  if(i === chapter) return;
+  if(CHAPTERS[i].droplet === true && CHAPTERS[chapter].droplet !== true) dropletFallT = 0;
+  busy = true;
+  camPosFrom.copy(camPos);
+  camAimFrom.copy(camAim);
+  chapter = i;
+  el.ui.classList.remove('is-in');
+  el.ui.classList.add('is-out');
+  trans = { on:true, t:0, swapped:false };
+  spinFrom = spinBase;
+  applyChapterTarget(i);
+  /* a long move gets a longer wash. section 3 -> 4 swings the camera right
+     across the range *and* turns the massif three radians; at the base
+     length that arrives hurried, and the tail of it shows after the reveal */
+  const reach = camPosFrom.distanceTo(camPosT) + camAimFrom.distanceTo(camAimT);
+  transDur = TRANS_BASE + Math.min(1.1, Math.abs(spinT - spinFrom) * .22 + reach * .018);
+}
+
+function tickTransition(dt){
+  if(!trans.on) return;
+  trans.t += dt / transDur;
+  const t = Math.min(trans.t, 1);
+  U.uTransition.value = Math.sin(t * Math.PI);         // peaks at a full cover
+  U.uChapter.value += (chapter - U.uChapter.value) * Math.min(1, dt*3);
+  if(!trans.swapped && t > .46){
+    trans.swapped = true;
+    paint(chapter);
+    camUp.copy(camUpT);        /* straight-down views need a different roll */
+    camera.up.copy(camUp);
+    /* snap the masks back below the line without animating, then reveal */
+    el.ui.classList.add('no-anim');
+    el.ui.classList.remove('is-out');
+    void el.ui.offsetWidth;
+    el.ui.classList.remove('no-anim');
+    void el.ui.offsetWidth;
+    el.ui.classList.add('is-in');
+  }
+  if(t >= 1){ trans.on = false; U.uTransition.value = 0; busy = false; }
+}
+
+/* input ---------------------------------------------------------------- */
+let wheelLock = 0;
+addEventListener('wheel', e=>{
+  if(TUNE) return;
+  const now = performance.now();
+  if(busy || now - wheelLock < 900) return;
+  if(Math.abs(e.deltaY) < 14) return;
+  wheelLock = now;
+  goTo(chapter + (e.deltaY > 0 ? 1 : -1));
+}, { passive:true });
+
+let touchY = null;
+addEventListener('touchstart', e=>{ touchY = e.touches[0].clientY; }, { passive:true });
+addEventListener('touchmove', e=>{
+  if(touchY === null || busy) return;
+  const dy = touchY - e.touches[0].clientY;
+  if(Math.abs(dy) > 48){ goTo(chapter + (dy > 0 ? 1 : -1)); touchY = null; }
+}, { passive:true });
+
+addEventListener('keydown', e=>{
+  if(TUNE) return;
+  if(e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') goTo(chapter+1);
+  if(e.key === 'ArrowUp'   || e.key === 'PageUp')  goTo(chapter-1);
+});
+el.prev.addEventListener('click', ()=>goTo(chapter-1));
+el.next.addEventListener('click', ()=>goTo(chapter+1));
+document.getElementById('next').addEventListener('click', ()=>goTo(chapter+1));
+document.getElementById('next').style.cursor = 'pointer';
+document.getElementById('next').style.pointerEvents = 'auto';
+document.getElementById('cta').addEventListener('click', e=>e.preventDefault());
+
+/* pointer -------------------------------------------------------------- */
+const pointer = new THREE.Vector2(0,0);
+const pointerS = new THREE.Vector2(0,0);
+let lastPointer = new THREE.Vector2(0,0);
+addEventListener('pointermove', e=>{
+  pointer.set((e.clientX/innerWidth)*2 - 1, -(e.clientY/innerHeight)*2 + 1);
+});
+
+/* =====================================================================
+   RESIZE
+   ===================================================================== */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 1.5);   // the fbm cloud field is fill-rate hungry
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  U.uResolution.value.set(w*dpr, h*dpr);
+  U.uAspect.value = w/h;
+  sceneRT.setSize(Math.round(w*dpr), Math.round(h*dpr));
+  earthCam.aspect = w/h;
+  earthCam.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+/* =====================================================================
+   LOAD
+   ===================================================================== */
+const loader     = document.getElementById('loader');
+const loadFill   = document.getElementById('loadFill');
+const loadPct    = document.getElementById('loadPct');
+const manager    = new THREE.LoadingManager();
+manager.onProgress = (url, loaded, total)=>{
+  const p = Math.round(loaded/total*100);
+  loadFill.style.transform = 'scaleX(' + (p/100) + ')';
+  loadPct.textContent = p + '%';
+};
+
+const MODEL = 'snowy_mountain_v2_-_terrain/';
+const texLoader = new THREE.TextureLoader(manager);
+const mapTex = texLoader.load(MODEL + 'textures/Material.001_baseColor.png');
+const nrmTex = texLoader.load(MODEL + 'textures/Material.001_normal.png');
+[mapTex, nrmTex].forEach(t=>{ t.colorSpace = THREE.NoColorSpace; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.anisotropy = 8; });
+mountainMat.uniforms.tMap.value    = mapTex;
+mountainMat.uniforms.tNormal.value = nrmTex;
+
+const gltfLoader = new GLTFLoader(manager);
+
+/* water droplet — centred and normalised for the dedicated sixth section */
+gltfLoader.load('water_droplet/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.sub(ctr);
+
+  dropletGlass = new THREE.MeshPhysicalMaterial({
+    color:new THREE.Color('#8fd7f2'),
+    roughness:.035,
+    metalness:0,
+    transmission:.98,
+    thickness:.62,
+    ior:1.333,
+    clearcoat:1,
+    clearcoatRoughness:.025,
+    specularIntensity:1,
+    attenuationColor:new THREE.Color('#d8f5ff'),
+    attenuationDistance:2.8,
+    transparent:true,
+    opacity:0,
+    depthWrite:false,
+    side:THREE.DoubleSide
+  });
+  m.traverse(o=>{
+    if(o.isMesh){
+      o.material = dropletGlass;
+      o.frustumCulled = false;
+      o.renderOrder = 6;
+    }
+  });
+
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(2.15 / Math.max(size.x, size.y, size.z));
+  dropletRoot.add(holder);
+  dropletRoot.position.copy(dropletHome);
+
+  const beadGeo = new THREE.SphereGeometry(.13, 18, 24);
+  const makeBead = (radius, root, list) => {
+    const material = dropletGlass.clone();
+    material.thickness = .28;
+    material.opacity = 0;
+    const bead = new THREE.Mesh(beadGeo, material);
+    bead.scale.setScalar(radius / .13);
+    bead.frustumCulled = false;
+    bead.renderOrder = 7;
+    root.add(bead);
+    list.push({ mesh:bead, material, radius });
+  };
+  for(let i=0; i<9; i++) makeBead(.06 + i * .009, dropletTrailRoot, dropletTrail);
+  for(let i=0; i<5; i++) makeBead(.055 + (i%3) * .012, dropletDripRoot, dropletDrips);
+
+  const rippleMat = new THREE.MeshBasicMaterial({
+    color:new THREE.Color('#a9e8ff'),
+    transparent:true,
+    opacity:0,
+    depthWrite:false,
+    side:THREE.DoubleSide,
+    blending:THREE.AdditiveBlending
+  });
+  dropletRipple = new THREE.Mesh(new THREE.RingGeometry(.34, .39, 72), rippleMat);
+  dropletRipple.position.set(dropletHome.x, dropletHome.y - 1.08, dropletHome.z);
+  dropletRipple.rotation.x = -Math.PI / 2;
+  dropletRipple.renderOrder = 8;
+  scene.add(dropletRipple);
+
+  dropletReady = true;
+  window.__droplet = dropletRoot;
+});
+
+/* the globe */
+gltfLoader.load('earth/scene.gltf', gltf=>{
+  const e = gltf.scene;
+  const box = new THREE.Box3().setFromObject(e);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  e.position.sub(ctr);
+  earthRadius = Math.max(size.x, size.y, size.z) * .5;
+  e.traverse(o=>{
+    if(o.isMesh){
+      earthMat.uniforms.tMap.value = o.material.map;
+      o.material = earthMat;
+      o.frustumCulled = false;
+    }
+  });
+  earthSpin.add(e);
+
+  /* trade routes between hubs, riding just above the surface */
+  const d2r = Math.PI / 180;
+  const onGlobe = (lat, lon, r) => new THREE.Vector3(
+    r * Math.cos(lat * d2r) * Math.cos(lon * d2r),
+    r * Math.sin(lat * d2r),
+    -r * Math.cos(lat * d2r) * Math.sin(lon * d2r)
+  );
+  const hubs = [
+    [ 49.6,   6.1], /* Luxembourg */
+    [ 46.8,   8.2], /* Switzerland */
+    [ 41.0,  28.9], /* Istanbul   */
+    [  1.3, 103.8], /* Singapore  */
+    [-33.9,  18.4], /* Cape Town  */
+    [ 35.7, 139.7]  /* Tokyo      */
+  ];
+  const links = [[0,1],[1,2],[2,3],[3,5],[2,4],[0,4]];
+  const R = earthRadius * 1.012;
+  links.forEach(([i,j], k) => {
+    const g = makeArc(onGlobe(hubs[i][0], hubs[i][1], R), onGlobe(hubs[j][0], hubs[j][1], R),
+                      { sphere:true, r:R, h:.16 }, k * .161, 120);
+    earthSpin.add(new THREE.Line(g, globeRouteMat));
+  });
+
+  /* a small dot on each hub */
+  const dotPos = [], dotSeeds = [];
+  hubs.forEach((h, i) => {
+    const v = onGlobe(h[0], h[1], R * 1.004);
+    dotPos.push(v.x, v.y, v.z); dotSeeds.push(i * .17);
+  });
+  const dg = new THREE.BufferGeometry();
+  dg.setAttribute('position', new THREE.Float32BufferAttribute(dotPos, 3));
+  dg.setAttribute('aSeed', new THREE.Float32BufferAttribute(dotSeeds, 1));
+  const dots = new THREE.Points(dg, hubMat);
+  dots.renderOrder = 6;
+  earthSpin.add(dots);
+  earthSpin.rotation.z = .28;             /* axial tilt */
+  earthSpin.rotation.y = 4.05;            /* land, not open ocean, facing us */
+  window.__earth = earthSpin;
+});
+
+/* cargo ship — normalised to 7.2 units long, then the exported transform */
+gltfLoader.load('cargo_ship_runtime/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box  = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.set(-ctr.x, -box.min.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(7.2 / Math.max(size.x, size.z));
+  shipRoot.add(holder);
+  shipRoot.renderOrder = 3;
+  /* --- wake, plume and lights, sized from the hull --- */
+  const L = Math.max(size.x, size.z) * (7.2 / Math.max(size.x, size.z));  /* = 7.2 */
+  const alongX = size.x >= size.z;
+
+  const wakeGeo = new THREE.PlaneGeometry(L * 1.5, L * 4.2, 1, 24);
+  wakeGeo.rotateX(-Math.PI / 2);
+  const wake = new THREE.Mesh(wakeGeo, wakeMat);
+  wake.position.set(alongX ? -L * 2.4 : 0, .06, alongX ? 0 : -L * 2.4);
+  if(!alongX) wake.rotation.y = Math.PI / 2;
+  wake.rotation.y += Math.PI;                 /* v = 0 at the stern */
+  wake.frustumCulled = false;
+  wake.renderOrder = 2;
+  shipRoot.add(wake);
+
+  const puffs = 26, pp = [], ps = [];
+  for(let i = 0; i < puffs; i++){
+    pp.push(alongX ? L * .12 : 0, L * .42, alongX ? 0 : L * .12);
+    ps.push(i / puffs);
+  }
+  const pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
+  pg.setAttribute('aSeed', new THREE.Float32BufferAttribute(ps, 1));
+  const plume = new THREE.Points(pg, plumeMat);
+  plume.frustumCulled = false;
+  plume.renderOrder = 5;
+  shipRoot.add(plume);
+
+  const lampPos = [], lampCol = [], lampBlink = [];
+  const put = (x, y, z, c, blink) => { lampPos.push(x, y, z); lampCol.push(c[0], c[1], c[2]); lampBlink.push(blink); };
+  put(alongX ?  L * .46 : .22, L * .12, alongX ? .22 : L * .46, [1.0, .25, .22], 0);  /* port  */
+  put(alongX ?  L * .46 : -.22, L * .12, alongX ? -.22 : L * .46, [.25, 1.0, .45], 0); /* stbd  */
+  put(alongX ?  L * .05 : 0, L * .50, alongX ? 0 : L * .05, [1.0, .95, .85], 1);       /* mast  */
+  const lg = new THREE.BufferGeometry();
+  lg.setAttribute('position', new THREE.Float32BufferAttribute(lampPos, 3));
+  lg.setAttribute('aColor', new THREE.Float32BufferAttribute(lampCol, 3));
+  lg.setAttribute('aBlink', new THREE.Float32BufferAttribute(lampBlink, 1));
+  const lamps = new THREE.Points(lg, navMat);
+  lamps.frustumCulled = false;
+  lamps.renderOrder = 7;
+  shipRoot.add(lamps);
+
+  m.traverse(o=>{
+    if(o.isMesh){
+      /* the asset's own PBR material, lit by the scene lights */
+      o.material.transparent = true;
+      o.material.opacity = 0;
+      o.material.depthWrite = false;
+      o.frustumCulled = false;
+      o.renderOrder = 3;
+      shipMats.push(o.material);
+    }
+  });
+});
+
+/* water surface — normalised to 14 units across, then the exported transform */
+gltfLoader.load('river_water_runtime/scene.gltf', gltf=>{
+  const m = gltf.scene;
+  const box  = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  m.position.set(-ctr.x, -ctr.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(14 / Math.max(size.x, size.z));
+  waterRoot.add(holder);
+  waterRoot.renderOrder = 2;
+  waterMat.uniforms.uHalf.value.set(Math.max(size.x, 1e-3) * .5, Math.max(size.z, 1e-3) * .5);
+  m.traverse(o=>{ if(o.isMesh){ o.material = waterMat; o.frustumCulled = false; o.renderOrder = 2; } });
+});
+
+gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
+  const m = gltf.scene;
+  m.traverse(o=>{ if(o.isMesh){ o.material = mountainMat; o.frustumCulled = false; hoverMeshes.push(o); } });
+
+  // normalise: centre on XZ, base at y = 0, terrain ~ 34 units across
+  const box = new THREE.Box3().setFromObject(m);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const ctr  = new THREE.Vector3(); box.getCenter(ctr);
+  const s = 34 / Math.max(size.x, size.z);
+  m.position.set(-ctr.x, -box.min.y, -ctr.z);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.scale.setScalar(s);
+  spin.add(holder);
+  window.__terrain = { size:size.toArray(), scale:s, height:size.y*s };
+
+  applyChapterTarget(chapter, true);
+  paint(chapter);
+  camera.position.copy(camPos);
+  camera.lookAt(camAim);
+
+  // intro
+  setTimeout(()=>{
+    loader.classList.add('is-done');
+    el.ui.classList.add('is-in');
+    intro = { on:true, t:0 };
+  }, 260);
+
+  /* build the raycast BVH once the intro is out of the way — a plain
+     raycast against 600k+ triangles would stall the frame */
+  setTimeout(()=>{
+    import('https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js')
+      .then(bvh=>{
+        THREE.BufferGeometry.prototype.computeBoundsTree = bvh.computeBoundsTree;
+        THREE.BufferGeometry.prototype.disposeBoundsTree = bvh.disposeBoundsTree;
+        THREE.Mesh.prototype.raycast = bvh.acceleratedRaycast;
+        /* build one chunk per tick so the page never freezes for a whole second */
+        let i = 0;
+        (function step(){
+          if(i >= hoverMeshes.length){ bvhReady = true; return; }
+          hoverMeshes[i++].geometry.computeBoundsTree({ strategy:0, maxLeafTris:16 });
+          setTimeout(step, 60);
+        })();
+      })
+      .catch(err=>console.warn('hover highlight disabled (BVH unavailable):', err));
+  }, 3200);
+});
+
+/* =====================================================================
+   LOOP
+   ===================================================================== */
+let intro = { on:false, t:0 };
+const clock = new THREE.Clock();
+
+/* ?tune — drag the camera around and read the pose back out */
+const TUNE = new URLSearchParams(location.search).has('tune');
+let controls = null;
+
+function frame(){
+  requestAnimationFrame(frame);
+  update(Math.min(clock.getDelta(), .05));
+}
+
+function update(dt){
+  U.uTime.value += dt;
+
+  /* intro wash: clouds part, camera settles */
+  if(intro.on){
+    intro.t += dt/2.4;
+    const t = Math.min(intro.t, 1);
+    U.uTransition.value = Math.pow(1 - t, 1.6);
+    if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
+  }
+  tickTransition(dt);
+
+  /* pointer smoothing + mouse fbo */
+  lastPointer.copy(pointerS);
+  pointerS.lerp(pointer, Math.min(1, dt*6));
+  U.uMouse.value.copy(pointerS);
+  U.uMouseVelocity.value.set((pointerS.x-lastPointer.x)/Math.max(dt,.001), (pointerS.y-lastPointer.y)/Math.max(dt,.001));
+
+  mouseMat.uniforms.tLast.value = rtB.texture;
+  renderer.setRenderTarget(rtA);
+  renderer.render(mouseScene, quadCam);
+  renderer.setRenderTarget(null);
+  U.tMouse.value = rtA.texture;
+  const swap = rtA; rtA = rtB; rtB = swap;
+
+  const t = U.uTime.value;
+
+  /* camera: chapter target + parallax + idle drift */
+  if(controls){
+    controls.update();
+  } else {
+  if(trans.on){
+    /* one eased ride from the old pose to the new one, spread over the
+       whole wash — no exponential snap, no overshoot */
+    const e = easeInOut(Math.min(trans.t, 1));
+    camPos.copy(camPosFrom).lerp(camPosT, e);
+    camAim.copy(camAimFrom).lerp(camAimT, e);
+  } else {
+    const k = Math.min(1, dt * 2.2);
+    camPos.lerp(camPosT, k);
+    camAim.lerp(camAimT, k);
+  }
+  const introPush = intro.on ? Math.pow(1-Math.min(intro.t,1), 2) * 6.5 : 0;
+  /* handheld: three detuned sines per axis never repeat inside a session,
+     so it reads as an operator holding the camera rather than a loop */
+  const sway = (a, b, c, s) =>
+    Math.sin(t * a) * s + Math.sin(t * b + 1.7) * s * .55 + Math.sin(t * c + 4.1) * s * .3;
+  const hx = sway(.083, .151, .237, .16);
+  const hy = sway(.071, .129, .199, .10);
+  const hr = sway(.061, .113, .173, .0016);   /* a whisper of roll */
+
+  camera.position.set(
+    camPos.x + pointerS.x * .55 + hx,
+    camPos.y - pointerS.y * .30 + hy,
+    camPos.z + introPush
+  );
+  camera.up.copy(camUp);   /* the roll is switched under the veil, never on screen */
+  camera.lookAt(camAim.x + hx * .35, camAim.y + hy * .5, camAim.z);
+  camera.rotateZ(hr);
+  }
+
+  if(Math.abs(camera.fov - fovT) > .01){
+    camera.fov += (fovT - camera.fov) * Math.min(1, dt*2.2);
+    camera.updateProjectionMatrix();
+  }
+
+  const fogAim = CHAPTERS[chapter].fogTop || 2.6;
+  mountainMat.uniforms.uFogTop.value += (fogAim - mountainMat.uniforms.uFogTop.value) * Math.min(1, dt*1.2);
+
+  /* the massif turns on the same eased clock as the camera, so the yaw is
+     spent by the time the veil draws back — an exponential lerp here left
+     the range still visibly rotating for a second after the reveal */
+  if(trans.on) spinBase = spinFrom + (spinT - spinFrom) * easeInOut(Math.min(trans.t, 1));
+  else         spinBase += (spinT - spinBase) * Math.min(1, dt*1.1);
+  spinDrift += Math.sin(t*.07) * .00035;
+  spin.rotation.y = spinBase + spinDrift;
+
+  /* cursor highlight on the terrain */
+  const hu = mountainMat.uniforms;
+  if(bvhReady && pointerInside && !busy){
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(hoverMeshes, false)[0];
+    if(hit){ hoverTarget.copy(hit.point); hoverAim = 1; } else hoverAim = 0;
+  } else hoverAim = 0;
+  if(hu.uHoverStrength.value < .002 && hoverAim === 1) hu.uHoverPos.value.copy(hoverTarget);
+  hu.uHoverPos.value.lerp(hoverTarget, Math.min(1, dt*9));
+  hu.uHoverStrength.value += (hoverAim - hu.uHoverStrength.value) * Math.min(1, dt*4.5);
+
+  /* the cargo ship and its water belong to the sections that declare them */
+  const cfgS = CHAPTERS[chapter].ship, cfgW = CHAPTERS[chapter].water;
+  /* how completely the wash is covering right now: the ship, its water and
+     the cloud deck may only change while this is up, otherwise leaving
+     section 3 dissolves the ship in plain sight before the veil arrives */
+  const cover = smoothstep01(U.uTransition.value, .30, .75);
+  const shipAim = cfgS ? 1 : 0;
+  shipAmt += (shipAim - shipAmt) * Math.min(1, dt * (trans.on ? 10 * cover : 2.0));
+  const shipOn = shipAmt > .004;
+  if(cfgS && cfgW){
+    /* hidden -> snap into place, visible -> glide from the previous pose */
+    const kc = shipAmt < .03 ? 1 : Math.min(1, dt * 1.6);
+    lerpCfg(shipNow, cfgS, kc);
+    lerpCfg(waterNow, cfgW, kc);
+  }
+  const flatAim = CHAPTERS[chapter].flat || 0;
+  U.uFlat.value += (flatAim - U.uFlat.value) * Math.min(1, dt * 1.8);
+  const deckAim = (CHAPTERS[chapter].deck !== undefined ? CHAPTERS[chapter].deck : 1) - .62 * shipAmt;
+  deckNow += (deckAim - deckNow) * Math.min(1, dt * (trans.on ? 3.4 : 1.8));
+  /* section 3 thins the deck right down to clear the water, which used to
+     leave the wash out of it barely half strength — lend it the full deck */
+  U.uDeck.value = Math.max(deckNow, U.uTransition.value);
+  shipRoot.visible = waterRoot.visible = shipOn;
+  if(shipOn){
+    /* ride the same swell the water shader is drawing */
+    const wt = U.uTime.value * waterNow.waveSpeed;
+    const swell = (x, z) => waterNow.waveHeight *
+      (Math.sin(x * .08 + wt) * .6 + Math.sin(z * .11 - wt * 1.3) * .4);
+    const h  = swell(shipNow.x, shipNow.z);
+    const hf = swell(shipNow.x + 2.2, shipNow.z + 2.2);   /* a point off the bow */
+    const hs = swell(shipNow.x + 2.2, shipNow.z - 2.2);   /* and off the beam    */
+
+    shipRoot.position.set(shipNow.x, shipNow.y + h * .55, shipNow.z);
+    shipRoot.rotation.set(
+      shipNow.rx + (hf - h) * .10,          /* pitch */
+      shipNow.ry,
+      shipNow.rz + (hs - h) * .12           /* roll  */
+    );
+    shipRoot.scale.setScalar(shipNow.scale);
+    waterRoot.position.set(waterNow.x, waterNow.y, waterNow.z);
+    waterRoot.rotation.set(waterNow.rx, waterNow.ry, waterNow.rz);
+    waterRoot.scale.set(waterNow.scaleX, waterNow.scaleY, waterNow.scaleZ);
+    for(let i = 0; i < shipMats.length; i++) shipMats[i].opacity = shipAmt;
+    waterMat.uniforms.uOpacity.value = waterNow.opacity * shipAmt;
+    waterMat.uniforms.uWaveHeight.value = waterNow.waveHeight;
+    waterMat.uniforms.uWaveSpeed.value = waterNow.waveSpeed;
+    wakeMat.uniforms.uOpacity.value  = shipAmt;
+    plumeMat.uniforms.uOpacity.value = shipAmt;
+    navMat.uniforms.uOpacity.value   = shipAmt * .9;
+  }
+
+  /* the imported water droplet owns section 6; it falls with a linked bead
+     trail, then keeps shedding smaller drops once it has settled */
+  const dropletAim = CHAPTERS[chapter].droplet === true ? 1 : 0;
+  dropletAmt += (dropletAim - dropletAmt) * Math.min(1, dt * (trans.on ? 10 * cover : 2.2));
+  if(dropletAim && dropletReady && (!trans.on || trans.swapped)) dropletFallT = Math.min(1, dropletFallT + dt * .72);
+  else if(!dropletAim) dropletFallT = 0;
+  const waterVisible = dropletAmt * (1 - smoothstep01(U.uTransition.value, .25, .9));
+  const fallEase = 1 - Math.pow(1 - dropletFallT, 3);
+  const landingBounce = Math.sin(dropletFallT * Math.PI) * (1 - dropletFallT) * .26;
+  dropletRoot.visible = dropletTrailRoot.visible = dropletDripRoot.visible = dropletReady && dropletAmt > .003;
+  mountainMat.uniforms.uModelOpacity.value = 1 - smoothstep01(dropletAmt, .08, .92);
+  if(dropletRoot.visible){
+    dropletRoot.position.set(
+      dropletHome.x - Math.sin(dropletFallT * Math.PI) * .18 + Math.sin(t * .17) * .025,
+      dropletHome.y + (1 - fallEase) * 3.6 + landingBounce + Math.sin(t * .43) * .035,
+      dropletHome.z
+    );
+    dropletRoot.rotation.x = Math.sin(t * .21) * .035;
+    dropletRoot.rotation.y = spinBase + spinDrift * .35;
+    dropletRoot.rotation.z = Math.cos(t * .19) * .025;
+    const stretch = 1 - fallEase;
+    dropletRoot.scale.set(.82 + fallEase * .18, 1 + stretch * .48, .82 + fallEase * .18);
+    dropletGlass.opacity = .96 * waterVisible;
+
+    dropletTrail.forEach((drop, i)=>{
+      const lag = .055 * (i + 1);
+      const p = Math.min(1, Math.max(0, (dropletFallT - lag) / Math.max(.001, 1 - lag)));
+      const pe = 1 - Math.pow(1 - p, 3);
+      drop.mesh.position.set(
+        dropletHome.x + Math.sin(i * 2.17) * (.05 + i * .006),
+        dropletHome.y + (1 - pe) * 3.6 + .18 + i * .055,
+        dropletHome.z + Math.cos(i * 1.73) * .045
+      );
+      const s = drop.radius / .13;
+      drop.mesh.scale.set(s, s * (1.25 + (1 - p) * .9), s);
+      drop.material.opacity = waterVisible * Math.sin(Math.min(1, p) * Math.PI) * .78;
+    });
+
+    const settled = smoothstep01(dropletFallT, .78, 1);
+    dropletDrips.forEach((drop, i)=>{
+      const phase = (t * .31 + i / dropletDrips.length) % 1;
+      const side = Math.sin(i * 2.4) * .16;
+      drop.mesh.position.set(
+        dropletHome.x + side + Math.sin(phase * Math.PI * 2) * .025,
+        dropletHome.y - .88 - phase * 2.25,
+        dropletHome.z + Math.cos(i * 1.9) * .08
+      );
+      const s = drop.radius / .13;
+      drop.mesh.scale.set(s * (.8 + phase * .25), s * (1.9 - phase * .7), s * (.8 + phase * .25));
+      drop.material.opacity = waterVisible * settled * Math.sin(phase * Math.PI) * .72;
+    });
+
+    if(dropletRipple){
+      const impact = smoothstep01(dropletFallT, .76, 1);
+      dropletRipple.visible = waterVisible > .003;
+      dropletRipple.scale.setScalar(.6 + impact * 3.4);
+      dropletRipple.material.opacity = waterVisible * Math.sin(impact * Math.PI) * .52;
+    }
+  } else if(dropletRipple){
+    dropletRipple.visible = false;
+  }
+
+  tickPointerUI();
+
+  /* light paths: strongest on the energy chapter, gone under a wash */
+  const routeWants = (CHAPTERS[chapter].ship || CHAPTERS[chapter].idx === '4') ? 1 : 0;
+  routeAmt += (routeWants - routeAmt) * Math.min(1, dt * 1.6);
+  const veiled = 1 - smoothstep01(U.uTransition.value, .25, .9);
+  /* everything above is inside the render target, so the veil covers it for
+     us. the globe is drawn on top of the post pass and is not — it has to be
+     faded against the wash by hand, and a little ahead of it */
+  const globeVeiled = 1 - smoothstep01(U.uTransition.value, .22, .55);
+  routeMat.uniforms.uOpacity.value = routeAmt * veiled * .9;
+  routes.visible = routeAmt > .01;
+  moteMat.uniforms.uOpacity.value = .5 * veiled * (1 - earthAmt);
+  globeRouteMat.uniforms.uOpacity.value = earthAmt * .95 * globeVeiled;
+  hubMat.uniforms.uOpacity.value = smoothstep01(earthAmt, .35, .9) * globeVeiled;
+
+  /* chapter 5: the drop hands over to the globe.
+     one eased clock drives the whole handover — an exponential lerp
+     front-loads the motion and makes it feel like a snap             */
+  const earthWants = CHAPTERS[chapter].earth === true;
+  /* it only forms — or gives itself up — once the wash has the frame, so
+     neither end of the handover is ever on screen */
+  if(!trans.on || trans.t > .22){
+    earthT = earthWants ? Math.min(1, earthT + dt / 3.0)
+                        : Math.max(0, earthT - dt / 1.3);
+  }
+  earthAmt = easeInOut(earthT);
+  /* solid well before the veil draws back: it is already a globe, mid-swell,
+     when it is handed to the viewer */
+  earthMat.uniforms.uOpacity.value = smoothstep01(earthT, .00, .18) * globeVeiled;
+  postMat.uniforms.uEarth.value = earthAmt;
+  if(earthAmt > .002){
+    /* it starts exactly as the drop, then swells until it fills the frame */
+    const aspect = Math.max(U.uAspect.value, .0001);
+    const R0 = Math.sqrt(aspect*aspect + 1) * .5 * 1.18;
+    const halfH = earthCam.position.z * Math.tan(earthCam.fov * Math.PI / 360);
+
+    /* still growing after it is fully opaque, so the motion never stops dead */
+    const grow = easeInOut(earthT);
+    const breathe = 1 + Math.sin(U.uTime.value * .12) * .012 * earthT;
+    /* it is already a globe when the veil lifts — no circle stage */
+    const rHH  = THREE.MathUtils.lerp(1.42, 2.05, grow);   /* half-heights */
+    const cx   = THREE.MathUtils.lerp(0.20, 0.16, grow);
+    const cy   = THREE.MathUtils.lerp(-0.50, -0.78, grow);
+
+    earthRoot.scale.setScalar(rHH * halfH / earthRadius * breathe);
+    earthRoot.position.set(cx * halfH * aspect, cy * halfH, 0);
+    if(earthDrag.on){
+      /* the pointer is driving it */
+    } else {
+      earthDrag.vy *= .94; earthDrag.vx *= .94;
+      if(Math.abs(earthDrag.vy) < 1e-4) earthDrag.vy = 0;
+      if(Math.abs(earthDrag.vx) < 1e-4) earthDrag.vx = 0;
+      earthSpin.rotation.y += earthDrag.vy + dt * .022;   /* inertia + slow drift */
+      earthSpin.rotation.x = Math.max(-.6, Math.min(.6, earthSpin.rotation.x + earthDrag.vx));
+    }
+  }
+
+  /* chapter 3: the frame condenses into a drop */
+  const wantsDrop   = CHAPTERS[chapter].condense === true;
+  const condenseAim = wantsDrop ? (trans.on ? (trans.t > .55 ? 1 : 0) : 1) : 0;
+  const condenseRate = CHAPTERS[chapter].earth === true ? 1.7 : 1.25;
+  condense += (condenseAim - condense) * Math.min(1, dt * (condenseAim ? condenseRate : 2.4));
+  postMat.uniforms.uCondense.value = condense;
+  postMat.uniforms.uWash.value = U.uTransition.value;
+  /* beads gather on the glass over the water, and are wiped by a cut */
+  const beadAim = (CHAPTERS[chapter].ship ? .85 : .16) * (1 - smoothstep01(U.uTransition.value, .1, .6));
+  postMat.uniforms.uBeads.value += (beadAim - postMat.uniforms.uBeads.value) * Math.min(1, dt * 1.2);
+
+  /* draw: scene to a buffer, then the drop pass to the screen */
+  renderer.setRenderTarget(sceneRT);
+  renderer.clear();
+  renderer.render(skyScene, quadCam);
+  renderer.clearDepth();
+  renderer.render(scene, camera);
+  renderer.render(fogScene, quadCam);
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  renderer.render(postScene, quadCam);
+  if(earthAmt > .002){
+    renderer.clearDepth();
+    renderer.render(earthScene, earthCam);
+  }
+}
+frame();
+
+/* =====================================================================
+   ?tune  — drag to orbit, wheel to dolly, then copy the pose out
+   ===================================================================== */
+if(TUNE){
+  const SLIDERS = [
+    { k:'x',    label:'鏡頭 X（左右）',     min:-60,  max:60,  step:.1  },
+    { k:'y',    label:'鏡頭 Y（高度）',     min:-5,   max:40,  step:.1  },
+    { k:'z',    label:'鏡頭 Z（前後）',     min:-60,  max:80,  step:.1  },
+    { k:'tx',   label:'注視點 X',           min:-40,  max:40,  step:.1  },
+    { k:'ty',   label:'注視點 Y',           min:-8,   max:20,  step:.1  },
+    { k:'tz',   label:'注視點 Z',           min:-40,  max:40,  step:.1  },
+    { k:'rot',  label:'山體／水滴旋轉 rad', min:-3.2, max:3.2, step:.01 },
+    { k:'fov',  label:'鏡頭視角 fov',       min:18,   max:75,  step:.5  },
+    { k:'dist', label:'距離（推近拉遠）',   min:1,    max:90,  step:.2  }
+  ];
+
+  const panel = document.createElement('div');
+  panel.className = 'tune-panel';
+  panel.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:20;background:rgba(16,24,34,.92);'
+    + 'color:#dfe8f2;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;border-radius:9px;transition:opacity .45s,transform .45s,visibility .45s;'
+    + 'width:400px;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
+
+  const btn = (id,txt,primary)=>'<button id="'+id+'" style="font:inherit;cursor:pointer;padding:5px 9px;border-radius:5px;'
+    + 'border:1px solid '+(primary?'#4a86bb':'#33465c')+';background:'+(primary?'#1d3550':'#16222f')+';color:#dfe8f2">'+txt+'</button>';
+
+  panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +   '<b id="tuneWho" style="color:#9fd3ff;font-weight:600"></b>'
+    +   '<span style="opacity:.55">也可直接拖曳／滾輪</span>'
+    + '</div>'
+    + '<div id="tuneRows"></div>'
+    + '<div id="tuneOut" style="white-space:pre;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   btn('tuneCopy','複製這一段',1) + btn('tuneCopyAll','複製全部',1)
+    +   btn('tunePrev','← 上一段') + btn('tuneNext','下一段 →') + btn('tuneReset','回到原本')
+    + '</div>';
+  document.body.appendChild(panel);
+
+  const rows = panel.querySelector('#tuneRows');
+  const ui = {};
+  SLIDERS.forEach(sl=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:112px 1fr 46px;gap:8px;align-items:center;margin:2px 0';
+    row.innerHTML = '<span style="opacity:.72">'+sl.label+'</span>'
+      + '<input type="range" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" style="width:100%;accent-color:#4a86bb">'
+      + '<span style="text-align:right;color:#9fd3ff"></span>';
+    rows.appendChild(row);
+    const inp = row.querySelector('input');
+    ui[sl.k] = { input:inp, val:row.querySelector('span:last-child'), spec:sl, busy:false };
+    inp.addEventListener('pointerdown', ()=>ui[sl.k].busy = true);
+    addEventListener('pointerup',       ()=>ui[sl.k].busy = false);
+    inp.addEventListener('input', ()=>write(sl.k, parseFloat(inp.value)));
+  });
+
+  const dirTmp = new THREE.Vector3();
+  function write(k, v){
+    if(!controls) return;
+    if(k === 'x' || k === 'y' || k === 'z') camera.position[k] = v;
+    else if(k === 'tx') controls.target.x = v;
+    else if(k === 'ty') controls.target.y = v;
+    else if(k === 'tz') controls.target.z = v;
+    else if(k === 'rot'){ spinT = v; spin.rotation.y = v; }
+    else if(k === 'fov'){ fovT = v; camera.fov = v; camera.updateProjectionMatrix(); }
+    else if(k === 'dist'){
+      dirTmp.copy(camera.position).sub(controls.target).normalize().multiplyScalar(v);
+      camera.position.copy(controls.target).add(dirTmp);
+    }
+    controls.update();
+  }
+
+  const fmt = (i)=>{
+    const c = CHAPTERS[i], n = x=>(+x).toFixed(1);
+    return '    cam:{ x:' + n(c.cam.x) + ', y:' + n(c.cam.y) + ', z:' + n(c.cam.z)
+         + ', tx:' + n(c.cam.tx) + ', ty:' + n(c.cam.ty) + ', tz:' + n(c.cam.tz || 0)
+         + ' }, rot:' + (+c.rot).toFixed(2) + ', fov:' + (+(c.fov || 40)).toFixed(1);
+  };
+  const grab = ()=>{
+    if(!controls) return;
+    CHAPTERS[chapter].cam = {
+      x:+camera.position.x.toFixed(2), y:+camera.position.y.toFixed(2), z:+camera.position.z.toFixed(2),
+      tx:+controls.target.x.toFixed(2), ty:+controls.target.y.toFixed(2), tz:+controls.target.z.toFixed(2)
+    };
+    CHAPTERS[chapter].rot = +spinT.toFixed(3);
+    CHAPTERS[chapter].fov = +camera.fov.toFixed(1);
+  };
+  const flash = (b,t)=>{ const old = b.textContent; b.textContent = t; setTimeout(()=>b.textContent = old, 1100); };
+
+  panel.querySelector('#tuneCopy').onclick = e=>{
+    grab(); navigator.clipboard.writeText(fmt(chapter)).then(()=>flash(e.target,'已複製 ✓'));
+  };
+  panel.querySelector('#tuneCopyAll').onclick = e=>{
+    grab();
+    navigator.clipboard.writeText(CHAPTERS.map((c,i)=>'/* '+(i+1)+' '+c.eyebrow+' */\n'+fmt(i)).join('\n'))
+      .then(()=>flash(e.target,'已複製全部 ✓'));
+  };
+  const restore = ()=>{
+    applyChapterTarget(chapter, true);
+    if(controls){
+      camera.position.copy(camPosT); controls.target.copy(camAimT);
+      camera.fov = fovT; camera.updateProjectionMatrix(); controls.update();
+    }
+    spinT = CHAPTERS[chapter].rot; spinBase = spinT; spinDrift = 0; spin.rotation.y = spinT;
+  };
+  const jump = d=>{
+    grab();
+    chapter = (chapter + d + CHAPTERS.length) % CHAPTERS.length;
+    paint(chapter);
+    restore();
+  };
+  panel.querySelector('#tunePrev').onclick  = ()=>jump(-1);
+  panel.querySelector('#tuneNext').onclick  = ()=>jump(1);
+  panel.querySelector('#tuneReset').onclick = restore;
+
+  addEventListener('keydown', e=>{
+    if(e.target.tagName === 'INPUT') return;
+    if(e.key === 'q' || e.key === 'Q'){ spinT -= .03; spinBase = spinT; spin.rotation.y = spinT + spinDrift; }
+    if(e.key === 'e' || e.key === 'E'){ spinT += .03; spinBase = spinT; spin.rotation.y = spinT + spinDrift; }
+  });
+
+  import('three/addons/controls/OrbitControls.js').then(({ OrbitControls })=>{
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .08;
+    controls.rotateSpeed = .45;
+    controls.zoomSpeed = .7;
+    const sync = ()=>{
+      if(!window.__terrain){ setTimeout(sync, 200); return; }
+      restore();
+    };
+    sync();
+  });
+
+  /* keep sliders and the readout in step with whatever moved the camera */
+  setInterval(()=>{
+    if(!controls) return;
+    const live = {
+      x:camera.position.x, y:camera.position.y, z:camera.position.z,
+      tx:controls.target.x, ty:controls.target.y, tz:controls.target.z,
+      rot:spinT, fov:camera.fov, dist:camera.position.distanceTo(controls.target)
+    };
+    SLIDERS.forEach(sl=>{
+      const u = ui[sl.k];
+      if(u.busy) return;
+      u.input.value = live[sl.k];
+      u.val.textContent = live[sl.k].toFixed(sl.step < .05 ? 2 : 1);
+    });
+    panel.querySelector('#tuneWho').textContent = '第 ' + (chapter+1) + ' 段 · ' + CHAPTERS[chapter].eyebrow;
+    const n = x=>(+x).toFixed(1);
+    panel.querySelector('#tuneOut').textContent =
+      '    cam:{ x:' + n(live.x) + ', y:' + n(live.y) + ', z:' + n(live.z)
+      + ', tx:' + n(live.tx) + ', ty:' + n(live.ty) + ', tz:' + n(live.tz)
+      + ' }, rot:' + live.rot.toFixed(2) + ', fov:' + live.fov.toFixed(1);
+  }, 100);
+}
+
+/* expose for debugging / screenshots */
+window.viz = {
+  renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, dropletRoot, CHAPTERS, mountainMat, update,
+  goTo:i=>{ busy=false; goTo(i); },
+  postMat, setCondense(v){ condense = v; postMat.uniforms.uCondense.value = v; },
+  /* jump straight to a chapter's resting pose (used for stills) */
+  pose(i){
+    const c = CHAPTERS[i];
+    chapter = i; paint(i); applyChapterTarget(i, true);
+    camera.position.set(c.cam.x, c.cam.y, c.cam.z);
+    camera.up.copy(camUpT);
+    camera.lookAt(c.cam.tx, c.cam.ty, c.cam.tz || 0);
+    spin.rotation.y = c.rot;
+    U.uChapter.value = i; U.uTransition.value = 0;
+    intro.on = false; trans.on = false; busy = false;
+  },
+  draw(){
+    renderer.setRenderTarget(sceneRT);
+    renderer.clear();
+    renderer.render(skyScene, quadCam);
+    renderer.clearDepth();
+    renderer.render(scene, camera);
+    renderer.render(fogScene, quadCam);
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(postScene, quadCam);
+    if(earthAmt > .002){ renderer.clearDepth(); renderer.render(earthScene, earthCam); }
+  }
+};
+</script>
+</body>
+</html>

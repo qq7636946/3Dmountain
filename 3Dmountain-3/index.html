@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -25,7 +25,40 @@ body{
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
-canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+canvas#gl{
+  position:fixed;inset:0;width:100%;height:100%;display:block;
+  opacity:1;transition:opacity 1.05s var(--ease);
+}
+.photo-section{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:#1a2a36;
+  opacity:0;transform:scale(1.018);
+  transition:opacity 1.05s var(--ease),transform 1.6s var(--ease);
+  will-change:opacity,transform;
+  overflow:hidden;
+}
+.photo-section video{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block;
+}
+.photo-cloud-deck{
+  position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;
+}
+.pcloud{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(ellipse at 40% 45%,
+    rgba(245,248,252,.75) 0%,
+    rgba(232,239,246,.42) 30%,
+    rgba(212,221,229,.14) 58%,
+    transparent 76%);
+  filter:blur(var(--pcb,18px));
+  will-change:transform;
+  animation:var(--pca) linear infinite;
+}
+@keyframes pcA{ from{transform:translateX(-22vw)} to{transform:translateX(122vw)} }
+@keyframes pcB{ from{transform:translateX(122vw)} to{transform:translateX(-22vw)} }
+body.on-photo canvas#gl{opacity:0}
+body.on-photo .photo-section{opacity:1;transform:scale(1)}
 
 /* ---------- overlay grain / vignette ---------- */
 .grain{
@@ -218,6 +251,29 @@ body.on-spec .spec{opacity:1}
 .spec .go:hover{opacity:.6}
 body.spec-lit .spec .tag{opacity:1}
 
+/* ---------- orb logo overlay ---------- */
+#orb-logo{
+  position:fixed;
+  left:50%;
+  top:calc(50% - 0.02 * 100vh);
+  transform:translate(-50%,-50%);
+  width:calc(1.26 * 100vh);
+  height:calc(1.26 * 100vh);
+  z-index:6;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 1.1s var(--ease);
+}
+#orb-logo img{
+  width:100%;height:100%;object-fit:contain;
+  filter:
+    brightness(0) saturate(100%)
+    invert(92%) sepia(18%) saturate(280%) hue-rotate(185deg) brightness(105%)
+    opacity(0.52);
+  mix-blend-mode:overlay;
+}
+body.on-orb-logo #orb-logo{opacity:1}
+
 /* ---------- credit ---------- */
 .credit{
   position:absolute;left:clamp(20px,3.2vw,54px);bottom:clamp(18px,3vh,30px);
@@ -251,6 +307,40 @@ body.spec-lit .spec .tag{opacity:1}
 <body>
 
 <canvas id="gl"></canvas>
+<div class="photo-section" id="photoSection">
+  <video autoplay loop muted playsinline>
+    <source src="logo.mp4" type="video/mp4">
+  </video>
+  <div class="photo-cloud-deck">
+    <div class="pcloud" style="--pcb:20px;--pca:pcA 52s;    width:62vw;height:38vh;top:3%;   left:-20vw;opacity:.82"></div>
+    <div class="pcloud" style="--pcb:16px;--pca:pcB 41s 6s; width:38vw;height:26vh;top:10%;  left:115vw;opacity:.70"></div>
+    <div class="pcloud" style="--pcb:24px;--pca:pcA 80s 4s; width:75vw;height:48vh;top:18%;  left:-28vw;opacity:.60"></div>
+    <div class="pcloud" style="--pcb:18px;--pca:pcB 65s 12s;width:52vw;height:34vh;top:32%;  left:118vw;opacity:.55"></div>
+    <div class="pcloud" style="--pcb:14px;--pca:pcA 38s 8s; width:32vw;height:22vh;top:26%;  left:-18vw;opacity:.48"></div>
+    <div class="pcloud" style="--pcb:28px;--pca:pcB 110s 2s;width:90vw;height:58vh;top:55%;  left:120vw;opacity:.65"></div>
+    <div class="pcloud" style="--pcb:22px;--pca:pcA 95s 18s;width:68vw;height:44vh;top:68%;  left:-24vw;opacity:.52"></div>
+    <div class="pcloud" style="--pcb:32px;--pca:pcB 75s 9s; width:80vw;height:52vh;top:78%;  left:116vw;opacity:.58"></div>
+    <div class="pcloud" style="--pcb:10px;--pca:pcA 30s 3s; width:44vw;height:14vh;top:44%;  left:-15vw;opacity:.38"></div>
+    <div class="pcloud" style="--pcb:12px;--pca:pcB 48s 14s;width:36vw;height:16vh;top:88%;  left:112vw;opacity:.40"></div>
+  </div>
+</div>
+<div class="photo-section" id="photoSection">
+  <video autoplay loop muted playsinline>
+    <source src="logo.mp4" type="video/mp4">
+  </video>
+  <div class="photo-cloud-deck">
+    <div class="pcloud" style="--pcb:20px;--pca:pcA 52s;    width:62vw;height:38vh;top:3%;   left:-20vw;opacity:.82"></div>
+    <div class="pcloud" style="--pcb:16px;--pca:pcB 41s 6s; width:38vw;height:26vh;top:10%;  left:115vw;opacity:.70"></div>
+    <div class="pcloud" style="--pcb:24px;--pca:pcA 80s 4s; width:75vw;height:48vh;top:18%;  left:-28vw;opacity:.60"></div>
+    <div class="pcloud" style="--pcb:18px;--pca:pcB 65s 12s;width:52vw;height:34vh;top:32%;  left:118vw;opacity:.55"></div>
+    <div class="pcloud" style="--pcb:14px;--pca:pcA 38s 8s; width:32vw;height:22vh;top:26%;  left:-18vw;opacity:.48"></div>
+    <div class="pcloud" style="--pcb:28px;--pca:pcB 110s 2s;width:90vw;height:58vh;top:55%;  left:120vw;opacity:.65"></div>
+    <div class="pcloud" style="--pcb:22px;--pca:pcA 95s 18s;width:68vw;height:44vh;top:68%;  left:-24vw;opacity:.52"></div>
+    <div class="pcloud" style="--pcb:32px;--pca:pcB 75s 9s; width:80vw;height:52vh;top:78%;  left:116vw;opacity:.58"></div>
+    <div class="pcloud" style="--pcb:10px;--pca:pcA 30s 3s; width:44vw;height:14vh;top:44%;  left:-15vw;opacity:.38"></div>
+    <div class="pcloud" style="--pcb:12px;--pca:pcB 48s 14s;width:36vw;height:16vh;top:88%;  left:112vw;opacity:.40"></div>
+  </div>
+</div>
 <div class="plate" id="plate"></div>
 <div class="grain"></div>
 <div class="reticle" id="reticle"></div>
@@ -308,6 +398,8 @@ body.spec-lit .spec .tag{opacity:1}
     <div class="diamond"><span id="tNextIdx">4</span></div>
     <div class="name"><b id="tNextName">Montis Ventures</b></div>
   </div>
+
+  <div id="orb-logo"><img src="logo.svg" alt="Montis Logo"></div>
 
   <div class="credit">Terrain: artfromheath · Water: UJWAL · Drop: furret · Specimen: tamminen · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
 
@@ -2212,7 +2304,10 @@ const CHAPTERS = [
     orb:true },
   { idx:'6', eyebrow:'Montis Global',      l1:'ONE PLANET,',       l2:'ONE SUPPLY CHAIN.', cta:'MONTIS GLOBAL',
     cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
-    earth:true, dark:true }
+    earth:true, dark:true },
+  { idx:'7', eyebrow:'Montis Vision', l1:'BEYOND THE HORIZON,', l2:'SHAPING THE FUTURE.', cta:'DISCOVER MONTIS',
+    cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
+    photo:true, dark:true }
 ];
 
 let chapter = 0;                 // the page opens on section 1
@@ -2255,6 +2350,10 @@ function paint(i){
   el.nextName.textContent = n.eyebrow;
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
   document.body.classList.toggle('on-dark', CHAPTERS[i].dark === true);
+  document.body.classList.toggle('on-photo', CHAPTERS[i].photo === true);
+  document.body.classList.toggle('on-orb-logo', CHAPTERS[i].orb === true);
+  document.body.classList.toggle('on-photo', CHAPTERS[i].photo === true);
+  document.body.classList.toggle('on-orb-logo', CHAPTERS[i].orb === true);
 }
 
 /* camera targets ------------------------------------------------------- */

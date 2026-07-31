@@ -251,28 +251,7 @@ body.on-spec .spec{opacity:1}
 .spec .go:hover{opacity:.6}
 body.spec-lit .spec .tag{opacity:1}
 
-/* ---------- orb logo overlay ---------- */
-#orb-logo{
-  position:fixed;
-  left:50%;
-  top:calc(50% - 0.02 * 100vh);
-  transform:translate(-50%,-50%);
-  width:calc(1.26 * 100vh);
-  height:calc(1.26 * 100vh);
-  z-index:6;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity 1.1s var(--ease);
-}
-#orb-logo img{
-  width:100%;height:100%;object-fit:contain;
-  filter:
-    brightness(0) saturate(100%)
-    invert(92%) sepia(18%) saturate(280%) hue-rotate(185deg) brightness(105%)
-    opacity(0.52);
-  mix-blend-mode:overlay;
-}
-body.on-orb-logo #orb-logo{opacity:1}
+
 
 /* ---------- credit ---------- */
 .credit{
@@ -398,8 +377,6 @@ body.on-orb-logo #orb-logo{opacity:1}
     <div class="diamond"><span id="tNextIdx">4</span></div>
     <div class="name"><b id="tNextName">Montis Ventures</b></div>
   </div>
-
-  <div id="orb-logo"><img src="logo.svg" alt="Montis Logo"></div>
 
   <div class="credit">Terrain: artfromheath · Water: UJWAL · Drop: furret · Specimen: tamminen · Earth: Alan Zimmerman — CC&nbsp;BY&nbsp;4.0</div>
 
@@ -2351,9 +2328,7 @@ function paint(i){
   [...el.dots.children].forEach((d,k)=>d.classList.toggle('is-on', k===i));
   document.body.classList.toggle('on-dark', CHAPTERS[i].dark === true);
   document.body.classList.toggle('on-photo', CHAPTERS[i].photo === true);
-  document.body.classList.toggle('on-orb-logo', CHAPTERS[i].orb === true);
   document.body.classList.toggle('on-photo', CHAPTERS[i].photo === true);
-  document.body.classList.toggle('on-orb-logo', CHAPTERS[i].orb === true);
 }
 
 /* camera targets ------------------------------------------------------- */

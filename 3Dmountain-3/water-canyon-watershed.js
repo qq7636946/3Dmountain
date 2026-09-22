@@ -1,19 +1,27 @@
-import { createConfluenceEffects } from './water-confluence-fx.js?v=river-polish-1';
-export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx.js?v=river-polish-1';
+import { createConfluenceEffects } from './water-confluence-fx.js?v=lines-beauty-1';
+export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx.js?v=lines-beauty-1';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
 /** One continuous alpine watershed; every tributary drains into the same trunk. */
-export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null}) {
+export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null}) {
   // shoreDetail (opt-in): sharper aretes, finer drainage, baked crease tone and a per-vertex
   // shore attribute on every river. Omitted, every line below behaves exactly as before.
   const detail=!!shoreDetail;
+  // relief (opt-in, needs shoreDetail): {config,material}. Ridge/valley hierarchy from a warped
+  // ridged multifractal, downslope erosion gullies, calmer valley floors and talus aprons, plus a
+  // per-vertex (convexity, gully, slope) attribute for the terrain's own material. Omitted: unchanged.
+  const R=detail&&relief?relief:null;
+  const buildStart=typeof performance==='object'?performance.now():0;
+  const reliefNumber=(key,min,max,fallback=1)=>{const value=Number(R?.config?.[key]??fallback);return Math.max(min,Math.min(max,Number.isFinite(value)?value:fallback));};
   const group=new THREE.Group(); group.name='Alpine watershed · five sources, one current';
   const rivers=[],ownedGeometries=[],ownedMaterials=[];
   const refined=flowConfig!==null;
   const terrainSettings={...WATERSHED_TERRAIN_DEFAULTS};
   const terrainNumber=(key,min,max)=>{const value=Number(terrainConfig?.[key]??WATERSHED_TERRAIN_DEFAULTS[key]);return Math.max(min,Math.min(max,Number.isFinite(value)?value:WATERSHED_TERRAIN_DEFAULTS[key]));};
-  const readTerrainSettings=()=>({height:terrainNumber('height',.5,1.8),ridge:terrainNumber('ridge',0,2),relief:terrainNumber('relief',0,2)});
+  const readTerrainSettings=()=>R
+    ?{height:terrainNumber('height',.5,1.8),ridge:terrainNumber('ridge',0,2),relief:terrainNumber('relief',0,2),reliefRidge:reliefNumber('ridge',0,2),reliefErosion:reliefNumber('erosion',0,2)}
+    :{height:terrainNumber('height',.5,1.8),ridge:terrainNumber('ridge',0,2),relief:terrainNumber('relief',0,2)};
   Object.assign(terrainSettings,readTerrainSettings());
   const lerp=THREE.MathUtils.lerp, clamp=x=>Math.max(0,Math.min(1,x));
   const smooth=(a,b,x)=>{const u=clamp((x-a)/(b-a));return u*u*(3-2*u);};
@@ -121,6 +129,86 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     }
     return [mass*.86,mass*ridge*.13+shoulder*57,strata*(6+shoulder*5)-gullies*(18+mass*.075)];
   }
+  // ---- relief mode --------------------------------------------------------------
+  // Ridged multifractal (Musgrave): each octave is weighted by the one above it, so detail
+  // gathers on the crests and the valleys stay calm. Octaves rotate ~37 deg to hide the lattice;
+  // the shortest wavelength stays above ~3.5 terrain samples.
+  const reliefOctaves=lite?3:4;
+  // Terrain sample spacing at (x,z), mirroring the xs/zs lattice below: an octave fades out
+  // before its wavelength drops under ~4 samples, so the coarse far grid never grows needles.
+  const gridSpacingAt=(x,z)=>Math.abs(x)>=3200||z>1800||z< -7000?135:(refined&&Math.abs(x)<330&&z<80&&z>-1970?(lite?18:12):(lite?36:24));
+  function ridgedField(x,z,spacing=24){
+    let sum=0,amp=1,weight=1,f=1/820,px=x,pz=z;
+    for(let o=0;o<reliefOctaves;o++){
+      const fade=smooth(2.8*spacing,4.5*spacing,1/f);if(fade<=0)break;
+      let r=1-Math.abs(noise(px*f+o*17.3,pz*f-o*9.1)*2-1);r*=r;r*=weight;weight=clamp(r*1.75);
+      sum+=(r*fade+.3*(1-fade))*amp;amp*=.5;const nx=px*.8-pz*.6;pz=px*.6+pz*.8;px=nx;f*=2.08;
+    }
+    return sum;
+  }
+  // Massif envelope with a tent-shaped cross-section: a crisp main ridgeline along the spine,
+  // long calm flanks, instead of the rounded dome.
+  function reliefMass(wx,wz,spacing=24){
+    // On the coarse far lattice a knife crest aliases into needles: round it there.
+    const tent=1.1+.55*smooth(40,135,spacing);
+    let mass=48;
+    for(const p of massifs){
+      const dx=(wx-p.x)/p.radius,dz=(wz-p.z)/p.radius;
+      if(Math.abs(dx)>4.3||Math.abs(dz)>4.3)continue;
+      const along=dx*p.c+dz*p.s,across=-dx*p.s+dz*p.c;
+      const spine=across+p.skew*along+.12*Math.sin(along*2.6+p.bend);
+      const a=Math.pow(Math.abs(along/p.length),2.6),c=Math.abs(spine/p.width);
+      const crown=p.height*.80*Math.exp(-a*1.0-Math.pow(c,tent)*1.35);
+      const shoulderDistance=Math.hypot((along-.46)/1.28,(spine+.28)/.91);
+      const shoulder=p.height*.38*Math.exp(-Math.pow(shoulderDistance,1.45)*1.5);
+      mass=smoothMax(mass,Math.max(crown,shoulder),44);
+    }
+    return mass;
+  }
+  // Macro height used only to orient the erosion (gradient by central differences).
+  const ridgeShare=(rid,mass)=>(rid-.42)*mass*.42*smooth(90,520,mass);
+  function reliefMacro(x,z,spacing=gridSpacingAt(x,z)){
+    const wx=x+(noise(x*.0009,z*.0008)-.5)*170,wz=z+(noise(x*.0009+71,z*.0008)-.5)*145;
+    const qx=wx+(noise(wx*.0013+3.7,wz*.0013)-.5)*300,qz=wz+(noise(wx*.0013,wz*.0013+8.1)-.5)*300;
+    const mass=reliefMass(wx,wz,spacing),rid=ridgedField(qx,qz,spacing);
+    return {mass,rid,h:mass*.86+ridgeShare(rid,mass)};
+  }
+  // Gabor-style erosion (after Clay John / IQ): stripes whose phase runs ACROSS the fall line,
+  // so every groove runs downhill; later octaves follow the slope the earlier ones carved.
+  const erosionOctaves=lite?[150]:[160,78];
+  function erosionField(x,z,gx,gz,spacing=24){
+    let total=0,amp=1,wsum=0;
+    for(const L of erosionOctaves){
+      // Same rule as the ridges: no groove narrower than ~4 terrain samples.
+      const fade=smooth(3*spacing,4.6*spacing,L);if(fade<=0)break;
+      const len=Math.hypot(gx,gz)||1e-6,dx=-gz/len,dz=gx/len;
+      const cx=Math.floor(x/L),cz=Math.floor(z/L);let acc=0,w=0,ddx=0,ddz=0;
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+        const ox=(cx+i+.2+hash(cx+i,cz+j)*.6)*L,oz=(cz+j+.2+hash(cz+j+7,cx+i)*.6)*L;
+        const px=(x-ox)/L,pz=(z-oz)/L,wt=Math.exp(-(px*px+pz*pz)*2.2),ph=(px*dx+pz*dz)*Math.PI*2;
+        acc+=Math.cos(ph)*wt;ddx-=Math.sin(ph)*dx*wt;ddz-=Math.sin(ph)*dz*wt;w+=wt;
+      }
+      total+=acc/w*amp*fade;wsum+=amp;
+      // Bend the next octave along the slope this one carved.
+      gx+=ddx/w*amp*.9*len;gz+=ddz/w*amp*.9*len;amp*=.5;
+    }
+    return wsum>0?total/wsum:0;
+  }
+  function reliefSample(x,z,pre=null){
+    let m,hx,hz;
+    if(pre){m=pre.m;hx=pre.hx;hz=pre.hz;}
+    else{const e=24,sp=gridSpacingAt(x,z);m=reliefMacro(x,z,sp);hx=(reliefMacro(x+e,z,sp).h-reliefMacro(x-e,z,sp).h)/(2*e);hz=(reliefMacro(x,z+e,sp).h-reliefMacro(x,z-e,sp).h)/(2*e);}
+    const slope=Math.hypot(hx,hz);
+    const ero=erosionField(x,z,hx,hz,gridSpacingAt(x,z));
+    // Grooves only where water actually runs fast: steep, and above the valley floor.
+    const gullyDepth=(10+m.mass*.05)*smooth(.10,.55,slope)*smooth(70,260,m.mass);
+    // Mid-scale structure the old version carried, kept but calmer.
+    const wx=x+(noise(x*.0009,z*.0008)-.5)*170,wz=z+(noise(x*.0009+71,z*.0008)-.5)*145;
+    const shoulder=1-Math.abs(noise(wx*.0048+18,wz*.0036-7)*2-1);
+    const strata=Math.sin(m.mass*.026+wx*.0046+wz*.0022+(noise(wx*.003,wz*.003)-.5)*2.1);
+    return {base:m.mass*.86,ridgeCh:shoulder*34,reliefCh:strata*(4+shoulder*3),
+      rid:ridgeShare(m.rid,m.mass),ero:(ero-.2)*gullyDepth,groove:clamp(.5-ero*.5)*smooth(.10,.55,slope)*smooth(70,260,m.mass)};
+  }
   // Match the original canyon's outer banks while keeping its navigable floor clear.
   function originalBank(x,z,row){const side=x<row.x?-1:1,d=Math.max(0,Math.abs(x-row.x)-row.nx*row.width),t=row.t,u=Math.pow(clamp(d/250),1/1.47);
     const canyon=smooth(.025,.17,t)*(1-smooth(.65,.91,t)),buttress=noise(t*24+13,side*19+65),ravine=Math.pow(noise(t*47+38,side*11+14),1.5),broad=fbm(x*.017+side*5,z*.014);
@@ -147,28 +235,36 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     return result;
   }
   function riverDistance(x,z){let d=Infinity;for(const rows of channelTables)d=Math.min(d,channelDistance(x,z,rows));return d;}
-  function makeHeightSample(x,z,channels=channelsAt(z)){
+  function makeHeightSample(x,z,channels=channelsAt(z),pre=null){
     let distance=Infinity,tributaryDistance=Infinity;for(let k=0;k<channels.length;k++){const c=channels[k],d=Math.abs(x-c.x)*Math.max(.25,c.nx??1)-c.width-4;distance=Math.min(distance,d);if(k>0)tributaryDistance=Math.min(tributaryDistance,d);}
     if(refined)distance=riverDistance(x,z);
-    const shape=massifSample(x,z),mass=Math.max(24,shape[0]+shape[1]+shape[2]),detail=fbm(x*.013,z*.012),bankWarp=noise(x*.004+11,z*.005);
-    const talus=smooth(24,80,distance)*(1-smooth(118,225,distance))*(13+detail*18);
-    const brokenShoulder=smooth(45,170,distance)*smooth(70,450,mass)*(detail-.43)*22;
-    const bank=refined?-10+smooth(-9,16,distance)*(15+detail*5):-7+smooth(-8,28,distance)*(12+detail*12);
+    const rs=R?reliefSample(x,z,pre):null;
+    const shape=R?[rs.base,rs.ridgeCh,rs.reliefCh]:massifSample(x,z),mass=Math.max(24,shape[0]+shape[1]+shape[2]+(R?rs.rid+rs.ero:0)),detail=fbm(x*.013,z*.012),bankWarp=noise(x*.004+11,z*.005);
+    // Relief: a concave talus apron (steepening toward the wall foot), almost no lumps on the floor.
+    const talus=R?Math.pow(smooth(20,150,distance),1.6)*(1-smooth(150,260,distance))*(20+detail*6)
+      :smooth(24,80,distance)*(1-smooth(118,225,distance))*(13+detail*18);
+    const brokenShoulder=R?smooth(60,190,distance)*smooth(70,450,mass)*(detail-.43)*8:smooth(45,170,distance)*smooth(70,450,mass)*(detail-.43)*22;
+    // Relief: a wider, gentler bank so the water line is well sampled (no saw-tooth shoreline).
+    const bank=R?-10+smooth(-14,34,distance)*(15+detail*3):refined?-10+smooth(-9,16,distance)*(15+detail*5):-7+smooth(-8,28,distance)*(12+detail*12);
     const massBlend=refined?smooth(16,390+bankWarp*65,distance):smooth(8,365+bankWarp*65,distance);
     let support=0,supportMix=0;
     if(z<=0&&z>=-1880){const r=lookup(mainRows,z),original=originalBank(x,z,r),endFade=smooth(0,90,-z)*(1-smooth(1770,1880,-z));
       // A buried interior lets the original detailed cliffs remain authoritative.
-      support=lerp(-9,original.height-3,smooth(195,245,original.distance));
+      const bankY=R?.bankHeight?R.bankHeight(r.t,x<r.x?-1:1,original.distance,x,z):original.height;
+      support=lerp(-9,bankY-3,smooth(195,245,original.distance));
       supportMix=(1-smooth(245,390,original.distance))*endFade*smooth(0,95,tributaryDistance);
     }
     // The refined trunk turns behind a massif before its final buried reach.
     // The closing ridge is curved in world space, never a straight Z dam.
     const ridgeStart=refined?-8650-Math.sin(x*.0017)*165:-7000;
     const ridgeEnd=refined?-9500-Math.sin(x*.0017)*165:-8100;
-    return [...shape,bank,massBlend,talus,brokenShoulder,support,supportMix,smooth(ridgeStart,ridgeEnd,z)];
+    const out=[...shape,bank,massBlend,talus,brokenShoulder,support,supportMix,smooth(ridgeStart,ridgeEnd,z)];
+    if(R)out.push(rs.rid,rs.ero,rs.groove);
+    return out;
   }
   function heightFromSample(samples,offset=0){
-    const mass=Math.max(24,(samples[offset]+samples[offset+1]*terrainSettings.ridge+samples[offset+2]*terrainSettings.relief)*terrainSettings.height);
+    const reliefTerms=R?samples[offset+10]*terrainSettings.reliefRidge+samples[offset+11]*terrainSettings.reliefErosion:0;
+    const mass=Math.max(24,(samples[offset]+samples[offset+1]*terrainSettings.ridge+samples[offset+2]*terrainSettings.relief+reliefTerms)*terrainSettings.height);
     const hillside=samples[offset+3]+samples[offset+4]*mass+samples[offset+5]+samples[offset+6]*terrainSettings.relief;
     // The riverbed and close canyon support never scale with the mountains.
     return lerp(lerp(hillside,samples[offset+7],samples[offset+8]),mass,samples[offset+9]);
@@ -181,15 +277,28 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const positions=new Float32Array(xs.length*zs.length*3),colors=new Float32Array(positions.length),indices=[];
   // Store noise/carving once. Slider updates only evaluate this short expression
   // and refresh the same geometry buffers, rather than rebuilding the scene.
-  const heightSamples=terrainConfig?new Float64Array(xs.length*zs.length*10):null;
+  const stride=R?13:10;
+  const heightSamples=terrainConfig||R?new Float64Array(xs.length*zs.length*stride):null;
   const dark=rockDark??new THREE.Color('#526676'),pale=rockPale??new THREE.Color('#a0acb4'),summit=new THREE.Color('#b7c4cd'),color=new THREE.Color();
   let maxHeight=0;
-  for(let i=0;i<zs.length;i++){const z=zs[i],channels=channelsAt(z);for(let j=0;j<xs.length;j++){const x=xs[j],sample=makeHeightSample(x,z,channels),y=heightFromSample(sample),n=fbm(x*.009+51,z*.009),o=(i*xs.length+j)*3;positions.set([x,y,z],o);if(heightSamples)heightSamples.set(sample,(i*xs.length+j)*10);maxHeight=Math.max(maxHeight,y);
+  let macroGrid=null;
+  if(R){
+    macroGrid=new Array(xs.length*zs.length);
+    for(let i=0;i<zs.length;i++)for(let j=0;j<xs.length;j++)macroGrid[i*xs.length+j]=reliefMacro(xs[j],zs[i]);
+  }
+  const preAt=(i,j)=>{
+    if(!macroGrid)return null;
+    const W=xs.length,jw=Math.max(0,j-1),je=Math.min(W-1,j+1),iN=Math.max(0,i-1),iS=Math.min(zs.length-1,i+1);
+    return {m:macroGrid[i*W+j],hx:(macroGrid[i*W+je].h-macroGrid[i*W+jw].h)/(xs[je]-xs[jw]),hz:(macroGrid[iS*W+j].h-macroGrid[iN*W+j].h)/(zs[iS]-zs[iN])};
+  };
+  for(let i=0;i<zs.length;i++){const z=zs[i],channels=channelsAt(z);for(let j=0;j<xs.length;j++){const x=xs[j],sample=makeHeightSample(x,z,channels,preAt(i,j)),y=heightFromSample(sample),n=fbm(x*.009+51,z*.009),o=(i*xs.length+j)*3;positions.set([x,y,z],o);if(heightSamples)heightSamples.set(sample,(i*xs.length+j)*stride);maxHeight=Math.max(maxHeight,y);
     color.copy(dark).multiplyScalar(.73).lerp(pale,.16+n*.39+smooth(190,1200,y)*.10);color.lerp(summit,smooth(1000,2300,y)*(.07+n*.12));
     const wet=1-smooth(.3,18,y);color.multiplyScalar(1-wet*.27);colors.set([color.r,color.g,color.b],o);
     if(i<zs.length-1&&j<xs.length-1){const a=i*xs.length+j,b=a+xs.length;if((i+j)%2)indices.push(a,a+1,b+1,a,b+1,b);else indices.push(a,a+1,b,b,a+1,b+1);}
   }}
   const baseColors=detail?colors.slice():null;
+  // Relief: per-vertex (convexity, erosion groove, 0) for the terrain's own material.
+  const reliefAttr=R?new Float32Array(positions.length):null;
   function bakeCreases(){
     // Grid curvature → tone: drainage creases darken, crests lift. Recomputed after slider edits.
     if(!detail)return;
@@ -201,12 +310,14 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       const cx=((positions[(i*W+jw)*3+1]+positions[(i*W+je)*3+1])*.5-y)/hx;
       const cz=((positions[(iN*W+j)*3+1]+positions[(iS*W+j)*3+1])*.5-y)/hz;
       const shade=1-Math.max(-.14,Math.min(.30,(cx+cz)*.55));
+      if(reliefAttr){reliefAttr[k*3]=Math.max(-1,Math.min(1,-(cx+cz)*1.6));reliefAttr[k*3+1]=heightSamples[k*stride+12];}
       colors[k*3]=baseColors[k*3]*shade;colors[k*3+1]=baseColors[k*3+1]*shade;colors[k*3+2]=baseColors[k*3+2]*shade;
     }
   }
   bakeCreases();
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();ownedGeometries.push(geo);
-  const terrain=new THREE.Mesh(geo,rockMaterial);terrain.name='Interlocking alpine massifs and carved confluences';terrain.castShadow=true;terrain.receiveShadow=true;group.add(terrain);
+  if(reliefAttr)geo.setAttribute('aRelief',new THREE.BufferAttribute(reliefAttr,3));
+  const terrain=new THREE.Mesh(geo,R?.material??rockMaterial);terrain.name='Interlocking alpine massifs and carved confluences';terrain.castShadow=true;terrain.receiveShadow=true;group.add(terrain);
 
   const flowPaths=[{curve,widthAt},...descriptors,{curve:upstream,widthAt:()=>57},{curve:downstream,widthAt:t=>trunkWidth(downstream.getPointAt(t).z)}];
   if(refined){
@@ -275,6 +386,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const riverVertices=[...rivers,...extensions].reduce((sum,r)=>sum+r.mesh.geometry.attributes.position.count,0);
   const bounds=new THREE.Box3().setFromObject(terrain),stats={tributaryCount:4,riverCount:5,terrainVertices:positions.length/3,terrainTriangles:indices.length/3,riverVertices,ownedSurfaceVertices:positions.length/3+riverVertices+(effects.stats.ribbonVertices||0),bankSlabs:slabCount,maxHeight,confluenceCount:4,lite,sharedWaterMaterial:[...rivers,...extensions].every(r=>r.mesh.material===rivers[0].mesh.material),drawCalls,effects:effects.stats};
   const terrainBounds={min:bounds.min,max:bounds.max,center:bounds.getCenter(new THREE.Vector3()),size:bounds.getSize(new THREE.Vector3())};
+  if(R)stats.reliefBuildMs=Math.round(performance.now()-buildStart);
   Object.assign(stats,{terrainSettings,terrainRevision:0,terrainUpdatePending:false,liveTerrainControls:!!terrainConfig});
   let disposed=false,pendingTerrain=null,pendingSince=0;
   let appliedTerrainKey=JSON.stringify(terrainSettings),pendingTerrainKey=appliedTerrainKey;
@@ -287,8 +399,8 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     if(!force&&now-pendingSince<80)return false;
     const started=performance.now();Object.assign(terrainSettings,pendingTerrain||next);
     maxHeight=0;
-    for(let i=0;i<positions.length/3;i++){const y=heightFromSample(heightSamples,i*10);positions[i*3+1]=y;maxHeight=Math.max(maxHeight,y);}
-    geo.attributes.position.needsUpdate=true;if(detail){bakeCreases();geo.attributes.color.needsUpdate=true;}geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
+    for(let i=0;i<positions.length/3;i++){const y=heightFromSample(heightSamples,i*stride);positions[i*3+1]=y;maxHeight=Math.max(maxHeight,y);}
+    geo.attributes.position.needsUpdate=true;if(detail){bakeCreases();geo.attributes.color.needsUpdate=true;if(reliefAttr)geo.attributes.aRelief.needsUpdate=true;}geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
     for(let i=0;i<slabSamples.length;i++){const slab=slabSamples[i];slab.matrix.elements[13]=heightFromSample(slab.sample)-slab.burial;slabs.setMatrixAt(i,slab.matrix);}
     slabs.instanceMatrix.needsUpdate=true;slabs.computeBoundingBox?.();slabs.computeBoundingSphere?.();
     bounds.copy(geo.boundingBox);terrainBounds.center.copy(bounds.getCenter(dummy.position));bounds.getSize(terrainBounds.size);

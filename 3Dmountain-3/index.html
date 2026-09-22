@@ -798,6 +798,8 @@
     .logo-actions { padding-bottom:9px; border-bottom:1px solid #c4e2f025; }
     .logo-compare { position:sticky; top:-5px; z-index:2; padding:14px 0 12px; background:#344d60; }
     .logo-compare .tuner-actions { padding-top:0; }
+    /* 一款 LOGO 一欄：三顆按鈕並排，不會有一顆孤零零掉到第二行。 */
+    .logo-compare .logo-switches { grid-template-columns: repeat(var(--logo-count, 3), 1fr); gap: 6px; }
     .logo-compare .logo-switches button { height:36px; font-size:11px; font-weight:500; letter-spacing:.12em; }
     .logo-compare .logo-switches button[aria-pressed="true"] { color:#17354b; background:#c9e0eb; border-color:#dbeef5; }
     .logo-compare button:disabled { opacity:.4; cursor:wait; }
@@ -1135,28 +1137,80 @@ body.is-watershed .fi-copy-action:hover > span { background: #edf4f8ec; }
 </style>
   <style id="finnovation-glass-refinement">
 /* Shared silver glass: the scene remains visible through every control. */
+/* 介面毛玻璃的參數（CONFIG.uiGlass → applyUiGlass() 寫到 :root）。預設值等於原本寫死的數值，
+   所以不動滑桿畫面一模一樣。每個元件原本的差異（頁尾飽和度少 5%、選單更不透明…）改成
+   「同一組參數 × 各自倍率」，拉一條滑桿就整套一起變。 */
+:root {
+  --uig-blur: 18px; --uig-sat: 1.2; --uig-bright: 1.04;
+  --uig-tint: #e2edf4; --uig-fill: 1; --uig-hi: 1; --uig-shade: 1; --uig-sheen: 1;
+  --uig-border: 1; --uig-shadow: 1;
+  --uig-menu-blur: 30px; --uig-menu-fill: 1; --uig-veil: 1; --uig-veil-blur: 7px;
+  /* 衍生色：不支援相對色語法的瀏覽器就用原本的固定色（顏色/透明度滑桿無效，模糊等仍有效）。 */
+  --uig-fill-1: #f8fcff66; --uig-fill-2: #e2edf42e; --uig-fill-3: #bad1e033;
+  --uig-hover-1: #ffffff80; --uig-hover-2: #e6f1f745; --uig-hover-3: #d1e4f04d;
+  --uig-foot-1: #eaf3fa30; --uig-foot-2: #e2edf449;
+  --uig-menu-1: #f2f7fbe6; --uig-menu-2: #dbe8f0c4;
+  --uig-hi-copy: #ffffffad; --uig-hi-head: #ffffff80; --uig-hi-menu: #ffffffb3;
+  --uig-rim-1: #ffffffd9; --uig-rim-2: #f6fcff99; --uig-rim-3: #5d789457; --uig-rim-4: #ffffffa6;
+  --uig-sh-copy: #25415938; --uig-sh-head: #29476126; --uig-sh-foot: #2b496326; --uig-sh-menu: #38566e24;
+  --uig-bd-foot: #f4faff80; --uig-bd-menu: #f4faff9e; --uig-bd-div: #4c6b8424;
+  --uig-drop-foot: #26496008; --uig-drop-menu: #0d273740; --uig-veil-c: #17314938;
+}
+@supports (color: rgb(from red r g b)) {
+  :root {
+    /* 玻璃底色：三段漸層都以底色為中心，保留原本的亮→暗差距（中段 #e2edf4 = 底色）。 */
+    --uig-fill-1: rgb(from var(--uig-tint) calc(r + 22) calc(g + 15) calc(b + 11) / calc(102 / 255 * var(--uig-fill)));
+    --uig-fill-2: rgb(from var(--uig-tint) r g b / calc(46 / 255 * var(--uig-fill)));
+    --uig-fill-3: rgb(from var(--uig-tint) calc(r - 40) calc(g - 28) calc(b - 20) / calc(51 / 255 * var(--uig-fill)));
+    --uig-hover-1: rgb(from var(--uig-tint) calc(r + 29) calc(g + 18) calc(b + 11) / calc(128 / 255 * var(--uig-fill)));
+    --uig-hover-2: rgb(from var(--uig-tint) calc(r + 4) calc(g + 4) calc(b + 3) / calc(69 / 255 * var(--uig-fill)));
+    --uig-hover-3: rgb(from var(--uig-tint) calc(r - 17) calc(g - 9) calc(b - 4) / calc(77 / 255 * var(--uig-fill)));
+    --uig-foot-1: rgb(from var(--uig-tint) calc(r + 8) calc(g + 6) calc(b + 6) / calc(48 / 255 * var(--uig-fill)));
+    --uig-foot-2: rgb(from var(--uig-tint) r g b / calc(73 / 255 * var(--uig-fill)));
+    /* 選單是要讀字的面板，透明度獨立一條，免得「清玻璃」把選單也變得看不清。 */
+    --uig-menu-1: rgb(from var(--uig-tint) calc(r + 16) calc(g + 10) calc(b + 7) / calc(230 / 255 * var(--uig-menu-fill)));
+    --uig-menu-2: rgb(from var(--uig-tint) calc(r - 7) calc(g - 5) calc(b - 4) / calc(196 / 255 * var(--uig-menu-fill)));
+    --uig-hi-copy: rgb(255 255 255 / calc(173 / 255 * var(--uig-hi)));
+    --uig-hi-head: rgb(255 255 255 / calc(128 / 255 * var(--uig-hi)));
+    --uig-hi-menu: rgb(255 255 255 / calc(179 / 255 * var(--uig-hi)));
+    --uig-rim-1: rgb(255 255 255 / calc(217 / 255 * var(--uig-hi)));
+    --uig-rim-2: rgb(246 252 255 / calc(153 / 255 * var(--uig-hi)));
+    --uig-rim-3: rgb(93 120 148 / calc(87 / 255 * var(--uig-shade)));
+    --uig-rim-4: rgb(255 255 255 / calc(166 / 255 * var(--uig-hi)));
+    --uig-sh-copy: rgb(37 65 89 / calc(56 / 255 * var(--uig-shade)));
+    --uig-sh-head: rgb(41 71 97 / calc(38 / 255 * var(--uig-shade)));
+    --uig-sh-foot: rgb(43 73 99 / calc(38 / 255 * var(--uig-shade)));
+    --uig-sh-menu: rgb(56 86 110 / calc(36 / 255 * var(--uig-shade)));
+    --uig-bd-foot: rgb(244 250 255 / calc(128 / 255 * var(--uig-border)));
+    --uig-bd-menu: rgb(244 250 255 / calc(158 / 255 * var(--uig-border)));
+    --uig-bd-div: rgb(76 107 132 / calc(36 / 255 * var(--uig-border)));
+    --uig-drop-foot: rgb(38 73 96 / calc(8 / 255 * var(--uig-shadow)));
+    --uig-drop-menu: rgb(13 39 55 / calc(64 / 255 * var(--uig-shadow)));
+    --uig-veil-c: rgb(23 49 73 / calc(56 / 255 * var(--uig-veil)));
+  }
+}
 .finnovation-ui {
-  --glass-fill: linear-gradient(135deg, #f8fcff66 0%, #e2edf42e 48%, #bad1e033 100%);
+  --glass-fill: linear-gradient(135deg, var(--uig-fill-1) 0%, var(--uig-fill-2) 48%, var(--uig-fill-3) 100%);
   --glass-rim: #f5fbffa6;
   --glass-shade: #19354b24;
 }
 .fi-copy-action {
   min-height: 48px; padding: 0; isolation: isolate;
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(18px) saturate(120%) brightness(1.04);
-  backdrop-filter: blur(18px) saturate(120%) brightness(1.04);
-  box-shadow: inset 0 1px 0 #ffffffad, inset 0 -1px 0 #25415938;
+  -webkit-backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(var(--uig-bright));
+  backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(var(--uig-bright));
+  box-shadow: inset 0 1px 0 var(--uig-hi-copy), inset 0 -1px 0 var(--uig-sh-copy);
   transition: transform .32s cubic-bezier(.2,.75,.25,1), background .3s, box-shadow .3s;
 }
 .fi-copy-action::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(125deg, #ffffffd9, #f6fcff99 35%, #5d789457 72%, #ffffffa6);
+  background: linear-gradient(125deg, var(--uig-rim-1), var(--uig-rim-2) 35%, var(--uig-rim-3) 72%, var(--uig-rim-4));
   clip-path: polygon(evenodd, 0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px), 0 0, 1px 1px, 1px calc(100% - 13.4px), 13.4px calc(100% - 1px), calc(100% - 1px) calc(100% - 1px), calc(100% - 1px) 13.4px, calc(100% - 13.4px) 1px, 1px 1px);
 }
 .fi-copy-action::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(110deg, transparent 10%, #ffffff24 46%, transparent 78%);
-  opacity: .35; transform: translateX(-36%); transition: opacity .45s, transform .7s cubic-bezier(.2,.75,.25,1);
+  opacity: calc(.35 * var(--uig-sheen)); transform: translateX(-36%); transition: opacity .45s, transform .7s cubic-bezier(.2,.75,.25,1);
 }
 .fi-copy-action > span,
 .fi-copy-action:hover > span,
@@ -1166,38 +1220,38 @@ body.is-watershed .fi-copy-action:hover > span {
   background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none;
   text-shadow: 0 1px 0 #ffffff4d;
 }
-.fi-copy-action:hover { transform: translateY(-2px); background: linear-gradient(135deg,#ffffff80,#e6f1f745 52%,#d1e4f04d); }
-.fi-copy-action:hover::after { transform: translateX(24%); opacity: .85; }
+.fi-copy-action:hover { transform: translateY(-2px); background: linear-gradient(135deg,var(--uig-hover-1),var(--uig-hover-2) 52%,var(--uig-hover-3)); }
+.fi-copy-action:hover::after { transform: translateX(24%); opacity: calc(.85 * var(--uig-sheen)); }
 .fi-copy-action:active { transform: translateY(0); }
 .fi-copy-action .fi-icon { transition: transform .3s; }
 .fi-copy-action:hover .fi-icon:last-child { transform: translateX(3px); }
 .fi-header-actions {
   background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
-  backdrop-filter: blur(18px) saturate(120%);
-  box-shadow: inset 0 1px 0 #ffffff80, inset 0 -1px 0 #29476126;
+  -webkit-backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+  backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+  box-shadow: inset 0 1px 0 var(--uig-hi-head), inset 0 -1px 0 var(--uig-sh-head);
 }
 .fi-header-actions button { background: transparent; }
-.fi-header-actions .fi-menu-toggle { background: #3153710c; border-left: 1px solid #4c6b8424; }
+.fi-header-actions .fi-menu-toggle { background: #3153710c; border-left: 1px solid var(--uig-bd-div); }
 .fi-header-actions button:hover { background: #ffffff30; }
 .fi-footer {
   --footer-cut:22px; clip-path:polygon(0 0,100% 0,100% calc(100% - var(--footer-cut)),calc(100% - var(--footer-cut)) 100%,var(--footer-cut) 100%,0 calc(100% - var(--footer-cut)));
-  background: linear-gradient(180deg,#eaf3fa30,#e2edf449);
-  border-top-color: #f4faff80;
-  -webkit-backdrop-filter: blur(18px) saturate(115%);
-  backdrop-filter: blur(18px) saturate(115%);
-  box-shadow: 0 -8px 32px #26496008, inset 0 -1px 0 #2b496326;
+  background: linear-gradient(180deg,var(--uig-foot-1),var(--uig-foot-2));
+  border-top-color: var(--uig-bd-foot);
+  -webkit-backdrop-filter: blur(var(--uig-blur)) saturate(calc(var(--uig-sat) - .05)) brightness(calc(var(--uig-bright) - .04));
+  backdrop-filter: blur(var(--uig-blur)) saturate(calc(var(--uig-sat) - .05)) brightness(calc(var(--uig-bright) - .04));
+  box-shadow: 0 -8px 32px var(--uig-drop-foot), inset 0 -1px 0 var(--uig-sh-foot);
 }
 .fi-footer button { transition: background .25s; }
 .fi-footer button:hover { background: #ffffff33; }
 .fi-menu {
-  border-color: #f4faff9e; border-radius: 10px;
-  background: linear-gradient(130deg,#f2f7fbe6,#dbe8f0c4);
-  -webkit-backdrop-filter: blur(30px) saturate(120%);
-  backdrop-filter: blur(30px) saturate(120%);
-  box-shadow: 0 32px 100px #0d273740, inset 0 1px 0 #ffffffb3, inset 0 -1px 0 #38566e24;
+  border-color: var(--uig-bd-menu); border-radius: 10px;
+  background: linear-gradient(130deg,var(--uig-menu-1),var(--uig-menu-2));
+  -webkit-backdrop-filter: blur(var(--uig-menu-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+  backdrop-filter: blur(var(--uig-menu-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+  box-shadow: 0 32px 100px var(--uig-drop-menu), inset 0 1px 0 var(--uig-hi-menu), inset 0 -1px 0 var(--uig-sh-menu);
 }
-.fi-menu::backdrop { background: #17314938; -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
+.fi-menu::backdrop { background: var(--uig-veil-c, #17314938); -webkit-backdrop-filter: blur(var(--uig-veil-blur, 7px)); backdrop-filter: blur(var(--uig-veil-blur, 7px)); }
 body.has-finnovation-ui .tuner {
   border: 1px solid #e8f6ff4d; border-radius: 9px;
   background: linear-gradient(135deg,#33536aa3,#18364ec7);
@@ -1308,11 +1362,11 @@ body.has-finnovation-ui .tuner {
 
   <script type="module">
     import * as THREE from 'three';
-    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS } from './water-journey-scene.js?v=wave-terrain-1';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed.js?v=wave-terrain-1';
+    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene.js?v=terrain-3';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed.js?v=terrain-3';
     import { createJourneyRiver } from './water-journey-river.js';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=fluid-controls-1';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS } from './water-forward-transition.js?v=center-flow-1';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=fluid-detail-1';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=depth-motion-1';
     import { mountJourneyInterface } from './finnovation-interface.js?v=interface-2';
     import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=five-rivers-only-1';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
@@ -1444,7 +1498,8 @@ body.has-finnovation-ui .tuner {
          摺痕配上抖動，正是錫箔的樣子。規則：|dot(方向,流速)| ≤ 0.45 × 相速度。 */
       sea: {
         screenDown: 200,
-        swell: 2.9, scale: 1.9, chop: 4, tilt: 1.03, calm: .42, heading: -105, spread: 1,
+        /* 使用者定的初始山形（2026-09-22）：浪高 3.5、尺度 .7、浪峰銳度 0。 */
+        swell: 3.5, scale: .7, chop: 0, tilt: 1.03, calm: .42, heading: -105, spread: 1,
         current: .30, drift: .22, timeScale: .85, river: 1,
         crest: 1.7, round: .55, foam: .75, foamEdge: .68, spray: .9, sprayScale: 2,
         /* The five components, each one openable on its own. HEADING turns
@@ -1583,18 +1638,46 @@ body.has-finnovation-ui .tuner {
          （journey 單位；散開整段是 2.6）。下游的河與品牌故事在這段期間停住。
          HEIGHT 是世界單位（水珠半徑 1.44；鏡頭距離 17 時畫面高 9.2）。 */
       logo: {
-        variant: new URLSearchParams(location.search).get('logo') === '2' ? 2 : 1,
+        variant: ({2:2,3:3})[new URLSearchParams(location.search).get('logo')] || 1,
         at:.75, fadeIn:.12, length:1.8, height:3.6, depth:2.4, turns:1, tilt:.22,
         bevel:.013, bevelSize:.0038, bevelSegments:5, curveSegments:48, edge:.035,
-        innerFrac:.30, innerY:-.12, dolly:1, pulse:.35
+        innerFrac:.30, innerY:-.12, dolly:1, pulse:.35,
+        /* LOGO 3（text_logo3.svg 全字標，約 7.4:1）：等高會變成 25 單位寬的長條，
+           所以改成「等寬」：LOGO3W 是字標寬度（以 LOGO 1/2 的單位高度計），1.8 剛好
+           落在卡牌環繞半徑 .94 之內；手機畫面窄，另給 LOGO3W MOBILE。
+           F 裡那一撇品牌弧（SVG 裡唯一在 <g> 外的路徑）用同一套玻璃物理，只把透射
+           染成品牌藍：BLUE A→B 是 #00a0e9→#0068b7 的漸層（寬端亮、尖端深），
+           BLUE = 透射染色濃度，GLOW = 玻璃內部自帶的藍光（不靠背景也看得到藍），
+           MIRROR = 反射也帶一點藍，邊緣才不會被白色反光洗掉。 */
+        logo3Width:1.8, logo3WidthMobile:1.35, logo3BlueA:'#00a0e9', logo3BlueB:'#0068b7',
+        logo3Blue:.9, logo3Glow:.42, logo3Mirror:.35
       },
       forwardTransition: { ...FORWARD_TRANSITION_DEFAULTS },
       logoFraming: { x: 0, y: 0 },
-      canyonMotion: { ...CANYON_MOTION_DEFAULTS },
-      watershedStyle: { ...WATERSHED_STYLE_DEFAULTS },
-      watershedFlow: { ...WATERSHED_FLOW_DEFAULTS },
+      /* 山道動態模糊：原本只有一道「朝消失點的放射模糊」，整張畫面一樣糊，連遠山也糊掉。
+         真正貼著河面往前衝的鏡頭是「依距離」糊的：腳下的水拉成長線、岩石少一點、遠山與天空是清楚的。
+         所以放射模糊降到只剩一點鏡頭感（blur .07），速度感交給景深動態模糊（depthBlur 以下各項）：
+         用深度重建每個像素的位置，算出快門打開那一刻它在哪裡，沿那條線取樣。停下來就完全清晰。 */
+      /* 水霧光點 .45：.7 在 100% 下像斜斜的雨絲；岸壁保留拖影 .45：全速時峽谷的邊還讀得出來。 */
+      canyonMotion: { ...CANYON_MOTION_DEFAULTS, ...CANYON_DEPTH_MOTION_DEFAULTS, blur: .07, motes: .45, wallBlur: .45 },
+      /* 遠霧色彩 #dedede 只在這一頁生效；共用模組的預設不動，其他頁不受影響。 */
+      watershedStyle: { ...WATERSHED_STYLE_DEFAULTS, rockColor: '#899baa', skyColor: '#8fa5ba', mistColor: '#dedede', exposure: 1, haze: 1, relief: 1 },
+      /* 河流光線：從「平平一條白膠帶」改成有核心、有光暈、會流動的光。
+         三條細光束互相編織（比一條更有生命、又不像五條那樣滿），核心細而亮、光暈柔軟地灑在水面上；
+         寬度 .10：新的光束中段本來就比兩端寬（脈衝時膨脹、尾巴收細），.14 會糊成一片。
+         亮度 1.15：脈衝頭部會吃到 bloom 自己發亮，整條不需要再推高。 */
+      watershedFlow: { ...WATERSHED_FLOW_DEFAULTS, count: 3, width: .10, brightness: 1.15 },
       watershedTerrain: { ...WATERSHED_TERRAIN_DEFAULTS },
-      watershedWater: { base:'#506b82', highlight:'#c8dbe8', reflection:.40 },
+      watershedWater: { base:'#778b9d', highlight:'#c8dbe8', reflection:.25 },
+      /* 河岸細節：河與山交界（浪花、淺水、岸壁倒影、濕岩帶）與岩面細節。只有這一頁傳給場景，
+         index4-6 / 4-6-2 沒傳就完全是原樣。數值每幀即時讀取，拖曳不重建幾何。 */
+      shoreline: { ...SHORELINE_DEFAULTS },
+      /* 第一人稱視角（山道那一段貼水前進的鏡頭）：預設值就是原本寫死的構圖，
+         拖曳即時生效；動態模糊組的 FOV 呼吸、俯衝、震動仍疊加在這之上。 */
+      canyonView: { ...CANYON_VIEW_DEFAULTS },
+      /* 山體與河岸第三輪細節（只有這一頁傳給場景）：山脊/山谷的層級、順著坡往下的沖蝕溝、
+         稜線霜白、遠山空氣透視分層，以及近岸水色。數值每幀即時讀取。 */
+      relief: { ...RELIEF_DEFAULTS },
       cursor: { ...CURSOR_DEFAULTS },
       logoGlass: { ...REFERENCE_LOGO_GLASS },
       logoCards: { ...LOGO_CARD_DEFAULTS },
@@ -1686,6 +1769,19 @@ body.has-finnovation-ui .tuner {
       scene: {
         exposure: .88, bloom: .24, bloomCut: 2.10, env: 1, keyLight: .9, fillLight: 0,
         grain: .055, grainSize: 1.3, grainSpeed: 1
+      },
+      /* 介面毛玻璃（頁首按鈕、中間 CTA、頁尾、選單）。全部只寫進 :root 的 CSS 變數，
+         拉滑桿不重排版面。預設 = 原本的樣子。
+         BLUR 背後場景糊的程度（px），越大越「霧」；SATURATE / BRIGHTNESS 是透過玻璃看到的
+         場景的飽和與亮度（CTA 為基準，其餘元件原本就沒提亮，保持相對差距）。
+         TINT 玻璃底色，漸層的亮暗三段都跟著它走；FILL 底色透明度倍率，0 = 完全清玻璃。
+         HIGHLIGHT 上緣與斜切邊的白色高光，SHADE 下緣暗線，SHEEN CTA 上那道斜光。
+         BORDER 頁尾／選單邊框與分隔線，SHADOW 頁尾與選單的外陰影。
+         MENU_BLUR / MENU_FILL 選單本身（要讀字，所以獨立），VEIL / VEIL_BLUR 選單後面整頁的遮罩。 */
+      uiGlass: {
+        blur: 18, saturate: 1.2, brightness: 1.04, tint: '#e2edf4', fill: 1,
+        highlight: 1, shade: 1, sheen: 1, border: 1, shadow: 1,
+        menuBlur: 30, menuFill: 1, veil: 1, veilBlur: 7
       }
     };
     /* Phones and narrow screens march fewer steps. Taken before the defaults
@@ -2803,6 +2899,13 @@ vec3 montisDither(vec2 fc){
       uWatershedBase: { value: new THREE.Color(CONFIG.watershedWater.base) },
       uWatershedHighlight: { value: new THREE.Color(CONFIG.watershedWater.highlight) },
       uWatershedReflection: { value: CONFIG.watershedWater.reflection },
+      /* 河岸交界：x 浪花、y 淺水、z 岸壁倒影、w 開關。只作用在河流（uRiverSurface=1）。 */
+      uShore: { value: new THREE.Vector4(0, 0, 0, 0) },
+      /* x = 近岸水色（relief.bankWater）；只在河流的岸線分支裡讀。 */
+      uShoreTone: { value: new THREE.Vector4(0, 0, 0, 0) },
+      uShoreFoamColor: { value: new THREE.Color('#e9f0f4') },
+      uShoreBedColor: { value: new THREE.Color('#a9b8c4') },
+      uShoreWallColor: { value: new THREE.Color('#5d6f7e') },
       uSeaWave: { value: SEA_WAVES.map(w => new THREE.Vector4(...w)) },
       uSeaDir: { value: SEA_DIRS.map(d => new THREE.Vector4(d[0], d[1], d[2], 0)) },
       uSeaCurrent: { value: new THREE.Vector2(CONFIG.sea.current, CONFIG.sea.drift) },
@@ -2911,6 +3014,8 @@ vec3 montisDither(vec2 fc){
     ${SEA_GLSL}
     ${RIPPLE_GLSL}
     uniform float uRippleLift,uRiverSurface,uRiverAerial,uRiverPixelAngle;
+    attribute vec3 aShore;
+    varying vec3 vShore;
     varying vec3 vWorld;
     varying vec3 vNormal;
     varying vec2 vFlow;
@@ -2961,7 +3066,7 @@ vec3 montisDither(vec2 fc){
          swell carries it. */
       vec4 rip=rippleField(world.xz);
       world.y+=rip.x*uRippleLift;
-      vWorld=world.xyz; vNormal=n; vFlow=flow; vLost=lost;
+      vWorld=world.xyz; vNormal=n; vFlow=flow; vLost=lost; vShore=aShore;
       vDist=length(cameraPosition-world.xyz);
       gl_Position=projectionMatrix*viewMatrix*world;
     }
@@ -2972,6 +3077,11 @@ vec3 montisDither(vec2 fc){
     uniform vec3 uRiverFogColor,uRiverFogParams;
     uniform vec3 uWatershedBase,uWatershedHighlight;
     uniform float uWatershedReflection;
+    uniform vec4 uShore;
+    uniform float uRiverSurface;
+    uniform vec3 uShoreFoamColor,uShoreBedColor,uShoreWallColor;
+    uniform vec4 uShoreTone;
+    varying vec3 vShore;
     uniform float uTexture;
     uniform vec3 uFoam;
     uniform vec2 uSpray;
@@ -3165,6 +3275,43 @@ vec3 montisDither(vec2 fc){
       float riverFog=mix(dayFog,clamp(valleyFog*uRiverFogParams.z,0.,.68),uRiverFogParams.y);
       mountainWater=mix(mountainWater,uRiverFogColor,riverFog);
       col=mix(col,mountainWater,uJourneyNight);
+      /* 河與岸的交界（只在河流上）：淺水變亮變清、近岸映出岸壁、貼著岸的浪花蕾絲。
+         vShore = (河床高度, 離岸距離, 岸壁高度)，由場景依同一份岸線幾何烘進每個頂點。 */
+      if(uRiverSurface>.5&&uShore.w>.5){
+        float bed=vShore.x,inward=vShore.y,wallH=max(vShore.z,0.);
+        float px=fwidth(vWorld.x)+fwidth(vWorld.z)+1e-3;
+        float vis=(1.-hz)*(1.-riverFog*uJourneyNight);
+        float depth=max(-bed,0.);
+        float aer=smoothstep(.6,3.,px);
+        float edge=max(inward,0.);
+        float shallow=max(1.-smoothstep(0.,2.6,depth),1.-smoothstep(0.,7.5,edge))*uShore.y*(1.-.55*aer);
+        vec3 bedTint=mix(uShoreBedColor,uWatershedHighlight,.30);
+        col=mix(col,mix(col,bedTint,.62)+.035,shallow*.55*vis);
+        float wob=(nrm.x*1.6+nrm.z*.7)*7.;
+        float reach=wallH*.5+5.;
+        float bank=1.-smoothstep(0.,reach,edge+wob);
+        float grazing=pow(1.-clamp(dot(nrm,V),0.,1.),2.);
+        /* 近岸水色：岸壁倒影不是一塊實心的深藍——牆本身是亮的灰藍，倒影帶一點霧色，
+           而且被細浪切成一條條（沿著視線拉長的碎片），不是整片。 */
+        vec3 wallCol=mix(uShoreWallColor,mix(uShoreBedColor,uRiverFogColor,.5),.45*uShoreTone.x);
+        float broken=mix(1.,.55+.45*smoothstep(-.5,.5,sin(vWorld.x*.9+vWorld.z*.35+nrm.x*40.)),min(uShoreTone.x,1.));
+        col=mix(col,wallCol,bank*uShore.z*(.30+.70*grazing)*.62*vis*broken);
+        vec2 fq=vWorld.xz*.55+vec2(uSeaTime*.035,-uSeaTime*.05);
+        float n1=seaNoise(fq),n2=seaNoise(fq*2.3+vec2(7.,3.)-uSeaTime*.06);
+        float laceDetail=1.-smoothstep(.35,1.2,px*.55);
+        float hug=max(smoothstep(-1.15,-.08,bed)*(1.-smoothstep(.05,.45,bed)),1.-smoothstep(.2+px,2.4+px*2.,inward+(n1-.5)*1.6));
+        float lace=mix(.60,smoothstep(.40,.68,n1*.62+n2*.38+hug*.2),laceDetail);
+        float trail=smoothstep(-3.,-.9,bed-edge*.25)*(1.-hug)*smoothstep(.60,.74,n1*.5+n2*.5)*laceDetail*.45*(1.-smoothstep(3.,9.,edge));
+        float foamAmt=uShore.x*vis*(hug*lace+trail)*(1.-.88*aer);
+        col=mix(col,uShoreFoamColor,clamp(foamAmt,0.,.82));
+        /* 深色反射提亮：蒼白的世界裡，河面最深的反射壓到接近天光的灰藍；越靠岸越明顯（淺水看得到河床），
+           亮部與高光不動，所以鏡面感還在。 */
+        float waterL=dot(col,vec3(.2126,.7152,.0722));
+        vec3 liftTo=mix(mix(uShoreBedColor,uRiverFogColor,.55),vec3(waterL),.25);
+        float nearBank=1.-smoothstep(0.,22.,edge);
+        float lift=uShoreTone.x*(1.-smoothstep(.16,.52,waterL))*vis*(.28+.42*nearBank)*(1.-.5*aer);
+        col=mix(col,mix(col,liftTo,.6),clamp(lift,0.,.85));
+      }
       col+=montisDither(gl_FragCoord.xy)*mix(.004,.0006,uJourneyNight);
       gl_FragColor=vec4(max(col,vec3(0.)),1.);
     }
@@ -6814,6 +6961,32 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     logoRoot.add(logoSpin);
     const logoGlass = createReferenceLogoGlass(THREE, { renderer, config:CONFIG.logoGlass });
     const logoMaterial = logoGlass.material;
+    /* LOGO 3 品牌弧：同一支玻璃 shader，只多一條藍色路徑；uniform 物件直接共用，
+       所以材質面板上每一個玻璃參數都同步作用在藍色那一撇上。 */
+    const logoBlueUniforms={uBlueA:{value:new THREE.Color()},uBlueB:{value:new THREE.Color()},
+      uBlueBox:{value:new THREE.Vector4(-1,1,-1,1)},uBlueDensity:{value:0},uBlueGlow:{value:0},uBlueMirror:{value:0}};
+    function logoBlueShader(src){
+      const at=src.indexOf('void main(){');if(at<0)return src;
+      let head=src.slice(0,at),body=src.slice(at+12).replace(/\buTint\b/g,'bTint');
+      head+='uniform vec3 uBlueA,uBlueB;uniform vec4 uBlueBox;uniform float uBlueDensity,uBlueGlow,uBlueMirror;\n';
+      body='\n        vec2 bq=(vObj.xy-uBlueBox.xz)/max(uBlueBox.yw-uBlueBox.xz,vec2(1e-4));\n'
+        +'        vec3 bBlue=mix(uBlueB,uBlueA,smoothstep(.1,.95,.42*bq.x+.58*bq.y));\n'
+        +'        vec3 bTint=mix(uTint,bBlue,uBlueDensity);\n'+body;
+      const glowAt='float fres=clamp(';
+      if(body.includes(glowAt))body=body.replace(glowAt,'color+=bBlue*uBlueGlow*(.45+.55*NdV);\n        '+glowAt);
+      const mirrorAt='color=mix(color,mirror,fres*grazeFade);';
+      if(body.includes(mirrorAt))body=body.replace(mirrorAt,'mirror*=mix(vec3(1.),bBlue/max(max(bBlue.r,max(bBlue.g,bBlue.b)),1e-3),uBlueMirror);\n        '+mirrorAt);
+      return head+'void main(){'+body;
+    }
+    const logoBlueMaterial=new THREE.ShaderMaterial({name:'Logo 3 · brand-blue swoosh glass',
+      uniforms:{...logoGlass.uniforms,...logoBlueUniforms},transparent:logoMaterial.transparent,depthWrite:logoMaterial.depthWrite,
+      defines:{...logoMaterial.defines},vertexShader:logoMaterial.vertexShader,fragmentShader:logoBlueShader(logoMaterial.fragmentShader)});
+    function syncLogoBlue(L,variant){
+      if(logoBlueMaterial.defines.SAMPLES!==logoMaterial.defines.SAMPLES){logoBlueMaterial.defines.SAMPLES=logoMaterial.defines.SAMPLES;logoBlueMaterial.needsUpdate=true;}
+      logoBlueUniforms.uBlueA.value.set(L.logo3BlueA);logoBlueUniforms.uBlueB.value.set(L.logo3BlueB);
+      logoBlueUniforms.uBlueDensity.value=L.logo3Blue;logoBlueUniforms.uBlueGlow.value=L.logo3Glow;logoBlueUniforms.uBlueMirror.value=L.logo3Mirror;
+      if(variant?.blueBox)logoBlueUniforms.uBlueBox.value.copy(variant.blueBox);
+    }
     const logoCards = createLogoCards(THREE, { renderer, config:CONFIG.logoCards });
     logoRoot.add(logoCards.group);
     /* Scroll-owned logo enlargement and optical focus. */
@@ -6828,12 +7001,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let logoMesh = null;
     const logoVariants = new Map([
       [1, {id:1,url:'logo.svg',label:'LOGO 1',shapes:null,mesh:null,key:'',error:false}],
-      [2, {id:2,url:'text_logo2.svg',label:'LOGO 2',shapes:null,mesh:null,key:'',error:false}]
+      [2, {id:2,url:'text_logo2.svg',label:'LOGO 2',shapes:null,mesh:null,key:'',error:false}],
+      [3, {id:3,url:'text_logo3.svg',label:'LOGO 3',shapes:null,blueShapes:null,mesh:null,key:'',error:false,wordmark:true,blueOutsideGroup:true}]
     ]);
     let activeLogoVariant = 0;
     let syncLogoComparison = () => {};
     let logoBuiltShape = '';
-    const selectedLogoVariant = () => Number(CONFIG.logo.variant) === 2 ? 2 : 1;
+    const selectedLogoVariant = () => { const v=Math.round(Number(CONFIG.logo.variant)); return logoVariants.has(v)?v:1; };
     const logoShapeKey=()=>[selectedLogoVariant(),...['depth','bevel','bevelSize','bevelSegments','curveSegments'].map(k=>CONFIG.logo[k])].join('|');
     function flipLogoWinding(g) {
       const a = g.attributes.position.array;
@@ -6852,13 +7026,20 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }
       const logoShapes=variant.shapes;
       const box = new THREE.Box2();
-      for (const shape of logoShapes) for (const pt of shape.extractPoints(48).shape) box.expandByPoint(pt);
+      const blueShapes=variant.blueShapes||[];
+      for (const shape of [...logoShapes,...blueShapes]) for (const pt of shape.extractPoints(48).shape) box.expandByPoint(pt);
       const size = box.getSize(new THREE.Vector2());
-      const span = Math.max(size.x, size.y) || 1;
-      let g = new THREE.ExtrudeGeometry(logoShapes, {
-        depth: span * .06, curveSegments: Math.round(CONFIG.logo.curveSegments), bevelEnabled: true,
+      /* 字標以字高當厚度基準（否則 7:1 的長條會擠出比字還高的厚度）。 */
+      const span = (variant.wordmark ? size.y : Math.max(size.x, size.y)) || 1;
+      const extrude = shapes => new THREE.ExtrudeGeometry(shapes, {
+        depth: span * .06, curveSegments: Math.max(8, Math.round(CONFIG.logo.curveSegments * (variant.wordmark ? .5 : 1))), bevelEnabled: true,
         bevelThickness: CONFIG.logo.bevel * span, bevelSize: Math.min(.0045,CONFIG.logo.bevelSize) * span, bevelOffset: 0, bevelSegments: Math.round(CONFIG.logo.bevelSegments)
       });
+      let g;
+      if(blueShapes.length){
+        const parts=[extrude(logoShapes),extrude(blueShapes)].map(p=>{const q=p.index?p.toNonIndexed():p;if(q!==p)p.dispose();q.clearGroups();return q;});
+        g=BufferGeometryUtils.mergeGeometries(parts,true);parts.forEach(p=>p.dispose());
+      } else g = extrude(logoShapes);
       if(g.index) g = g.toNonIndexed();
       for (const name of Object.keys(g.attributes)) if (name !== 'position') g.deleteAttribute(name);
       /* SVG 的 y 朝下，場景的 y 朝上。 */
@@ -6885,10 +7066,18 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }
       g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
       g.computeBoundingBox();
+      variant.aspect=g.boundingBox.max.x-g.boundingBox.min.x;
+      const blueGroup=blueShapes.length?g.groups.find(q=>q.materialIndex===1):null;
+      if(blueGroup){
+        // Swoosh extent in the shader's vObj space (position*2.4) for the A→B gradient.
+        let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+        for(let v=blueGroup.start;v<blueGroup.start+blueGroup.count;v++){const x=P.getX(v),y=P.getY(v);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+        variant.blueBox=new THREE.Vector4(x0*2.4,x1*2.4,y0*2.4,y1*2.4);
+      }
       // Retain one model per variant; switching never recreates the shared glass.
       logoMesh?.removeFromParent();
       if(variant.mesh){variant.mesh.geometry.dispose();variant.mesh.children.forEach(c=>c.geometry?.dispose());}
-      logoMesh = new THREE.Mesh(g, logoMaterial);
+      logoMesh = new THREE.Mesh(g, blueGroup ? [logoMaterial, logoBlueMaterial] : logoMaterial);
       logoMesh.name=variant.label+' · shared cast glass';
       logoMesh.userData.logoVariant=variant.id;
       logoMesh.renderOrder = 5;
@@ -6902,7 +7091,10 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     for(const variant of logoVariants.values()) new THREE.FileLoader().load(variant.url, txt => {
       try {
         const parsed=new SVGLoader().parse(txt);
-        variant.shapes=parsed.paths.filter(path=>path.userData?.style?.fill!=='none').flatMap(path=>SVGLoader.createShapes(path));
+        const filled=parsed.paths.filter(path=>path.userData?.style?.fill!=='none');
+        const isBlue=path=>Boolean(variant.blueOutsideGroup&&path.userData?.node&&!path.userData.node.closest?.('g'));
+        variant.shapes=filled.filter(path=>!isBlue(path)).flatMap(path=>SVGLoader.createShapes(path));
+        if(variant.blueOutsideGroup)variant.blueShapes=filled.filter(isBlue).flatMap(path=>SVGLoader.createShapes(path));
         if(!variant.shapes.length)throw new Error('SVG has no filled shapes');
         if(selectedLogoVariant()===variant.id)buildLogoMark();
       } catch(e){variant.error=true;console.warn(variant.url+' could not be built',e);}
@@ -6934,6 +7126,9 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       const L = CONFIG.logo;
       logoGlass.update({palette:CONFIG.field});
       if (logoBuiltShape !== logoShapeKey()) buildLogoMark();
+      const activeVariant=logoVariants.get(activeLogoVariant);
+      syncLogoBlue(L,activeVariant);
+      if(logoMesh)logoMesh.scale.setScalar(activeVariant?.wordmark?(innerWidth<760?L.logo3WidthMobile:L.logo3Width)/Math.max(.01,activeVariant.aspect||1):1);
       /* 浮現：光幕還亮著時它已經在光裡凝結——先是線，玻璃再從線裡填滿；尺
          寸帶一次彈簧過衝；浮現到一半泛光脈衝一下，像光收進玻璃裡。 */
       const reveal = smooth01((progress - (L.at - L.fadeIn)) / Math.max(.02, L.fadeIn));
@@ -6970,7 +7165,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const journeyCue=document.querySelector('#journeyCue');
     const journeyLabel=document.querySelector('#journeyLabel');
     const journeyChapter=document.querySelector('#journeyChapter');
-    const canyon=createJourneyScene(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
+    const canyon=createJourneyScene(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,shoreConfig:CONFIG.shoreline,viewConfig:CONFIG.canyonView,reliefConfig:CONFIG.relief,lite:DROPLET_LITE,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
     canyon.scene.environment=scene.environment;
     const canyonTarget=new THREE.WebGLRenderTarget(innerWidth,innerHeight,{type:THREE.HalfFloatType,depthBuffer:true});
     // Only a full-frame dissolve under the zoom smear. No circular scene window.
@@ -6984,16 +7179,37 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     composer.insertPass(journeyBlend,1);journeyBlend.enabled=false;
     const forwardTransition=createForwardTransition({config:CONFIG.forwardTransition,flowConfig:CONFIG.canyonMotion,lite:DROPLET_LITE});
     composer.insertPass(forwardTransition.pass,2);
+    /* 景深動態模糊要場景深度：composer 兩張畫布和河道轉場畫布都掛一張 DepthTexture
+       （MSAA 解析時 three 會把深度一起 blit 過去，幾乎不花時間），比另外畫一次深度 prepass 便宜。
+       dispose() 讓已建立的 framebuffer 下一次使用時帶著深度貼圖重建。 */
+    for(const rt of [composer.renderTarget1,composer.renderTarget2,canyonTarget]){rt.depthTexture=new THREE.DepthTexture(rt.width,rt.height);rt.dispose();}
+    const canyonMotion=createCanyonDepthMotion({config:CONFIG.canyonMotion,lite:DROPLET_LITE});
+    canyonMotion.setDepth(canyonTarget.depthTexture);
+    canyonMotion.warm(renderer);
+    /* 主場景畫進哪一張畫布，深度就從那一張拿；轉場溶接時河道是另外畫在 canyonTarget。 */
+    const renderMainPass=mainRenderPass.render.bind(mainRenderPass);
+    mainRenderPass.render=(r,writeBuffer,readBuffer,...rest)=>{renderMainPass(r,writeBuffer,readBuffer,...rest);
+      canyonMotion.pass.uniforms.tDepth.value=journeyBlend.enabled?canyonTarget.depthTexture:readBuffer.depthTexture;};
+    /* 貼著水面往鏡頭掠過的水霧光點：固定在河道上，所以往回滾就倒著流，停下就消失。 */
+    const canyonMotes=createCanyonSpeedMotes({curve:canyon.curve,widthAt:canyon.widthAt,lite:DROPLET_LITE});
+    canyonMotes.warm(renderer,canyon.camera);
+    /* 光點本身就畫成拖影，所以放在模糊之後疊上去，免得被再糊一次。 */
+    canyonMotion.setOverlay((r,depth)=>canyonMotes.render(r,canyon.camera,depth));
     let journeyReady=false;
     async function warmJourney(){
       await logoCards.ready;
       const warmTarget=new THREE.WebGLRenderTarget(64,64);
       try{
+        {const ws=new THREE.Scene(),wg=new THREE.PlaneGeometry(1,1);
+          for(const m of [logoMaterial,logoBlueMaterial]){const o=new THREE.Mesh(wg,m);o.position.set(camera.position.x,camera.position.y,camera.position.z-3);o.frustumCulled=false;ws.add(o);}
+          const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(ws,camera);}finally{renderer.setRenderTarget(previous);wg.dispose();}}
         for(const stage of [canyon]){
           if(stage.ready)await stage.ready;
           stage.scene.environment=scene.environment;
           if(renderer.compileAsync)await renderer.compileAsync(stage.scene,stage.camera);else renderer.compile(stage.scene,stage.camera);
           const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);}
+          /* 河流光線在空拍前是隱藏的，compileAsync 不會編到它；這裡用「半浮點合成目標」先編好（和實際畫面同一支程式），捲到空拍時才不會卡一下。 */
+          {const flowFx=stage.watershed?.effects?.group;if(flowFx){const shown=flowFx.visible,fxTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});flowFx.visible=true;try{renderer.setRenderTarget(fxTarget);renderer.compile(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);fxTarget.dispose();flowFx.visible=shown;}}}
         }
       }finally{warmTarget.dispose();journeyReady=true;}
     }
@@ -7006,6 +7222,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     }});
     const sceneCursor=createFinnovationCursor({renderer,config:CONFIG.cursor,reducedMotion:reduceMotion,isBlocked:()=>journeyUI.menuOpen});
     composer.insertPass(sceneCursor.pass,2);
+    /* 順序：主畫面 → 河道溶接 → 景深動態模糊 → 游標流體 → 放射模糊 → bloom。游標的漣漪不會被拖糊，HTML 介面本來就不在畫布裡。 */
+    composer.insertPass(canyonMotion.pass,composer.passes.indexOf(journeyBlend)+1);
     journeyCue.addEventListener('click',()=>{journey.target=journeyStops().find(s=>s>journey.target+.05)??0;});
     function advanceJourney(delta){if(!assetsReady||dropTouch.grabbed||!Number.isFinite(delta))return;const ahead=journey.target-journey.progress;if(delta*ahead<0)journey.target=journey.progress;journey.target=THREE.MathUtils.clamp(journey.target+delta,Math.max(0,journey.progress-1.25),Math.min(journey.max,journey.progress+1.25));}
     function updateDropTransition(dt,time,scrollDt=dt){
@@ -7183,6 +7401,22 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       canyon.update(THREE.MathUtils.clamp((p-1.404)/(8-1.404),0,1),time,reduceMotion,THREE.MathUtils.clamp((p-6.4)/(11.8-6.4),0,1),THREE.MathUtils.clamp((p-11.8)/2,0,1));
       // The blur follows the river's forward view, not the opening scene camera.
       const flowAmount=journey.mix*(1-easeJourney((p-6.1)/.7));
+      /* 速度量測用 canyon.update() 放好的鏡頭位置（還沒加下面的傾身），之後的一切都跟著它停。 */
+      const CM=CONFIG.canyonMotion;
+      const speedCue=canyonMotion.measure({camera:canyon.camera,amount:flowAmount,dt:flightDelta,reducedMotion:reduceMotion});
+      if(!reduceMotion&&speedCue.envelope>0){
+        /* 鏡頭語言：快時視角略為張開（≤ 2–3°）、機頭朝前進方向微微壓低、貼水的細微震動。
+           都只是顯示用的偏移：canyon.update() 每一幀重設 fov 與朝向，所以不會累積。 */
+        const env=speedCue.envelope*flowAmount;
+        const arcS=THREE.MathUtils.clamp((p-1.404)/(8-1.404),0,1)*.865*canyon.stats.pathLength;
+        canyon.camera.fov+=CM.fovBreath*env;
+        canyon.camera.rotateX(THREE.MathUtils.degToRad(-CM.pitch*speedCue.lean*flowAmount+CM.chatter*env*(Math.sin(arcS*.045)*.6+Math.sin(arcS*.11+1.3)*.4)));
+        canyon.camera.rotateZ(THREE.MathUtils.degToRad(CM.chatter*env*.8*Math.sin(arcS*.07+.4)));
+        canyon.camera.updateProjectionMatrix();
+      }
+      /* 河水跟著滾動加速：海的時鐘多走「滾過的距離 × 水流加速」，是 progress 的純函數，
+         往回滾就倒回去、停下就回到原本流速；mix = 0（開場海面）時為 0。 */
+      if(!reduceMotion)seaUniforms.uSeaTime.value+=CM.flowBoost*(THREE.MathUtils.clamp(p,1.404,6.8)-1.404)*journey.mix;
       const route=THREE.MathUtils.clamp((p-1.404)/(8-1.404),0,1)*.865;
       canyon.curve.getPointAt(Math.min(1,route+80/canyon.stats.pathLength),flowFocus);
       flowFocus.y=2.9;
@@ -7236,6 +7470,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       seaUniforms.uWatershedBase.value.set(CONFIG.watershedWater.base);
       seaUniforms.uWatershedHighlight.value.set(CONFIG.watershedWater.highlight);
       seaUniforms.uWatershedReflection.value=CONFIG.watershedWater.reflection;
+      {const S=CONFIG.shoreline;seaUniforms.uShore.value.set(+S.foam||0,+S.shallow||0,+S.reflect||0,1);
+       seaUniforms.uShoreTone.value.x=THREE.MathUtils.clamp(+CONFIG.relief.bankWater||0,0,2);
+       seaUniforms.uShoreFoamColor.value.set(S.foamColor);
+       seaUniforms.uShoreBedColor.value.set(CONFIG.watershedStyle.rockColor).lerp(seaUniforms.uWatershedHighlight.value,.45);
+       seaUniforms.uShoreWallColor.value.set(CONFIG.watershedStyle.rockColor).multiplyScalar(.62).lerp(canyon.scene.fog.color,.22);}
       bloom.strength=THREE.MathUtils.lerp(bloom.strength,.30,watershedNight);
       bloom.radius=THREE.MathUtils.lerp(bloom.radius,.48,watershedNight);
       bloom.threshold=THREE.MathUtils.lerp(bloom.threshold,1.12,watershedNight);
@@ -7247,6 +7486,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       journeyBlend.enabled=mix>.001&&mix<.999;
       journeyBlend.uniforms.uMix.value=mix;
       if(mix>.001){seaUniforms.uHeroOn.value=0;seaUniforms.uDropOcclude.value=0;}
+      canyonMotion.apply({camera:canyon.camera,renderer});
+      canyonMotes.update({arc:route,shiftWorld:canyonMotion.shiftWorld,envelope:speedCue.envelope,amount:flowAmount,gain:CM.motes,trail:CM.moteTrail,renderer,reducedMotion:reduceMotion});
       if(journeyBlend.enabled){const target=renderer.getRenderTarget();renderer.setRenderTarget(canyonTarget);renderer.render(canyon.scene,canyon.camera);renderer.setRenderTarget(target);}
 
 
@@ -7257,7 +7498,24 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* ------------------------------------------------------------------
        LIVE TUNING
        ------------------------------------------------------------------ */
+    /* 介面毛玻璃：只在數值真的變了才寫 :root 變數（自訂屬性會讓全頁重算樣式，但不重排）。 */
+    const uiGlassWritten = {};
+    function applyUiGlass() {
+      const G = CONFIG.uiGlass, s = document.documentElement.style;
+      const vars = {
+        '--uig-blur': G.blur + 'px', '--uig-sat': G.saturate, '--uig-bright': G.brightness,
+        '--uig-tint': G.tint, '--uig-fill': G.fill, '--uig-hi': G.highlight, '--uig-shade': G.shade,
+        '--uig-sheen': G.sheen, '--uig-border': G.border, '--uig-shadow': G.shadow,
+        '--uig-menu-blur': G.menuBlur + 'px', '--uig-menu-fill': G.menuFill,
+        '--uig-veil': G.veil, '--uig-veil-blur': G.veilBlur + 'px'
+      };
+      for (const k in vars) {
+        const v = String(vars[k]);
+        if (uiGlassWritten[k] !== v) { s.setProperty(k, v); uiGlassWritten[k] = v; }
+      }
+    }
     function applyConfig() {
+      applyUiGlass();
       riverRoot.position.set(CONFIG.water.x, CONFIG.water.y, CONFIG.water.z);
       riverRoot.rotation.set(CONFIG.water.rx, CONFIG.water.ry, CONFIG.water.rz);
       riverRoot.scale.set(CONFIG.water.sx, CONFIG.water.sy, CONFIG.water.sz);
@@ -7429,19 +7687,47 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* 面板以中文標示。每一列是 [名稱, 設定群組, 鍵名, 最小, 最大, 每step]，
        只有名稱換成中文，鍵名維持不變，所以複製出來的設定檔跟程式碼一致。 */
     const tuningGroups = [
+      /* 介面毛玻璃：頁首按鈕、CTA、頁尾、選單共用一套。雙擊名稱還原單一參數。 */
+      ['介面毛玻璃', [
+        ['模糊程度','uiGlass','blur',0,48,1],
+        ['飽和度','uiGlass','saturate',.5,2.5,.01],
+        ['亮度','uiGlass','brightness',.7,1.4,.01],
+        ['玻璃底色','uiGlass','tint'],
+        ['底色透明度','uiGlass','fill',0,3,.01],
+        ['高光邊','uiGlass','highlight',0,2,.01],
+        ['暗部邊','uiGlass','shade',0,3,.01],
+        ['光澤','uiGlass','sheen',0,2.8,.01],
+        ['邊框透明度','uiGlass','border',0,2,.01],
+        ['陰影','uiGlass','shadow',0,4,.01],
+        ['選單模糊','uiGlass','menuBlur',0,60,1],
+        ['選單底色透明度','uiGlass','menuFill',0,1.1,.01],
+        ['選單遮罩','uiGlass','veil',0,3,.01],
+        ['遮罩模糊','uiGlass','veilBlur',0,24,1]
+      ]],
       ['山體建模', [
         ['山體高度','watershedTerrain','height',.5,1.8,.01],
         ['山脊起伏','watershedTerrain','ridge',0,2,.01],
-        ['岩壁細節','watershedTerrain','relief',0,2,.01]
+        ['岩壁細節','watershedTerrain','relief',0,2,.01],
+        ['岩面紋理','shoreline','micro',0,2.5,.05],
+        ['岩層層理','shoreline','strata',0,2.5,.05],
+        ['山脊銳利','relief','ridge',0,2,.05],
+        ['沖蝕溝紋','relief','erosion',0,2,.05]
       ]],
       ['河流光線', [
         ['每河光線條數','watershedFlow','count',0,5,1],
-        ['光線寬度','watershedFlow','width',.01,.14,.005],
+        ['光線寬度','watershedFlow','width',.01,.20,.005],
         ['光線亮度','watershedFlow','brightness',0,2,.05],
         ['流動速度','watershedFlow','speed',0,2.5,.05],
         ['柔和光暈','watershedFlow','glow',0,1.5,.05],
         ['光線色彩','watershedFlow','color'],
-        ['低層薄霧','watershedFlow','mist',0,1.5,.05]
+        ['低層薄霧','watershedFlow','mist',0,1.5,.05],
+        ['光束核心','watershedFlow','core',0,1,.05],
+        ['光暈寬度','watershedFlow','halo',0,1.5,.05],
+        ['脈衝流光','watershedFlow','pulse',0,1.5,.05],
+        ['水面閃爍','watershedFlow','sparkle',0,1.5,.05],
+        ['匯流亮度','watershedFlow','join',0,2,.05],
+        ['光束編織','watershedFlow','meander',0,1.5,.05],
+        ['遠景霧化','watershedFlow','depth',0,1,.05]
       ]],
       ['山景色調', [
         ['山景明亮度','watershedStyle','exposure',.5,1.6,.05],
@@ -7450,16 +7736,53 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['山石色彩','watershedStyle','rockColor'],
         ['天空色彩','watershedStyle','skyColor'],
         ['遠霧色彩','watershedStyle','mistColor'],
+        ['岩縫陰影','shoreline','crease',0,2.5,.05],
+        ['高處霜色','shoreline','frost',0,1.5,.05],
+        ['稜線霜白','relief','ridgeFrost',0,2,.05],
+        ['遠山層次','relief','layers',0,2,.05],
         ['河流底色','watershedWater','base'],
         ['銀色反射','watershedWater','highlight'],
         ['水面反射強度','watershedWater','reflection',0,1,.05]
+      ]],
+      ['河岸細節', [
+        ['岸邊浪花','shoreline','foam',0,2,.05],
+        ['淺水透亮','shoreline','shallow',0,2,.05],
+        ['岸壁倒影','shoreline','reflect',0,1.5,.05],
+        ['濕岩帶','shoreline','wet',0,2,.05],
+        ['近岸水色','relief','bankWater',0,2,.05],
+        ['浪花色彩','shoreline','foamColor']
+      ]],
+      ['第一人稱視角', [
+        ['視角高度','canyonView','height',.6,12,.05],
+        ['前視距離','canyonView','lookAhead',6,120,1],
+        ['視線高度','canyonView','lookHeight',-6,24,.05],
+        ['俯仰角 °','canyonView','pitch',-20,20,.25],
+        ['視野 FOV 偏移 °','canyonView','fov',-24,30,.5],
+        ['視野漸寬 °','canyonView','fovRamp',0,16,.25],
+        ['左右偏移','canyonView','lateral',-14,14,.1],
+        ['彎道側傾','canyonView','bank',0,4,.05],
+        ['起伏晃動','canyonView','bob',0,4,.05]
       ]],
       ['LOGO 位置', [
         ['水平位置 px','logoFraming','x',-600,600,1],
         ['垂直位置 px','logoFraming','y',-600,600,1]
       ]],
       ['山道動態模糊', [
-        ['模糊強度','canyonMotion','blur',0,.6,.01],
+        ['放射模糊（整體）','canyonMotion','blur',0,.6,.01],
+        ['景深模糊強度','canyonMotion','depthBlur',0,2.5,.05],
+        ['快門長度 s','canyonMotion','shutter',0,.1,.002],
+        ['最長拖影 px','canyonMotion','maxStreak',8,120,1],
+        ['全速基準','canyonMotion','speedRef',40,600,5],
+        ['岸壁保留拖影','canyonMotion','wallBlur',0,1,.05],
+        ['水面高光拉絲','canyonMotion','specGain',0,2,.05],
+        ['高光門檻','canyonMotion','specThreshold',.3,3,.05],
+        ['高光拉長倍數','canyonMotion','specLength',1,3.5,.05],
+        ['水流加速','canyonMotion','flowBoost',0,2,.05],
+        ['水霧光點','canyonMotion','motes',0,3,.05],
+        ['光點拖尾','canyonMotion','moteTrail',.1,1.5,.05],
+        ['視角呼吸 °','canyonMotion','fovBreath',0,3,.05],
+        ['前傾 °','canyonMotion','pitch',0,1.5,.05],
+        ['貼水震動 °','canyonMotion','chatter',0,.3,.005],
         ['速度靈敏度','canyonMotion','sensitivity',.2,3,.05],
         ['加速反應','canyonMotion','response',3,25,1],
         ['消散速度','canyonMotion','decay',3,20,1],
@@ -7471,7 +7794,12 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['折射強度','cursor','refraction',0,2,.05],
         ['亮暗光痕','cursor','relief',0,2,.05],
         ['拖尾時間','cursor','persistence',.25,3,.05],
-        ['旋渦幅度','cursor','curl',0,3,.05]
+        ['旋渦幅度','cursor','curl',0,3,.05],
+        ['渦旋細節','cursor','vortex',0,3,.05],
+        ['漣漪強度','cursor','ripple',0,2,.05],
+        ['漣漪速度','cursor','rippleSpeed',.3,1.25,.05],
+        ['高光','cursor','specular',0,2,.05],
+        ['邊緣色散','cursor','dispersion',0,2,.05]
       ]],
       ['品牌 LOGO', [
         ['出現點','logo','at',.55,.95,.01],['淡入長度','logo','fadeIn',.02,.3,.01],
@@ -7480,7 +7808,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['倒角深度','logo','bevel',.002,.03,.001],['倒角寬度','logo','bevelSize',.001,.0045,.0001],
         ['倒角段數','logo','bevelSegments',2,12,1],['曲線精度','logo','curveSegments',24,96,8],
         ['輪廓亮度','logo','edge',0,.6,.01],
-        ['放大轉場','logo','dolly',0,1,1],['浮現泛光','logo','pulse',0,1.2,.05]
+        ['放大轉場','logo','dolly',0,1,1],['浮現泛光','logo','pulse',0,1.2,.05],
+        ['LOGO3 寬度','logo','logo3Width',1,3,.05],['LOGO3 手機寬度','logo','logo3WidthMobile',.8,2.4,.05],
+        ['LOGO3 藍色 · 亮端','logo','logo3BlueA'],['LOGO3 藍色 · 深端','logo','logo3BlueB'],
+        ['LOGO3 藍色濃度','logo','logo3Blue',0,1,.01],['LOGO3 藍色亮度','logo','logo3Glow',0,1.5,.01],
+        ['LOGO3 反射帶藍','logo','logo3Mirror',0,1,.01]
       ]],
       ['LOGO 向前轉場', [
         ['轉場長度','forwardTransition','length',.6,1.65,.01],
@@ -7790,7 +8122,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     syncLogoComparison=()=>{
       const selected=selectedLogoVariant(),variant=logoVariants.get(selected);
       for(const [id,button] of logoChoiceButtons){const item=logoVariants.get(id);button.disabled=!item.shapes?.length;button.setAttribute('aria-pressed',String(selected===id));button.title=item.error?'SVG 載入失敗':item.url;}
-      logoCompareStatus.textContent=variant.error?'此款 LOGO 載入失敗，請重新整理。':!variant.shapes?.length?'LOGO 載入中…':variant.label+' · 共用玻璃材質 · 等高置中';
+      logoCompareStatus.textContent=variant.error?'此款 LOGO 載入失敗，請重新整理。':!variant.shapes?.length?'LOGO 載入中…':variant.label+(variant.wordmark?' · 共用玻璃材質 · 品牌藍弧 · 等寬置中':' · 共用玻璃材質 · 等高置中');
     };
     logoCompare.append(logoCompareHeading,logoSwitches,logoCompareStatus,compareActions);tunerBody.appendChild(logoCompare);syncLogoComparison();
 
@@ -7812,17 +8144,24 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const resetTerrain=document.createElement('button');resetTerrain.type='button';resetTerrain.textContent='重設山體';
     resetTerrain.addEventListener('click',()=>{Object.assign(CONFIG.watershedTerrain,DEFAULT_CONFIG.watershedTerrain);syncTunerValues();});
     const resetRivers=document.createElement('button');resetRivers.type='button';resetRivers.textContent='重設山景 / 光流';
-    resetRivers.addEventListener('click',()=>{for(const key of ['watershedFlow','watershedStyle','watershedWater','watershedTerrain'])Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);syncTunerValues();});
-    logoActions.append(previewWater,previewRivers,resetTerrain,resetRivers,centerLogo,previewLogo,previewCanyon,resetLogo,resetCursor);
-    for(const [text,title] of [['山體參數','山體建模'],['光流參數','河流光線'],['山景參數','山景色調'],['位置參數','LOGO 位置'],['山道參數','山道動態模糊'],['游標參數','游標流體'],['轉場參數','LOGO 向前轉場'],['材質參數','LOGO 材質 · index'],['卡牌參數','LOGO 卡牌環繞']]){
+    resetRivers.addEventListener('click',()=>{for(const key of ['watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline','relief'])Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);syncTunerValues();});
+    const resetView=document.createElement('button');resetView.type='button';resetView.textContent='重設視角';
+    resetView.addEventListener('click',()=>{Object.assign(CONFIG.canyonView,CANYON_VIEW_DEFAULTS);syncTunerValues();});
+    const previewView=document.createElement('button');previewView.type='button';previewView.textContent='預覽視角';
+    previewView.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=6.2;});
+    logoActions.append(previewWater,previewRivers,resetTerrain,resetRivers,previewView,resetView,centerLogo,previewLogo,previewCanyon,resetLogo,resetCursor);
+    for(const [text,title] of [['山體參數','山體建模'],['光流參數','河流光線'],['山景參數','山景色調'],['河岸參數','河岸細節'],['視角參數','第一人稱視角'],['位置參數','LOGO 位置'],['山道參數','山道動態模糊'],['游標參數','游標流體'],['玻璃參數','介面毛玻璃'],['轉場參數','LOGO 向前轉場'],['材質參數','LOGO 材質 · index'],['卡牌參數','LOGO 卡牌環繞']]){
       const button=document.createElement('button');button.type='button';button.textContent=text;
       button.addEventListener('click',()=>{
         const section=[...tunerBody.querySelectorAll('.tune-group')].find(g=>g.dataset.title===title);
         if(section)tunerBody.scrollTo({top:section.offsetTop-tunerBody.offsetTop-logoCompare.offsetHeight-5,behavior:reduceMotion?'auto':'smooth'});
       });logoActions.append(button);
     }
+    const resetGlass=document.createElement('button');resetGlass.type='button';resetGlass.textContent='重設毛玻璃';
+    resetGlass.addEventListener('click',()=>{Object.assign(CONFIG.uiGlass,DEFAULT_CONFIG.uiGlass);syncTunerValues();applyUiGlass();});
+    logoActions.append(resetGlass);
     tunerBody.appendChild(logoActions);
-    const logoGroupOrder=['山體建模','河流光線','山景色調','LOGO 位置','山道動態模糊','游標流體','LOGO 向前轉場','LOGO 材質 · index','LOGO 卡牌環繞','品牌 LOGO','LOGO 表面貼圖'];
+    const logoGroupOrder=['山體建模','河流光線','山景色調','河岸細節','第一人稱視角','LOGO 位置','山道動態模糊','游標流體','介面毛玻璃','LOGO 向前轉場','LOGO 材質 · index','LOGO 卡牌環繞','品牌 LOGO','LOGO 表面貼圖'];
     tuningGroups.sort((a,b)=>(logoGroupOrder.includes(a[0])?logoGroupOrder.indexOf(a[0]):99)-(logoGroupOrder.includes(b[0])?logoGroupOrder.indexOf(b[0]):99));
     const sliderRefs = [];
     for (const [title, items] of tuningGroups) {
@@ -7834,7 +8173,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       for (const [label, groupKey, key, min, max, step] of items) {
         const row = document.createElement('div');
         row.className = 'tune-row';
-        const isLogo=['logo','logoGlass','logoCards','forwardTransition','cursor','logoFraming','canyonMotion','watershedFlow','watershedStyle','watershedWater','watershedTerrain'].includes(groupKey);
+        const isLogo=groupKey==='uiGlass'||['logo','logoGlass','logoCards','forwardTransition','cursor','logoFraming','canyonMotion','watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline','canyonView','relief'].includes(groupKey);
         row.classList.toggle('is-logo',isLogo);
         if (key === 'waveMorph') row.classList.add('is-morph');
         const caption = document.createElement('label');
@@ -7861,6 +8200,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           if (key === 'waveMorph') CONFIG.drop.roundness = 1;
           refresh();
           if(!isLogo)applyConfig();
+          else if(groupKey==='uiGlass')applyUiGlass();
           if (groupKey === 'gather' && key === 'intro') {
             /* Turned on, the gather plays again from scattered beads; turned
                off, a gather that is running is cut short to the whole drop. */
@@ -8658,7 +8998,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     }
 
     /* Read-only diagnostics for local verification; never shown in the visitor interface. */
-    window.__MONTIS_STUDY__ = { sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark:{root:logoRoot,spin:logoSpin,glass:logoGlass,cards:logoCards,variants:logoVariants,get activeVariant(){return activeLogoVariant;},get mesh(){return logoMesh;}}, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
+    window.__MONTIS_STUDY__ = { canyonMotion, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark:{root:logoRoot,spin:logoSpin,glass:logoGlass,cards:logoCards,variants:logoVariants,get activeVariant(){return activeLogoVariant;},get mesh(){return logoMesh;}}, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
 
     function resize() {
       const width = innerWidth;

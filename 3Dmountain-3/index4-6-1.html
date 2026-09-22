@@ -1362,8 +1362,8 @@ body.has-finnovation-ui .tuner {
 
   <script type="module">
     import * as THREE from 'three';
-    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS } from './water-journey-scene.js?v=shore-detail-1';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed.js?v=shore-detail-1';
+    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene.js?v=terrain-3';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed.js?v=terrain-3';
     import { createJourneyRiver } from './water-journey-river.js';
     import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=fluid-detail-1';
     import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=depth-motion-1';
@@ -1662,12 +1662,22 @@ body.has-finnovation-ui .tuner {
       canyonMotion: { ...CANYON_MOTION_DEFAULTS, ...CANYON_DEPTH_MOTION_DEFAULTS, blur: .07, motes: .45, wallBlur: .45 },
       /* 遠霧色彩 #dedede 只在這一頁生效；共用模組的預設不動，其他頁不受影響。 */
       watershedStyle: { ...WATERSHED_STYLE_DEFAULTS, rockColor: '#899baa', skyColor: '#8fa5ba', mistColor: '#dedede', exposure: 1, haze: 1, relief: 1 },
-      watershedFlow: { ...WATERSHED_FLOW_DEFAULTS },
+      /* 河流光線：從「平平一條白膠帶」改成有核心、有光暈、會流動的光。
+         三條細光束互相編織（比一條更有生命、又不像五條那樣滿），核心細而亮、光暈柔軟地灑在水面上；
+         寬度 .10：新的光束中段本來就比兩端寬（脈衝時膨脹、尾巴收細），.14 會糊成一片。
+         亮度 1.15：脈衝頭部會吃到 bloom 自己發亮，整條不需要再推高。 */
+      watershedFlow: { ...WATERSHED_FLOW_DEFAULTS, count: 3, width: .10, brightness: 1.15 },
       watershedTerrain: { ...WATERSHED_TERRAIN_DEFAULTS },
       watershedWater: { base:'#778b9d', highlight:'#c8dbe8', reflection:.25 },
       /* 河岸細節：河與山交界（浪花、淺水、岸壁倒影、濕岩帶）與岩面細節。只有這一頁傳給場景，
          index4-6 / 4-6-2 沒傳就完全是原樣。數值每幀即時讀取，拖曳不重建幾何。 */
       shoreline: { ...SHORELINE_DEFAULTS },
+      /* 第一人稱視角（山道那一段貼水前進的鏡頭）：預設值就是原本寫死的構圖，
+         拖曳即時生效；動態模糊組的 FOV 呼吸、俯衝、震動仍疊加在這之上。 */
+      canyonView: { ...CANYON_VIEW_DEFAULTS },
+      /* 山體與河岸第三輪細節（只有這一頁傳給場景）：山脊/山谷的層級、順著坡往下的沖蝕溝、
+         稜線霜白、遠山空氣透視分層，以及近岸水色。數值每幀即時讀取。 */
+      relief: { ...RELIEF_DEFAULTS },
       cursor: { ...CURSOR_DEFAULTS },
       logoGlass: { ...REFERENCE_LOGO_GLASS },
       logoCards: { ...LOGO_CARD_DEFAULTS },
@@ -2891,6 +2901,8 @@ vec3 montisDither(vec2 fc){
       uWatershedReflection: { value: CONFIG.watershedWater.reflection },
       /* 河岸交界：x 浪花、y 淺水、z 岸壁倒影、w 開關。只作用在河流（uRiverSurface=1）。 */
       uShore: { value: new THREE.Vector4(0, 0, 0, 0) },
+      /* x = 近岸水色（relief.bankWater）；只在河流的岸線分支裡讀。 */
+      uShoreTone: { value: new THREE.Vector4(0, 0, 0, 0) },
       uShoreFoamColor: { value: new THREE.Color('#e9f0f4') },
       uShoreBedColor: { value: new THREE.Color('#a9b8c4') },
       uShoreWallColor: { value: new THREE.Color('#5d6f7e') },
@@ -3068,6 +3080,7 @@ vec3 montisDither(vec2 fc){
     uniform vec4 uShore;
     uniform float uRiverSurface;
     uniform vec3 uShoreFoamColor,uShoreBedColor,uShoreWallColor;
+    uniform vec4 uShoreTone;
     varying vec3 vShore;
     uniform float uTexture;
     uniform vec3 uFoam;
@@ -3278,7 +3291,11 @@ vec3 montisDither(vec2 fc){
         float reach=wallH*.5+5.;
         float bank=1.-smoothstep(0.,reach,edge+wob);
         float grazing=pow(1.-clamp(dot(nrm,V),0.,1.),2.);
-        col=mix(col,uShoreWallColor,bank*uShore.z*(.30+.70*grazing)*.62*vis);
+        /* 近岸水色：岸壁倒影不是一塊實心的深藍——牆本身是亮的灰藍，倒影帶一點霧色，
+           而且被細浪切成一條條（沿著視線拉長的碎片），不是整片。 */
+        vec3 wallCol=mix(uShoreWallColor,mix(uShoreBedColor,uRiverFogColor,.5),.45*uShoreTone.x);
+        float broken=mix(1.,.55+.45*smoothstep(-.5,.5,sin(vWorld.x*.9+vWorld.z*.35+nrm.x*40.)),min(uShoreTone.x,1.));
+        col=mix(col,wallCol,bank*uShore.z*(.30+.70*grazing)*.62*vis*broken);
         vec2 fq=vWorld.xz*.55+vec2(uSeaTime*.035,-uSeaTime*.05);
         float n1=seaNoise(fq),n2=seaNoise(fq*2.3+vec2(7.,3.)-uSeaTime*.06);
         float laceDetail=1.-smoothstep(.35,1.2,px*.55);
@@ -3287,6 +3304,13 @@ vec3 montisDither(vec2 fc){
         float trail=smoothstep(-3.,-.9,bed-edge*.25)*(1.-hug)*smoothstep(.60,.74,n1*.5+n2*.5)*laceDetail*.45*(1.-smoothstep(3.,9.,edge));
         float foamAmt=uShore.x*vis*(hug*lace+trail)*(1.-.88*aer);
         col=mix(col,uShoreFoamColor,clamp(foamAmt,0.,.82));
+        /* 深色反射提亮：蒼白的世界裡，河面最深的反射壓到接近天光的灰藍；越靠岸越明顯（淺水看得到河床），
+           亮部與高光不動，所以鏡面感還在。 */
+        float waterL=dot(col,vec3(.2126,.7152,.0722));
+        vec3 liftTo=mix(mix(uShoreBedColor,uRiverFogColor,.55),vec3(waterL),.25);
+        float nearBank=1.-smoothstep(0.,22.,edge);
+        float lift=uShoreTone.x*(1.-smoothstep(.16,.52,waterL))*vis*(.28+.42*nearBank)*(1.-.5*aer);
+        col=mix(col,mix(col,liftTo,.6),clamp(lift,0.,.85));
       }
       col+=montisDither(gl_FragCoord.xy)*mix(.004,.0006,uJourneyNight);
       gl_FragColor=vec4(max(col,vec3(0.)),1.);
@@ -7141,7 +7165,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const journeyCue=document.querySelector('#journeyCue');
     const journeyLabel=document.querySelector('#journeyLabel');
     const journeyChapter=document.querySelector('#journeyChapter');
-    const canyon=createJourneyScene(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,shoreConfig:CONFIG.shoreline,lite:DROPLET_LITE,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
+    const canyon=createJourneyScene(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,shoreConfig:CONFIG.shoreline,viewConfig:CONFIG.canyonView,reliefConfig:CONFIG.relief,lite:DROPLET_LITE,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
     canyon.scene.environment=scene.environment;
     const canyonTarget=new THREE.WebGLRenderTarget(innerWidth,innerHeight,{type:THREE.HalfFloatType,depthBuffer:true});
     // Only a full-frame dissolve under the zoom smear. No circular scene window.
@@ -7184,6 +7208,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           stage.scene.environment=scene.environment;
           if(renderer.compileAsync)await renderer.compileAsync(stage.scene,stage.camera);else renderer.compile(stage.scene,stage.camera);
           const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);}
+          /* 河流光線在空拍前是隱藏的，compileAsync 不會編到它；這裡用「半浮點合成目標」先編好（和實際畫面同一支程式），捲到空拍時才不會卡一下。 */
+          {const flowFx=stage.watershed?.effects?.group;if(flowFx){const shown=flowFx.visible,fxTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});flowFx.visible=true;try{renderer.setRenderTarget(fxTarget);renderer.compile(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);fxTarget.dispose();flowFx.visible=shown;}}}
         }
       }finally{warmTarget.dispose();journeyReady=true;}
     }
@@ -7445,6 +7471,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       seaUniforms.uWatershedHighlight.value.set(CONFIG.watershedWater.highlight);
       seaUniforms.uWatershedReflection.value=CONFIG.watershedWater.reflection;
       {const S=CONFIG.shoreline;seaUniforms.uShore.value.set(+S.foam||0,+S.shallow||0,+S.reflect||0,1);
+       seaUniforms.uShoreTone.value.x=THREE.MathUtils.clamp(+CONFIG.relief.bankWater||0,0,2);
        seaUniforms.uShoreFoamColor.value.set(S.foamColor);
        seaUniforms.uShoreBedColor.value.set(CONFIG.watershedStyle.rockColor).lerp(seaUniforms.uWatershedHighlight.value,.45);
        seaUniforms.uShoreWallColor.value.set(CONFIG.watershedStyle.rockColor).multiplyScalar(.62).lerp(canyon.scene.fog.color,.22);}
@@ -7682,16 +7709,25 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['山脊起伏','watershedTerrain','ridge',0,2,.01],
         ['岩壁細節','watershedTerrain','relief',0,2,.01],
         ['岩面紋理','shoreline','micro',0,2.5,.05],
-        ['岩層層理','shoreline','strata',0,2.5,.05]
+        ['岩層層理','shoreline','strata',0,2.5,.05],
+        ['山脊銳利','relief','ridge',0,2,.05],
+        ['沖蝕溝紋','relief','erosion',0,2,.05]
       ]],
       ['河流光線', [
         ['每河光線條數','watershedFlow','count',0,5,1],
-        ['光線寬度','watershedFlow','width',.01,.14,.005],
+        ['光線寬度','watershedFlow','width',.01,.20,.005],
         ['光線亮度','watershedFlow','brightness',0,2,.05],
         ['流動速度','watershedFlow','speed',0,2.5,.05],
         ['柔和光暈','watershedFlow','glow',0,1.5,.05],
         ['光線色彩','watershedFlow','color'],
-        ['低層薄霧','watershedFlow','mist',0,1.5,.05]
+        ['低層薄霧','watershedFlow','mist',0,1.5,.05],
+        ['光束核心','watershedFlow','core',0,1,.05],
+        ['光暈寬度','watershedFlow','halo',0,1.5,.05],
+        ['脈衝流光','watershedFlow','pulse',0,1.5,.05],
+        ['水面閃爍','watershedFlow','sparkle',0,1.5,.05],
+        ['匯流亮度','watershedFlow','join',0,2,.05],
+        ['光束編織','watershedFlow','meander',0,1.5,.05],
+        ['遠景霧化','watershedFlow','depth',0,1,.05]
       ]],
       ['山景色調', [
         ['山景明亮度','watershedStyle','exposure',.5,1.6,.05],
@@ -7702,6 +7738,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['遠霧色彩','watershedStyle','mistColor'],
         ['岩縫陰影','shoreline','crease',0,2.5,.05],
         ['高處霜色','shoreline','frost',0,1.5,.05],
+        ['稜線霜白','relief','ridgeFrost',0,2,.05],
+        ['遠山層次','relief','layers',0,2,.05],
         ['河流底色','watershedWater','base'],
         ['銀色反射','watershedWater','highlight'],
         ['水面反射強度','watershedWater','reflection',0,1,.05]
@@ -7711,7 +7749,19 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['淺水透亮','shoreline','shallow',0,2,.05],
         ['岸壁倒影','shoreline','reflect',0,1.5,.05],
         ['濕岩帶','shoreline','wet',0,2,.05],
+        ['近岸水色','relief','bankWater',0,2,.05],
         ['浪花色彩','shoreline','foamColor']
+      ]],
+      ['第一人稱視角', [
+        ['視角高度','canyonView','height',.6,12,.05],
+        ['前視距離','canyonView','lookAhead',6,120,1],
+        ['視線高度','canyonView','lookHeight',-6,24,.05],
+        ['俯仰角 °','canyonView','pitch',-20,20,.25],
+        ['視野 FOV 偏移 °','canyonView','fov',-24,30,.5],
+        ['視野漸寬 °','canyonView','fovRamp',0,16,.25],
+        ['左右偏移','canyonView','lateral',-14,14,.1],
+        ['彎道側傾','canyonView','bank',0,4,.05],
+        ['起伏晃動','canyonView','bob',0,4,.05]
       ]],
       ['LOGO 位置', [
         ['水平位置 px','logoFraming','x',-600,600,1],
@@ -8094,9 +8144,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const resetTerrain=document.createElement('button');resetTerrain.type='button';resetTerrain.textContent='重設山體';
     resetTerrain.addEventListener('click',()=>{Object.assign(CONFIG.watershedTerrain,DEFAULT_CONFIG.watershedTerrain);syncTunerValues();});
     const resetRivers=document.createElement('button');resetRivers.type='button';resetRivers.textContent='重設山景 / 光流';
-    resetRivers.addEventListener('click',()=>{for(const key of ['watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline'])Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);syncTunerValues();});
-    logoActions.append(previewWater,previewRivers,resetTerrain,resetRivers,centerLogo,previewLogo,previewCanyon,resetLogo,resetCursor);
-    for(const [text,title] of [['山體參數','山體建模'],['光流參數','河流光線'],['山景參數','山景色調'],['河岸參數','河岸細節'],['位置參數','LOGO 位置'],['山道參數','山道動態模糊'],['游標參數','游標流體'],['玻璃參數','介面毛玻璃'],['轉場參數','LOGO 向前轉場'],['材質參數','LOGO 材質 · index'],['卡牌參數','LOGO 卡牌環繞']]){
+    resetRivers.addEventListener('click',()=>{for(const key of ['watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline','relief'])Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);syncTunerValues();});
+    const resetView=document.createElement('button');resetView.type='button';resetView.textContent='重設視角';
+    resetView.addEventListener('click',()=>{Object.assign(CONFIG.canyonView,CANYON_VIEW_DEFAULTS);syncTunerValues();});
+    const previewView=document.createElement('button');previewView.type='button';previewView.textContent='預覽視角';
+    previewView.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=6.2;});
+    logoActions.append(previewWater,previewRivers,resetTerrain,resetRivers,previewView,resetView,centerLogo,previewLogo,previewCanyon,resetLogo,resetCursor);
+    for(const [text,title] of [['山體參數','山體建模'],['光流參數','河流光線'],['山景參數','山景色調'],['河岸參數','河岸細節'],['視角參數','第一人稱視角'],['位置參數','LOGO 位置'],['山道參數','山道動態模糊'],['游標參數','游標流體'],['玻璃參數','介面毛玻璃'],['轉場參數','LOGO 向前轉場'],['材質參數','LOGO 材質 · index'],['卡牌參數','LOGO 卡牌環繞']]){
       const button=document.createElement('button');button.type='button';button.textContent=text;
       button.addEventListener('click',()=>{
         const section=[...tunerBody.querySelectorAll('.tune-group')].find(g=>g.dataset.title===title);
@@ -8107,7 +8161,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     resetGlass.addEventListener('click',()=>{Object.assign(CONFIG.uiGlass,DEFAULT_CONFIG.uiGlass);syncTunerValues();applyUiGlass();});
     logoActions.append(resetGlass);
     tunerBody.appendChild(logoActions);
-    const logoGroupOrder=['山體建模','河流光線','山景色調','河岸細節','LOGO 位置','山道動態模糊','游標流體','介面毛玻璃','LOGO 向前轉場','LOGO 材質 · index','LOGO 卡牌環繞','品牌 LOGO','LOGO 表面貼圖'];
+    const logoGroupOrder=['山體建模','河流光線','山景色調','河岸細節','第一人稱視角','LOGO 位置','山道動態模糊','游標流體','介面毛玻璃','LOGO 向前轉場','LOGO 材質 · index','LOGO 卡牌環繞','品牌 LOGO','LOGO 表面貼圖'];
     tuningGroups.sort((a,b)=>(logoGroupOrder.includes(a[0])?logoGroupOrder.indexOf(a[0]):99)-(logoGroupOrder.includes(b[0])?logoGroupOrder.indexOf(b[0]):99));
     const sliderRefs = [];
     for (const [title, items] of tuningGroups) {
@@ -8119,7 +8173,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       for (const [label, groupKey, key, min, max, step] of items) {
         const row = document.createElement('div');
         row.className = 'tune-row';
-        const isLogo=groupKey==='uiGlass'||['logo','logoGlass','logoCards','forwardTransition','cursor','logoFraming','canyonMotion','watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline'].includes(groupKey);
+        const isLogo=groupKey==='uiGlass'||['logo','logoGlass','logoCards','forwardTransition','cursor','logoFraming','canyonMotion','watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline','canyonView','relief'].includes(groupKey);
         row.classList.toggle('is-logo',isLogo);
         if (key === 'waveMorph') row.classList.add('is-morph');
         const caption = document.createElement('label');

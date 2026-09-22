@@ -1282,6 +1282,27 @@ body.has-finnovation-ui .tuner {
 }
 
 </style>
+  <style id="mobile-perf-style">
+/* 手機效能（與 DROPLET_LITE 同一個條件）。html/body 不再把手勢交給瀏覽器的下拉重新整理。
+   .grain：CSS 顆粒層是 220% 視窗大、DPR 3 點陣化的動畫圖層，WebGL 最後一道本來就有顆粒，手機上只留那一道。
+   perf-glass-static：介面毛玻璃換成靜態霧面（同一組 --uig 底色疊在不透明的霧白上），不再每幀重糊畫布。 */
+@media (max-width: 720px), (pointer: coarse) {
+  html, body { overscroll-behavior: none; }
+  .grain { display: none; }
+  html.perf-glass-static .fi-copy-action,
+  html.perf-glass-static .fi-header-actions {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: var(--glass-fill), var(--perf-frost, #d8e3f2d6);
+  }
+  html.perf-glass-static .fi-footer {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: linear-gradient(180deg, var(--uig-foot-1), var(--uig-foot-2)), var(--perf-frost-foot, #d5e1f0d2);
+  }
+  html.perf-glass-static body.is-watershed { --perf-frost: #bccbd9dc; --perf-frost-foot: #b8c8d6d8; }
+}
+.perf-hud { position: fixed; left: 8px; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 60; padding: 3px 6px; border-radius: 3px;
+  font: 500 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .03em; color: #10283a; background: #ffffffcc; pointer-events: none; }
+  </style>
   <link rel="icon" href="logo.svg" type="image/svg+xml">
 </head>
 
@@ -1362,13 +1383,13 @@ body.has-finnovation-ui .tuner {
 
   <script type="module">
     import * as THREE from 'three';
-    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene.js?v=terrain-3';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed.js?v=terrain-3';
+    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene.js?v=beam-head-3';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed.js?v=beam-head-3';
     import { createJourneyRiver } from './water-journey-river.js';
     import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=fluid-detail-1';
     import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=depth-motion-1';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=interface-2';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=five-rivers-only-1';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=interface-2-perf1';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=five-rivers-only-1-perf1';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
     import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=logo-cards-1';
     import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=logo-cards-1';
@@ -1378,6 +1399,12 @@ body.has-finnovation-ui .tuner {
        published, so a visitor never meets it. `?tune=1` forces it on
        anywhere, `?tune=0` off, and T toggles it at any time (ignored while
        a slider has focus, or the key would fight the arrow keys). */
+    /* 手機效能：innerWidth / innerHeight 在 Blink 是「會強制同步重算樣式」的讀取。frame() 先寫 DOM
+       （章節字、卡片變數、閃光），updateJourneyCamera 再讀 innerWidth，每一幀都被逼著在腳本中途
+       重算整頁樣式——手機 4× CPU 節流下實測佔主執行緒 40%（每幀 ~5 ms）。這裡用模組層同名變數
+       遮住它們、只在 resize 時更新：數值完全一樣，整支程式其他地方一個字都不用改。 */
+    let innerWidth=window.innerWidth,innerHeight=window.innerHeight;
+    addEventListener('resize',()=>{innerWidth=window.innerWidth;innerHeight=window.innerHeight;},{passive:true});
     const tuneFlag=new URLSearchParams(location.search).get('tune');
     const tuneLocal=location.protocol==='file:'
       ||/^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname)
@@ -1788,6 +1815,19 @@ body.has-finnovation-ui .tuner {
        are copied, so RESET keeps it. */
     const DROPLET_LITE = matchMedia('(max-width: 720px), (pointer: coarse)').matches;
     if (DROPLET_LITE) CONFIG.droplet.steps = 28;
+    /* 手機效能（除了 PREWARM，全部只在 DROPLET_LITE＝窄螢幕或觸控裝置生效；桌機畫面完全照舊）。
+       AUTO 自動解析度：量每一幀的間隔，持續低於目標幀率就把畫面解析度（DPR）降一階；穩定、而且
+       沒在滑動時才試著升回一階，升了又掉就 30 秒內不再試，所以不會忽清忽糊。
+       MIN_DPR / MAX_DPR 上下限：MAX 1.5——DPR 3 的手機從 1.65 降到 1.5 少畫 17% 像素，肉眼分不出。
+       TARGET_FPS 目標幀率（50：60 Hz 螢幕上偶爾掉一格不算慢，連續掉才降）。
+       BLOOM 光暈緩衝的解析度倍率：光暈本來就是糊的，手機用一半。GLASS_RES LOGO 玻璃折射背景的解析度
+       倍率（背景透過霧面玻璃看，本來就糊）。UI_GLASS 介面毛玻璃：0 靜態霧面（最順）、1 停下來才即時
+       模糊、2 永遠即時模糊——backdrop-filter 疊在每幀重畫的 WebGL 上，手機合成器每幀都要重糊一次畫布，
+       而且畫布不能再走硬體 overlay（實測合成器繪製時間 ×2.7）。FLING 手指放開後的慣性（0 = 關）。
+       HUD 左下角顯示 DPR / fps（網址加 ?perf=hud 也會出現）。PREWARM 載入時把每一章先畫一次（所有裝置），
+       著色器編譯、貼圖上傳、畫布配置都在載入畫面後面做完，不再落在滾動途中。MSAA 手機抗鋸齒取樣數
+       （改了要重新整理）。 */
+    CONFIG.perf = { auto: 1, minDpr: 1, maxDpr: 1.5, targetFps: 50, bloom: .5, glassRes: .6, uiGlass: 0, fling: 1, hud: 0, prewarm: 1, msaa: 2 };
     /* ------------------------------------------------------------------
        FRAME TIERS
        One picture on every device. Because the field of view is vertical and
@@ -4428,7 +4468,7 @@ vec3 montisDither(vec2 fc){
       format: THREE.RGBAFormat,
       depthBuffer: true,
       stencilBuffer: false,
-      samples: 4
+      samples: DROPLET_LITE ? CONFIG.perf.msaa : 4
     });
     const composer = new EffectComposer(renderer, renderTarget);
     const mainRenderPass = new RenderPass(scene, camera);
@@ -4450,6 +4490,11 @@ vec3 montisDither(vec2 fc){
     bloom.threshold = CONFIG.scene.bloomCut;
     bloom.strength = CONFIG.scene.bloom;
     composer.addPass(bloom);
+    /* 手機：光暈的 mip 鏈用 BLOOM 倍率的解析度建（composer 每次 setSize 都會經過這裡）。 */
+    if (DROPLET_LITE) {
+      const setBloomSize = bloom.setSize.bind(bloom);
+      bloom.setSize = (w, h) => setBloomSize(Math.max(8, Math.round(w * CONFIG.perf.bloom)), Math.max(8, Math.round(h * CONFIG.perf.bloom)));
+    }
     composer.addPass(new OutputPass());
 
     /* ------------------------------------------------------------------
@@ -4495,6 +4540,17 @@ vec3 montisDither(vec2 fc){
   `
     });
     composer.addPass(grainPass);
+    /* 手機：OutputPass（色調映射 + sRGB）併進最後這道顆粒——顆粒這一道本來就畫到螢幕上，three 會在它
+       的程式裡放同一個 Neutral 色調映射與 sRGB 轉換，所以數學完全相同，只是全螢幕少畫一次、少寫一張
+       半浮點畫布。桌機維持原本兩道。 */
+    if (DROPLET_LITE) {
+      const outputPass = composer.passes.find(pass => pass instanceof OutputPass);
+      if (outputPass) outputPass.enabled = false;
+      grainPass.material.fragmentShader = grainPass.material.fragmentShader.replace(
+        'vec4 c=texture2D(tDiffuse,vUv);',
+        'vec4 c=texture2D(tDiffuse,vUv);\n      gl_FragColor=c;\n      #include <tonemapping_fragment>\n      #include <colorspace_fragment>\n      c=gl_FragColor;');
+      grainPass.material.needsUpdate = true;
+    }
 
     /* ------------------------------------------------------------------
        DROP / WATER PHYSICS
@@ -7328,8 +7384,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       const preDip=1-.20*Math.exp(-Math.pow((progress-.33)/.035,2))*lightMotion;
       renderer.toneMappingExposure=Math.min(CONFIG.scene.exposure*1.34,CONFIG.scene.exposure*preDip*(1+burst*DZ.exposure*lightMotion));
       const flashAlpha=Math.min(.72,flareIgnition*flareFade*CONFIG.details.transitionFlash*DZ.veil)*lightMotion;
-      transitionFlash.style.opacity=flashAlpha.toFixed(4);
-      transitionFlash.style.transform=`scale(${(.14+flareExpand*1.55).toFixed(4)},${(.12+Math.pow(flareExpand,1.25)*1.48).toFixed(4)})`;
+      writeStyle(transitionFlash,'opacity',flashAlpha.toFixed(4));
+      writeStyle(transitionFlash,'transform',`scale(${(.14+flareExpand*1.55).toFixed(4)},${(.12+Math.pow(flareExpand,1.25)*1.48).toFixed(4)})`);
       transitionGlow.position.set(CONFIG.drop.x,CONFIG.drop.y,CONFIG.drop.z);
       transitionScreen.copy(transitionGlow.position).project(camera);
       writeVar(transitionFlash,'--flare-x',`${((transitionScreen.x*.5+.5)*100).toFixed(2)}%`);
@@ -7341,14 +7397,14 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       waterGlints.material.uniforms.uTransition.value=impactPulse*.24*lightMotion;
       airMotes.material.uniforms.uOpacity.value=.30*(1-J.mix);
       applyWaterRipple(0,0,0,1,0);impactKick=0;sceneDim=1-J.mix;
-      writeStyle(canvas,'opacity','1');writeStyle(sectionTwo,'opacity','0');sectionTwo.classList.remove('is-active','is-live','is-in');sectionTwo.setAttribute('aria-hidden','true');setSectionTwoPlayback(false);
-      document.body.classList.remove('is-transitioning','is-section-two');document.body.classList.toggle('is-journey-moving',p>.09);
+      writeStyle(canvas,'opacity','1');writeStyle(sectionTwo,'opacity','0');for(const c of ['is-active','is-live','is-in'])if(sectionTwo.classList.contains(c))sectionTwo.classList.remove(c);if(sectionTwo.getAttribute('aria-hidden')!=='true')sectionTwo.setAttribute('aria-hidden','true');setSectionTwoPlayback(false);
+      for(const c of ['is-transitioning','is-section-two'])if(document.body.classList.contains(c))document.body.classList.remove(c);document.body.classList.toggle('is-journey-moving',p>.09);
       const phase=p<logoChapterStart()?'disperse':p<logoChapterEnd()?'mark':q<1.976?'enter':q<6.4?'flow':'aerial';
       if(J.phase!==phase||!journeyCue.dataset.ready){J.phase=phase;journeyCue.dataset.ready='true';
         const labels={disperse:'01 / 05 · DISPERSE',mark:'02 / 05 · THE MARK',enter:'03 / 05 · ENTER THE FLOW',flow:'04 / 05 · FLOW',aerial:'05 / 05 · WIDER PERSPECTIVE'};
         journeyChapter.textContent=labels[phase];}
-      journeyLabel.textContent=p>J.max-.05?'重新探索 ↑':'向下探索 ↓';
-      journeyCue.setAttribute('aria-label',p>J.max-.05?'重新探索恒灝創新':'前往下一個品牌篇章');
+      {const label=p>J.max-.05?'重新探索 ↑':'向下探索 ↓';if(journeyLabel.textContent!==label)journeyLabel.textContent=label;}
+      {const aria=p>J.max-.05?'重新探索恒灝創新':'前往下一個品牌篇章';if(journeyCue.getAttribute('aria-label')!==aria)journeyCue.setAttribute('aria-label',aria);}
       brandStory.update(q,reduceMotion);
       journeyUI.update({progress:p,max:J.max,logoStart:logoChapterStart(),logoEnd:logoChapterEnd(),shift:journeyShift()});
       writeVar(journeyCue,'--journey-p',(p/J.max).toFixed(4));
@@ -7687,6 +7743,18 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* 面板以中文標示。每一列是 [名稱, 設定群組, 鍵名, 最小, 最大, 每step]，
        只有名稱換成中文，鍵名維持不變，所以複製出來的設定檔跟程式碼一致。 */
     const tuningGroups = [
+      /* 手機效能：只在手機／觸控裝置生效（DROPLET_LITE）；顯示效能在桌機也看得到。 */
+      ['手機效能', [
+        ['自動解析度','perf','auto',0,1,1],
+        ['最低解析度','perf','minDpr',.5,2,.05],
+        ['最高解析度','perf','maxDpr',.75,2.5,.05],
+        ['目標幀率','perf','targetFps',24,60,1],
+        ['光暈解析度','perf','bloom',.25,1,.05],
+        ['玻璃折射解析度','perf','glassRes',.3,1,.05],
+        ['毛玻璃模式','perf','uiGlass',0,2,1],
+        ['手指慣性','perf','fling',0,2,.05],
+        ['顯示效能','perf','hud',0,1,1]
+      ]],
       /* 介面毛玻璃：頁首按鈕、CTA、頁尾、選單共用一套。雙擊名稱還原單一參數。 */
       ['介面毛玻璃', [
         ['模糊程度','uiGlass','blur',0,48,1],
@@ -7715,7 +7783,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       ]],
       ['河流光線', [
         ['每河光線條數','watershedFlow','count',0,5,1],
-        ['光線寬度','watershedFlow','width',.01,.20,.005],
+        ['光線寬度','watershedFlow','width',.01,1,.005],
         ['光線亮度','watershedFlow','brightness',0,2,.05],
         ['流動速度','watershedFlow','speed',0,2.5,.05],
         ['柔和光暈','watershedFlow','glow',0,1.5,.05],
@@ -7727,7 +7795,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['水面閃爍','watershedFlow','sparkle',0,1.5,.05],
         ['匯流亮度','watershedFlow','join',0,2,.05],
         ['光束編織','watershedFlow','meander',0,1.5,.05],
-        ['遠景霧化','watershedFlow','depth',0,1,.05]
+        ['遠景霧化','watershedFlow','depth',0,1,.05],
+        ['光束頭大小','watershedFlow','headSize',.2,5,.05],
+        ['光束頭亮度','watershedFlow','headBright',0,5,.05],
+        ['光束頭光暈','watershedFlow','headGlow',0,5,.05],
+        ['光束頭粗細','watershedFlow','headWidth',.3,5,.05],
+        ['光束尾長','watershedFlow','tail',.2,3,.05],
+        ['脈衝間距','watershedFlow','spacing',.3,3,.05]
       ]],
       ['山景色調', [
         ['山景明亮度','watershedStyle','exposure',.5,1.6,.05],
@@ -8670,6 +8744,138 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       hasWaterTrail = true;
     }
 
+    /* ------------------------------------------------------------------
+       手機效能：自動解析度、手指慣性、主光陰影只在有東西投影時重畫、載入時預熱每一章。
+       ------------------------------------------------------------------ */
+    const PERF=CONFIG.perf;
+    const perfState={dpr:Math.min(devicePixelRatio,PERF.maxDpr),last:0,ema:0,cpu:0,over:0,good:0,cooldown:0,
+      ceiling:9,ceilingUntil:0,raisedAt:-1e9,readyAt:0,fpsFrames:0,fpsT:0,fps:0,key:'',movingUntil:0,glassStatic:null,hud:null,hudText:'',
+      floor:0,checkAt:0,prevDpr:0,emaBefore:0,lockUntil:0,lockFloor:0};
+    /* 畫面解析度。桌機：原本的 min(DPR, 1.65)，一個字不變。手機：自動解析度目前那一階，夾在上下限之間。 */
+    function renderDpr(){
+      if(!DROPLET_LITE)return Math.min(devicePixelRatio,1.65);
+      const hi=Math.max(.5,Math.min(devicePixelRatio,PERF.maxDpr)),lo=Math.min(hi,Math.max(.5,PERF.minDpr));
+      return PERF.auto>0?THREE.MathUtils.clamp(perfState.dpr,lo,hi):hi;
+    }
+    /* 手指慣性：放開前 100 ms 內的速度（旅程單位／秒）交給一個指數衰減的滑行，每幀推 journey.target，
+       跟滾輪一樣只動目標，畫面仍然是 journey.progress 的純函數。 */
+    const fling={v:0,samples:[]};
+    function noteTouchMove(delta){const t=performance.now();fling.samples.push([t,delta]);while(fling.samples.length&&t-fling.samples[0][0]>100)fling.samples.shift();}
+    function releaseTouchFling(){
+      const t=performance.now(),s=fling.samples.filter(x=>t-x[0]<=100);fling.samples.length=0;fling.v=0;
+      /* 手指停住 60 ms 以上再放開＝想停在這裡，不滑。 */
+      if(reduceMotion||!(PERF.fling>0)||s.length<2||t-s[s.length-1][0]>60)return;
+      const span=Math.max(32,t-s[0][0]),sum=s.reduce((a,x)=>a+x[1],0);
+      fling.v=THREE.MathUtils.clamp(sum/span*1000,-5,5)*.85*PERF.fling;
+    }
+    function stopFling(){fling.v=0;fling.samples.length=0;}
+    function stepTouchFling(dt){
+      if(!fling.v)return;
+      if(!assetsReady||journeyUI.menuOpen){fling.v=0;return;}
+      advanceJourney(fling.v*dt);fling.v*=Math.exp(-dt*3.6);
+      if(Math.abs(fling.v)<.04)fling.v=0;
+    }
+    addEventListener('pointerdown',stopFling,{passive:true});
+    addEventListener('wheel',stopFling,{passive:true});
+    addEventListener('keydown',stopFling);
+    /* 開場主光的 2048² 陰影貼圖原本每一次 render(scene) 都重畫（LOGO 章節玻璃折射還要再畫一次）；投影的只有
+       水珠那幾樣。改成只在有投影物可見時重畫，全部消失時再畫一次把影子清掉：畫面一樣，GPU 少一整道。 */
+    let shadowCasters=[],casterScan=0,keyShadowLive=true;
+    keyLight.shadow.autoUpdate=false;keyLight.shadow.needsUpdate=true;
+    function updateKeyShadow(){
+      if(--casterScan<=0){casterScan=90;shadowCasters=[];scene.traverse(o=>{if(o.castShadow&&(o.isMesh||o.isPoints||o.isLine))shadowCasters.push(o);});}
+      let live=false;
+      for(const o of shadowCasters){if(o.isInstancedMesh&&o.count===0)continue;let x=o;while(x&&x.visible)x=x.parent;if(!x){live=true;break;}}
+      if(live||keyShadowLive)keyLight.shadow.needsUpdate=true;
+      keyShadowLive=live;
+    }
+    const perfMoving=()=>Math.abs(journey.velocity)>.02||Math.abs(journey.target-journey.progress)>.002||!!journeyTouch||!!fling.v;
+    function updatePerfHud(){
+      const on=PERF.hud>0||/^(1|hud|on)$/i.test(new URLSearchParams(location.search).get('perf')||'');
+      if(!on){if(perfState.hud){perfState.hud.remove();perfState.hud=null;perfState.hudText='';}return;}
+      if(!perfState.hud){perfState.hud=document.createElement('div');perfState.hud.className='perf-hud';perfState.hud.setAttribute('aria-hidden','true');document.body.append(perfState.hud);}
+      const text=`DPR ${renderer.getPixelRatio().toFixed(2)} · ${perfState.fps.toFixed(0)} fps · ${perfState.ema.toFixed(1)} ms${DROPLET_LITE?'':' · 桌機'}`;
+      if(text!==perfState.hudText){perfState.hudText=text;perfState.hud.textContent=text;}
+    }
+    /* 介面毛玻璃模式（只在手機）：靜態霧面由 CSS 的 html.perf-glass-static 接手。 */
+    function updatePerfGlass(now){
+      if(!DROPLET_LITE)return;
+      const mode=Math.round(PERF.uiGlass);
+      if(perfMoving())perfState.movingUntil=now+450;
+      const on=mode<=0||(mode===1&&now<perfState.movingUntil);
+      if(on!==perfState.glassStatic){perfState.glassStatic=on;document.documentElement.classList.toggle('perf-glass-static',on);}
+    }
+    function perfGovernor(t0){
+      const S=perfState,now=performance.now(),cpu=now-t0;
+      const interval=S.last?now-S.last:16.7;S.last=now;
+      if(S.fpsFrames++===0&&!S.fpsT)S.fpsT=now;
+      if(now-S.fpsT>=500){S.fps=S.fpsFrames*1000/(now-S.fpsT);S.fpsFrames=0;S.fpsT=now;updatePerfHud();}
+      updatePerfGlass(now);
+      /* 參數列改了上下限或緩衝倍率：重新配置一次。 */
+      const key=[PERF.auto,PERF.minDpr,PERF.maxDpr,PERF.bloom,PERF.glassRes].join('|');
+      if(key!==S.key){const first=!S.key;S.key=key;if(!first){S.dpr=renderDpr();resize();}}
+      /* 切到背景、或一幀停了超過 250 ms（編譯、分頁切換）不算數。 */
+      if(document.hidden||interval>250){S.ema=0;S.over=0;S.good=0;return;}
+      S.ema=S.ema?S.ema+(interval-S.ema)*.12:interval;
+      S.cpu=S.cpu?S.cpu+(cpu-S.cpu)*.12:cpu;
+      /* 節拍下限：最近 ~1 s 內最短的一幀間隔（每幀往上漂 2%+0.2 ms，出現更短的就貼回去）。
+         瀏覽器／系統把 rAF 鎖在 30 Hz（iOS 低耗電、Safari 限制幀率、省電模式）時它會停在 ~33 ms。 */
+      S.floor=S.floor?Math.min(S.floor*1.02+.2,interval):interval;
+      if(!DROPLET_LITE||!(PERF.auto>0)||!assetsReady||!journeyReady)return;
+      if(!S.readyAt)S.readyAt=now+2500;
+      if(now<S.readyAt||now<S.cooldown)return;
+      const budget=1000/THREE.MathUtils.clamp(PERF.targetFps,20,120);
+      const hi=Math.max(.5,Math.min(devicePixelRatio,PERF.maxDpr)),lo=Math.min(hi,Math.max(.5,PERF.minDpr));
+      /* 慢是因為 JS 本身（CPU）就吃掉預算時，降解析度沒有用，只會變糊：不降。 */
+      const cpuBound=S.cpu>budget*.8;
+      if(S.ema>budget*1.1&&!cpuBound)S.over+=interval;else S.over=Math.max(0,S.over-interval*.5);
+      if(S.ema<budget*.92)S.good+=interval;else S.good=0;
+      const apply=dpr=>{S.dpr=dpr;S.over=0;S.good=0;S.ema=0;S.cooldown=now+1200;resize();updatePerfHud();};
+      /* 降階成效檢查：降完 1.5 s 後幀間隔沒有至少好 8%，代表慢的原因不是像素（幀率被鎖、或卡在 CPU）——
+         退回原本解析度，並在 30 s 內、以及節拍下限維持同一個值的期間，不再往下降。 */
+      if(S.checkAt){
+        if(now<S.checkAt)return;
+        const failed=S.ema>S.emaBefore*.92,back=S.prevDpr;S.checkAt=0;
+        if(failed){S.lockUntil=now+30000;S.lockFloor=S.floor;apply(back);return;}
+      }
+      const lockFloorHeld=S.lockFloor>0&&Math.abs(S.floor-S.lockFloor)<S.lockFloor*.12;
+      if(!lockFloorHeld&&now>=S.lockUntil)S.lockFloor=0;
+      const downLocked=now<S.lockUntil||lockFloorHeld;
+      if(S.over>700&&S.dpr>lo+.005&&!downLocked){
+        /* 剛升上去 3.5 s 內又掉：這一階撐不住，30 s 內不再往上試。 */
+        if(now-S.raisedAt<3500){S.ceiling=S.dpr-.005;S.ceilingUntil=now+30000;}
+        /* 一次降多少看慢多少（像素數 ∝ DPR²），至少 .1、至多 .3。 */
+        const before=S.ema,from=S.dpr;
+        apply(Math.max(lo,S.dpr-.3,Math.min(S.dpr-.1,S.dpr*Math.sqrt(budget/S.ema))));
+        S.prevDpr=from;S.emaBefore=before;S.checkAt=now+1500;
+      }else if(S.good>5000&&S.dpr<hi-.005&&!perfMoving()&&(S.dpr+.1<=S.ceiling||now>S.ceilingUntil)){
+        S.raisedAt=now;apply(Math.min(hi,S.dpr+.1));
+      }
+    }
+    /* 載入畫面還蓋著的時候，把每一章用真正的流程畫一次（dt 幾乎為 0，海面時鐘、旋轉都不前進）：
+       每支著色器、卡片貼圖、LOGO 玻璃與河道溶接的畫布都在這裡建好，滾動途中不再卡一下。
+       介面與故事卡這段期間不更新，最後回到原位再畫一次。 */
+    function prewarmChapters(){
+      if(!(PERF.prewarm>0))return;
+      const J=journey,saved={p:J.progress,t:J.target,v:J.velocity};
+      const uiUpdate=journeyUI.update,storyUpdate=brandStory.update;
+      journeyUI.update=()=>{};brandStory.update=()=>{};
+      try{
+        const shift=journeyShift(),start=logoChapterStart(),end=logoChapterEnd(),fwd=forwardLength();
+        const stops=[.35,.62,.95,1.3,1.66,1.74,2.2,start+CONFIG.logo.length*.25,start+CONFIG.logo.length*.6,end-.1,end+fwd*.35,end+fwd*.7,
+          4.6+shift,5.6+shift,6.5+shift,7.2+shift,8.7+shift,9.6+shift,10.3+shift,11.2+shift,12.4+shift,13.4+shift,J.max];
+        for(const p of stops){J.progress=J.target=THREE.MathUtils.clamp(p,0,J.max);J.velocity=0;frame(true,1e-6);}
+        /* 只在「有滾動速度」時才開的後製（LOGO 向前放射模糊、游標流體）預熱時是關著的：直接各畫一次到小畫布。 */
+        const warmTarget=new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType}),previous=renderer.getRenderTarget();
+        try{renderer.setRenderTarget(warmTarget);for(const pass of [forwardTransition.pass,sceneCursor.pass])if(pass&&pass.fsQuad)pass.fsQuad.render(renderer);}
+        finally{renderer.setRenderTarget(previous);warmTarget.dispose();}
+      }catch(error){console.warn('Chapter prewarm skipped',error);}
+      finally{
+        J.progress=saved.p;J.target=saved.t;J.velocity=saved.v;
+        journeyUI.update=uiUpdate;brandStory.update=storyUpdate;
+        canyonMotion.reset();frame(true,1e-6);
+      }
+    }
     addEventListener('wheel',event=>{
       if(journeyUI.menuOpen||event.target.closest('[data-journey-ui]')||tuner.contains(event.target)||!assetsReady||dropTouch.grabbed||event.ctrlKey)return;
       event.preventDefault();const pixels=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?innerHeight:1);
@@ -8677,8 +8883,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     },{passive:false});
     let journeyTouch=null;
     addEventListener('pointerdown',event=>{if(journeyUI.menuOpen||event.target.closest('[data-journey-ui]')||event.pointerType!=='touch'||tuner.contains(event.target)||event.target.closest('button,a,input'))return;journeyTouch={id:event.pointerId,y:event.clientY};if(event.target===canvas)canvas.setPointerCapture(event.pointerId);},{passive:true});
-    addEventListener('pointermove',event=>{if(!journeyTouch||event.pointerId!==journeyTouch.id)return;advanceJourney((journeyTouch.y-event.clientY)*1.9/Math.max(580,innerHeight*.8));journeyTouch.y=event.clientY;},{passive:true});
-    for(const type of ['pointerup','pointercancel'])addEventListener(type,event=>{if(journeyTouch?.id===event.pointerId)journeyTouch=null;},{passive:true});
+    addEventListener('pointermove',event=>{if(!journeyTouch||event.pointerId!==journeyTouch.id)return;const delta=(journeyTouch.y-event.clientY)*1.9/Math.max(580,innerHeight*.8);advanceJourney(delta);noteTouchMove(delta);journeyTouch.y=event.clientY;},{passive:true});
+    for(const type of ['pointerup','pointercancel'])addEventListener(type,event=>{if(journeyTouch?.id===event.pointerId){if(type==='pointerup')releaseTouchFling();journeyTouch=null;}},{passive:true});
     addEventListener('keydown',event=>{
       if(journeyUI.menuOpen||event.target.closest('input,textarea,select,button,a,[contenteditable]')||event.ctrlKey||event.metaKey||event.altKey)return;
       const moves={ArrowDown:.15,ArrowUp:-.15,PageDown:.85,PageUp:-.85,' ':event.shiftKey?-.85:.85};
@@ -8688,7 +8894,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     });
 
     function updateDropTouch(dt, time) {
-      if(journey.progress>.03){releaseDropGrab();dropTouch.hovered=false;document.body.classList.remove('is-drop-hovered');dropTouch.offset.multiplyScalar(Math.exp(-dt*8));dropTouch.velocity.multiplyScalar(Math.exp(-dt*8));return;}
+      if(journey.progress>.03){releaseDropGrab();dropTouch.hovered=false;if(document.body.classList.contains('is-drop-hovered'))document.body.classList.remove('is-drop-hovered');dropTouch.offset.multiplyScalar(Math.exp(-dt*8));dropTouch.velocity.multiplyScalar(Math.exp(-dt*8));return;}
       let hit = null;
       if (
         assetsReady &&
@@ -8866,6 +9072,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     document.addEventListener('visibilitychange',()=>{clock.getDelta();journey.velocity=0;});
     function frame(manual, fixedDelta) {
       const realDelta = clock.getDelta();
+      const perfT0 = performance.now();
       const scrollDt=Math.min(fixedDelta === undefined ? realDelta : fixedDelta,.18);
       const dt = Math.min(scrollDt,.04);
       sceneTime += dt;
@@ -8931,6 +9138,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       updateWaterTouch(dt);
       updateRipples(dt);
       updatePointerSpray(dt);
+      stepTouchFling(scrollDt);
       if (assetsReady) {
         updateDropTransition(dt, time, scrollDt);
       } else {
@@ -8960,6 +9168,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         dropletUniforms.uNoiseView.value.setFromMatrix4(camera.matrixWorldInverse);
       }
 
+      updateKeyShadow();
       renderFrame++;
       if(logoRoot.visible)logoGlass.capture(scene,camera,logoSpin);
       sceneCursor.update(dt,time);
@@ -8967,6 +9176,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       if (firstFrame && assetsReady && journeyReady) {
         firstFrame = false;
         requestAnimationFrame(() => {
+          prewarmChapters();
           const preview=new URLSearchParams(location.search).get('view');
           if(preview==='transition')journey.progress=journey.target=logoChapterEnd()-.16;
           if(preview==='logo')journey.progress=journey.target=logoChapterStart()+CONFIG.logo.length*.44;
@@ -8994,6 +9204,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }
       /* Wrapped, not passed directly: rAF hands its callback a timestamp,
          which would arrive here as `manual` and stop the loop. */
+      if (!manual) perfGovernor(perfT0);
       if (!manual) requestAnimationFrame(() => frame());
     }
 
@@ -9003,13 +9214,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     function resize() {
       const width = innerWidth;
       const height = innerHeight;
-      const dpr = Math.min(devicePixelRatio, 1.65);
+      const dpr = renderDpr();
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.fov = CONFIG.camera.fov + (width < 760 ? 8 : 0);
       camera.updateProjectionMatrix();
-      logoGlass.resize(width,height,dpr);
+      logoGlass.resize(width,height,DROPLET_LITE?dpr*CONFIG.perf.glassRes:dpr);
       sceneCursor.resize(width,height);
       composer.setPixelRatio(dpr);
       composer.setSize(width, height);

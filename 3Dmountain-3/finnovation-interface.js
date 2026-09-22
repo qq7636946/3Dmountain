@@ -51,6 +51,7 @@ export function mountJourneyInterface({ navigate, reducedMotion = false }) {
   const currentLabel=root.querySelector('.fi-footer-current'), total=root.querySelector('.fi-footer-total');
   const nextLabel=root.querySelector('.fi-footer-next span');
   let targets=[0,2.8,6.7,9,11.3,12.5], lastState=null, active=-1, copyId='', progressKey='';
+  const progressBar=root.querySelector('.fi-footer-progress i');
   const frame=root.querySelector('.fi-frame path');
   const resize=new ResizeObserver(()=>{
     const w=root.clientWidth,h=root.clientHeight,c=innerWidth<681?14:22;
@@ -128,7 +129,10 @@ export function mountJourneyInterface({ navigate, reducedMotion = false }) {
       nextLabel.textContent=id==='derivatives'?'BACK TO START':index===5?'NEXT STRATEGY':'NEXT CHAPTER';
     }
     const key=Math.max(0,Math.min(1,state.progress/state.max)).toFixed(4);
-    if(key!==progressKey){progressKey=key;root.style.setProperty('--fi-progress',key);}
+    /* Mobile perf: the only reader of --fi-progress is the footer bar itself. Written on the UI root it made the
+       whole interface subtree recalc its style on every scrolled frame (~4 ms/frame on a throttled phone CPU);
+       written on the bar it restyles one element. Same rule, same pixels. */
+    if(key!==progressKey){progressKey=key;(progressBar||root).style.setProperty('--fi-progress',key);}
   }
   return {root,update,get menuOpen(){return menu.open;}};
 }

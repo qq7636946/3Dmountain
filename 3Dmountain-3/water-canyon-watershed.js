@@ -1,5 +1,5 @@
-import { createConfluenceEffects } from './water-confluence-fx.js?v=lines-beauty-1';
-export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx.js?v=lines-beauty-1';
+import { createConfluenceEffects } from './water-confluence-fx.js?v=beam-head-3';
+export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx.js?v=beam-head-3';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 

@@ -1,4 +1,4 @@
-import { createCanyonWatershed } from './water-canyon-watershed.js?v=terrain-3';
+import { createCanyonWatershed } from './water-canyon-watershed.js?v=beam-head-3';
 
 // Opt in per page; existing journey pages retain their original night palette.
 export const WATERSHED_STYLE_DEFAULTS = Object.freeze({

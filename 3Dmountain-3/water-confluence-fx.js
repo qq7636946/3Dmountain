@@ -8,7 +8,12 @@ export const WATERSHED_FLOW_DEFAULTS = Object.freeze({
   // falloff that spills over the water, pulse = travelling comet packets,
   // sparkle = sun glints riding the current, join = extra light where rivers
   // meet, meander = how much the strands braid, depth = fade into valley haze.
-  core: .6, halo: .7, pulse: .85, sparkle: .5, join: 1, meander: .6, depth: .75
+  core: .6, halo: .7, pulse: .85, sparkle: .5, join: 1, meander: .6, depth: .75,
+  // The comet head (光束頭) and its train, all 1 = the look as designed:
+  // headSize = how long the head is along the river, headBright = how hot it
+  // burns, headGlow = the halo it throws, headWidth = how thick it is across,
+  // tail = length of the fading train behind it, spacing = gap between packets.
+  headSize: 1, headBright: 1, headGlow: 1, headWidth: 1, tail: 1, spacing: 1
 });
 
 /** Locally bounded, terrain-occluded light carried by the five actual rivers. */
@@ -40,7 +45,9 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
     uFlowCore: { value: WATERSHED_FLOW_DEFAULTS.core }, uFlowHalo: { value: WATERSHED_FLOW_DEFAULTS.halo },
     uFlowPulse: { value: WATERSHED_FLOW_DEFAULTS.pulse }, uFlowSparkle: { value: WATERSHED_FLOW_DEFAULTS.sparkle },
     uFlowJoin: { value: WATERSHED_FLOW_DEFAULTS.join }, uFlowMeander: { value: WATERSHED_FLOW_DEFAULTS.meander },
-    uFlowDepth: { value: WATERSHED_FLOW_DEFAULTS.depth }
+    uFlowDepth: { value: WATERSHED_FLOW_DEFAULTS.depth },
+    uHeadSize: { value: 1 }, uHeadBright: { value: 1 }, uHeadGlow: { value: 1 }, uHeadWidth: { value: 1 },
+    uHeadTail: { value: 1 }, uHeadSpacing: { value: 1 }
   });
   let disposed = false, previousTime = null, motionTime = 0, flowTravel = 0;
   const pointAt = (curve, t) => curve.getPointAt(clamp(t));
@@ -50,7 +57,8 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
     uniform float uTime, uFlowTravel, uReveal, uConfluence;
     uniform float uFlowCount, uFlowWidth, uFlowBrightness, uFlowSpeed, uFlowGlow, uMist;
     uniform vec3 uFlowColor;${refined ? `
-    uniform float uFlowCore, uFlowHalo, uFlowPulse, uFlowSparkle, uFlowJoin, uFlowMeander, uFlowDepth;` : ''}
+    uniform float uFlowCore, uFlowHalo, uFlowPulse, uFlowSparkle, uFlowJoin, uFlowMeander, uFlowDepth;
+    uniform float uHeadSize, uHeadBright, uHeadGlow, uHeadWidth, uHeadTail, uHeadSpacing;` : ''}
     float hash21(vec2 p) { p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
     float noise21(vec2 p) {
       vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
@@ -178,18 +186,22 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
           // Comet packets: every strand has its own speed and spacing, so
           // they overtake one another. All share the drainage-wide distance
           // clock, so nothing reverses or restarts at a confluence.
-          float adv=(distance-uFlowTravel*(.80+.40*h1))/(520.+340.*h2)+h3;
+          float adv=(distance-uFlowTravel*(.80+.40*h1))/((520.+340.*h2)*uHeadSpacing)+h3;
           float ph=fract(adv), phAA=max(fwidth(adv)*1.25,.002);
           const float H=.86;
-          float L=.34+.26*h2;
+          // 尾巴最長只到下一個包的前面：再長就會在相位繞回處接出一道亮縫。
+          float L=min((.34+.26*h2)*uHeadTail,H-.02);
           float tail=pow(clamp(1.-(H-ph)/L,0.,1.),2.2);
-          float front=1.-smoothstep(H,H+.028+phAA,ph);
+          // 寬到 0.15 以上，包的硬前緣和粗細錐度會橫跨整條河、疊成一格一格的台階；
+          // 越寬越收掉它，讓寬光是一條平順的光河（0.15 以下完全不變）。
+          float wide=smoothstep(.15,.6,w);
+          float front=1.-smoothstep(H,H+.028+phAA+.10*wide,ph);
           float packet=mix(tail,front,step(H,ph));
-          float head=bell(ph-H+.006,.011+phAA)*step(.001,pulse);
-          float energy=mix(.62,.28+packet*.95,steady)+head*.85*pulse;
+          float head=bell(ph-H+.006*uHeadSize,.011*uHeadSize+phAA)*step(.001,pulse);
+          float energy=mix(.62,.28+packet*.95,steady*(1.-.6*wide))+head*.85*pulse*uHeadBright*(1.-.7*wide);
           // Tapered: the light is widest in the bright body of a packet,
           // thins to a thread in its tail and rounds off at its head.
-          float sw=w*mix(1.,mix(.58,1.14,packet),steady);
+          float sw=w*mix(1.,mix(.58,1.14,packet),steady*(1.-.85*wide));
           // Core stays crisp at any distance: never thinner than a pixel,
           // and its energy is conserved when the pixel floor widens it.
           float coreSigma=sw*mix(.50,.20,clamp(uFlowCore,0.,1.));
@@ -202,8 +214,13 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
           float hw=max(sw*1.1+uFlowHalo*.09,aa*2.);
           float x=d/hw, halo=1./((1.+x*x)*(1.+x*x));
           line+=white*core*energy*(.95+.5*uFlowCore)+uFlowColor*shoulder*energy*.11;
-          glow+=haloTint*halo*(.05+.24*packet*steady+head*.3*pulse);
-          heads+=head*core;
+          // 光束頭光暈：自己的範圍，1 以上沿河與橫向一起長大（在 1 時與原式相同）。
+          float glowGrow=max(uHeadGlow-1.,0.);
+          float headHalo=bell(ph-H+.006*uHeadSize,(.011*uHeadSize+phAA)*(1.+1.5*glowGrow));
+          float xg=d/(hw*(1.+.5*glowGrow)), hhalo=1./((1.+xg*xg)*(1.+xg*xg));
+          glow+=haloTint*(halo*(.05+.24*packet*steady)+hhalo*headHalo*.3*pulse*uHeadGlow);
+          // The head's own cross-section: at HEAD WIDTH 1 it is exactly the core.
+          heads+=head*bell(d,max(coreS*uHeadWidth,aa*.50))*keep;
           haloSum+=halo*(.35+.65*packet); packetSum+=packet;
         }
         // Light spilling onto the water itself: a broad, faint sheen that
@@ -212,7 +229,7 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
         glow=glow*uFlowGlow*(.5+.6*uFlowHalo)+haloTint*sheen*uFlowGlow*uFlowHalo;
         // Pulse heads run hot enough to catch the bloom pass: a travelling
         // point of light rather than a brighter stretch of tape.
-        line+=vec3(1.,.995,.985)*heads*pulse*1.35;
+        line+=vec3(1.,.995,.985)*heads*pulse*1.35*uHeadBright;
         #ifndef FLOW_LITE
         // Sun glints riding the current: a fine layer for close reaches and a
         // coarse, sparser one that still resolves from the aerial height.
@@ -443,7 +460,7 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
       previousTime = currentTime;
       if (refined) {
         uniforms.uFlowCount.value = Math.round(flowValue('count', 0, 5));
-        uniforms.uFlowWidth.value = flowValue('width', .005, .20);
+        uniforms.uFlowWidth.value = flowValue('width', .005, 1);
         uniforms.uFlowBrightness.value = flowValue('brightness', 0, 2);
         uniforms.uFlowSpeed.value = flowValue('speed', 0, 2.5);
         uniforms.uFlowGlow.value = flowValue('glow', 0, 1.5);
@@ -455,6 +472,12 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
         uniforms.uFlowJoin.value = flowValue('join', 0, 2);
         uniforms.uFlowMeander.value = flowValue('meander', 0, 1.5);
         uniforms.uFlowDepth.value = flowValue('depth', 0, 1);
+        uniforms.uHeadSize.value = flowValue('headSize', .2, 5);
+        uniforms.uHeadBright.value = flowValue('headBright', 0, 5);
+        uniforms.uHeadGlow.value = flowValue('headGlow', 0, 5);
+        uniforms.uHeadWidth.value = flowValue('headWidth', .3, 5);
+        uniforms.uHeadTail.value = flowValue('tail', .2, 3);
+        uniforms.uHeadSpacing.value = flowValue('spacing', .3, 3);
         const color = flowConfig.color ?? WATERSHED_FLOW_DEFAULTS.color;
         if (color !== lastFlowColor) { flowColor.set(color); lastFlowColor = color; }
         stats.strandsPerRiver = uniforms.uFlowCount.value;

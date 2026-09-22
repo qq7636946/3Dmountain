@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
-  <title>MONTIS — Glacial Orb Study</title>
+  <title>恒灝創新 Finnovation — 科技賦能，金融加值</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -868,6 +868,66 @@
         transition-delay: 0s
       }
     }
+    body.is-journey-moving .hero-title, body.is-journey-moving .hero-sub {
+      opacity: 0; transform: translateY(-.5em);
+      transition: opacity .4s ease, transform .6s var(--ease); transition-delay: 0s;
+    }
+    .journey-cue {
+      position: fixed; z-index: 6; left: 50%; bottom: max(24px, env(safe-area-inset-bottom));
+      transform: translateX(-50%); border: 1px solid #ffffff55; border-radius: 32px;
+      background: #edf6f9d4; color: #254661; backdrop-filter: blur(12px);
+      padding: 10px 24px; font: 400 11px/1.65 "Jost", "Noto Sans TC", sans-serif;
+      letter-spacing: .13em; white-space: nowrap; cursor: pointer;
+      opacity: 0; transition: opacity .8s ease;
+    }
+    body.is-ready .journey-cue { opacity: 1; }
+    .journey-cue:focus-visible { outline: 2px solid #9ac9e4; outline-offset: 4px; }
+    .journey-cue small { display: block; font-size: 8px; letter-spacing: .28em; opacity: .66; }
+    .journey-track { display: block; margin: 7px auto 0; width: 120px; height: 1px; background: #25466133; }
+    .journey-track i { display: block; width: 100%; height: 1px; background: #437e9b; transform-origin: left; transform: scaleX(var(--journey-p, 0)); }
+    .hair { display: none; }
+    @media(max-width:760px) { .tuner { top: 60px; bottom: auto; } .journey-cue { bottom: 14px; font-size: 10px; padding: 9px 20px; } }
+  </style>
+  <style id="journey-story-style">
+/* The same scale and type family as the opening banner, with scroll-owned motion. */
+/* Header ink, type and spacing follow the opening banner in every scene. */
+.journey-story { position:fixed; inset:0; z-index:5; pointer-events:none; color:#fff; opacity:0; }
+body.is-ready .journey-story { opacity:1; }
+.story-scrim { position:absolute; inset:0; opacity:var(--scrim,0); background:linear-gradient(90deg,#28445e 0%,#28445e66 40%,transparent 72%); }
+.journey-story[data-side="right"] .story-scrim { transform:scaleX(-1); }
+.journey-story[data-side="center"] .story-scrim { background:radial-gradient(ellipse at 50% 51%,#081a25 0%,#081a25aa 45%,transparent 85%); }
+.story-card { position:absolute; top:51%; left:6vw; right:6vw; transform:translateY(-50%); visibility:hidden; opacity:var(--opacity,0); }
+.story-card.is-active { visibility:visible; }
+.story-card.story-right { text-align:right; }
+.story-card.story-center { text-align:center; }
+.story-kicker { margin:0 0 22px; font:400 10px/1.4 "Jost","Noto Sans TC",sans-serif; letter-spacing:.24em; text-shadow:0 2px 12px #07192288; }
+.story-title { font:400 clamp(1.9rem,5.2vw,8.4rem)/1.04 "Jost","Helvetica Neue",Arial,sans-serif; letter-spacing:.012em; text-shadow:0 .04em .28em #07192244; }
+.story-line { display:block; overflow:hidden; padding-bottom:.10em; margin-bottom:-.10em; }
+.story-line>span { display:inline-block; transform:translate3d(0,calc((1 - var(--entry,0)) * var(--movement,24px) * (1 + var(--line-delay,0)*.26) - var(--exit,0)*16px),0); }
+.story-zh { max-width:34em; margin:24px 0 0; font:300 clamp(.78rem,1.12vw,1.08rem)/1.95 "Noto Sans TC",sans-serif; letter-spacing:.21em; text-shadow:0 1px 12px #071922b3; opacity:var(--zh,0); transform:translate3d(0,calc((1 - var(--zh,0))*10px),0); }
+.story-right .story-zh { margin-left:auto; }
+.story-center .story-zh { margin-left:auto; margin-right:auto; }
+.story-signature span { display:inline-block; white-space:nowrap; margin:0 .65em; }
+.story-signature { margin-top:32px; font:300 10px/2 "Noto Sans TC",sans-serif; letter-spacing:.25em; opacity:var(--zh,0); text-shadow:0 1px 12px #071922; }
+html:not([data-tuning="true"]) .tuner { display:none; }
+.journey-cue { bottom:max(25px,env(safe-area-inset-bottom)); border:0; border-radius:0; background:transparent; backdrop-filter:none; color:#fff; text-shadow:0 1px 12px #102d4caa; padding:12px 24px; letter-spacing:.17em; }
+.journey-cue small { display:none; }
+.journey-track { background:#ffffff3d; width:92px; margin-top:10px; }
+.journey-track i { background:#fff; }
+.journey-cue:hover .journey-track { background:#ffffff70; }
+.journey-cue:focus-visible { outline:1px solid white; outline-offset:0; }
+@media(max-width:680px){
+ .story-card { left:7vw; right:7vw; top:50%; }
+ .story-title { font-size:clamp(2rem,10.5vw,3.4rem); line-height:1.05; letter-spacing:.005em; }
+ .story-kicker { font-size:8px; letter-spacing:.20em; margin-bottom:17px; }
+ .story-zh { font-size:12px; letter-spacing:.13em; line-height:1.95; margin-top:21px; max-width:25em; }
+ .story-card.story-left,.story-card.story-right { top:57%; }
+ .story-signature span { display:block; margin:0; }
+ .story-signature { max-width:24em; margin:25px auto 0; font-size:9px; letter-spacing:.18em; }
+ .journey-cue { font-size:10px; bottom:max(17px,env(safe-area-inset-bottom)); }
+}
+@media(prefers-reduced-motion:reduce){ .story-line>span,.story-zh { transform:none; } }
+
   </style>
 </head>
 
@@ -877,17 +937,18 @@
   <div class="wash"></div>
   <div class="grain"></div>
   <div class="chrome">
-    <div class="brand">MONTIS</div>
-    <div class="study">GLACIAL STUDY / 04</div>
+    <div class="brand">FINNOVATION</div>
+    <div class="study">KNOWLEDGE · CAPITAL · INNOVATION</div>
     <div class="hero">
-      <h1 class="hero-title">OMNI INVESTMENT STRATEGIE</h1>
+      <h1 class="hero-title">OMNI INVESTMENT STRATEGIES</h1>
       <p class="hero-sub">洞悉市場，全方位資產佈局</p>
     </div>
     <div class="hair"></div>
   </div>
+  <button id="journeyCue" class="journey-cue" type="button"><small id="journeyChapter">01 / 04 · DISPERSE</small><span id="journeyLabel">向下捲動 · 展開水珠 ↓</span><span class="journey-track" aria-hidden="true"><i></i></span></button>
   <div class="loader" id="loader">
     <div class="loader-inner">
-      <div class="loader-logo">MONTIS</div>
+      <div class="loader-logo">FINNOVATION</div>
       <div class="loader-line"><i></i></div>
       <div class="loader-note">FORMING ATMOSPHERE</div>
     </div>
@@ -947,6 +1008,11 @@
 
   <script type="module">
     import * as THREE from 'three';
+    import { createJourneyScene } from './water-journey-scene.js?v=alpine-confluence-1';
+    import { createJourneyRiver } from './water-journey-river.js';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=five-rivers-only-1';
+    document.documentElement.dataset.tuning=String(new URLSearchParams(location.search).get('tune')==='1');
+    const brandStory=mountJourneyStory();
     import { Water } from 'three/addons/objects/Water.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1207,7 +1273,7 @@
         loop: 0,
         /* 0: the page opens on the drop already whole, with no gathering. 1:
            the beads gather into it as the loader clears. Read at load. */
-        intro: 1,
+        intro: 0,
         split: 3.20, splitStagger: .45, splitContact: .70, splitSnap: 2.6,
         splitArc: .36, splitShuffle: .35, splitRing: .042,
         strays: 2, straySize: .26, strayReach: .8
@@ -1286,7 +1352,7 @@
     const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));
     /* ?drop=mesh keeps the MarchingCubes cluster and the GLTF orb as the
        visible drop, exactly as before the droplet port. */
-    const dropSDF = new URLSearchParams(location.search).get('drop') !== 'mesh';
+    const dropSDF = true;
 
     /* Display value to the light that becomes it. Every colour in CONFIG.field
        is written as the hex it should reach the screen as; this undoes the
@@ -2599,7 +2665,6 @@ vec3 montisDither(vec2 fc){
       loaderNote.textContent = 'SCENE READY';
       /* The film is heavy: only start buffering once the 3D scene is done,
          so it never competes with the GLTF loads for the first paint. */
-      warmSectionTwoVideo();
     };
     assetManager.onError = url => {
       loaderNote.textContent = 'ASSET LOAD FAILED';
@@ -3513,7 +3578,8 @@ vec3 montisDither(vec2 fc){
       samples: 4
     });
     const composer = new EffectComposer(renderer, renderTarget);
-    composer.addPass(new RenderPass(scene, camera));
+    const mainRenderPass = new RenderPass(scene, camera);
+    composer.addPass(mainRenderPass);
     const bloom = new UnrealBloomPass(
       new THREE.Vector2(innerWidth, innerHeight),
       .20,
@@ -5613,28 +5679,10 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       rippleAmount: 0
     };
 
-    function beginEntry() {
-      if (entry.running || entry.done) return;
-      entry.running = true;
-      entry.splashed = false;
-      entry.time = 0;
-      beginGather();
-    }
-
+    function beginEntry() { skipEntry(); }
     function skipEntry() {
-      entry.running = false;
-      entry.done = true;
-      entry.splashed = true;
-      /* Ending the entrance only hands the visitor the page; a running loop
-         goes on. Only if it never started (reduced motion) is the orb simply
-         put there. */
-      if (gatherState.mode === 'off') endGather();
-      entry.y = CONFIG.drop.y;
-      entry.stretch = 0;
-      entry.extras = 1;
-      entry.rippleAge = -1;
-      entry.rippleFade = 0;
-      entry.rippleAmount = 0;
+      entry.running=false; entry.done=true; entry.extras=1; entry.y=CONFIG.drop.y;
+      gatherState.mode='journey'; gatherState.opacity=1;
     }
 
     /* The entrance used to surface the orb from the river. It now forms
@@ -5736,23 +5784,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }
     }
 
-    function openSectionTwo() {
-      /* The wheel waits for the first gather, but the tuner button and
-         window.index4 do not. Either way the loop is told to draw every bead
-         in, so what falls is one drop and not a clump left in the air. */
-      if (entry.running) skipEntry();
-      collapseGather();
-      dropTransition.target = 1;
-      releaseDropGrab();
-      dropTouch.hovered = false;
-      document.body.classList.remove('is-drop-hovered');
-      resetDropSimulation(false);
-    }
-
-    function closeSectionTwo(instant = false) {
-      dropTransition.target = 0;
-      if (instant) dropTransition.progress = 0;
-    }
+    function openSectionTwo() { journey.target=5; releaseDropGrab(); }
+    function closeSectionTwo(instant=false) { journey.target=0; if(instant)journey.progress=0; }
 
     /* ------------------------------------------------------------------
        前散的每一幀。
@@ -6062,59 +6095,55 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       u.uDropRim.value.set(L(CONFIG.drop.rim, 1.0, close), CONFIG.drop.rimEdge);
     }
 
-    function updateDropTransition(dt, time) {
-      updateEntry(dt);
-      /* While the orb is surfacing it owns its own height, stretch and the
-         brightness of everything orbiting it. */
-      const heroY = entry.running ? entry.y : CONFIG.drop.y;
-      const heroStretch = entry.running ? entry.stretch : 0;
-      const heroExtras = entry.running ? entry.extras : 1;
-      if (reduceMotion) {
-        dropTransition.progress = dropTransition.target;
-      } else {
-        const follow = 1 - Math.exp(-dt * CONFIG.transition.speed * 2.25);
-        dropTransition.progress += (
-          dropTransition.target - dropTransition.progress
-        ) * follow;
-      }
-      if (Math.abs(dropTransition.target - dropTransition.progress) < .0005) {
-        dropTransition.progress = dropTransition.target;
-      }
-
-      const progress = THREE.MathUtils.clamp(dropTransition.progress, 0, 1);
-      /* ----------------------------------------------------------------
-         重新分節。水珠不再往下掉，它朝鏡頭散開。
-           .00-.07  蓄勢：水珠先往後縮一點點、壓扁。沒有這一下，斷裂會
-                    像是平白發生的；動畫裡這叫預備動作。
-           .07-.26  斷裂：英雄水珠淡出，珠子從它體內長出來。
-           .10-.68  飛行：珠子以進度的 2.05 次方加速穿過十七個單位。
-           .48-.78  過鏡：珠子陸續掠過近平面，化進光裡。
-           .44-.82  光芒：泛光、曝光、面紗一起推到高點再落下。
-           .62-.88  第二塊的影片從光底下浮上來。
-           .74-.94  畫布淡出。
-         每一項都是 progress 的純函數，沒有任何一次性旗標，所以往回捲的
-         時候整段會倒著播回來。
-         ---------------------------------------------------------------- */
+    /* A reversible score: the original frontal dispersal, first-person flow,
+       then five independently flowing rivers. */
+    const journey={progress:0,target:0,max:13.8,velocity:0,phase:'disperse',mix:0,impact:0};
+    const easeJourney=x=>{const u=THREE.MathUtils.clamp(x,0,1);return u*u*u*(u*(u*6-15)+10);};
+    const journeyCue=document.querySelector('#journeyCue');
+    const journeyLabel=document.querySelector('#journeyLabel');
+    const journeyChapter=document.querySelector('#journeyChapter');
+    const canyon=createJourneyScene(THREE,{createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
+    canyon.scene.environment=scene.environment;
+    const canyonTarget=new THREE.WebGLRenderTarget(innerWidth,innerHeight,{type:THREE.HalfFloatType,depthBuffer:true});
+    const journeyBlend=new ShaderPass({uniforms:{tDiffuse:{value:null},tCanyon:{value:canyonTarget.texture},uMix:{value:0},uImpact:{value:0}},
+      vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      fragmentShader:`varying vec2 vUv;uniform sampler2D tDiffuse,tCanyon;uniform float uMix,uImpact;
+        void main(){vec2 d=vUv-.5;float r=length(d);vec2 uv=clamp(vUv+d*sin(r*42.-uMix*8.)*uImpact*.035,vec2(.001),vec2(.999));
+        vec3 a=texture2D(tDiffuse,uv).rgb;vec3 b=texture2D(tCanyon,uv).rgb;
+        vec3 c=mix(a,b,uMix);c=mix(c,vec3(.72,.85,.93),uImpact*.14);gl_FragColor=vec4(c,1.);}`});
+    // ShaderPass clones uniforms; retain the live render-target texture.
+    journeyBlend.uniforms.tCanyon.value=canyonTarget.texture;
+    composer.insertPass(journeyBlend,1);journeyBlend.enabled=false;
+    let journeyReady=false;
+    async function warmJourney(){
+      const warmTarget=new THREE.WebGLRenderTarget(64,64);
+      try{
+        for(const stage of [canyon]){
+          if(stage.ready)await stage.ready;
+          stage.scene.environment=scene.environment;
+          if(renderer.compileAsync)await renderer.compileAsync(stage.scene,stage.camera);else renderer.compile(stage.scene,stage.camera);
+          const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);}
+        }
+      }finally{warmTarget.dispose();journeyReady=true;}
+    }
+    const journeyStops=[.52,1.12,2.12,2.96,4.8,6.9,8.95,10.18,10.99,11.71,12.43,13.22,13.8];
+    journeyCue.addEventListener('click',()=>{journey.target=journeyStops.find(s=>s>journey.target+.05)??0;});
+    function advanceJourney(delta){if(!assetsReady||dropTouch.grabbed||!Number.isFinite(delta))return;const ahead=journey.target-journey.progress;if(delta*ahead<0)journey.target=journey.progress;journey.target=THREE.MathUtils.clamp(journey.target+delta,Math.max(0,journey.progress-1.25),Math.min(journey.max,journey.progress+1.25));}
+    function updateDropTransition(dt,time,scrollDt=dt){
+      const J=journey,S=gatherState;
+      stepJourneyMotion(J,scrollDt,reduceMotion);
+      const p=J.progress;
+      // Replay index4-5's exact dispersal under the reversible scroll clock.
+      const progress=THREE.MathUtils.clamp(p/2.6,0,1);
+      dropTransition.progress=progress;dropTransition.target=p>.001?1:0;
+      entry.running=false;entry.done=true;
+      J.mix=easeJourney((progress-CONFIG.disperse.handoff)/.22);J.impact=0;
       const DZ = CONFIG.disperse;
-      /* 預備動作要是一個真正的脈衝：靜止時必須剛好是 0，否則水珠平常就
-         被推到 z=-7.15 而不是 -7。高斯在 p=0 還有 27% 的值，所以改用一
-         個兩端都歸零的窗。 */
+      const heroStretch = 0;
       const anticip = smooth01(progress / .055)
         * (1 - smooth01((progress - .055) / .06));
-      /* 斷裂從 .06 起：英雄壓扁蓄勢、朝鏡頭頸縮、核心一縮碎片從表面冒出
-         來，主珠在 BREAK AT 接手；一級碎片在 .33 之前全部脫離。 */
       const breakUp = smooth01((progress - .06) / .16);
       const flight = smooth01((progress - .10) / .58);
-      /* 光的包絡分成三條，不是一條。
-         ATTACK 在珠子還在穿過鏡頭的時候就起，比第一顆抵達鏡頭平面早
-         0.03 秒——等珠子走光才亮，那叫剪接，不叫發光。
-         CORE 是一顆窄高斯，只有它負責「爆」的那一下。
-         RELEASE 慢，因為全畫面的亮度事件要是收得太快，讀起來又是一刀剪
-         掉而不是光在衰減。
-         門檻另外用一條更快的釋放：它必須比光幕早回到基準，否則最後三分
-         之二的收尾會整片糊成牛奶。 */
-      /* 第一顆在 p≈.40 進入近平面淡出區，提早一點點火 → .36；最後一顆
-         在 .52 穿過、.58 消失，光在 .64 才開始退。 */
       const flareAtk = smooth01((progress - .36) / .18);
       const flareRel = 1 - smooth01((progress - .64) / .24);
       const flareCut = 1 - smooth01((progress - .62) / .14);
@@ -6122,8 +6151,6 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         -Math.pow((progress - DZ.burstAt) / DZ.burstWidth, 2)
       );
       const flare = flareAtk * flareRel;
-      /* 英雄 → 主珠的交接（breakAt ± .02），兩顆球同位置、同半徑、同軸比；
-         `dissolve` 這個名字留給下面所有用它關光點/衛星/暈的地方。 */
       const dissolve = heroHandover(progress);
       const flareExpand = smooth01((progress - .26) / .40);
       const flareIgnition = smooth01((progress - .30) / .16);
@@ -6133,16 +6160,9 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         * CONFIG.transition.sectionFade;
       const touchFade = 1 - smooth01(progress / .12);
       const dropX = CONFIG.drop.x + dropTouch.offset.x * touchFade;
-      const dropY = heroY + dropTouch.offset.y;
-      /* 蓄勢時往後縮 .55 個單位——離鏡頭更遠，所以下一刻的衝出來更有落差。
-         這是所有碎片的出發原點（不含之後追隨主珠的位移）。 */
+      const dropY = CONFIG.drop.y + dropTouch.offset.y * touchFade;
       const originZ = CONFIG.drop.z - anticip * .55;
-      /* 碎片先算：本體要不要讓位、站在哪裡、什麼形狀，都是它們決定的。 */
       updateDispersal(progress, breakUp, flight, dropX, dropY, originZ);
-      /* 英雄的 SDF 就是本體：BREAK AT 之前留在原點縮核、頸縮；之後就是主珠
-         本人——跟著主珠的閉式軌跡走、帶著主珠的軸比，芽掛在它身上，液橋一
-         條條被拉斷。最後一顆芽脫離那一格它讓位給 instanced 的主珠，同位置、
-         同半徑、同軸比，不是疊化。`dissolve` 的緩坡留給光點、暈這些地方。 */
       const heroSDF = disperseLead.sdf;
       const heroFlying = progress >= DZ.breakAt;
       dropRoot.visible = heroSDF;
@@ -6157,13 +6177,6 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         CONFIG.drop.ry,
         CONFIG.drop.rz - dropTouch.offset.x * .10 * touchFade
       );
-      /* Squash and stretch from the pointer: the bead lengthens along the
-         direction it is thrown and thins across it, then the spring pulls
-         it back round. */
-      /* 果凍拉伸沿真正的速度方向：速度 s 給 .30·(1−e^(−.09s)) 的軟上限（4 u/s
-         → .09、12 u/s → .20），方向以倍角平均（θ 與 θ+π 是同一個橢圓）用
-         22/s 追速度，過零時不翻面。SDF 用 uSquashRot 把場轉到速度軸，長軸永
-         遠是 scale.x；mesh 後備沒有旋轉，退回成投影到 x/y。 */
       const jellySpeed = dropTouch.velocity.length();
       const jellyAmp = .30 * (1 - Math.exp(-jellySpeed * .09)) * touchFade;
       const jellyTheta = jellySpeed > .02 ? Math.atan2(dropTouch.velocity.y, dropTouch.velocity.x) : 0;
@@ -6176,11 +6189,6 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         : 0;
       const jellyX = dropSDF ? jelly : jelly * Math.abs(Math.cos(dropTouch.jellyAngle));
       const jellyY = dropSDF ? 0 : jelly * Math.abs(Math.sin(dropTouch.jellyAngle));
-      /* 蓄勢的壓扁（xy +9%、z −16%，體積 .998）、斷裂的頸縮（沿 z 拉
-         neckAxis^(2/3)、橫向縮 neckAxis^(-1/3)，體積守恆）、縮核（整顆乘
-         core，那部分體積交給冒出來的碎片）。靜止時三個因子都是 1，水珠一
-         格不差地留在原位。主珠出發後改用主珠的半徑與軸比（BREAK AT 那一格
-         兩者相等，所以是連續的）。 */
       let neckZ;
       let neckXY;
       if (heroFlying) {
@@ -6198,222 +6206,74 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         CONFIG.drop.scale * (1 + heroStretch + jellyY - jellyX * .62) * neckXY,
         CONFIG.drop.scale * (1 - heroStretch * .42 - (jellyX + jellyY) * .34) * neckZ
       );
-      /* After the group has this frame's place and squash, so the cluster
-         rides exactly with it. */
-      updateGatherLoop(dt, dissolve);
+      // The single SDF owns the attached buds; no autonomous gather loop.
+      S.mode='orb';S.opacity=0;S.ballCount=S.activeCount=0;S.fx=S.fy=S.fz=1;
+      cluster.visible=false;
+      if(dropRoot.userData.orbMesh)dropRoot.userData.orbMesh.visible=!dropSDF&&dropRoot.visible;
+      if(p>.03){dropletTrail.amount=0;dropShapeUniforms.uTouchStrength.value=0;dropShapeUniforms.uTouchWobble.value=0;}
       dropShapeUniforms.uTransitionWobble.value = 0;
       syncDroplet(dt, time);
-      dropMotes.material.uniforms.uTime.value = time;
-      dropMotes.material.uniforms.uTransition.value = impactPulse * .68;
-      dropMotes.material.uniforms.uOpacity.value =
-        CONFIG.details.motes * (1 - dissolve) * (1 - overlayAlpha) * heroExtras;
-      /* Lights turned to zero are taken out of the frame, not drawn as
-         nothing: no draw calls, and the pointer's raycast skips them. */
-      dropMotes.visible = CONFIG.details.motes > 0;
-      orbHighlights.forEach(highlight => { highlight.visible = CONFIG.details.highlight > 0; });
-      dropOrbitGroup.visible = CONFIG.details.satelliteIntensity > 0;
-      glowTop.visible = glowFoot.visible = CONFIG.details.glow > 0;
-      waterGlints.material.uniforms.uTime.value = time;
-      waterGlints.material.uniforms.uTransition.value = impactPulse * .24;
 
-      /* ----------------------------------------------------------------
-         光芒。
-         原本的「光芒」只是水面上一小團青色光暈：量過整幀的平均亮度，從
-         頭到尾只從 166 動到 170（滿格 255），也就是 2%——難怪讀不出來。
-         真正的爆光要從畫面本身來，所以這裡推的是泛光和曝光，DOM 的面紗
-         只是最後一層收尾。泛光保色，所以亮起來仍然是這一頁的藍白帶虹彩，
-         而不是一片死白。
-         上限：曝光最多加 55%，泛光加到 1.79，兩者都用同一條高斯線，所以
-         起落速率一致，不會出現刺眼的階梯。 */
-      /* 光是從畫面本身來的，不是貼上去的。但三條路徑都要有硬上限：調光
-         師把滑桿推到底也不能做出頻閃或一片死白。
-         門檻的地板是 1.95。這一頁的場域量到約 1.70，海面約 1.80——門檻
-         一旦掉到它們底下，整片淡藍紫就進了泛光，出來是牛奶而不是光。
-         要更亮就推 strength：它只放大本來就過門檻的東西。
-         門檻用的是比光幕更快的那條釋放曲線，所以它會早一步回到基準。 */
-      bloom.strength = Math.min(
-        1.85,
-        CONFIG.scene.bloom + flare * DZ.burst * .42 + burst * DZ.burst * .58
-      );
-      bloom.radius = .58 + burst * .22;
-      bloom.threshold = Math.max(
-        1.95,
-        CONFIG.scene.bloomCut - flareAtk * flareCut * DZ.cut
-      );
-      /* 點火前兩格把曝光壓下去 20%。眼睛是比較出來的，不是量出來的：
-         先暗一下，同一個峰值讀起來會亮一倍，而量到的亮度一格沒漲。
-         純高斯，兩端都歸零，所以往回捲的時候它自己會走回來。 */
-      const preDip = 1 - .20 * Math.exp(
-        -Math.pow((progress - .33) / .035, 2)
-      );
-      renderer.toneMappingExposure = Math.min(
-        CONFIG.scene.exposure * 1.34,
-        CONFIG.scene.exposure * preDip * (1 + burst * DZ.exposure)
-      );
-
-      /* The film comes up UNDER the flare and finishes before it clears, so
-         the eye never catches the swap; the copy then rides in on top. */
-      const mediaReveal = smooth01((progress - DZ.handoff - .02) / .24);
-      const settle = smooth01((progress - .64) / .34);
-      writeStyle(sectionTwo, 'opacity', overlayAlpha.toFixed(4));
-      writeVar(sectionTwo, '--s2-media', mediaReveal.toFixed(4));
-      writeVar(sectionTwo, '--s2-scale', (1.075 - settle * .075).toFixed(4));
-      sectionTwo.classList.toggle('is-active', overlayAlpha > .001);
-      sectionTwo.classList.toggle('is-in', progress > .76);
-      sectionTwo.classList.toggle('is-live', progress > .92);
-      sectionTwo.setAttribute('aria-hidden', overlayAlpha > .5 ? 'false' : 'true');
-      setSectionTwoPlayback(progress > .34);
-      /* 畫布在最後一顆珠子走光（.58）之後才淡：.64–.78，第二塊的遮罩
-         （handoff .54 + .22）那時已經蓋上。 */
-      writeStyle(canvas, 'opacity', (1 - smooth01((progress - .64) / .14)).toFixed(4));
-      document.body.classList.toggle(
-        'is-transitioning',
-        progress > .035 && progress < .96
-      );
-      document.body.classList.toggle('is-section-two', progress > .70);
-
-      /* 硬上限 .72，而且是乘過 CONFIG 之後才夾。調光師把「光幕強度」推到
-         2.0 也只能更快到頂，不能做出一格死白。峰值 .72 用 screen 疊在平
-         均 0.62 的畫面上得到 0.894——留下的那 10% 餘裕，就是珠子剪影在
-         最亮的那一格仍然讀得出來的原因。原本這裡算出 1.189，瀏覽器夾到
-         1.0，等於整整 160 毫秒的進度是一張全螢幕的白紙。 */
-      const flashAlpha = Math.min(
-        .72,
-        flareIgnition * flareFade * CONFIG.details.transitionFlash * DZ.veil
-      );
-      transitionFlash.style.opacity = flashAlpha.toFixed(4);
-      /* 面紗是圓的、而且是從水珠原本掛著的地方朝四面推開的：光要跟著珠
-         子的來向走。原本它壓成 .035 的扁橢圓，是為了貼著水面的濺起——
-         那個動作已經不存在了。 */
-      transitionFlash.style.transform =
-        `scale(${(.14 + flareExpand * 1.55).toFixed(4)},`
-        + `${(.12 + Math.pow(flareExpand, 1.25) * 1.48).toFixed(4)})`;
-      /* 光源留在水珠原本掛著的位置，不要跟著珠子往前推。
-         鉻不會發光，它只會轉述光。珠子自己亮起來的那一刻，這一頁的材質
-         身分就死了。光站在它們背後，每一顆飛過去的珠子才會被逆光鑲上一
-         圈邊——銀色的身體、燒開的虹彩邊緣、白色的核心。而且它在深度上
-         真的在珠子後面，所以珠子會擋住它，剪影是真的。 */
-      transitionGlow.position.set(
-        CONFIG.drop.x,
-        CONFIG.drop.y,
-        CONFIG.drop.z
-      );
+      dropMotes.visible=false;dropOrbitGroup.visible=false;glowTop.visible=glowFoot.visible=false;
+      orbHighlights.forEach(h=>h.visible=false);
+      // Keep the same silver-water light as 4-5 as the drops cross the lens.
+      const lightMotion=reduceMotion?0:1;
+      bloom.strength=Math.min(1.85,CONFIG.scene.bloom+lightMotion*(flare*DZ.burst*.42+burst*DZ.burst*.58));
+      bloom.radius=.58+burst*.22*lightMotion;
+      bloom.threshold=Math.max(1.95,CONFIG.scene.bloomCut-flareAtk*flareCut*DZ.cut*lightMotion);
+      const preDip=1-.20*Math.exp(-Math.pow((progress-.33)/.035,2))*lightMotion;
+      renderer.toneMappingExposure=Math.min(CONFIG.scene.exposure*1.34,CONFIG.scene.exposure*preDip*(1+burst*DZ.exposure*lightMotion));
+      const flashAlpha=Math.min(.72,flareIgnition*flareFade*CONFIG.details.transitionFlash*DZ.veil)*lightMotion;
+      transitionFlash.style.opacity=flashAlpha.toFixed(4);
+      transitionFlash.style.transform=`scale(${(.14+flareExpand*1.55).toFixed(4)},${(.12+Math.pow(flareExpand,1.25)*1.48).toFixed(4)})`;
+      transitionGlow.position.set(CONFIG.drop.x,CONFIG.drop.y,CONFIG.drop.z);
       transitionScreen.copy(transitionGlow.position).project(camera);
-      /* 走 writeVar 去重：光源位置現在是常數（只剩指標視差），同一個字串
-         每幀重設兩次，等於每秒 120 次讓一張全螢幕 screen 疊層的樣式失效。 */
-      writeVar(transitionFlash, '--flare-x',
-        `${((transitionScreen.x * .5 + .5) * 100).toFixed(2)}%`);
-      writeVar(transitionFlash, '--flare-y',
-        `${((-transitionScreen.y * .5 + .5) * 100).toFixed(2)}%`);
-      /* 1.30 個畫面高。sprite 的 scale 就是世界單位，而 d=17.12 處的畫面
-         高是 2·17.12·tan15° = 9.175 單位，所以 11.93 才是「一盞光」；原本
-         的 20.16 是 2.2 個畫面高，落差整個在畫面外，畫面裡只剩一塊均勻
-         的加光。 */
-      transitionGlow.scale.setScalar(.16 + flareExpand * 11.77);
-      transitionGlow.material.opacity = THREE.MathUtils.clamp(
-        flashAlpha * (1.24 + impactPulse * .34),
-        0,
-        1.02
-      );
+      writeVar(transitionFlash,'--flare-x',`${((transitionScreen.x*.5+.5)*100).toFixed(2)}%`);
+      writeVar(transitionFlash,'--flare-y',`${((-transitionScreen.y*.5+.5)*100).toFixed(2)}%`);
+      transitionGlow.scale.setScalar(.16+flareExpand*11.77);
+      transitionGlow.material.opacity=THREE.MathUtils.clamp(flashAlpha*(1.24+impactPulse*.34),0,1.02);
+      transitionGlow.visible=flashAlpha>.001&&J.mix<.999;
+      waterGlints.material.uniforms.uTime.value=time;waterGlints.material.uniforms.uOpacity.value=CONFIG.details.waterGlints*(1-J.mix);
+      waterGlints.material.uniforms.uTransition.value=impactPulse*.24*lightMotion;
+      airMotes.material.uniforms.uOpacity.value=.30*(1-J.mix);
+      applyWaterRipple(0,0,0,1,0);impactKick=0;sceneDim=1-J.mix;
+      writeStyle(canvas,'opacity','1');writeStyle(sectionTwo,'opacity','0');sectionTwo.classList.remove('is-active','is-live','is-in');sectionTwo.setAttribute('aria-hidden','true');setSectionTwoPlayback(false);
+      document.body.classList.remove('is-transitioning','is-section-two');document.body.classList.toggle('is-journey-moving',p>.09);
+      const phase=p<1.404?'disperse':p<1.976?'enter':p<6.4?'flow':'aerial';
+      if(J.phase!==phase||!journeyCue.dataset.ready){J.phase=phase;journeyCue.dataset.ready='true';
+        const labels={disperse:'01 / 04 · DISPERSE',enter:'02 / 04 · ENTER THE FLOW',flow:'03 / 04 · FLOW',aerial:'04 / 04 · WIDER PERSPECTIVE'};
+        journeyChapter.textContent=labels[phase];}
+      journeyLabel.textContent=p>J.max-.05?'重新探索 ↑':'向下探索 ↓';
+      journeyCue.setAttribute('aria-label',p>J.max-.05?'重新探索恒灝創新':'前往下一個品牌篇章');
+      brandStory.update(p,reduceMotion);
+      writeVar(journeyCue,'--journey-p',(p/J.max).toFixed(4));
+    }
+    function updateJourneyCamera(time){
+      const p=journey.progress;
+      document.body.classList.toggle('is-watershed',p>8.4);
+      // Hold the original frontal view while droplets fly past; then the
+      // first-person river scene takes over directly, without an overhead shot.
+      const parallax=(reduceMotion?0:1)*(1-easeJourney(p/.16));
+      camera.position.set(CONFIG.camera.x+pointerSoft.x*.18*parallax,CONFIG.camera.y-pointerSoft.y*.07*parallax,CONFIG.camera.z);
+      camera.up.set(0,1,0);
+      camera.lookAt(cameraLook.x+pointerSoft.x*.08*parallax,cameraLook.y-pointerSoft.y*.04*parallax,cameraLook.z);
+      camera.fov=CONFIG.camera.fov+(innerWidth<760?8:0);camera.updateProjectionMatrix();
+      sea.visible=true;
+      canyon.update(THREE.MathUtils.clamp((p-1.404)/(8-1.404),0,1),time,reduceMotion,THREE.MathUtils.clamp((p-6.4)/(11.8-6.4),0,1),THREE.MathUtils.clamp((p-11.8)/2,0,1));
+      // The opening water's 55–150 unit horizon is a close-up range. Extend
+      // that same haze with altitude, so distant rivers retain moving reflections.
+      const waterHazeScale=1+Math.max(0,canyon.camera.position.y-2.5)/32*easeJourney((p-6.4)/1.1);
+      seaUniforms.uHaze.value.set(CONFIG.sea.haze*waterHazeScale,CONFIG.sea.hazeFar*waterHazeScale);
+      grainPass.uniforms.uAmount.value=CONFIG.scene.grain;
+      const mix=journey.mix;
+      canyon.scene.environment=scene.environment;
+      mainRenderPass.scene=mix>=.999?canyon.scene:scene;
+      mainRenderPass.camera=mix>=.999?canyon.camera:camera;
+      journeyBlend.enabled=mix<.999&&(mix>.001||journey.impact>.001);
+      journeyBlend.uniforms.uMix.value=mix;journeyBlend.uniforms.uImpact.value=journey.impact;
+      if(mix>.001){seaUniforms.uHeroOn.value=0;seaUniforms.uDropOcclude.value=0;}
+      if(mix>.001&&mix<.999){const target=renderer.getRenderTarget();renderer.setRenderTarget(canyonTarget);renderer.render(canyon.scene,canyon.camera);renderer.setRenderTarget(target);}
 
-      const glowFade = (1 - dissolve) * (1 - overlayAlpha) * heroExtras * CONFIG.details.glow;
-      glowTop.material.opacity = glowFade * (.38 + Math.sin(time * 1.18) * .035);
-      glowFoot.material.opacity = glowFade * (.44 + Math.sin(time * .92 + 1.1) * .035);
-      waterGlints.material.uniforms.uOpacity.value =
-        CONFIG.details.waterGlints * (1 - overlayAlpha);
-      orbHighlights.forEach((highlight, index) => {
-        const sparkle = .78 + .22 * Math.sin(time * (1.6 + index * .38) + index * 2.1);
-        highlight.material.opacity = CONFIG.details.highlight
-          * [1, .84, .72, .62][index] * sparkle
-          * (1 - dissolve) * (1 - overlayAlpha) * heroExtras;
-      });
-      dropOrbitGroup.scale.setScalar(1);
-      dropOrbitGroup.rotation.y = time * CONFIG.details.orbitSpeed * .16
-        + impactPulse * .10;
-      dropOrbitGroup.rotation.z = Math.sin(
-        time * CONFIG.details.orbitSpeed * .22
-      ) * .055;
-      orbitSatellites.forEach((satellite, index) => {
-        const data = satellite.userData;
-        const angle = data.phase + time * CONFIG.details.orbitSpeed * data.speed;
-        const x = Math.cos(angle) * data.radius;
-        const y = Math.sin(angle) * data.radius * data.flatten;
-        const z = Math.sin(angle * 1.7 + index) * .32;
-        const cosTilt = Math.cos(data.tilt);
-        const sinTilt = Math.sin(data.tilt);
-        satellite.position.set(
-          x,
-          y * cosTilt - z * sinTilt,
-          y * sinTilt + z * cosTilt
-        );
-        satellite.scale.setScalar(
-          data.size * CONFIG.details.sparkleSize * (1 + impactPulse * .24)
-        );
-        satellite.material.opacity = THREE.MathUtils.clamp(
-          satellite.material.userData.baseOpacity
-          * CONFIG.details.satelliteIntensity
-          * (1 - dissolve)
-          * (1 - overlayAlpha)
-          * heroExtras
-          * (.65 + .35 * Math.sin(time * (1.8 + data.speed) + data.phase)),
-          0,
-          1.5
-        );
-      });
-      glowTop.position.set(
-        dropX - .18 * CONFIG.drop.scale,
-        dropY + currentDropRadius() * .72,
-        CONFIG.drop.z + 1.04
-      );
-      glowFoot.position.set(
-        dropX + .06 * CONFIG.drop.scale,
-        dropY - currentDropRadius() * .78,
-        CONFIG.drop.z + 1.00
-      );
-
-      /* 水珠不再落水，所以沒有濺起。但海面也不能就這樣把英雄的遮蔽「關
-         掉」——那會看起來像 bug。真正發生的事是：壓在水面上的那團質量放
-         手了，於是海面回彈，送出一圈很輕的漣漪。時機對在斷裂那一刻。 */
-      /* 但不能用 splashAt()：它把環推進即時的漣漪陣列，由 updateRipples(dt)
-         用真正的時間積分，往下捲過 .12 再立刻往上捲，那圈環會在一片沒事
-         的水面上繼續擴散——那就是壞掉的往回捲。這裡改成把保留的最後一
-         格每幀整格重寫，年齡是 progress 的閉式函數，所以它跟其他所有東西
-         一樣會倒著走。
-         年齡用鏡頭時間而不是 progress：progress 對時間是 1-e^(-t/0.4994)，
-         用它當年齡，環的速度會在頭 250 毫秒衝出去然後越走越慢。 */
-      const ringT = Math.max(0, shotTime(progress) - shotTime(.12));
-      const ringLive = progress > .12 && progress < .78;
-      const ringSlot = rippleSlots[RIPPLE_SLOTS - 1];
-      if (ringLive) {
-        ringSlot.set(CONFIG.drop.x, CONFIG.drop.z, ringT, CONFIG.ripple.click * .50);
-        uRippleLive.value = 1;
-      } else if (ringSlot.w > 0) {
-        ringSlot.set(0, 0, 999, 0);
-      }
-
-      const rippleAge = ringT * 1.15;
-      const rippleFade = progress >= .12 ? 1 - smooth01((progress - .52) / .22) : 0;
-      if (rippleFade > .01) {
-        applyWaterRipple(rippleAge, rippleFade, 1, 1 + impactPulse * .78, overlayAlpha);
-      } else {
-        applyWaterRipple(
-          entry.rippleAge,
-          entry.rippleFade,
-          entry.rippleAmount,
-          entry.rippleAmount,
-          overlayAlpha
-        );
-      }
-
-      /* Impact energy leaks into the frame: ambient specks get a kick, and
-         the camera takes a tiny vertical knock.
-         泛光不在這裡設。上面一百多行已經把它交給光芒的包絡了，這一行會在
-         同一個函數裡把它蓋掉——峰值從 1.79 被壓回 0.83，等於整段爆光只
-         剩四成七的力道。這就是「光芒讀不出來」的頭號原因。 */
-      impactKick = impactPulse * .05;
-      airMotes.material.uniforms.uTransition.value = impactPulse * .12;
-      airMotes.material.uniforms.uOpacity.value = .30 * (1 - overlayAlpha);
-      sceneDim = 1 - overlayAlpha;
     }
 
     /* ------------------------------------------------------------------
@@ -7071,6 +6931,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const _trailHit = new THREE.Vector3();
     function updateDropletTrail(dt) {
       const T = dropletTrail;
+      if (journey.progress > .03) { T.amount=0; return; }
       const live = dropSDF
         && assetsReady
         && !reduceMotion
@@ -7152,6 +7013,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       /* Only the canvas: the tuner panel and the section-two overlay sit
          above it and must keep their own presses. */
       if (event.target !== canvas) return;
+      if (event.pointerType === 'touch' || journey.progress > .03) return;
       /* Touch sends no move before the press: the trail starts here. */
       if (event.pointerType === 'touch') {
         dropletTrail.pointerType = 'touch';
@@ -7276,26 +7138,25 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       hasWaterTrail = true;
     }
 
-    addEventListener('wheel', event => {
-      if (
-        tuner.contains(event.target) ||
-        !assetsReady ||
-        entry.running
-      ) return;
-
-      wheelAccumulator += THREE.MathUtils.clamp(event.deltaY, -140, 140);
-      clearTimeout(wheelResetTimer);
-      wheelResetTimer = setTimeout(() => { wheelAccumulator = 0; }, 520);
-      if (wheelAccumulator >= CONFIG.transition.scrollThreshold) {
-        wheelAccumulator = 0;
-        openSectionTwo();
-      } else if (wheelAccumulator <= -CONFIG.transition.scrollThreshold) {
-        wheelAccumulator = 0;
-        closeSectionTwo(false);
-      }
-    }, { passive: true });
+    addEventListener('wheel',event=>{
+      if(tuner.contains(event.target)||!assetsReady||dropTouch.grabbed||event.ctrlKey)return;
+      event.preventDefault();const pixels=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?innerHeight:1);
+      advanceJourney(THREE.MathUtils.clamp(pixels,-400,400)/Math.max(720,innerHeight*.85));
+    },{passive:false});
+    let journeyTouch=null;
+    addEventListener('pointerdown',event=>{if(event.pointerType!=='touch'||tuner.contains(event.target)||event.target.closest('button,a,input'))return;journeyTouch={id:event.pointerId,y:event.clientY};if(event.target===canvas)canvas.setPointerCapture(event.pointerId);},{passive:true});
+    addEventListener('pointermove',event=>{if(!journeyTouch||event.pointerId!==journeyTouch.id)return;advanceJourney((journeyTouch.y-event.clientY)*1.9/Math.max(580,innerHeight*.8));journeyTouch.y=event.clientY;},{passive:true});
+    for(const type of ['pointerup','pointercancel'])addEventListener(type,event=>{if(journeyTouch?.id===event.pointerId)journeyTouch=null;},{passive:true});
+    addEventListener('keydown',event=>{
+      if(event.target.closest('input,textarea,select,button,a,[contenteditable]')||event.ctrlKey||event.metaKey||event.altKey)return;
+      const moves={ArrowDown:.15,ArrowUp:-.15,PageDown:.85,PageUp:-.85,' ':event.shiftKey?-.85:.85};
+      if(event.key==='Home'){event.preventDefault();journey.target=0;}
+      else if(event.key==='End'){event.preventDefault();journey.target=journey.max;}
+      else if(event.key in moves){event.preventDefault();advanceJourney(moves[event.key]);}
+    });
 
     function updateDropTouch(dt, time) {
+      if(journey.progress>.03){releaseDropGrab();dropTouch.hovered=false;document.body.classList.remove('is-drop-hovered');dropTouch.offset.multiplyScalar(Math.exp(-dt*8));dropTouch.velocity.multiplyScalar(Math.exp(-dt*8));return;}
       let hit = null;
       if (
         assetsReady &&
@@ -7470,9 +7331,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
        clock, so a caller can hand in a fixed step and replay the timeline
        deterministically. */
     let sceneTime = 0;
+    document.addEventListener('visibilitychange',()=>{clock.getDelta();journey.velocity=0;});
     function frame(manual, fixedDelta) {
       const realDelta = clock.getDelta();
-      const dt = Math.min(fixedDelta === undefined ? realDelta : fixedDelta, .04);
+      const scrollDt=Math.min(fixedDelta === undefined ? realDelta : fixedDelta,.18);
+      const dt = Math.min(scrollDt,.04);
       sceneTime += dt;
       const time = sceneTime;
       const motion = reduceMotion ? 0 : 1;
@@ -7536,7 +7399,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       updateRipples(dt);
       updatePointerSpray(dt);
       if (assetsReady) {
-        updateDropTransition(dt, time);
+        updateDropTransition(dt, time, scrollDt);
       } else {
         dropRoot.position.set(CONFIG.drop.x, CONFIG.drop.y, CONFIG.drop.z);
         syncDroplet(dt, time);
@@ -7557,21 +7420,22 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         cameraLook.y - pointerSoft.y * .04 * motion,
         cameraLook.z
       );
+      updateJourneyCamera(time);
       /* The droplet's highlights are laid out in this camera's axes. */
       if (dropSDF) {
         camera.updateMatrixWorld();
         dropletUniforms.uNoiseView.value.setFromMatrix4(camera.matrixWorldInverse);
       }
 
-      /* Once the film covers the frame the 3D pass is invisible: hand the
-         GPU to the video instead of compositing a hidden canvas. */
-      if (!(dropTransition.progress > .94 && dropTransition.target > 0)) {
-        renderFrame++;
-        composer.render();
-      }
-      if (firstFrame && assetsReady) {
+      renderFrame++;
+      composer.render();
+      if (firstFrame && assetsReady && journeyReady) {
         firstFrame = false;
         requestAnimationFrame(() => {
+          const preview=new URLSearchParams(location.search).get('view');
+          if(preview==='rivers')journey.progress=journey.target=11.8;
+          if(preview==='canyon')journey.progress=journey.target=4.8;
+          if(preview==='finale')journey.progress=journey.target=journey.max;
           document.body.classList.add('is-ready');
           loader.classList.add('is-done');
           /* The hero surfaces as the loader clears; with reduced motion, or
@@ -7590,7 +7454,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     }
 
     /* Read-only diagnostics for local verification; never shown in the visitor interface. */
-    window.__MONTIS_STUDY__ = { CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
+    window.__MONTIS_STUDY__ = { journey, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
 
     function resize() {
       const width = innerWidth;
@@ -7604,9 +7468,12 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       composer.setPixelRatio(dpr);
       composer.setSize(width, height);
       bloom.resolution.set(width * dpr, height * dpr);
+      canyon.resize(width,height);
+      canyonTarget.setSize(Math.round(width*Math.min(dpr,1.3)),Math.round(height*Math.min(dpr,1.3)));
     }
     addEventListener('resize', resize, { passive: true });
     resize();
+    warmJourney().catch(error=>console.warn('Scene warmup failed',error));
     frame();
   </script>
 </body>

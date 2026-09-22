@@ -1172,6 +1172,161 @@ const postMat = new THREE.ShaderMaterial({
 postScene.add(new THREE.Mesh(quadGeo, postMat));
 let condense = 0;
 
+/* =====================================================================
+   LIGHT STREAMS — section 3 only
+   Rivers of light in the hubtown.co.in manner: glowing blue ribbons that
+   hug the terrain, running from the summit down the flanks of the range.
+   Each one is a tube whose path was found by raycasting the real terrain,
+   so they ride ridges and pool into gullies instead of floating over the
+   picture.  They live inside the main scene — occluded by ridges, graded
+   by the film pass — with an additive halo shell for the glow.
+   Open ?v=true for the slider panel that writes BEAM below.
+   ===================================================================== */
+const BEAM = {
+  gain:   4.2,   /* overall strength — high, because the snow the streams
+                    lie on is itself nearly white                    */
+  speed:  .55,   /* shimmer running along the climbed part           */
+  pulses: 3.0,   /* shimmer bands along each route                   */
+  count:  5,     /* how many routes come off the summit              */
+  glow:   3.0,   /* the additive halo around each core               */
+  width:  .013   /* core radius, in scene units                      */
+};
+const STREAM_MAX = 12;
+
+/* uniforms shared by every stream, so one write drives them all */
+const beamUni = {
+  uAmt:{ value:0 },
+  uGain:{ value:BEAM.gain },
+  uSpeed:{ value:BEAM.speed },
+  uPulses:{ value:BEAM.pulses },
+  uGlow:{ value:BEAM.glow },
+  uProgress:{ value:0 }          /* 0 = at the foot, 1 = summit reached */
+};
+let beamAmt = 0;
+/* scroll-driven ascent of the routes (section 3) */
+let climb = 0, climbTarget = 0;
+
+const streamVert = /* glsl */`
+  varying vec2 vUv;
+  void main(){
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+  }`;
+
+/* vUv.x runs 0 at the summit → 1 at the foot of the stream.
+   The look is the "light-streak" shader style: a blown-out white core
+   inside a soft glow, with sinuous waves of brightness running along
+   the beam. uProgress climbs the beam from the foot — below the front
+   it burns bright, ahead of it only a faint trace shows — and a hot
+   head rides the climbing front. */
+const streamFrag = (halo)=>/* glsl */`
+  precision highp float;
+  varying vec2 vUv;
+  uniform float uTime, uAmt, uGain, uSpeed, uPulses, uGlow, uSeed, uProgress;
+  void main(){
+    float t = vUv.x;
+    float edge = 1. - uProgress;                    /* the climbing front */
+    float vis  = smoothstep(edge - .02, edge + .02, t);
+    /* hot head riding the climbing front */
+    float d = t - edge;
+    float head = exp(-d * d * 1400.) * smoothstep(.0, .04, uProgress);
+    /* sinuous brightness waves flowing up the beam (the streak look) */
+    float wave = .5 + .5 * sin(t * 22. + uSeed * 6. + uTime * (1.2 + .3 * sin(uSeed))
+                               + sin(uTime * .7 + t * 9.) * .8);
+    float f = fract(-t * uPulses + uTime * uSpeed + uSeed);
+    float pulse = pow(1. - f, 5.);
+    float flow = .45 + .40 * wave + .45 * pulse;
+    float ends = smoothstep(.0, .05, t) * (1. - smoothstep(.86, 1., t));
+    ${halo ? /* glsl */`
+    /* soft glow shell — barely-blue white so it still reads on the snow */
+    vec3 col = mix(vec3(.62, .82, 1.), vec3(1.), .4 + .6 * pulse);
+    float a = uAmt * uGlow * ends * (vis * flow * .30 + head * .9);
+    a += uAmt * uGlow * ends * (1. - vis) * .05;   /* faint trace ahead */
+    ` : /* glsl */`
+    /* blown-out white core */
+    vec3 col = vec3(1.);
+    float a = uAmt * uGain * ends * (vis * flow * .55 + head);
+    a += uAmt * ends * (1. - vis) * .14;           /* faint trace ahead */
+    `}
+    gl_FragColor = vec4(col, clamp(a, 0., 1.));
+  }`;
+
+const streamMat = (halo, seed)=>new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  blending:halo ? THREE.AdditiveBlending : THREE.NormalBlending,
+  uniforms:Object.assign({ uTime:U.uTime, uSeed:{ value:seed } }, beamUni),
+  vertexShader:streamVert,
+  fragmentShader:streamFrag(halo)
+});
+
+/* built once the terrain and its BVH are in; curves kept in spin-local
+   space so a width change can retube without touching the raycaster    */
+const streamRoot = new THREE.Group();
+streamRoot.visible = false;
+spin.add(streamRoot);
+const peakTmp = new THREE.Vector3();
+let streamCurves = [];
+let summitMarker = null;
+
+function traceStreams(){
+  const sRay = new THREE.Raycaster();
+  sRay.firstHitOnly = true;
+  const down = new THREE.Vector3(0, -1, 0);
+  const org  = new THREE.Vector3();
+  const peak = summitMarker.getWorldPosition(new THREE.Vector3());
+  spin.updateMatrixWorld(true);
+  streamCurves = [];
+
+  for(let i = 0; i < STREAM_MAX; i++){
+    /* spread round the peak, golden-angle so no two runs are parallel */
+    let ang = i * 2.39996 + .7;
+    let x = peak.x, z = peak.z;
+    const pts = [];
+    for(let s = 0; s < 60; s++){
+      org.set(x, peak.y + 6, z);
+      sRay.set(org, down);
+      const hit = sRay.intersectObjects(hoverMeshes, false)[0];
+      if(!hit) break;
+      /* the streams die out as they reach the flats, like the reference */
+      if(s > 8 && hit.point.y < .35) { pts.push(hit.point.clone()); break; }
+      pts.push(hit.point.clone());
+      /* wander: mostly outward, snaking a little as it goes */
+      ang += Math.sin(s * .37 + i * 2.1) * .10;
+      x += Math.cos(ang) * .42;
+      z += Math.sin(ang) * .42;
+    }
+    if(pts.length < 10) continue;
+    streamCurves.push(new THREE.CatmullRomCurve3(
+      pts.map(p=>streamRoot.worldToLocal(p.clone()))
+    ));
+  }
+  buildStreamTubes();
+}
+
+function buildStreamTubes(){
+  while(streamRoot.children.length){
+    const m = streamRoot.children.pop();
+    m.geometry.dispose(); m.material.dispose();
+  }
+  streamCurves.forEach((curve, i)=>{
+    const seed = i * 1.618;
+    /* lifted off the ground inside the tube radius, so the underside is
+       buried and the top half reads as light lying on the snow */
+    const core = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, BEAM.width, 6, false), streamMat(false, seed));
+    const halo = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, BEAM.width * 3.4, 6, false), streamMat(true, seed));
+    core.position.y = halo.position.y = BEAM.width * .8;
+    halo.renderOrder = 4; core.renderOrder = 5;
+    core.frustumCulled = halo.frustumCulled = false;
+    core.userData.idx = halo.userData.idx = i;
+    streamRoot.add(halo, core);
+  });
+  applyStreamCount();
+}
+
+function applyStreamCount(){
+  streamRoot.children.forEach(m=>{ m.visible = m.userData.idx < BEAM.count; });
+}
+
 /* placements exported from the tuning panel (formatVersion 2).
    each section carries its own, and they glide from one to the next   */
 const SHIP_S3  = { x:-1.30, y:1.00, z:6.40, rx:-0.08, ry:-1.34, rz:0.00, scale:0.68 };
@@ -1200,7 +1355,7 @@ const CHAPTERS = [
     cam:{ x:-10.3, y:30.6, z:0.0, tx:-10.3, ty:2.8, tz:0.0 }, rot:2.16, fov:40.0, flat:.82, deck:.45 },
   { idx:'3', eyebrow:'Montis Energy',      l1:'HARNESSING HEIGHT,',l2:'DELIVERING POWER.', cta:'MONTIS ENERGY',
     cam:{ x:-5.96, y:5.53, z:23.76, tx:-5.87, ty:0.95, tz:-9.85 }, rot:-1.00, fov:40.0,
-    ship:SHIP_S3, water:WATER_S3 },
+    ship:SHIP_S3, water:WATER_S3, beams:true },
   { idx:'4', eyebrow:'Montis Portfolio',   l1:'A PORTFOLIO',       l2:'IN MOTION.',        cta:'MONTIS PORTFOLIO',
     cam:{ x:8.90, y:6.76, z:24.43, tx:-10.6, ty:2.9, tz:0.0 }, rot:2.04, fov:40.0,
     slider:true },
@@ -1293,6 +1448,12 @@ function goTo(i){
   if(i === chapter) return;
   busy = true;
   sliderFromBelow = i < chapter;
+  /* arriving on the route section: from above the line starts at the foot,
+     from below it arrives fully drawn so scrolling up walks it back down */
+  if(CHAPTERS[i].beams === true){
+    climb = climbTarget = sliderFromBelow ? 1 : 0;
+    beamUni.uProgress.value = climb;
+  }
   camPosFrom.copy(camPos);
   camAimFrom.copy(camAim);
   prevChapter = chapter;
@@ -1337,6 +1498,17 @@ addEventListener('wheel', e=>{
     if(!slider.introDone) return;
   }
 
+  /* on the route section the wheel climbs the line first; the page only
+     moves on once the line has reached the summit (or is back at the foot) */
+  if(CHAPTERS[chapter].beams === true && !trans.on && !busy){
+    const up = e.deltaY > 0;
+    if(up ? climbTarget < 1 : climbTarget > 0){
+      climbTarget = Math.max(0, Math.min(1, climbTarget + e.deltaY * .0011));
+      return;
+    }
+    if(up ? climb < .965 : climb > .035) return;   /* let the line finish */
+  }
+
   const now = performance.now();
   if(busy || now - wheelLock < 700) return;
   if(Math.abs(e.deltaY) < 14) return;
@@ -1361,6 +1533,17 @@ addEventListener('touchmove', e=>{
     const used = Math.abs(drive) > 2 && slider.scrollBy(-drive * 24);
     touchY = y; touchX = x;
     if(used || !slider.introDone){ touchGoY = y; return; }
+    const go = touchGoY - y;
+    if(Math.abs(go) > 48){ goTo(chapter + (go > 0 ? 1 : -1)); touchY = null; }
+    return;
+  }
+
+  /* on the route section the swipe drives the climb first, same as the wheel */
+  if(CHAPTERS[chapter].beams === true && !trans.on){
+    const spent = dy > 0 ? climbTarget >= 1 : climbTarget <= 0;
+    climbTarget = Math.max(0, Math.min(1, climbTarget + dy * .0035));
+    touchY = y; touchX = x;
+    if(!spent){ touchGoY = y; return; }
     const go = touchGoY - y;
     if(Math.abs(go) > 48){ goTo(chapter + (go > 0 ? 1 : -1)); touchY = null; }
     return;
@@ -1509,6 +1692,24 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
   spin.add(holder);
   window.__terrain = { size:size.toArray(), scale:s, height:size.y*s };
 
+  /* the highest vertex on the range — the beams converge on it */
+  spin.updateMatrixWorld(true);
+  const vTmp = new THREE.Vector3(), peak = new THREE.Vector3(0, -Infinity, 0);
+  m.traverse(o=>{
+    if(!o.isMesh) return;
+    const pos = o.geometry.attributes.position;
+    for(let i = 0; i < pos.count; i++){
+      vTmp.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+      if(vTmp.y > peak.y) peak.copy(vTmp);
+    }
+  });
+  if(isFinite(peak.y)){
+    summitMarker = new THREE.Object3D();
+    summitMarker.position.copy(peak);
+    spin.attach(summitMarker);          /* keeps the world pose, rides the spin */
+    window.__summit = peak.toArray();
+  }
+
   applyChapterTarget(chapter, true);
   paint(chapter);
   camera.position.copy(camPos);
@@ -1536,7 +1737,13 @@ gltfLoader.load(MODEL + 'scene.gltf', gltf=>{
         /* build one chunk per tick so the page never freezes for a whole second */
         let i = 0;
         (function step(){
-          if(i >= hoverMeshes.length){ bvhReady = true; return; }
+          if(i >= hoverMeshes.length){
+            bvhReady = true;
+            /* the BVH makes the 700-odd ground probes cheap — trace the
+               light streams now, well before their section arrives */
+            if(summitMarker) traceStreams();
+            return;
+          }
           hoverMeshes[i++].geometry.computeBoundsTree({ strategy:0, maxLeafTris:16 });
           setTimeout(step, 60);
         })();
@@ -1571,6 +1778,26 @@ function update(dt){
     if(t >= 1){ intro.on = false; U.uTransition.value = 0; busy = false; }
   }
   tickTransition(dt);
+
+  /* section 3: the scroll walks the route up the mountain and the camera
+     rides along — aim and height ease toward the summit as it climbs */
+  climb += (climbTarget - climb) * Math.min(1, dt * 3.2);
+  beamUni.uProgress.value = climb;
+  if(CHAPTERS[chapter].beams === true && !trans.on && summitMarker && !controls){
+    const c3 = CHAPTERS[chapter];
+    const e3 = smootherstep(climb);
+    summitMarker.getWorldPosition(peakTmp);
+    camPosT.set(
+      c3.cam.x,
+      c3.cam.y + Math.max(peakTmp.y + 1.8 - c3.cam.y, 0) * e3,
+      c3.cam.z
+    );
+    camAimT.set(
+      c3.cam.tx        + (peakTmp.x - c3.cam.tx)        * .85 * e3,
+      c3.cam.ty        + (peakTmp.y - c3.cam.ty)        * .85 * e3,
+      (c3.cam.tz || 0) + (peakTmp.z - (c3.cam.tz || 0)) * .85 * e3
+    );
+  }
 
   /* pointer smoothing + mouse fbo */
   lastPointer.copy(pointerS);
@@ -1728,6 +1955,15 @@ function update(dt){
   condense += (condenseAim - condense) * Math.min(1, dt * (condenseAim ? condenseRate : 2.4));
   postMat.uniforms.uCondense.value = condense;
   postMat.uniforms.uWash.value = U.uTransition.value;
+
+  /* section 3: the beams come up with the section and go out under the veil,
+     the same way the slider changes over, so the cut never shows them move */
+  const beamWants = CHAPTERS[chapter].beams === true;
+  const beamShown = trans.on ? (trans.t > .46 ? beamWants : CHAPTERS[prevChapter].beams === true)
+                             : beamWants;
+  beamAmt += ((beamShown ? 1 : 0) - beamAmt) * Math.min(1, dt * 2.6);
+  beamUni.uAmt.value = beamAmt * (1 - smoothstep01(U.uTransition.value, .30, .96));
+  streamRoot.visible = beamUni.uAmt.value > .002;
 
   /* draw: scene to a buffer, then the drop pass to the screen */
   renderer.setRenderTarget(sceneRT);
@@ -1900,11 +2136,96 @@ if(TUNE){
   }, 100);
 }
 
+/* =====================================================================
+   ?v=true  — the beam panel.  Drag the sliders, copy the BEAM block out
+   and paste it over the one at the top of the beam section.
+   ===================================================================== */
+if(new URLSearchParams(location.search).get('v') === 'true'){
+  const B = [
+    { k:'gain',   label:'強度',     min:0,    max:5,   step:.05,  d:2 },
+    { k:'speed',  label:'流速',     min:0,    max:3,   step:.02,  d:2 },
+    { k:'pulses', label:'脈衝數',   min:1,    max:12,  step:.5,   d:1 },
+    { k:'count',  label:'光帶數',   min:1,    max:STREAM_MAX, step:1, d:0 },
+    { k:'glow',   label:'光暈',     min:0,    max:4,   step:.05,  d:2 },
+    { k:'width',  label:'寬度',     min:.015, max:.15, step:.005, d:3 }
+  ];
+
+  const p = document.createElement('div');
+  p.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:21;background:rgba(16,24,34,.93);'
+    + 'color:#dfe8f2;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;border-radius:9px;'
+    + 'width:380px;box-shadow:0 10px 34px rgba(0,0,0,.4);user-select:none';
+  const bt = (id,txt,primary)=>'<button id="'+id+'" style="font:inherit;cursor:pointer;padding:5px 9px;border-radius:5px;'
+    + 'border:1px solid '+(primary?'#4a86bb':'#33465c')+';background:'+(primary?'#1d3550':'#16222f')+';color:#dfe8f2">'+txt+'</button>';
+  p.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +   '<b style="color:#9fd3ff;font-weight:600">第 3 段 · 光流</b>'
+    +   '<span style="opacity:.55">從山頂沿地形而下</span>'
+    + '</div>'
+    + '<div id="bRows"></div>'
+    + '<div id="bOut" style="white-space:pre;color:#9fd3ff;margin-top:9px;padding:7px 8px;background:#0d151f;'
+    +   'border-radius:5px;user-select:text;font-size:11px"></div>'
+    + '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'
+    +   bt('bCopy','複製 BEAM',1) + bt('bGo','跳到第 3 段') + bt('bReset','回到預設')
+    + '</div>';
+  document.body.appendChild(p);
+
+  const DEF = Object.assign({}, BEAM);
+  const rows = p.querySelector('#bRows'), ui2 = {};
+  B.forEach(s=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:104px 1fr 52px;gap:8px;align-items:center;margin:2px 0';
+    row.innerHTML = '<span style="opacity:.72">'+s.label+'</span>'
+      + '<input type="range" min="'+s.min+'" max="'+s.max+'" step="'+s.step+'" style="width:100%;accent-color:#4a86bb">'
+      + '<span style="text-align:right;color:#9fd3ff"></span>';
+    rows.appendChild(row);
+    const inp = row.querySelector('input');
+    ui2[s.k] = { inp, val:row.querySelector('span:last-child'), s };
+    inp.addEventListener('input', ()=>{ BEAM[s.k] = parseFloat(inp.value); push(); });
+  });
+
+  let retube = 0;
+  function push(){
+    B.forEach(s=>{
+      const u = ui2[s.k];
+      u.inp.value = BEAM[s.k];
+      u.val.textContent = (+BEAM[s.k]).toFixed(s.d);
+      const un = beamUni['u' + s.k[0].toUpperCase() + s.k.slice(1)];
+      if(un) un.value = BEAM[s.k];
+    });
+    applyStreamCount();
+    /* a width change means new tube geometry — debounced off the drag */
+    clearTimeout(retube);
+    retube = setTimeout(()=>{
+      if(streamCurves.length && Math.abs(lastWidth - BEAM.width) > 1e-4){
+        lastWidth = BEAM.width; buildStreamTubes();
+      }
+    }, 200);
+    p.querySelector('#bOut').textContent = 'const BEAM = {\n'
+      + B.map(s=>'  ' + s.k + ': ' + (+BEAM[s.k]).toFixed(s.d)).join(',\n')
+      + '\n};';
+  }
+  let lastWidth = BEAM.width;
+  push();
+
+  p.querySelector('#bCopy').onclick  = ()=>navigator.clipboard.writeText(p.querySelector('#bOut').textContent)
+    .then(()=>{ const b = p.querySelector('#bCopy'); b.textContent = '已複製 ✓'; setTimeout(()=>b.textContent = '複製 BEAM', 1200); });
+  p.querySelector('#bGo').onclick    = ()=>{ busy = false; goTo(2); climbTarget = 1; };
+  p.querySelector('#bReset').onclick = ()=>{ Object.assign(BEAM, DEF); push(); };
+
+  /* land on the section the beams live in, once the loader has cleared */
+  const settle = ()=>{ if(busy){ setTimeout(settle, 250); return; } if(chapter !== 2){ goTo(2); climbTarget = 1; } };
+  setTimeout(settle, 600);
+}
+
 /* expose for debugging / screenshots */
 window.viz = {
   renderer, scene, camera, U, skyScene, fogScene, quadCam, spin, CHAPTERS, mountainMat, update,
   goTo:i=>{ busy=false; goTo(i); },
   postMat, setCondense(v){ condense = v; postMat.uniforms.uCondense.value = v; },
+  beamUni, BEAM, streamRoot,
+  setBeamGain(v){ BEAM.gain = v; beamUni.uGain.value = v; },
+  setClimb(v){ climb = climbTarget = v; beamUni.uProgress.value = v; },
+  retraceStreams:traceStreams,
   /* jump straight to a chapter's resting pose (used for stills) */
   pose(i){
     const c = CHAPTERS[i];
@@ -1914,6 +2235,11 @@ window.viz = {
     camera.lookAt(c.cam.tx, c.cam.ty, c.cam.tz || 0);
     spin.rotation.y = c.rot;
     U.uChapter.value = i; U.uTransition.value = 0;
+    beamAmt = c.beams === true ? 1 : 0;
+    beamUni.uAmt.value = beamAmt;
+    climb = climbTarget = beamAmt;         /* stills show the route fully drawn */
+    beamUni.uProgress.value = climb;
+    streamRoot.visible = beamAmt > .002;
     intro.on = false; trans.on = false; busy = false;
   },
   draw(){

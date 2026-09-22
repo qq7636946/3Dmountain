@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a1423">
+  <meta name="description" content="Explore the next summit of venture capital. An immersive world by Montis Ventures.">
+  <title>MONTIS — An elevated perspective</title>
+  <style>
+    :root{color-scheme:dark;--paper:#e9ecee;--muted:#8ba4b6;--line:#a5c6d52b;--ease:cubic-bezier(.16,1,.3,1)}
+    *{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#091221}
+    body{color:var(--paper);font:400 16px/1.6 Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+    button,a{-webkit-tap-highlight-color:transparent}button{color:inherit;font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+    button{border:0;background:none}button:disabled{cursor:default}button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:1px solid #c4edff;outline-offset:7px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    #world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;transition:filter 1.3s,opacity 1.3s;outline:none}
+    #world:active{cursor:grabbing}.shade{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,#080e2078 0%,transparent 17%,transparent 76%,#030b1833 100%);z-index:2}
+    .header{position:fixed;inset:14px 27px auto;display:flex;align-items:center;justify-content:space-between;height:40px;z-index:30}
+    .brand{display:inline-flex;align-items:center;gap:19px;min-height:44px}.mark{display:block;width:34px;height:39px;fill:currentColor;flex:none;opacity:.69}
+    .wordmark{font-size:11px;letter-spacing:.27em;font-weight:600;white-space:nowrap}.wordmark span{color:#6f8da0;font-weight:400;margin-left:8px}
+    .navigation{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:64px;align-items:center}
+    .navlink,.eyebrow{font-size:11px;letter-spacing:.29em;font-weight:600;text-transform:uppercase}.navlink{position:relative;padding:15px 0;color:#8292a8;transition:color .5s}
+    .navlink:hover,.navlink[aria-current="page"]{color:var(--paper)}.navlink::after{content:"";position:absolute;left:0;bottom:7px;height:1px;width:calc(100% - .29em);background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .7s var(--ease)}.navlink:hover::after{transform:scaleX(1)}
+    .sound{width:33px;height:33px;display:grid;place-items:center;border:1px solid #91adc247;border-radius:50%;transition:background .4s,border-color .4s}.sound:hover{background:#91adc212;border-color:#a4cadd}.sound svg{width:18px;height:13px;fill:none;stroke:#a9bac7;stroke-width:1}.sound[aria-pressed="true"] svg{animation:audio-pulse 2s infinite}
+    @keyframes audio-pulse{50%{opacity:.4;transform:scaleY(.7)}}.sound-tip{position:absolute;right:42px;top:11px;font-size:10px;letter-spacing:.19em;opacity:0;white-space:nowrap;transition:opacity .3s}.sound:hover .sound-tip,.sound:focus-visible .sound-tip{opacity:1}.mobile-menu{display:none}
+    .hero{position:fixed;left:9.5vw;top:22.4vh;z-index:5;pointer-events:none;transition:opacity .7s,transform 1.5s var(--ease)}
+    .hero h1{margin:0;font:400 clamp(36px,3.02vw,58px)/.91 Georgia,'Times New Roman',serif;letter-spacing:-.045em;max-width:490px;text-shadow:0 2px 25px #14233944}
+    .hero h1 span{display:block;overflow:hidden;padding-bottom:.1em}.hero h1 span>i{display:block;font-style:normal;transform:translateY(115%);transition:transform 1.7s var(--ease)}
+    .ready .hero h1 span>i{transform:none}.hero h1 span:nth-child(2)>i{transition-delay:.12s}.hero h1 span:nth-child(3)>i{transition-delay:.22s}
+    .hero-link{pointer-events:auto;display:inline-flex;gap:24px;align-items:center;font-size:11px;letter-spacing:.12em;margin-top:33px;opacity:0;transition:opacity 1.3s .85s,color .4s;padding:9px 0;color:#b7cbd8}
+    .ready .hero-link{opacity:.85}.hero-link:hover{color:#fff}.line-arrow{width:35px;height:1px;background:currentColor;position:relative;display:inline-block}.line-arrow::after{content:"";position:absolute;right:0;top:-3px;width:6px;height:6px;border-top:1px solid;border-right:1px solid;transform:rotate(45deg)}
+    .exploring .hero{opacity:0;transform:translateY(-17px);pointer-events:none}.exploring .hero-link{pointer-events:none}
+    .bottom{position:fixed;left:26px;right:26px;bottom:24px;display:flex;justify-content:space-between;align-items:end;z-index:12;pointer-events:none;transition:opacity .5s}
+    .list-toggle{pointer-events:auto;width:49px;height:48px;display:grid;place-items:center;border:1px solid #a5c6d54d;border-radius:2px;transition:background .5s,border-color .5s}.list-toggle:hover{border-color:#b7d9ed;background:#7da5c31a}.list-toggle svg{height:14px;width:16px;stroke:#adc5d3;stroke-width:1;fill:none}
+    .instructions{color:#aec0ce;font-size:10px;letter-spacing:.03em;line-height:1.65;text-align:right;opacity:.7}.instructions .touch{display:none}.coordinates{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.17em;color:#91a9b9;opacity:0;transition:opacity 1s}.exploring .coordinates{opacity:.7}
+    #markers{position:fixed;inset:0;z-index:6;pointer-events:none;transition:opacity .6s}.marker{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px;pointer-events:auto;padding:0;border-radius:50%;will-change:transform;opacity:0;transition:opacity .5s;color:#d8f6ff}
+    .marker::before{content:"";position:absolute;inset:17px;border:1px solid #d4f9ff9c;border-radius:50%;box-shadow:0 0 18px var(--glow);opacity:0;transform:scale(.6);transition:transform .7s,opacity .7s}.marker:hover::before,.marker:focus-visible::before{opacity:1;transform:scale(2)}
+    .marker-label{position:absolute;left:36px;top:9px;white-space:nowrap;text-align:left;line-height:1.25;font-size:12px;letter-spacing:.015em;opacity:0;transform:translateX(-6px);transition:opacity .5s,transform .7s;text-shadow:0 1px 8px #030c22}.marker-label small{display:block;margin-bottom:5px;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#93b9ce}.marker:hover .marker-label,.marker:focus-visible .marker-label{opacity:1;transform:none}
+    .loader{position:fixed;inset:0;z-index:100;background:#091221;display:grid;place-items:center;transition:opacity 1.4s,visibility 1.4s;pointer-events:none}.loader-inner{text-align:center}.loader .mark{width:57px;height:68px;margin:auto;opacity:.7}.loader-name{font-size:10px;letter-spacing:.32em;margin-top:25px}.load-line{margin:27px auto 12px;width:112px;height:1px;background:#a5c6d526;overflow:hidden}.load-line i{display:block;height:100%;background:#a7cbe0;transform:scaleX(.05);transform-origin:left;transition:transform .5s}.load-status{font-size:9px;letter-spacing:.18em;color:#7996ad}.ready .loader{opacity:0;visibility:hidden}
+    .view{position:fixed;inset:0;z-index:20;padding:145px 9.5vw 80px;overflow:auto;overscroll-behavior:contain;visibility:hidden;opacity:0;transform:translateY(22px);transition:opacity .7s,transform 1s var(--ease),visibility .7s;background:linear-gradient(110deg,#0a152bf0,#0b2035c9 60%,#142c40a1);backdrop-filter:blur(14px)}
+    .view.active{visibility:visible;opacity:1;transform:none}.panel-open .hero,.panel-open #markers,.panel-open .bottom{opacity:0;pointer-events:none}.panel-open #markers button{pointer-events:none}.panel-open #world{filter:blur(4px)}
+    .view-close{position:fixed;right:29px;top:82px;width:39px;height:39px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:#b5cedd}.view-close::before,.view-close::after{content:"";position:absolute;width:13px;height:1px;background:currentColor;transform:rotate(45deg)}.view-close::after{transform:rotate(-45deg)}
+    .view .eyebrow{color:#809eb2;font-size:10px;margin-bottom:27px}.view h2{font:400 clamp(43px,5.8vw,90px)/1.02 Georgia,serif;letter-spacing:-.045em;max-width:850px;margin:0 0 45px}.view p{color:#b6c8d4;max-width:560px;line-height:1.8;font-size:16px}.back-link{font-size:11px;color:#b4cddb;letter-spacing:.08em;display:inline-flex;gap:25px;align-items:center;margin-top:55px;padding:8px 0}.back-link .line-arrow{transform:rotate(180deg)}
+    .project-list{list-style:none;margin:0;padding:0;max-width:1200px}.project-list li{border-top:1px solid var(--line)}.project-list li:last-child{border-bottom:1px solid var(--line)}.project-list button{width:100%;display:grid;grid-template-columns:70px 1fr 220px 30px;align-items:center;text-align:left;padding:25px 0;gap:20px;transition:padding .7s var(--ease),background .7s}.project-list button:hover{padding-left:15px;background:#a4c9e006}.project-list small{font-size:10px;color:#6e94ad;letter-spacing:.13em}.project-list strong{font:400 clamp(24px,3vw,43px)/1.2 Georgia,serif;letter-spacing:-.025em}.project-list .tag{font-size:11px;letter-spacing:.06em;color:#91adc0}.project-list .line-arrow{width:25px}
+    .studio-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:10vw;max-width:1200px}.studio-grid h2{font-size:clamp(42px,5vw,78px)}.services{padding-top:5px}.service{padding:20px 0;border-top:1px solid var(--line)}.service h3{font:400 26px/1.2 Georgia,serif;margin:0 0 13px}.service p{font-size:14px;margin:0;color:#93afc2}.service small{font-size:9px;color:#62859e;letter-spacing:.15em;display:block;margin-bottom:12px}
+    .contact-layout{display:grid;grid-template-columns:1fr 1fr;gap:10vw;max-width:1200px}.contact-form{display:grid;gap:25px;max-width:480px}.contact-form label{font-size:11px;letter-spacing:.07em;color:#a3bdce;display:grid;gap:8px}.contact-form input,.contact-form textarea{width:100%;color:#e9f2f8;font:400 16px/1.5 Arial,sans-serif;border:0;border-bottom:1px solid #819eb64a;border-radius:0;background:transparent;padding:10px 0;resize:vertical}.contact-form input:focus,.contact-form textarea:focus{border-color:#a5d6f0}.contact-form button{justify-self:start;border:1px solid var(--line);padding:12px 25px;font-size:11px;letter-spacing:.1em}.form-status{font-size:12px!important;color:#a7d3d6!important;min-height:24px;margin:0!important}
+    .detail-meta{display:flex;gap:70px;border-top:1px solid var(--line);padding-top:20px;max-width:720px;margin-top:40px}.detail-meta small{font-size:9px;letter-spacing:.17em;color:#7596ad;display:block;margin-bottom:8px}.detail-meta span{font-size:13px;color:#b1cbd9}.detail-content{display:grid;grid-template-columns:1fr 1fr;gap:8vw;max-width:1150px}.detail-orbit{align-self:center;min-height:250px;display:grid;place-items:center}.detail-orbit .mark{width:165px;height:195px;opacity:.27;filter:drop-shadow(0 0 35px #459bbd)}.detail-next{margin-top:35px;display:flex;align-items:center;gap:25px;font-size:12px;color:#c5dde8}.detail-next .line-arrow{width:45px}
+    .error-message{display:none;position:fixed;inset:0;padding:20vh 12vw;background:#0b1b2e;z-index:99}.error-message h2{font:44px Georgia,serif;line-height:1.15}.error-message p{max-width:540px;color:#a5becf}.error-message button{border:1px solid #9cbcd255;padding:10px 20px}.render-error .error-message{display:block}.render-error .loader{display:none}
+    @media(min-width:2000px){.hero h1{font-size:64px}.header{inset:20px 35px auto}}
+    @media(max-width:900px){.navigation{gap:30px}.wordmark{font-size:10px;letter-spacing:.16em}.wordmark span{display:none}.hero{left:8vw;top:23vh}.hero h1{font-size:43px}.view{padding:140px 8vw 70px}.project-list button{grid-template-columns:45px 1fr 130px 25px}.studio-grid,.contact-layout{gap:6vw}.detail-content{grid-template-columns:1fr .5fr}}
+    @media(max-width:600px){.header{inset:18px 20px auto;height:38px}.brand{gap:12px}.mark{width:28px;height:34px}.wordmark{font-size:10px;letter-spacing:.21em}.navigation{display:none}.mobile-menu{display:block;font-size:10px;letter-spacing:.2em;margin-left:auto;padding:12px 18px}.sound{width:31px;height:31px}.sound-tip{display:none}.hero{left:8vw;top:20vh}.hero h1{font-size:40px;max-width:330px}.hero-link{margin-top:24px;font-size:10px}.bottom{left:20px;right:20px;bottom:22px}.list-toggle{width:43px;height:43px}.instructions{font-size:9px}.instructions .desktop{display:none}.instructions .touch{display:inline}.coordinates{display:none}.marker-label{font-size:11px}.view{padding:135px 8vw 55px}.view-close{top:79px;right:20px;width:32px;height:32px}.view h2{font-size:46px;margin-bottom:30px}.project-list button{grid-template-columns:27px 1fr 22px;gap:14px;padding:23px 0}.project-list .tag{display:none}.project-list strong{font-size:28px}.studio-grid,.contact-layout,.detail-content{grid-template-columns:1fr;gap:35px}.detail-orbit{display:none}.studio-grid h2{font-size:43px}.view p{font-size:15px}.detail-meta{gap:25px}.service h3{font-size:25px}.contact-form{gap:17px}.back-link{margin-top:35px}.nav-mobile-links{display:flex;gap:25px;margin-bottom:37px;flex-wrap:wrap}.nav-mobile-links button{font-size:11px;letter-spacing:.14em;padding:6px 0;color:#b6d0df}}
+    @media(min-width:601px){.nav-mobile-links{display:none}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <!-- Exact cubic paths from the final visible layer of logo.ai; only origin and Y-axis are normalized. -->
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><defs><symbol id="montis-symbol" viewBox="0 0 137.9714 170.9163"><path d="M65.5459 0 L65.5459 26.3445 C65.5459 26.3445 8.4538 31.4805 0.389 89.5606 C0.389 89.5606 -9.0906 12.0969 65.5459 0 Z"/><path fill-rule="evenodd" d="M65.5459 26.387 C65.5459 26.387 65.5459 43.995 65.5452 44.0012 C32.9504 48.0057 3.1543 78.627 4.5275 112.9598 C4.8595 121.256 7.2357 129.3471 11.1867 136.6328 C14.5007 142.7439 18.8459 148.2673 23.7956 153.1353 C27.1135 156.3983 30.7105 159.4028 34.5563 162.0256 C42.8136 167.6574 52.972 170.1391 62.8406 170.7777 C68.7973 171.1632 74.8029 170.7391 80.655 169.5696 C88.0037 168.1013 95.1129 165.4636 101.6595 161.8192 C108.2368 158.1577 114.2489 153.4773 119.3733 147.9607 C124.5751 142.3603 128.8457 135.9004 131.891 128.8866 C133.4421 125.3143 134.5174 121.6515 135.5506 117.9073 C147.7896 73.5442 111.9571 27.048 65.5459 26.387 Z M126.5263 115.9048 C124.823 124.0965 122.2012 131.674 117.5487 138.7011 C113.0717 145.4637 107.4837 151.6605 100.5903 155.9207 C86.059 164.9019 69.9953 167.3868 55.038 164.4774 C35.6722 160.7105 23.3099 143.7852 22.4269 128.1127 C21.8328 117.562 25.8532 107.694 32.5422 99.6944 C35.6644 95.9602 39.2688 92.6436 43.1299 89.6878 C46.5325 87.0832 50.1428 84.7517 53.8844 82.6653 C56.5933 81.1541 59.3738 79.7666 62.2183 78.5287 C62.4399 78.4323 65.5459 77.3521 65.5459 77.1808 C65.5459 77.1791 65.5459 44.0019 65.5459 44.0019 C102.8766 41.8404 134.2465 78.7724 126.5263 115.9048 Z"/></symbol></defs></svg>
+  <canvas id="world" aria-label="Interactive Montis landscape. Drag or use arrow keys to explore; use the list button for all destinations." tabindex="0"></canvas>
+  <div class="shade" aria-hidden="true"></div>
+  <div class="loader" role="status" aria-live="polite"><div class="loader-inner"><svg class="mark"><use href="#montis-symbol"/></svg><div class="loader-name">MONTIS VENTURES</div><div class="load-line"><i id="load-bar"></i></div><div class="load-status" id="load-status">ENTERING THE WORLD</div></div></div>
+  <header class="header">
+    <a class="brand" href="#" aria-label="Montis Ventures — overview"><svg class="mark" aria-hidden="true"><use href="#montis-symbol"/></svg><span class="wordmark">MONTIS <span>VENTURES</span></span></a>
+    <nav class="navigation" aria-label="Main"><a class="navlink" href="#" data-nav="overview" aria-current="page">Projects</a><a class="navlink" href="#studio" data-nav="studio">Studio</a><a class="navlink" href="#contact" data-nav="contact">Contact</a></nav>
+    <button class="mobile-menu" id="menu-toggle" aria-label="Open menu" aria-expanded="false">MENU</button>
+    <button class="sound" id="sound-toggle" aria-label="Turn ambient sound on" aria-pressed="false"><span class="sound-tip">SOUND OFF</span><svg viewBox="0 0 20 14" aria-hidden="true"><path id="sound-wave" d="M2 5.5C5 5.5 5 9 8 9S11 5.5 14 5.5S17 9 18 9"/></svg></button>
+  </header>
+  <main>
+    <section class="hero" aria-label="Introduction"><h1><span><i>The next summit</i></span><span><i>of venture</i></span><span><i>capital</i></span></h1><a class="hero-link" href="#work">Explore our world <span class="line-arrow" aria-hidden="true"></span></a></section>
+    <div id="markers" aria-label="Explore our focus areas"></div>
+    <section id="view-work" class="view" aria-labelledby="work-title" inert><button class="view-close" aria-label="Return to overview"></button><nav class="nav-mobile-links" aria-label="Mobile navigation"><button data-route="overview">PROJECTS</button><button data-route="studio">STUDIO</button><button data-route="contact">CONTACT</button></nav><div class="eyebrow">An elevated perspective</div><h2 id="work-title">Explore our world.</h2><ul class="project-list" id="project-list"></ul><a class="back-link" href="#"><span class="line-arrow" aria-hidden="true"></span>To overview</a></section>
+    <section id="view-studio" class="view" aria-labelledby="studio-title" inert><button class="view-close" aria-label="Return to overview"></button><div class="eyebrow">Montis Ventures / Studio</div><div class="studio-grid"><div><h2 id="studio-title">Capital with<br>altitude.</h2><p>We back founders at the earliest stage, where the air is thin and the view is long.</p><p>At the meeting point of energy, infrastructure and intelligent systems, we bring operating experience and an enduring perspective to the climb.</p><a class="back-link" href="#"><span class="line-arrow" aria-hidden="true"></span>To overview</a></div><div class="services"><div class="service"><small>01 / PERSPECTIVE</small><h3>Early conviction</h3><p>From pre-seed through Series A. We move before consensus, alongside founders building what comes next.</p></div><div class="service"><small>02 / EXPERIENCE</small><h3>Built by operators</h3><p>Founders, operators and engineers. Experience earned through the challenges of building and scaling.</p></div><div class="service"><small>03 / CONNECTION</small><h3>A wider horizon</h3><p>Operating expertise, enterprise distribution and fast-moving capital, connected through the Montis network.</p></div><div class="service"><small>04 / COMMITMENT</small><h3>Here for the climb</h3><p>A long-term partnership through each stage of a company's journey.</p></div></div></div></section>
+    <section id="view-contact" class="view" aria-labelledby="contact-title" inert><button class="view-close" aria-label="Return to overview"></button><div class="eyebrow">Start a conversation</div><h2 id="contact-title">Get in touch.</h2><p>Tell us what you are building, where you are heading, and the challenge ahead.</p><p id="contact-pending">Our contact details will be available soon.</p><a id="contact-link" class="back-link" hidden><span id="contact-address"></span><span class="line-arrow" aria-hidden="true"></span></a><div><a class="back-link" href="#"><span class="line-arrow" aria-hidden="true"></span>To overview</a></div></section>
+    <section id="view-detail" class="view" aria-labelledby="detail-title" inert><button class="view-close" aria-label="Return to overview"></button><div class="eyebrow" id="detail-kicker"></div><div class="detail-content"><div><h2 id="detail-title"></h2><p id="detail-copy"></p><div class="detail-meta"><div><small>PERSPECTIVE</small><span id="detail-category"></span></div><div><small>HORIZON</small><span>Long term</span></div><div><small>PARTNER</small><span>Montis Ventures</span></div></div><button class="detail-next" id="detail-next">Next destination <span class="line-arrow" aria-hidden="true"></span></button><a class="back-link" href="#work"><span class="line-arrow" aria-hidden="true"></span>All destinations</a></div><div class="detail-orbit" aria-hidden="true"><svg class="mark"><use href="#montis-symbol"/></svg></div></div></section>
+  </main>
+  <footer class="bottom"><a class="list-toggle" href="#work" aria-label="Open project list"><svg viewBox="0 0 18 16" aria-hidden="true"><path d="M1 3h1m3 0h11M1 6.5h1m3 0h11M1 10h1m3 0h11M1 13.5h1m3 0h11"/></svg></a><div class="coordinates" id="coordinates" aria-hidden="true">MONTIS / 00.000° N</div><div class="instructions"><span class="desktop">Drag or scroll to navigate.<br>Click markers to explore.</span><span class="touch">Drag to navigate.<br>Tap markers to explore.</span></div></footer>
+  <div class="error-message" role="alert"><h2>Your world is<br>taking a little longer.</h2><p id="error-copy">Please connect to the internet and enable WebGL in your browser, then try again.</p><button onclick="location.reload()">Try again</button></div>
+  <script>
+    window.addEventListener('error',e=>{if(!document.body.classList.contains('ready')){document.body.classList.add('render-error');console.error('Montis initialization:',e.error||e.message)}});
+    window.addEventListener('unhandledrejection',e=>{if(!document.body.classList.contains('ready')){document.body.classList.add('render-error');console.error('Montis initialization:',e.reason)}});
+  </script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    // Original scene, materials, navigation and audio. The terrain mask uses the supplied brand artwork.
+    const $=s=>document.querySelector(s), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Populate with the brand's approved address when available. No visitor data is collected.
+    const CONTACT_EMAIL='';
+    const mobile=matchMedia('(max-width: 700px)').matches;
+    const SETTINGS={size:70,segments:mobile?300:460,pixelRatio:Math.min(devicePixelRatio,mobile?1.35:1.65),reflectionScale:mobile?.33:.48,waterY:0};
+    const DESTINATIONS=[
+      {slug:'infrastructure',title:'Infrastructure',category:'Foundations for tomorrow',color:'#5ecdf9',x:-5.0,z:3.8,copy:'The foundations of the next economy. We partner with founders building the systems that connect industries, enable adoption and support enduring progress.'},
+      {slug:'energy',title:'Energy',category:'A changing landscape',color:'#a984ff',x:5.5,z:1.4,copy:'A new energy landscape takes conviction and operating experience. Montis brings both, connecting ambitious founders with a network built around real-world infrastructure.'},
+      {slug:'intelligence',title:'Intelligent systems',category:'Ideas into impact',color:'#60edcb',x:1.4,z:-5.7,copy:'Intelligent systems will reshape how the world works. We support founders turning technical insight into useful products, lasting businesses and meaningful change.'},
+      {slug:'partnership',title:'Partnership',category:'Stronger connections',color:'#ff95d8',x:-5.6,z:-3.7,copy:'Capital is the beginning of a partnership. Through operating expertise and enterprise connections, we work alongside founders as they build, learn and grow.'},
+      {slug:'horizon',title:'The next summit',category:'An enduring perspective',color:'#d6e783',x:3.8,z:6.2,copy:'We invest at the earliest stages, from pre-seed through Series A. With conviction, speed and a long-term view, we stay for the climb.'}
+    ];
+    const loading=n=>{$('#load-bar').style.transform=`scaleX(${n})`;$('#load-status').textContent=n<1?`ENTERING THE WORLD / ${Math.round(n*100)}`:'WELCOME TO MONTIS'};
+    loading(.12);
+    const canvas=$('#world');
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance'});
+    renderer.setPixelRatio(SETTINGS.pixelRatio);renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.LinearSRGBColorSpace;
+    renderer.setClearColor(0x10273b);renderer.autoClear=true;
+    renderer.debug.onShaderError=(gl,program,vertex,fragment)=>{throw new Error('Scene shader: '+gl.getProgramInfoLog(program)+' '+gl.getShaderInfoLog(vertex)+' '+gl.getShaderInfoLog(fragment))};
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.15,170);
+    const reflectionCamera=new THREE.PerspectiveCamera();
+    const mainTarget=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:true});
+    const reflectionTarget=new THREE.WebGLRenderTarget(1,1,{depthBuffer:true});
+    const reflectionMatrix=new THREE.Matrix4();
+    const shared={time:{value:0},camera:{value:camera.position},fogColor:{value:new THREE.Color('#385d7c')},light:{value:new THREE.Vector3(-.45,.8,-.4).normalize()},markers:{value:DESTINATIONS.map(d=>new THREE.Vector3(d.x,1,d.z))},colors:{value:DESTINATIONS.map(d=>new THREE.Color(d.color))}};
+    const noiseGLSL=`
+      float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+      float fbm(vec2 p){float f=0.;float a=.5;mat2 m=mat2(.8,.6,-.6,.8);for(int i=0;i<5;i++){f+=a*noise(p);p=m*p*2.03+7.1;a*=.5;}return f;}
+      float ridge(vec2 p){return 1.-abs(noise(p)*2.-1.);}
+    `;
+    const fogGLSL=`
+      vec3 applyFog(vec3 col,vec3 world){float d=length(cameraPosition-world);float mist=1.-exp(-pow(d*.023,1.55));float low=exp(-max(world.y,0.)*.3);mist=clamp(mist+low*(1.-exp(-d*.009)),0.,.96);return mix(col,uFog,mist);}
+    `;
+    const vertexWorld=`varying vec3 vWorld;varying vec3 vNormal;void main(){vec4 p=modelMatrix*vec4(position,1.);vWorld=p.xyz;vNormal=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*p;}`;
+
+    // Chamfer distance transform over an n×n mask: 0 on the mask, distance in texels off it. Used for the logo field and for the water's distance-to-shore.
+    function chamfer(mask,n){const a=new Float32Array(n*n),q=Math.SQRT2;for(let i=0;i<a.length;i++)a[i]=mask[i]?0:1e4;
+      for(let y=0;y<n;y++)for(let x=0;x<n;x++){const i=y*n+x;let v=a[i];if(x)v=Math.min(v,a[i-1]+1);if(y)v=Math.min(v,a[i-n]+1);if(x&&y)v=Math.min(v,a[i-n-1]+q);if(x<n-1&&y)v=Math.min(v,a[i-n+1]+q);a[i]=v;}
+      for(let y=n-1;y>=0;y--)for(let x=n-1;x>=0;x--){const i=y*n+x;let v=a[i];if(x<n-1)v=Math.min(v,a[i+1]+1);if(y<n-1)v=Math.min(v,a[i+n]+1);if(x<n-1&&y<n-1)v=Math.min(v,a[i+n+1]+q);if(x&&y<n-1)v=Math.min(v,a[i+n-1]+q);a[i]=v;}return a;}
+    // A signed distance field, rather than an extruded plate, turns every original curve into a continuous mountain ridge.
+    function makeLogoField(){
+      const n=640,c=document.createElement('canvas');c.width=c.height=n;
+      const ctx=c.getContext('2d',{willReadFrequently:true});
+      const symbol=$('#montis-symbol'),box=symbol.getAttribute('viewBox').split(/[ ,]+/).map(Number);
+      const pad=.10,scale=n*(1-pad*2)/Math.max(box[2],box[3]);
+      ctx.translate((n-box[2]*scale)/2-box[0]*scale,(n-box[3]*scale)/2-box[1]*scale);ctx.scale(scale,scale);ctx.fillStyle='#fff';
+      for(const path of symbol.querySelectorAll('path'))ctx.fill(new Path2D(path.getAttribute('d')),path.getAttribute('fill-rule')||'nonzero');
+      const pixels=ctx.getImageData(0,0,n,n).data,inside=new Uint8Array(n*n);
+      for(let i=0;i<inside.length;i++)inside[i]=pixels[i*4+3]>127?1:0;
+      const toInside=chamfer(inside.map(v=>v===1?1:0),n),toOutside=chamfer(inside.map(v=>v===0?1:0),n),field=new Float32Array(n*n);
+      for(let i=0;i<field.length;i++)field[i]=(toOutside[i]-toInside[i])*35/n;
+      return function(x,z){const u=(x/35+.5)*(n-1),v=(z/35+.5)*(n-1);if(u<0||v<0||u>=n-1||v>=n-1)return -20;const ix=Math.floor(u),iy=Math.floor(v),fx=u-ix,fy=v-iy,i=iy*n+ix;return (field[i]*(1-fx)+field[i+1]*fx)*(1-fy)+(field[i+n]*(1-fx)+field[i+n+1]*fx)*fy;};
+    }
+    function hash2(x,y){let t=Math.sin(x*127.1+y*311.7)*43758.5453;return t-Math.floor(t)}
+    function noise2(x,y){const a=Math.floor(x),b=Math.floor(y);let u=x-a,v=y-b;u=u*u*(3-2*u);v=v*v*(3-2*v);return (hash2(a,b)*(1-u)+hash2(a+1,b)*u)*(1-v)+(hash2(a,b+1)*(1-u)+hash2(a+1,b+1)*u)*v;}
+    function fbm2(x,y,octaves=5){let v=0,a=.5;for(let i=0;i<octaves;i++){v+=a*noise2(x,y);const ox=x;x=.8*x*2.03+.6*y*2.03+17;y=-.6*ox*2.03+.8*y*2.03+11;a*=.5;}return v;}
+    const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+    const logoDistance=makeLogoField();
+    function heightAt(x,z){
+      const n=fbm2(x*1.4,z*1.4),d=logoDistance(x+(noise2(x*.42,z*.42)-.5)*.18,z+(noise2(x*.42+30,z*.42)-.5)*.18);
+      const shoulder=Math.exp(-Math.pow(Math.max(-d,0)/.64,1.7));
+      const inside=1.05+Math.pow(Math.max(d,0),.7)*1.5;
+      const erosion=.71+.26*fbm2(x*2.8,z*2.8)+.3*(1-Math.abs(noise2(x*1.3+noise2(x,z)*.5,z*1.3)*2-1));
+      const logo=shoulder*inside*erosion;
+      const radius=Math.hypot(x*.92,z),edge=smooth(18,27,radius);
+      const backdrop=edge*(.4+Math.pow(fbm2(x*.19,z*.19),2.1)*8.5+fbm2(x*.65,z*.65)*1.9);
+      const striation=Math.abs(noise2(x*7+noise2(x*.7,z*.7)*6,z*3)*2-1)*.115;
+      return -.23+logo+backdrop+(n-.5)*.2+striation*smooth(.15,.65,logo+backdrop);
+    }
+    loading(.4);
+    const terrainGeometry=new THREE.PlaneGeometry(SETTINGS.size,SETTINGS.size,SETTINGS.segments,SETTINGS.segments);terrainGeometry.rotateX(-Math.PI/2);
+    const position=terrainGeometry.attributes.position;
+    for(let i=0;i<position.count;i++)position.setY(i,heightAt(position.getX(i),position.getZ(i)));
+    terrainGeometry.computeVertexNormals();
+    // The water reads terrain depth (R) and distance to the nearest shore (G) from the same heights the terrain mesh uses.
+    // Depth alone cannot say "near rock": the channel floor sits at a near-constant -0.23, so the pale shallows and the foam are keyed on shore distance.
+    const HM=SETTINGS.segments+1,hmH=new Float32Array(HM*HM),land=new Uint8Array(HM*HM);
+    for(let i=0;i<position.count;i++){const u=Math.round((position.getX(i)/SETTINGS.size+.5)*(HM-1)),v=Math.round((position.getZ(i)/SETTINGS.size+.5)*(HM-1)),k=v*HM+u;hmH[k]=position.getY(i);land[k]=hmH[k]>.02?1:0;}
+    const shoreDist=chamfer(land,HM),texel=SETTINGS.size/SETTINGS.segments,hmData=new Uint16Array(HM*HM*2);
+    for(let i=0;i<HM*HM;i++){hmData[i*2]=THREE.DataUtils.toHalfFloat(hmH[i]);hmData[i*2+1]=THREE.DataUtils.toHalfFloat(Math.min(shoreDist[i]*texel,8));}
+    const heightTexture=new THREE.DataTexture(hmData,HM,HM,THREE.RGFormat,THREE.HalfFloatType);
+    heightTexture.minFilter=heightTexture.magFilter=THREE.LinearFilter;heightTexture.wrapS=heightTexture.wrapT=THREE.ClampToEdgeWrapping;heightTexture.generateMipmaps=false;heightTexture.needsUpdate=true;
+    const heightFit=new THREE.Vector2((HM-1)/HM,.5/HM);
+    const terrainMaterial=new THREE.ShaderMaterial({uniforms:{uTime:shared.time,uFog:shared.fogColor,uLight:shared.light,uMarkers:shared.markers,uColors:shared.colors,uReflectionPass:{value:0}},vertexShader:vertexWorld,fragmentShader:`
+      varying vec3 vWorld;varying vec3 vNormal;uniform float uTime,uReflectionPass;uniform vec3 uFog,uLight;uniform vec3 uMarkers[5];uniform vec3 uColors[5];
+      ${noiseGLSL}${fogGLSL}
+      void main(){
+        // There is no oblique clip plane, so the underwater walls would otherwise leak into the mirror as dark smears exactly where the pale shallows are.
+        if(uReflectionPass>.5&&vWorld.y<-.04)discard;
+        vec3 normal=normalize(vNormal);float detail=fbm(vWorld.xz*13.);float ex=fbm(vWorld.xz*13.+vec2(.1,0))-detail;float ez=fbm(vWorld.xz*13.+vec2(0,.1))-detail;
+        normal=normalize(normal+vec3(ex,0.,ez)*1.4);float slope=1.-max(normal.y,0.);float diffuse=max(dot(normal,uLight),0.);
+        float veins=pow(ridge(vWorld.xz*4.+fbm(vWorld.xz*1.6)*2.),5.);float damp=1.-smoothstep(.05,.7,vWorld.y);
+        vec3 rock=mix(vec3(.012,.038,.066),vec3(.043,.106,.153),diffuse);rock*=.72+detail*.5;rock+=veins*.006;
+        rock=mix(rock,vec3(.006,.022,.037),damp*.54);rock*=1.-slope*.24;
+        vec3 view=normalize(cameraPosition-vWorld);float rim=pow(1.-max(dot(normal,view),0.),3.5)*max(normal.y,0.);rock+=vec3(.015,.069,.103)*rim*.35;
+        // The rock side of the waterline: wet, and lit in broken segments that move with the water's own foam, so the seam glows from both sides.
+        float shoreline=exp(-abs(vWorld.y-.025)*9.);float lap=.6+.4*noise(vec2(vWorld.x*1.6+uTime*.25,vWorld.z*1.6-uTime*.18));
+        rock=mix(rock,vec3(.02,.06,.09),shoreline*.3);rock+=vec3(.05,.13,.18)*shoreline*lap;
+        float sparkle=pow(noise(vWorld.xz*105.),35.)*pow(max(dot(reflect(-uLight,normal),view),0.),14.);
+        rock+=vec3(.2,.44,.55)*sparkle*.2;
+        for(int i=0;i<5;i++){float dist=length(vWorld-uMarkers[i]);rock+=uColors[i]*exp(-dist*dist*2.2)*(.08+.018*sin(uTime*1.2+float(i)));}
+        gl_FragColor=vec4(applyFog(rock,vWorld),1.);
+      }`});
+    const terrain=new THREE.Mesh(terrainGeometry,terrainMaterial);scene.add(terrain);
+
+    // Sky light and slow storm layers are evaluated in world space so the horizon stays anchored while navigating.
+    const skyMaterial=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{uTime:shared.time},vertexShader:`varying vec3 vDirection;void main(){vDirection=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vDirection;uniform float uTime;${noiseGLSL}void main(){vec3 d=normalize(vDirection);float h=max(d.y,0.);vec3 col=mix(vec3(.071,.143,.222),vec3(.013,.036,.07),smoothstep(0.,.65,h));vec2 p=d.xz/(abs(d.y)+.18);float cloud=fbm(p*.75+vec2(uTime*.006,0.));float band=fbm(p*1.7+vec2(0.,uTime*.01));col+=vec3(.018,.037,.063)*smoothstep(.38,.7,cloud);col-=band*.016;float light=pow(max(dot(d,normalize(vec3(-.35,.5,-1.))),0.),13.);col+=vec3(.025,.055,.083)*light;gl_FragColor=vec4(col,1.);}`});
+    const sky=new THREE.Mesh(new THREE.SphereGeometry(110,32,16),skyMaterial);scene.add(sky);
+
+    // Reflect the complete landscape into a separate target before shading the water.
+    // The water: pale and luminous wherever it hugs rock, deep in open water, with a swell, a ripple layer, broken foam at every shoreline, and a matte reflection.
+    // The old shader's ripple gradient was a finite difference never divided by its step, so the normal tilted ~2° and the water read as a still mirror.
+    const terrainGLSL=`uniform float uTerrainSize;uniform vec2 uHeightFit;uniform sampler2D uHeight;
+      vec2 terrain(vec2 xz){vec2 uv=xz/uTerrainSize+.5;vec2 s=step(vec2(0.),uv)*step(uv,vec2(1.));return mix(vec2(-20.,8.),texture2D(uHeight,uv*uHeightFit.x+uHeightFit.y).rg,s.x*s.y);}`;
+    const waterMaterial=new THREE.ShaderMaterial({transparent:false,defines:{DETAIL:mobile?0:1},uniforms:{uTime:shared.time,uReflection:{value:reflectionTarget.texture},uReflectionMatrix:{value:reflectionMatrix},uFog:shared.fogColor,uLight:shared.light,uMarkers:shared.markers,uColors:shared.colors,
+      uHeight:{value:heightTexture},uTerrainSize:{value:SETTINGS.size},uHeightFit:{value:heightFit},
+      uShallow:{value:new THREE.Color(.11,.31,.43)},uDeep:{value:new THREE.Color(.014,.055,.091)},uFoam:{value:new THREE.Color(.42,.66,.8)},
+      uSwell:{value:1},uRipple:{value:1},uFoamAmt:{value:1},uDistort:{value:.11},uHaze:{value:1}},
+      vertexShader:`varying vec3 vWorld;varying vec4 vReflection;uniform mat4 uReflectionMatrix;void main(){vec4 p=modelMatrix*vec4(position,1.);vWorld=p.xyz;vReflection=uReflectionMatrix*p;gl_Position=projectionMatrix*viewMatrix*p;}`,fragmentShader:`
+      varying vec3 vWorld;varying vec4 vReflection;uniform float uTime,uSwell,uRipple,uFoamAmt,uDistort,uHaze;uniform sampler2D uReflection;uniform vec3 uFog,uLight,uMarkers[5],uColors[5],uShallow,uDeep,uFoam;${noiseGLSL}${fogGLSL}${terrainGLSL}
+      void main(){
+        vec2 p=vWorld.xz;vec2 t=terrain(p);float h=t.x,depth=max(-h,0.),shore=t.y;
+        float dist=length(cameraPosition-vWorld);float far=smoothstep(22.,60.,dist);
+        // Where a world unit spans only a few pixels, ripple and foam would alias into shimmer; fade them by screen-space derivative rather than by distance alone.
+        float fine=1.-smoothstep(.02,.09,fwidth(p.x)+fwidth(p.y));
+        // 0 hugging rock, 1 in open water — but never fully still in the channels, which are what the near camera looks at.
+        float open=mix(.35,1.,smoothstep(.25,1.8,shore));
+        // Swell: two analytic sines, damped near rock. Its height tints the body (crests lighter) so it reads from the high overview too.
+        float a1=p.x*1.05+p.y*.55+uTime*.5,a2=-p.x*1.3+p.y*1.75-uTime*.37;
+        float sw=(sin(a1)*.085+sin(a2)*.045)*open*(1.-far)*uSwell;
+        vec2 g=(vec2(1.05,.55)*cos(a1)*.085+vec2(-1.3,1.75)*cos(a2)*.045)*open*(1.-far*.6)*uSwell;
+        // Ripple: layered noise, gradient divided by its step.
+        vec2 q=p*3.2+vec2(uTime*.28,uTime*.16);const float e=.12;
+        #if DETAIL
+        float r0=noise(q)+.55*noise(q*2.2-uTime*.45),rx=noise(q+vec2(e,0.))+.55*noise((q+vec2(e,0.))*2.2-uTime*.45),ry=noise(q+vec2(0.,e))+.55*noise((q+vec2(0.,e))*2.2-uTime*.45);
+        #else
+        float r0=noise(q),rx=noise(q+vec2(e,0.)),ry=noise(q+vec2(0.,e));
+        #endif
+        vec2 gr=vec2(rx-r0,ry-r0)/e*.055*(.45+.55*open)*fine*(1.-far*.75)*uRipple;g+=gr;
+        vec3 normal=normalize(vec3(-g.x,1.,-g.y));
+        vec3 view=normalize(cameraPosition-vWorld);float fresnel=.1+.6*pow(1.-max(dot(view,normal),0.),3.);
+        // Body: pale luminous in the shallows and near any shore, deep in open water; lit by the normal so the ripple texture is visible; the gradient modulates it too, so it shows regardless of light angle.
+        float shallow=clamp(exp(-depth*3.5)*.5+exp(-shore*.6)*.7,0.,1.);
+        vec3 body=mix(uDeep,uShallow,shallow);
+        float lit=dot(normal,uLight);body*=.35+.85*lit;body*=1.+gr.x*3.;body+=uShallow*sw*2.;
+        // Foam: a noise-broken band 0.05–0.7 units from rock, lapping toward it, plus a thin wet line on the true water/rock crossing (signed height, not the coarser chamfer).
+        #if DETAIL
+        float foamTex=noise(p*4.2+vec2(uTime*.06,-uTime*.04))*.65+noise(p*9.5-vec2(uTime*.05,uTime*.08))*.35;
+        #else
+        float foamTex=noise(p*4.2+vec2(uTime*.06,-uTime*.04));
+        #endif
+        float lap=noise(vec2(shore*3.5-uTime*.5,(p.x+p.y)*.7));
+        float band=1.-smoothstep(.05,.42+.25*foamTex,shore);
+        float wet=exp(-abs(h)*45.);
+        float foam=(band*smoothstep(.42,.72,foamTex+lap*.25)*fine*(1.-far*.6)+wet*.35)*uFoamAmt;
+        // Reflection: distortion up from ~2px to ~20px, pulled back at the shore so it cannot drag rock into the foam, damped at the texture edge, matted with fog.
+        vec2 ruv=vReflection.xy/vReflection.w;vec2 edge=1.-smoothstep(.85,1.,abs(ruv*2.-1.));
+        float nearShore=smoothstep(0.,.25,depth)*(1.-band*.7);
+        vec3 reflection=texture2D(uReflection,clamp(ruv+g*uDistort*edge.x*edge.y*nearShore,.001,.999)).rgb;reflection=mix(reflection,uFog*.75,.3);
+        vec3 col=mix(body,reflection,fresnel*.6);
+        float satin=pow(max(dot(reflect(-uLight,normal),view),0.),38.);col+=vec3(.16,.28,.36)*satin*.3;
+        col+=uFoam*foam;
+        // A low drifting haze over the water keeps it matte.
+        #if DETAIL
+        float haze=noise(p*.35+vec2(uTime*.025,0.))*.5+noise(p*.9-vec2(0.,uTime*.02))*.25;
+        #else
+        float haze=.4;
+        #endif
+        col=mix(col,uFog*.8,(.06+.12*haze)*(.5+.5*open)*uHaze);
+        for(int i=0;i<5;i++){vec2 delta=p-uMarkers[i].xz;float glow=exp(-dot(delta,delta)*1.1);col+=uColors[i]*glow*(.035+.02*noise(p*12.+uTime*.1));}
+        gl_FragColor=vec4(applyFog(col,vWorld),1.);
+      }`});
+    const water=new THREE.Mesh(new THREE.PlaneGeometry(160,160),waterMaterial);water.rotation.x=-Math.PI/2;water.position.y=SETTINGS.waterY;scene.add(water);
+    // A low mist sheet over the water only (masked by the baked height), drifting, thicker with distance and at grazing angles. Two-sided on desktop so the mirror sees it too.
+    const mistMaterial=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:mobile?THREE.FrontSide:THREE.DoubleSide,uniforms:{uTime:shared.time,uFog:shared.fogColor,uHeight:{value:heightTexture},uTerrainSize:{value:SETTINGS.size},uHeightFit:{value:heightFit},uMist:{value:.18}},vertexShader:`varying vec3 vWorld;void main(){vec4 p=modelMatrix*vec4(position,1.);vWorld=p.xyz;gl_Position=projectionMatrix*viewMatrix*p;}`,fragmentShader:`
+      varying vec3 vWorld;uniform float uTime,uMist;uniform vec3 uFog;${noiseGLSL}${terrainGLSL}
+      void main(){vec2 p=vWorld.xz;float h=terrain(p).x;float overWater=1.-smoothstep(.04,.28,h);
+        vec2 q=p*.22+vec2(uTime*.02,uTime*.011);float m=noise(q)*.5+noise(q*2.1+3.)*.3+noise(q*4.3-1.)*.2;
+        float d=length(cameraPosition-vWorld);vec3 v=normalize(cameraPosition-vWorld);float graze=1.-abs(v.y);
+        float a=overWater*smoothstep(.34,.72,m)*(.45+.55*smoothstep(8.,40.,d))*(.55+.45*graze)*uMist;
+        gl_FragColor=vec4(uFog*.9,a);}`});
+    const mist=new THREE.Mesh(new THREE.PlaneGeometry(160,160),mistMaterial);mist.rotation.x=-Math.PI/2;mist.position.y=SETTINGS.waterY+.42;mist.renderOrder=3;scene.add(mist);
+
+    // Small instanced conifers give the landscape a readable physical scale.
+    let randomSeed=81023;function random(){randomSeed=(randomSeed*1664525+1013904223)>>>0;return randomSeed/4294967296}
+    const treeGeo=new THREE.BufferGeometry(),treeVerts=[];
+    for(let tier=0;tier<4;tier++){const radius=.19*(1-tier*.19),top=.83+tier*.23,bottom=.06+tier*.2;for(let j=0;j<6;j++){const a=j/6*Math.PI*2,b=(j+1)/6*Math.PI*2;treeVerts.push(Math.cos(a)*radius,bottom,Math.sin(a)*radius,0,top,0,Math.cos(b)*radius,bottom,Math.sin(b)*radius);}}
+    treeGeo.setAttribute('position',new THREE.Float32BufferAttribute(treeVerts,3));treeGeo.computeVertexNormals();
+    const treeMat=new THREE.ShaderMaterial({uniforms:{uFog:shared.fogColor},vertexShader:`varying vec3 vWorld;varying vec3 vNormal;void main(){vec4 p=modelMatrix*instanceMatrix*vec4(position,1.);vWorld=p.xyz;vNormal=normalize(mat3(modelMatrix*instanceMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*p;}`,fragmentShader:`varying vec3 vWorld;varying vec3 vNormal;uniform vec3 uFog;${fogGLSL}void main(){float light=max(dot(normalize(vNormal),normalize(vec3(-.5,.8,-.4))),0.);vec3 col=mix(vec3(.003,.01,.02),vec3(.008,.027,.038),light);gl_FragColor=vec4(applyFog(col,vWorld),1.);}`});
+    const trees=new THREE.InstancedMesh(treeGeo,treeMat,mobile?600:1300),dummy=new THREE.Object3D();let treeCount=0;
+    for(let i=0;i<12000&&treeCount<trees.instanceMatrix.count;i++){const x=(random()-.5)*56,z=(random()-.5)*56,h=heightAt(x,z);if(h<.35||h>3.7||Math.hypot(x,z)<10&&random()>.14)continue;if(fbm2(x*.5,z*.5)<.42)continue;const slope=Math.abs(heightAt(x+.15,z)-h)+Math.abs(heightAt(x,z+.15)-h);if(slope>.2)continue;dummy.position.set(x,h-.035,z);dummy.rotation.y=random()*Math.PI;const s=.19+random()*.45;dummy.scale.set(s,s*(.9+random()*.45),s);dummy.updateMatrix();trees.setMatrixAt(treeCount++,dummy.matrix);}
+    trees.count=treeCount;trees.instanceMatrix.needsUpdate=true;scene.add(trees);
+    loading(.68);
+
+    // Luminous destinations: a soft light at each one (not a flame), airborne motes, and light caught by the terrain and the water.
+    const beaconGeometry=new THREE.PlaneGeometry(1,1);
+    const beaconVertex=`varying vec2 vUv;void main(){vUv=uv;vec4 center=modelViewMatrix*vec4(0.,0.,0.,1.);center.xy+=position.xy*vec2(length(modelMatrix[0].xyz),length(modelMatrix[1].xyz));gl_Position=projectionMatrix*center;}`;
+    const beaconObjects=[];
+    DESTINATIONS.forEach((d,i)=>{
+      // Snap each destination onto the closest point of the actual logo ridge.
+      d.x*=1.5;d.z*=1.5;let bx=d.x,bz=d.z,best=1e6;for(let z=-15;z<15;z+=.2)for(let x=-15;x<15;x+=.2){const h=heightAt(x,z);if(h<.5||h>3.5||logoDistance(x,z)<-.05)continue;const dist=(x-d.x)**2+(z-d.z)**2;if(dist<best){best=dist;bx=x;bz=z;}}
+      d.x=bx;d.z=bz;d.y=heightAt(bx,bz)+.12;shared.markers.value[i].set(bx,d.y,bz);
+      // A breathing orb of light with a wide soft halo — the destination's colour, brightened by hover. The flame it replaces is gone.
+      const material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:{uTime:shared.time,uColor:{value:shared.colors.value[i]},uSeed:{value:i*4.13},uHover:{value:0}},vertexShader:beaconVertex,fragmentShader:`varying vec2 vUv;uniform float uTime,uSeed,uHover;uniform vec3 uColor;${noiseGLSL}void main(){vec2 p=vUv-.5;float t=uTime*.5+uSeed;float r=dot(p*vec2(1.,.85),p*vec2(1.,.85));float breathe=.9+.1*sin(t*1.7);float core=exp(-r*40.*breathe);float halo=exp(-r*6.)*.3;float shimmer=.86+.14*noise(vec2(p.x*9.,p.y*9.-t));float alpha=(core*.9+halo)*shimmer*(.8+uHover*.7);gl_FragColor=vec4(mix(uColor,vec3(.85,.95,1.),core*.35)*1.6,alpha);}`});
+      const mesh=new THREE.Mesh(beaconGeometry,material);mesh.position.set(bx,d.y+.32,bz);mesh.scale.set(1.15,1.15,1);mesh.renderOrder=4;scene.add(mesh);beaconObjects.push(mesh);
+      const button=document.createElement('button');button.className='marker';button.style.setProperty('--glow',d.color);button.setAttribute('aria-label',`Explore ${d.title}`);button.innerHTML=`<span class="marker-label"><small>0${i+1} / ${d.category}</small>${d.title}</span>`;
+      button.addEventListener('click',()=>{location.hash='project/'+d.slug;playChime(i)});button.addEventListener('pointerenter',()=>{material.uniforms.uHover.value=1;playChime(i,.16)});button.addEventListener('pointerleave',()=>material.uniforms.uHover.value=0);button.addEventListener('focus',()=>material.uniforms.uHover.value=1);button.addEventListener('blur',()=>material.uniforms.uHover.value=0);$('#markers').append(button);d.button=button;
+    });
+    const particles=mobile?180:360,particlePositions=new Float32Array(particles*3),particleColors=new Float32Array(particles*3),particleSizes=new Float32Array(particles);
+    for(let i=0;i<particles;i++){const d=DESTINATIONS[i%5],r=random()*.55,a=random()*Math.PI*2;particlePositions.set([d.x+Math.cos(a)*r,d.y+random()*1.8,d.z+Math.sin(a)*r],i*3);particleColors.set(shared.colors.value[i%5].toArray(),i*3);particleSizes[i]=random()*1.3+.35;}
+    const particleGeo=new THREE.BufferGeometry();particleGeo.setAttribute('position',new THREE.BufferAttribute(particlePositions,3));particleGeo.setAttribute('color',new THREE.BufferAttribute(particleColors,3));particleGeo.setAttribute('aSize',new THREE.BufferAttribute(particleSizes,1));
+    const particleMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:{uTime:shared.time,uRatio:{value:SETTINGS.pixelRatio}},vertexShader:`attribute vec3 color;attribute float aSize;varying vec3 vColor;varying float vFade;uniform float uTime,uRatio;void main(){vec3 p=position;p.x+=sin(uTime*.35+position.y*5.)*.15;p.z+=cos(uTime*.28+position.x*3.)*.15;p.y+=sin(uTime*.6+position.z)*.16;vec4 mv=modelViewMatrix*vec4(p,1.);vColor=color;vFade=.35+.65*pow(sin(uTime*.7+position.y*15.),2.);gl_PointSize=clamp(aSize*uRatio*38./-mv.z,1.,6.);gl_Position=projectionMatrix*mv;}`,fragmentShader:`varying vec3 vColor;varying float vFade;void main(){float r=length(gl_PointCoord-.5);gl_FragColor=vec4(vColor*2.,(1.-smoothstep(.06,.5,r))*vFade);}`});scene.add(new THREE.Points(particleGeo,particleMat));
+
+    const fogMaterial=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uTime:shared.time},vertexShader:beaconVertex,fragmentShader:`varying vec2 vUv;uniform float uTime;${noiseGLSL}void main(){vec2 p=vUv;float edge=pow(max(0.,1.-length((p-.5)*2.)),1.5);float cloud=fbm(vec2(p.x*6.+uTime*.018,p.y*3.));gl_FragColor=vec4(.24,.40,.56,edge*cloud*.12);}`});
+    for(let i=0;i<9;i++){const fog=new THREE.Mesh(beaconGeometry,fogMaterial);fog.position.set((i%3-1)*17,1.6+Math.floor(i/3)*1.1,-6-Math.floor(i/3)*13);fog.scale.set(30,5,1);fog.renderOrder=5;scene.add(fog);}
+
+    // Final optical pass: restrained bloom, cool film response, fine grain, and a soft lens vignette.
+    const postScene=new THREE.Scene(),postCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+    const postMaterial=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tScene:{value:mainTarget.texture},uResolution:{value:new THREE.Vector2()},uTime:shared.time,uReveal:{value:0}},vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,fragmentShader:`
+      uniform sampler2D tScene;uniform vec2 uResolution;uniform float uTime,uReveal;varying vec2 vUv;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+      void main(){vec2 uv=vUv,px=1./uResolution;vec3 col=texture2D(tScene,uv).rgb;vec3 bloom=vec3(0.);for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 off=vec2(cos(a),sin(a));vec3 c=texture2D(tScene,uv+off*px*4.).rgb;vec3 farC=texture2D(tScene,uv+off*px*12.).rgb;bloom+=max(c-.3,0.)*.07+max(farC-.3,0.)*.035;}col+=bloom;col=vec3(1.)-exp(-col*1.65);col=pow(max(col,0.),vec3(.454545));float vignette=1.-smoothstep(.3,.88,length((uv-.5)*vec2(1.03,.95)));col*=.65+.35*vignette;col=mix(vec3(.033,.065,.12),col,uReveal);float grain=hash(gl_FragCoord.xy+floor(uTime*24.)*vec2(41.3,13.7))-.5;col+=grain*.041;gl_FragColor=vec4(col,1.);}`});postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),postMaterial));
+    function resize(){const w=innerWidth,h=innerHeight,r=renderer.getPixelRatio();renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();mainTarget.setSize(Math.round(w*r),Math.round(h*r));reflectionTarget.setSize(Math.max(2,Math.round(w*r*SETTINGS.reflectionScale)),Math.max(2,Math.round(h*r*SETTINGS.reflectionScale)));postMaterial.uniforms.uResolution.value.set(w*r,h*r);}
+    resize();addEventListener('resize',resize,{passive:true});
+
+    // A constrained, damped camera path keeps the logo readable from every position.
+    const motion={target:0,value:0,panX:0,panY:0,pointerX:0,pointerY:0,down:false,startX:0,startY:0,lastX:0,lastY:0,travel:0};
+    const lookAt=new THREE.Vector3(),baseLook=new THREE.Vector3(),mirrorLook=new THREE.Vector3(),projected=new THREE.Vector3();
+    let activeView='overview',detailIndex=0,lastFocus=null,started=performance.now(),lastFrame=started,frameCount=0,slowFrames=0;
+    const clamp=THREE.MathUtils.clamp;
+    function changeMotion(delta){if(activeView!=='overview')return;motion.target=clamp(motion.target+delta,0,1);}
+    canvas.addEventListener('wheel',e=>{if(activeView!=='overview')return;e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?innerHeight:1);changeMotion(delta*.00025)},{passive:false});
+    canvas.addEventListener('pointerdown',e=>{if(activeView!=='overview')return;motion.down=true;motion.startX=motion.lastX=e.clientX;motion.startY=motion.lastY=e.clientY;motion.travel=0;canvas.setPointerCapture(e.pointerId)});
+    canvas.addEventListener('pointermove',e=>{motion.pointerX=e.clientX/innerWidth*2-1;motion.pointerY=e.clientY/innerHeight*2-1;if(motion.down){const dx=e.clientX-motion.lastX,dy=e.clientY-motion.lastY;motion.travel+=Math.abs(dx)+Math.abs(dy);changeMotion((-dx-dy*.7)*.00085);motion.lastX=e.clientX;motion.lastY=e.clientY;}});
+    function pointerUp(){motion.down=false}canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',pointerUp);canvas.addEventListener('lostpointercapture',pointerUp);canvas.addEventListener('pointerleave',()=>{motion.pointerX=motion.pointerY=0});
+    canvas.addEventListener('keydown',e=>{if(['ArrowRight','ArrowDown','PageDown','ArrowLeft','ArrowUp','PageUp','Home','End'].includes(e.key)){e.preventDefault();if(e.key==='Home')motion.target=0;else if(e.key==='End')motion.target=1;else changeMotion(['ArrowRight','ArrowDown','PageDown'].includes(e.key)?.08:-.08)}});
+    function updateCamera(dt){motion.value=THREE.MathUtils.damp(motion.value,motion.target,reduced?30:3,dt);motion.panX=THREE.MathUtils.damp(motion.panX,reduced?0:motion.pointerX,2,dt);motion.panY=THREE.MathUtils.damp(motion.panY,reduced?0:motion.pointerY,2,dt);const p=motion.value,angle=-.12+p*.88;const radius=mobile?34:27;const intro=reduced?0:Math.max(0,1-(performance.now()-started)/2700);const distance=radius+intro*3-p*6;camera.position.set(Math.sin(angle)*distance+motion.panX*.36,17.8-p*5.5+intro*2.2+motion.panY*.22,Math.cos(angle)*distance);baseLook.set(0,.2,-2.1);lookAt.copy(baseLook);if(activeView==='detail'){const d=DESTINATIONS[detailIndex];lookAt.lerp(new THREE.Vector3(d.x,d.y,d.z),.27)}camera.lookAt(lookAt);camera.updateMatrixWorld();document.body.classList.toggle('exploring',p>.10);$('#coordinates').textContent=`MONTIS / ${(p*87.2).toFixed(3)}° N / AN ELEVATED PERSPECTIVE`;}
+    const frustum=new THREE.Frustum(),projectionView=new THREE.Matrix4();
+    function updateMarkers(){projectionView.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(projectionView);for(const d of DESTINATIONS){projected.set(d.x,d.y+.43,d.z);const visible=frustum.containsPoint(projected);projected.project(camera);d.button.style.transform=`translate(${(projected.x*.5+.5)*innerWidth}px,${(-projected.y*.5+.5)*innerHeight}px)`;d.button.style.opacity=visible&&activeView==='overview'?'1':'0';d.button.disabled=!visible||activeView!=='overview';d.button.tabIndex=visible&&activeView==='overview'?0:-1;}}
+
+    function renderReflection(){water.visible=false;terrainMaterial.uniforms.uReflectionPass.value=1;if(mobile)mist.visible=false;reflectionCamera.copy(camera);reflectionCamera.position.y=-camera.position.y;mirrorLook.copy(lookAt);mirrorLook.y=-lookAt.y;reflectionCamera.up.set(0,-1,0);reflectionCamera.lookAt(mirrorLook);reflectionCamera.updateMatrixWorld();reflectionMatrix.set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1);reflectionMatrix.multiply(reflectionCamera.projectionMatrix).multiply(reflectionCamera.matrixWorldInverse);renderer.setRenderTarget(reflectionTarget);renderer.render(scene,reflectionCamera);water.visible=true;terrainMaterial.uniforms.uReflectionPass.value=0;if(mobile)mist.visible=true;}
+    let raf=0;function frame(now){raf=requestAnimationFrame(frame);const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;const elapsed=(now-started)/1000;shared.time.value=reduced?5:elapsed;updateCamera(dt);postMaterial.uniforms.uReveal.value=Math.min(1,elapsed/2.4);if(frameCount%2===0)renderReflection();renderer.setRenderTarget(mainTarget);renderer.render(scene,camera);renderer.setRenderTarget(null);renderer.render(postScene,postCamera);updateMarkers();frameCount++;if(dt>.034)slowFrames++;if(frameCount===180&&slowFrames>95){mist.visible=false;waterMaterial.uniforms.uHaze.value=.5;if(renderer.getPixelRatio()>1){renderer.setPixelRatio(1);resize();}} }
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);audioContext?.suspend()}else{lastFrame=performance.now();raf=requestAnimationFrame(frame);if(soundOn)audioContext?.resume()}});
+    renderer.compile(scene,camera);loading(1);updateCamera(.016);renderReflection();requestAnimationFrame(frame);
+    setTimeout(()=>{document.body.classList.add('ready');$('.loader').setAttribute('aria-hidden','true')},250);
+
+    // DOM routes stay accessible and share one persistent world and audio context.
+    $('#project-list').innerHTML=DESTINATIONS.map((d,i)=>`<li><button data-project="${d.slug}"><small>0${i+1}</small><strong>${d.title}</strong><span class="tag">${d.category}</span><span class="line-arrow" aria-hidden="true"></span></button></li>`).join('');
+    $('#project-list').addEventListener('click',e=>{const b=e.target.closest('[data-project]');if(b)location.hash='project/'+b.dataset.project});
+    for(const b of document.querySelectorAll('[data-route]'))b.addEventListener('click',()=>location.hash=b.dataset.route==='overview'?'':b.dataset.route);
+    for(const b of document.querySelectorAll('.view-close'))b.addEventListener('click',()=>location.hash='');
+    $('#menu-toggle').addEventListener('click',()=>location.hash=activeView==='work'?'':'work');
+    $('.brand').addEventListener('click',()=>{motion.target=0});
+    function route(){const raw=decodeURIComponent(location.hash.slice(1));let next=['work','studio','contact'].includes(raw)?raw:'overview';if(raw.startsWith('project/')){const index=DESTINATIONS.findIndex(d=>d.slug===raw.slice(8));if(index>=0){detailIndex=index;next='detail';}}
+      if(next!=='overview'&&activeView==='overview')lastFocus=document.activeElement;
+      for(const view of document.querySelectorAll('.view')){const active=view.id==='view-'+next;view.classList.toggle('active',active);view.inert=!active;if(active)view.scrollTop=0;}
+      activeView=next;document.body.classList.toggle('panel-open',next!=='overview');$('#menu-toggle').setAttribute('aria-expanded',next==='work'?'true':'false');
+      for(const a of document.querySelectorAll('[data-nav]')){if(a.dataset.nav===next||(next==='work'||next==='detail')&&a.dataset.nav==='overview')a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}
+      if(next==='detail'){const d=DESTINATIONS[detailIndex];$('#detail-kicker').textContent=`0${detailIndex+1} / Our world`;$('#detail-title').textContent=d.title;$('#detail-copy').textContent=d.copy;$('#detail-category').textContent=d.category;document.title=`${d.title} — MONTIS`;}
+      else document.title=next==='overview'?'MONTIS — An elevated perspective':`${next==='work'?'Our world':next[0].toUpperCase()+next.slice(1)} — MONTIS`;
+      if(next!=='overview'){requestAnimationFrame(()=>$('#view-'+next+' .view-close').focus({preventScroll:true}))}else if(lastFocus?.isConnected){lastFocus.focus({preventScroll:true});lastFocus=null;}
+    }
+    $('#detail-next').addEventListener('click',()=>location.hash='project/'+DESTINATIONS[(detailIndex+1)%DESTINATIONS.length].slug);
+    addEventListener('hashchange',route);route();
+    addEventListener('keydown',e=>{if(e.key==='Escape'&&activeView!=='overview'){location.hash='';return;}if(e.key!=='Tab'||activeView==='overview')return;const panel=$('#view-'+activeView),focusable=[...panel.querySelectorAll('button,a[href],input,textarea')].filter(el=>el.getClientRects().length>0);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
+    if(CONTACT_EMAIL){$('#contact-pending').hidden=true;$('#contact-link').hidden=false;$('#contact-link').href='mailto:'+CONTACT_EMAIL;$('#contact-address').textContent=CONTACT_EMAIL;}
+
+    // User-initiated original ambient sound. Nothing plays before the sound button is pressed.
+    let audioContext=null,master=null,soundOn=false;const voices=[];
+    async function initAudio(){if(audioContext)return;const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext)return;audioContext=new AudioContext();master=audioContext.createGain();master.gain.value=0;master.connect(audioContext.destination);const noiseBuffer=audioContext.createBuffer(1,audioContext.sampleRate*5,audioContext.sampleRate),data=noiseBuffer.getChannelData(0);let last=0;for(let i=0;i<data.length;i++){last=(last+(Math.random()*2-1)*.02)/1.02;data[i]=last*3.2}const source=audioContext.createBufferSource();source.buffer=noiseBuffer;source.loop=true;const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=550;source.connect(filter);const windGain=audioContext.createGain();windGain.gain.value=.34;filter.connect(windGain);windGain.connect(master);source.start();voices.push(source);for(const f of [55,82.4069,110.12,164.81]){const osc=audioContext.createOscillator(),g=audioContext.createGain();osc.type='sine';osc.frequency.value=f;g.gain.value=.035;osc.connect(g);g.connect(master);osc.start();voices.push(osc)}await audioContext.resume();}
+    async function toggleAudio(){try{await initAudio();if(!audioContext)return;await audioContext.resume();soundOn=!soundOn;master.gain.setTargetAtTime(soundOn?.6:0,audioContext.currentTime,.5);$('#sound-toggle').setAttribute('aria-pressed',String(soundOn));$('#sound-toggle').setAttribute('aria-label',`Turn ambient sound ${soundOn?'off':'on'}`);$('.sound-tip').textContent='SOUND '+(soundOn?'ON':'OFF');$('#sound-wave').setAttribute('d',soundOn?'M1 7C3 7 3 2 5 2S7 12 9 12S11 2 13 2S15 12 17 12S19 7 20 7':'M2 5.5C5 5.5 5 9 8 9S11 5.5 14 5.5S17 9 18 9');}catch(error){console.warn('Audio unavailable',error);$('.sound-tip').textContent='AUDIO UNAVAILABLE';}}
+    function playChime(index,strength=.35){if(!soundOn||!audioContext)return;const osc=audioContext.createOscillator(),gain=audioContext.createGain(),now=audioContext.currentTime;osc.type='sine';osc.frequency.value=[220,261.63,329.63,392,440][index];gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(strength*.08,now+.08);gain.gain.exponentialRampToValueAtTime(.0001,now+2.3);osc.connect(gain);gain.connect(master);osc.start(now);osc.stop(now+2.4);osc.onended=()=>{osc.disconnect();gain.disconnect()};}
+    $('#sound-toggle').addEventListener('click',toggleAudio);
+    window.addEventListener('pagehide',()=>{cancelAnimationFrame(raf);audioContext?.close()},{once:true});
+    // Read-only diagnostics for local verification; never shown in the visitor interface.
+    window.__MONTIS_WORLD__={heightAt,logoDistance,destinations:DESTINATIONS.map(({button,...d})=>d),renderer,scene,camera,settings:SETTINGS,water:waterMaterial,mist:mistMaterial,heightTexture,motion,ready:true};
+  </script>
+</body>
+</html>

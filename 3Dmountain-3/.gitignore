@@ -1,0 +1,4 @@
+dist/
+dist-expanded-backup/
+.claude/
+.vscode/

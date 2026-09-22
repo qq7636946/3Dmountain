@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dceaf1">
+<title>MONTIS — Glacial Orb Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2f5f8a;
+  --ink-dim:rgba(47,95,138,.48);
+  --ease:cubic-bezier(.16,1,.3,1);
+  /* The horizon is the one number the DOM scene and the orb shader share.
+     JS mirrors it into the shader so the refraction lines up exactly. */
+  --hz:40.5%;
+  --scene:1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  background:
+    linear-gradient(180deg,#c9dfe9 0%,#e9eef1 48%,#f6e9e6 61%,#b7dce9 100%);
+  color:var(--ink);
+  font-family:"Jost","Helvetica Neue",Arial,sans-serif;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ====================================================================
+   THE SCENE — every pixel below is DOM. Sky, range, water, weather.
+   Nothing here touches WebGL; only #orb does.
+   ==================================================================== */
+.scene{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  opacity:var(--scene);
+  pointer-events:none;
+}
+.sky{
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg,#c9dfe9 0%,#e9eef1 48%,#f6e9e6 61%,#b7dce9 100%);
+}
+/* Low sun, a touch left of centre — same direction the study's sky dome
+   used, so the warm band sits just under the ridge line. */
+.sun{
+  position:absolute;
+  left:42%;
+  top:var(--hz);
+  width:76vw;
+  height:44vh;
+  transform:translate(-50%,-62%);
+  background:
+    radial-gradient(closest-side,rgba(255,236,224,.82),rgba(255,225,210,.30) 34%,transparent 72%);
+  filter:blur(6px);
+}
+.sun:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:58%;
+  width:8.5vh;
+  height:8.5vh;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,250,246,.95),rgba(255,232,216,.42) 52%,transparent 76%);
+}
+
+/* ---------- cloud sea ---------- */
+.cloudsea{position:absolute;inset:0;overflow:hidden;opacity:var(--clouds,.68)}
+.cloudsea i{
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 40% 45%,
+    rgba(252,253,255,.80) 0%,
+    rgba(238,245,250,.44) 30%,
+    rgba(214,229,238,.14) 58%,
+    transparent 76%);
+  filter:blur(var(--pcb,18px));
+  will-change:transform;
+  animation:var(--pca) linear infinite;
+}
+@keyframes pcA{from{transform:translateX(-26vw)}to{transform:translateX(126vw)}}
+@keyframes pcB{from{transform:translateX(126vw)}to{transform:translateX(-26vw)}}
+
+/* ---------- the range ----------
+   Each layer's silhouette is generated from ridgeHeight() in JS, the same
+   function the orb shader raymarches against, so glass and page agree. */
+.range{
+  position:absolute;
+  left:0;
+  width:100%;
+  height:30vh;
+  bottom:calc(100% - var(--hz));
+  opacity:var(--ridge,1);
+}
+.range svg{display:block;width:100%;height:100%}
+.range.r0{filter:blur(.6px)}
+.range.r1{filter:blur(.3px)}
+/* Aerial perspective: the far wall reads almost as fog, the near one holds
+   its edge. Snow caps come from the gradient's top stop. */
+.range.r0 .body{fill:url(#gFar)}
+.range.r1 .body{fill:url(#gMid)}
+.range.r2 .body{fill:url(#gNear)}
+
+/* Horizon haze — the fog term the study ran at .0018 density. */
+.haze{
+  position:absolute;
+  left:0;
+  width:100%;
+  height:22vh;
+  bottom:calc(100% - var(--hz) - 9vh);
+  background:linear-gradient(180deg,transparent,rgba(199,219,228,.86) 62%,rgba(199,219,228,.94));
+  opacity:var(--haze,1);
+}
+
+/* ---------- dawn shafts ---------- */
+.shafts{position:absolute;inset:0;overflow:hidden;opacity:var(--shafts,1);mix-blend-mode:screen}
+.shafts i{
+  position:absolute;
+  top:-24vh;
+  height:104vh;
+  transform-origin:50% 0;
+  background:linear-gradient(180deg,rgba(255,246,238,.44),rgba(255,243,233,.10) 58%,transparent 82%);
+  filter:blur(9px);
+  animation:shaft 17s ease-in-out infinite alternate;
+}
+@keyframes shaft{from{opacity:.42}to{opacity:.92}}
+
+/* ---------- water ---------- */
+.water{
+  position:absolute;
+  left:0;
+  width:100%;
+  top:var(--hz);
+  bottom:0;
+  background:
+    linear-gradient(180deg,
+      rgba(189,230,242,.96) 0%,
+      rgba(126,183,206,.94) 16%,
+      rgba(63,124,157,.96) 52%,
+      rgba(50,111,141,.98) 100%);
+}
+/* Mirrored range: flipped copy of the same silhouettes, softened and faded
+   the way a calm surface actually returns a ridge. */
+.mirror{
+  position:absolute;
+  left:0;
+  width:100%;
+  top:0;
+  height:19vh;
+  overflow:hidden;
+  opacity:.42;
+  filter:blur(2.4px) saturate(72%);
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.92),transparent 88%);
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.92),transparent 88%);
+}
+/* The flip lives on an inner wrapper: were it on .mirror itself, the
+   clip would run in pre-transform space and cut the ridge away. */
+.mirror-flip{
+  position:absolute;
+  inset:0;
+  transform:scaleY(-.62);
+  transform-origin:50% 0;
+}
+.mirror-flip .range{bottom:auto;top:-30vh;height:30vh}
+.caustics{
+  position:absolute;
+  inset:0;
+  opacity:var(--caustics,1);
+  mix-blend-mode:screen;
+  /* Wide, faint and fading toward the horizon — calm water seen from a
+     camera only a little above it, not a barcode. */
+  background:
+    repeating-linear-gradient(180deg,
+      transparent 0 11px,rgba(231,247,251,.10) 11px 13px,transparent 13px 27px),
+    repeating-linear-gradient(180deg,
+      transparent 0 34px,rgba(200,232,244,.08) 34px 37px,transparent 37px 78px);
+  -webkit-mask-image:linear-gradient(180deg,transparent,rgba(0,0,0,.85) 22%,rgba(0,0,0,.5) 72%,transparent);
+  mask-image:linear-gradient(180deg,transparent,rgba(0,0,0,.85) 22%,rgba(0,0,0,.5) 72%,transparent);
+  animation:caustics 17s linear infinite;
+}
+@keyframes caustics{to{background-position:0 27px,0 78px}}
+/* Sun road: the specular path the low sun lays across the surface. */
+.road{
+  position:absolute;
+  left:42%;
+  top:0;
+  bottom:0;
+  width:34vw;
+  transform:translateX(-50%);
+  background:linear-gradient(180deg,rgba(255,241,234,.62),rgba(255,238,228,.10) 46%,transparent 76%);
+  -webkit-mask-image:radial-gradient(60% 100% at 50% 0%,#000,transparent 78%);
+  mask-image:radial-gradient(60% 100% at 50% 0%,#000,transparent 78%);
+  filter:blur(5px);
+  opacity:var(--glints,.19);
+  animation:road 9s ease-in-out infinite alternate;
+}
+@keyframes road{from{opacity:calc(var(--glints,.19) * .7)}to{opacity:calc(var(--glints,.19) * 1.5)}}
+
+/* ---------- impact: rings, spray, waterline puff ---------- */
+.impacts{position:absolute;inset:0;overflow:hidden}
+.ring{
+  position:absolute;
+  border:1px solid rgba(233,249,253,.9);
+  border-radius:50%;
+  transform:translate(-50%,-50%) scale(.08);
+  opacity:0;
+  will-change:transform,opacity;
+}
+.ring.go{animation:ring var(--rt,1.9s) cubic-bezier(.12,.7,.24,1) forwards}
+@keyframes ring{
+  0%{transform:translate(-50%,-50%) scale(.08);opacity:0}
+  9%{opacity:var(--ro,.72)}
+  100%{transform:translate(-50%,-50%) scale(var(--rs,7));opacity:0}
+}
+.spray{
+  position:absolute;
+  width:5px;
+  height:7px;
+  margin:-3px 0 0 -2px;
+  border-radius:50% 50% 46% 46%;
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(190,229,244,.72));
+  opacity:0;
+  will-change:transform,opacity;
+}
+.spray.go{animation:spray var(--st,1.1s) cubic-bezier(.22,.62,.3,1) forwards}
+@keyframes spray{
+  0%{transform:translate(0,0) scale(.5);opacity:0}
+  12%{opacity:1}
+  100%{transform:translate(var(--sx,0),var(--sy,0)) scale(.34);opacity:0}
+}
+.puff{
+  position:absolute;
+  width:24vw;
+  height:9vh;
+  transform:translate(-50%,-58%) scale(.3);
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 55%,rgba(255,255,255,.62),rgba(226,243,250,.20) 46%,transparent 74%);
+  filter:blur(7px);
+  opacity:0;
+  will-change:transform,opacity;
+}
+.puff.go{animation:puff 1.5s var(--ease) forwards}
+@keyframes puff{
+  0%{transform:translate(-50%,-58%) scale(.3);opacity:0}
+  16%{opacity:.5}
+  100%{transform:translate(-50%,-104%) scale(1.9);opacity:0}
+}
+
+/* ---------- weather ---------- */
+.mist{position:absolute;left:0;width:100%;top:calc(var(--hz) - 7vh);height:22vh;overflow:hidden;opacity:var(--mist,1)}
+.mist i{
+  position:absolute;
+  height:5.5vh;
+  border-radius:50%;
+  background:linear-gradient(90deg,transparent,rgba(247,252,254,.72),transparent);
+  filter:blur(8px);
+  animation:drift 46s ease-in-out infinite alternate;
+}
+@keyframes drift{from{transform:translateX(-5vw)}to{transform:translateX(5vw)}}
+.birds{position:absolute;inset:0;opacity:var(--birds,.85)}
+.birds i{
+  position:absolute;
+  width:9px;
+  height:4px;
+  border-top:1.2px solid rgba(58,92,116,.5);
+  border-radius:50% 50% 0 0 / 100% 100% 0 0;
+  animation:fly var(--bt,54s) linear infinite,flap var(--bf,.42s) ease-in-out infinite alternate;
+}
+@keyframes fly{
+  from{transform:translate(-8vw,0)}
+  to{transform:translate(108vw,-3vh)}
+}
+@keyframes flap{from{transform:scaleY(.42)}to{transform:scaleY(1.25)}}
+
+/* ====================================================================
+   THE ONLY WEBGL SURFACE IN THE PAGE
+   ==================================================================== */
+#orb{
+  position:fixed;
+  inset:0;
+  z-index:1;
+  display:block;
+  width:100vw!important;
+  height:100vh!important;
+  touch-action:none;
+  cursor:default;
+}
+body.is-drop-hovered #orb{cursor:pointer}
+
+.wash{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:2;
+  background:
+    radial-gradient(68% 38% at 50% 54%,rgba(255,233,226,.10),transparent 58%),
+    radial-gradient(120% 90% at 50% 44%,transparent 58%,rgba(74,111,133,.16) 100%);
+  mix-blend-mode:soft-light;
+}
+.grain{
+  position:fixed;
+  inset:-60%;
+  pointer-events:none;
+  z-index:3;
+  opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+  animation:grain .24s steps(2) infinite;
+}
+@keyframes grain{
+  0%{transform:translate3d(-2%,-1%,0)}
+  25%{transform:translate3d(1%,2%,0)}
+  50%{transform:translate3d(2%,-2%,0)}
+  75%{transform:translate3d(-1%,1%,0)}
+  100%{transform:translate3d(0,0,0)}
+}
+.chrome{
+  position:fixed;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 1.8s var(--ease) .5s;
+}
+body.is-ready .chrome{opacity:1}
+.brand,.study{
+  position:absolute;
+  top:clamp(20px,2.4vw,38px);
+  font-size:.62rem;
+  letter-spacing:.34em;
+  line-height:1;
+  color:var(--ink-dim);
+  text-transform:uppercase;
+}
+.brand{left:clamp(20px,3.2vw,54px);font-weight:400}
+.study{right:clamp(20px,3.2vw,54px);letter-spacing:.24em}
+.hair{
+  position:absolute;
+  left:50%;
+  bottom:clamp(18px,2.6vw,34px);
+  width:38px;
+  height:1px;
+  transform:translateX(-50%);
+  background:rgba(47,95,138,.28);
+}
+.hair:before,.hair:after{
+  content:"";
+  position:absolute;
+  top:0;
+  width:3px;
+  height:3px;
+  margin-top:-1px;
+  border-radius:50%;
+  background:rgba(47,95,138,.36);
+}
+.hair:before{left:-8px}
+.hair:after{right:-8px}
+.loader{
+  position:fixed;
+  inset:0;
+  z-index:10;
+  display:grid;
+  place-items:center;
+  background:#e4edf1;
+  transition:opacity 1.15s var(--ease),visibility 1.15s;
+}
+.loader.is-done{opacity:0;visibility:hidden}
+.loader-inner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:20px;
+}
+.loader-logo{
+  font-size:.78rem;
+  letter-spacing:.48em;
+  text-indent:.48em;
+  color:var(--ink);
+}
+.loader-line{
+  width:min(210px,46vw);
+  height:1px;
+  overflow:hidden;
+  background:rgba(47,95,138,.16);
+}
+.loader-line i{
+  display:block;
+  width:100%;
+  height:100%;
+  background:#4a86bb;
+  transform:scaleX(0);
+  transform-origin:left center;
+  animation:load 1.25s var(--ease) forwards;
+}
+.loader-note{
+  color:var(--ink-dim);
+  font-size:.52rem;
+  letter-spacing:.24em;
+}
+@keyframes load{to{transform:scaleX(1)}}
+.fallback{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:none;
+  place-items:center;
+  padding:30px;
+  color:var(--ink);
+  text-align:center;
+  background:#e4edf1;
+  font-size:.78rem;
+  letter-spacing:.14em;
+}
+.section-two{
+  --s2-media:0;
+  --s2-scale:1.075;
+  position:fixed;
+  inset:0;
+  z-index:5;
+  overflow:hidden;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  background:
+    radial-gradient(70% 52% at 50% 62%,rgba(255,239,234,.48),transparent 64%),
+    radial-gradient(92% 72% at 50% 0%,rgba(156,204,222,.34),transparent 72%),
+    linear-gradient(180deg,#c6dce6 0%,#e8eef1 49%,#eee9e7 64%,#b8d8e5 100%);
+  will-change:opacity;
+}
+.section-two.is-active{visibility:visible}
+.section-two.is-live{pointer-events:auto}
+.s2-plate{
+  position:absolute;
+  inset:0;
+  opacity:var(--s2-media);
+  background:
+    radial-gradient(118% 88% at 50% 40%,#26414f 0%,#162834 62%,#0e1c26 100%);
+}
+.s2-media{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  opacity:var(--s2-media);
+  transform:scale(var(--s2-scale));
+  transform-origin:50% 54%;
+  will-change:transform,opacity;
+}
+.s2-media video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  opacity:0;
+  transition:opacity 1.25s var(--ease);
+}
+.section-two.is-video-ready .s2-media video{opacity:1}
+.s2-clouds{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.s2-clouds i{
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 40% 45%,
+    rgba(245,248,252,.72) 0%,
+    rgba(232,239,246,.40) 30%,
+    rgba(212,221,229,.13) 58%,
+    transparent 76%);
+  filter:blur(var(--pcb,18px));
+  will-change:transform;
+  animation:var(--pca) linear infinite;
+}
+.s2-shade{
+  position:absolute;
+  inset:0;
+  opacity:var(--s2-media);
+  background:
+    linear-gradient(100deg,rgba(9,20,28,.72) 0%,rgba(9,20,28,.38) 38%,transparent 68%),
+    linear-gradient(0deg,rgba(9,20,28,.46) 0%,transparent 42%),
+    radial-gradient(122% 88% at 50% 46%,transparent 40%,rgba(8,18,26,.46) 100%);
+}
+.s2-stage{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  padding-left:clamp(64px,15vw,300px);
+  padding-right:clamp(24px,6vw,80px);
+  color:#fff;
+}
+.s2-block{max-width:min(760px,64vw)}
+.mask{display:block;overflow:hidden}
+.mask > i{
+  display:block;
+  font-style:normal;
+  transform:translateY(112%);
+  opacity:0;
+  transition:transform 1.05s var(--ease),opacity .8s var(--ease);
+  transition-delay:var(--d,0s);
+}
+.section-two.is-in .mask > i{transform:none;opacity:1}
+.section-two:not(.is-in) .mask > i{
+  transition-duration:.5s,.34s;
+  transition-delay:0s;
+}
+.s2-eyebrow{
+  font-size:clamp(.86rem,1.1vw,1.05rem);
+  letter-spacing:.02em;
+  opacity:.92;
+  margin-bottom:clamp(22px,3vw,44px);
+}
+.s2-title{
+  font-weight:200;
+  font-size:clamp(2rem,4.6vw,4.5rem);
+  line-height:1.12;
+  letter-spacing:.005em;
+  text-transform:uppercase;
+  margin-bottom:clamp(30px,4vw,58px);
+}
+.s2-cta{
+  display:inline-flex;
+  align-items:center;
+  gap:clamp(18px,2vw,34px);
+  text-decoration:none;
+  color:#fff;
+}
+.s2-cta .txt{font-size:.72rem;letter-spacing:.24em;font-weight:500;text-transform:uppercase}
+.s2-cta .circle{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.45);
+  display:grid;
+  place-items:center;
+  font-size:.8rem;
+  opacity:0;
+  transform:scale(.76);
+  transition:background .5s var(--ease),color .5s var(--ease),
+             border-color .5s var(--ease),
+             transform .72s var(--ease) .30s,opacity .55s var(--ease) .30s;
+}
+.section-two.is-in .s2-cta .circle{opacity:1;transform:none}
+.s2-cta:hover .circle{background:#fff;color:#12222c;border-color:#fff;transform:translateX(4px)}
+.s2-rule{
+  height:1px;
+  width:min(300px,34vw);
+  margin-top:clamp(22px,2.4vw,38px);
+  background:rgba(255,255,255,.38);
+  transform:scaleX(0);
+  transform-origin:0 50%;
+  transition:transform 1.2s var(--ease) .42s;
+}
+.section-two.is-in .s2-rule{transform:scaleX(1)}
+.section-two:not(.is-in) .s2-rule{
+  transform-origin:100% 50%;
+  transition-duration:.42s;
+  transition-delay:0s;
+}
+.section-two:not(.is-in) .s2-cta .circle{
+  transition-duration:.3s,.3s,.3s,.34s,.26s;
+  transition-delay:0s;
+}
+.section-two:not(.is-in) .s2-back{transition-delay:0s;transition-duration:.35s}
+.s2-back{
+  position:absolute;
+  right:clamp(20px,3.2vw,54px);
+  bottom:clamp(22px,3vw,46px);
+  font-size:.54rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.46);
+  opacity:0;
+  transition:opacity .9s var(--ease) .5s;
+}
+.section-two.is-in .s2-back{opacity:1}
+.transition-flash{
+  --flare-x:50%;
+  --flare-y:62%;
+  position:fixed;
+  inset:-18%;
+  z-index:6;
+  pointer-events:none;
+  opacity:0;
+  background:
+    radial-gradient(ellipse at var(--flare-x) var(--flare-y),
+      rgba(255,255,255,1) 0 1.2%,
+      rgba(210,246,255,.96) 4%,
+      rgba(108,211,248,.66) 13%,
+      rgba(50,147,201,.22) 31%,
+      transparent 59%);
+  mix-blend-mode:screen;
+  will-change:opacity,transform;
+  transform-origin:var(--flare-x) var(--flare-y);
+  transform:scale(.08,.035);
+}
+.transition-flash:before{
+  content:"";
+  position:absolute;
+  left:5%;
+  right:5%;
+  top:var(--flare-y);
+  height:2px;
+  transform:translateY(-50%);
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(151,227,255,.28) 22%,
+    rgba(255,255,255,.98) 50%,
+    rgba(151,227,255,.28) 78%,
+    transparent
+  );
+  filter:blur(.4px);
+  box-shadow:
+    0 0 10px rgba(211,247,255,.92),
+    0 0 34px rgba(80,191,235,.68);
+}
+.section-two-index{
+  position:absolute;
+  left:clamp(20px,3.2vw,54px);
+  bottom:clamp(22px,3vw,46px);
+  color:rgba(255,255,255,.54);
+  font-size:.58rem;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+}
+body.is-ready.is-transitioning .chrome{opacity:.24}
+body.is-ready.is-section-two .chrome{opacity:0}
+.tuner{
+  position:fixed;
+  top:74px;
+  right:18px;
+  z-index:12;
+  width:min(330px,calc(100vw - 36px));
+  max-height:calc(100vh - 96px);
+  color:#dcebf3;
+  border:1px solid rgba(196,226,240,.22);
+  background:rgba(23,45,58,.76);
+  box-shadow:0 18px 55px rgba(26,56,73,.22);
+  backdrop-filter:blur(18px) saturate(118%);
+  -webkit-backdrop-filter:blur(18px) saturate(118%);
+  opacity:0;
+  transform:translateY(10px);
+  transition:opacity .8s var(--ease) .65s,transform .8s var(--ease) .65s;
+}
+body.is-ready .tuner{opacity:1;transform:none}
+.tuner.is-folded .tuner-body{display:none}
+.tuner-head{
+  height:43px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 13px 0 15px;
+  border-bottom:1px solid rgba(196,226,240,.14);
+}
+.tuner-title{
+  font-size:.58rem;
+  letter-spacing:.27em;
+  text-transform:uppercase;
+}
+.tuner-toggle{
+  width:25px;
+  height:25px;
+  border:0;
+  color:inherit;
+  background:transparent;
+  cursor:pointer;
+  font:300 .9rem/1 "Jost",sans-serif;
+}
+.tuner-body{
+  max-height:calc(100vh - 140px);
+  overflow:auto;
+  padding:5px 14px 14px;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(205,230,242,.28) transparent;
+}
+.tune-group{padding:12px 0 8px;border-bottom:1px solid rgba(196,226,240,.11)}
+.tune-group:last-of-type{border-bottom:0}
+.tune-group h3{
+  margin-bottom:9px;
+  color:rgba(222,239,247,.58);
+  font-size:.48rem;
+  font-weight:400;
+  letter-spacing:.28em;
+}
+.tune-row{
+  min-height:25px;
+  display:grid;
+  grid-template-columns:64px 1fr 45px;
+  align-items:center;
+  gap:8px;
+}
+.tune-row.is-morph{
+  min-height:45px;
+  padding-top:2px;
+}
+.tune-row.is-morph:after{
+  content:"PURE SPHERE  ◀────────▶  LIQUID WAVE";
+  grid-column:2/4;
+  margin-top:-5px;
+  color:rgba(218,239,248,.48);
+  font:400 .42rem/1 Consolas,monospace;
+  letter-spacing:.04em;
+  text-align:center;
+}
+.tune-row label{
+  color:rgba(226,240,247,.72);
+  font-size:.5rem;
+  letter-spacing:.08em;
+}
+.tune-row input[type="range"]{
+  width:100%;
+  height:1px;
+  accent-color:#a9d7ea;
+  cursor:ew-resize;
+}
+.tune-value{
+  color:#e8f5fb;
+  font:400 .51rem/1 Consolas,monospace;
+  text-align:right;
+}
+.tuner-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:12px}
+.tuner-actions button{
+  height:29px;
+  border:1px solid rgba(196,226,240,.18);
+  color:#dcebf3;
+  background:rgba(217,239,248,.06);
+  cursor:pointer;
+  font:300 .47rem/1 "Jost",sans-serif;
+  letter-spacing:.16em;
+  transition:background .25s ease;
+}
+.tuner-actions button:hover{background:rgba(217,239,248,.14)}
+@media (max-width:860px){
+  .s2-stage{
+    align-items:flex-end;
+    padding-left:clamp(22px,7vw,60px);
+    padding-bottom:26vh;
+  }
+  .s2-block{max-width:none}
+  .s2-back{display:none}
+}
+@media (max-width:760px){
+  .study{display:none}
+  .brand{font-size:.55rem}
+  .chrome{opacity:.78}
+  .tuner{top:auto;bottom:15px;right:12px;width:min(310px,calc(100vw - 24px));max-height:58vh}
+  .tuner-body{max-height:calc(58vh - 44px)}
+}
+@media (prefers-reduced-motion:reduce){
+  .grain,.cloudsea i,.s2-clouds i,.caustics,.mist i,.birds i,.shafts i,.road{animation:none}
+  .mask > i,.s2-rule,.s2-cta .circle,.s2-back{transition-duration:.2s;transition-delay:0s}
+}
+</style>
+</head>
+<body>
+<div class="scene" id="scene" aria-hidden="true">
+  <div class="sky"></div>
+  <div class="sun"></div>
+  <div class="cloudsea" id="cloudsea"></div>
+  <div class="shafts" id="shafts"></div>
+  <div class="range r0"><svg viewBox="0 0 1000 400" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="gFar" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e4ecef"/><stop offset=".26" stop-color="#c3d3da"/>
+        <stop offset=".72" stop-color="#a8bfc9"/><stop offset="1" stop-color="#9db6c2"/>
+      </linearGradient>
+      <linearGradient id="gMid" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#dce5e8"/><stop offset=".3" stop-color="#a9c0cb"/>
+        <stop offset="1" stop-color="#7f9daa"/>
+      </linearGradient>
+      <linearGradient id="gNear" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#c6d6dd"/><stop offset=".42" stop-color="#8fa7b3"/>
+        <stop offset="1" stop-color="#6f92a2"/>
+      </linearGradient>
+    </defs>
+    <polygon class="body"/>
+  </svg></div>
+  <div class="range r1"><svg viewBox="0 0 1000 400" preserveAspectRatio="none"><polygon class="body"/></svg></div>
+  <div class="range r2"><svg viewBox="0 0 1000 400" preserveAspectRatio="none"><polygon class="body"/></svg></div>
+  <div class="haze"></div>
+  <div class="mist" id="mist"></div>
+  <div class="birds" id="birds"></div>
+  <div class="water">
+    <div class="mirror"><div class="mirror-flip" id="mirror"></div></div>
+    <div class="caustics"></div>
+    <div class="road"></div>
+    <div class="impacts" id="impacts"></div>
+  </div>
+</div>
+
+<canvas id="orb" aria-label="A transparent glass orb floating above pale dunes and calm water"></canvas>
+
+<div class="wash"></div>
+<div class="grain"></div>
+<div class="chrome">
+  <div class="brand">MONTIS</div>
+  <div class="study">GLACIAL STUDY / 04</div>
+  <div class="hair"></div>
+</div>
+<div class="loader" id="loader">
+  <div class="loader-inner">
+    <div class="loader-logo">MONTIS</div>
+    <div class="loader-line"><i></i></div>
+    <div class="loader-note">FORMING ATMOSPHERE</div>
+  </div>
+</div>
+<div class="fallback" id="fallback">THIS STUDY REQUIRES WEBGL</div>
+<section class="section-two" id="sectionTwo" aria-label="Montis Vision" aria-hidden="true">
+  <div class="s2-plate"></div>
+  <div class="s2-media">
+    <video id="sectionTwoVideo" loop muted playsinline preload="none" aria-hidden="true">
+      <source src="logo.mp4" type="video/mp4">
+    </video>
+    <div class="s2-clouds">
+      <i style="--pcb:20px;--pca:pcA 52s;    width:62vw;height:38vh;top:3%; left:-20vw;opacity:.60"></i>
+      <i style="--pcb:16px;--pca:pcB 41s 6s; width:38vw;height:26vh;top:10%;left:115vw;opacity:.52"></i>
+      <i style="--pcb:24px;--pca:pcA 80s 4s; width:75vw;height:48vh;top:18%;left:-28vw;opacity:.44"></i>
+      <i style="--pcb:18px;--pca:pcB 65s 12s;width:52vw;height:34vh;top:32%;left:118vw;opacity:.40"></i>
+      <i style="--pcb:28px;--pca:pcB 110s 2s;width:90vw;height:58vh;top:55%;left:120vw;opacity:.46"></i>
+      <i style="--pcb:22px;--pca:pcA 95s 18s;width:68vw;height:44vh;top:68%;left:-24vw;opacity:.38"></i>
+      <i style="--pcb:32px;--pca:pcB 75s 9s; width:80vw;height:52vh;top:78%;left:116vw;opacity:.42"></i>
+    </div>
+  </div>
+  <div class="s2-shade"></div>
+  <div class="s2-stage">
+    <div class="s2-block">
+      <p class="s2-eyebrow"><span class="mask"><i>Montis Vision</i></span></p>
+      <h1 class="s2-title">
+        <span class="mask" style="--d:.10s;--do:.06s"><i>Beyond the horizon,</i></span>
+        <span class="mask" style="--d:.20s;--do:0s"><i>shaping the future.</i></span>
+      </h1>
+      <a class="s2-cta" href="#" id="sectionTwoCta">
+        <span class="mask" style="--d:.34s;--do:0s"><i class="txt">Discover Montis</i></span>
+        <span class="circle">&#8594;</span>
+      </a>
+      <div class="s2-rule"></div>
+    </div>
+  </div>
+  <div class="section-two-index">SECTION / 02 &nbsp;·&nbsp; MONTIS VISION</div>
+  <div class="s2-back">SCROLL UP TO RETURN</div>
+</section>
+<div class="transition-flash" id="transitionFlash"></div>
+<aside class="tuner" id="tuner" aria-label="Scene tuning controls">
+  <div class="tuner-head">
+    <div class="tuner-title">LIVE TUNING / 04</div>
+    <button class="tuner-toggle" id="tunerToggle" type="button" aria-label="Collapse controls">−</button>
+  </div>
+  <div class="tuner-body" id="tunerBody"></div>
+</aside>
+
+<script>
+/* ====================================================================
+   MONTIS — GLACIAL ORB STUDY / 04
+   Same study as index4-3, one structural difference: the landscape is
+   DOM. Sky, range, water, weather and all of section two are CSS and
+   SVG. The single WebGL surface in this document is #orb, and it draws
+   nothing but the droplet — everywhere the raymarch misses, the canvas
+   is transparent and the page itself shows through.
+
+   Because the glass must refract what is behind it and there is no
+   scene texture to sample, the shader reconstructs the backdrop
+   analytically from the same constants the CSS uses, and from the same
+   ridgeHeight() that generates the SVG silhouettes. Page and refraction
+   therefore agree by construction rather than by eye.
+   ==================================================================== */
+
+const canvas=document.querySelector('#orb');
+const sceneEl=document.querySelector('#scene');
+const loader=document.querySelector('#loader');
+const loaderNote=document.querySelector('.loader-note');
+const fallback=document.querySelector('#fallback');
+const sectionTwo=document.querySelector('#sectionTwo');
+const sectionTwoVideo=document.querySelector('#sectionTwoVideo');
+const transitionFlash=document.querySelector('#transitionFlash');
+const impacts=document.querySelector('#impacts');
+const tuner=document.querySelector('#tuner');
+const tunerBody=document.querySelector('#tunerBody');
+const tunerToggle=document.querySelector('#tunerToggle');
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth01=v=>{const t=clamp(v,0,1);return t*t*(3-2*t);};
+const fract=x=>x-Math.floor(x);
+/* Deterministic scatter, so a reload composes the same frame. */
+const seeded=(i,s)=>fract(Math.sin(i*12.9898+s*78.233)*43758.5453);
+
+const CONFIG={
+  /* radius is a fraction of viewport HEIGHT (the shader is fed an
+     aspect-corrected value), so the orb keeps its size on any window. */
+  orb:{ size:1, radius:.085, thickness:.27,
+        dispersion:1.35, scatter:1, absorb:1, spec:1, glow:.045, irid:.22,
+        refract:.88, invert:2.4 },
+  bubbles:{ count:8, speed:.70, min:.10, max:.26, blend:.13 },
+  /* enabled drives the auto-drop loop. The study it follows leaves the
+     droplet hovering and only lets it fall on the scroll hand-off, so
+     this is off by default; DROP NOW throws a single one. */
+  physics:{ enabled:0, startY:3.15, waterY:.10,
+            gravity:6.4, airDrag:.035, impact:1,
+            rippleSpeed:3.3, damping:1.12, splash:.82, loopDelay:1.85,
+            fluidity:1.08, fallStretch:.38, impactSoftness:.86,
+            touchForce:.89, touchRadius:.76 },
+  distortion:{ waveMorph:.34, amount:0, waveAmplitude:.055,
+               waveFrequency:4.8, waveSpeed:1.15, twist:.055, breathing:.025 },
+  scene:{ horizon:.405, sun:.42, exposure:.87, haze:1, ridge:1, snow:1 },
+  details:{ clouds:.68, shafts:1, mist:1, birds:.85,
+            glints:.19, caustics:1, transitionFlash:1.45 },
+  transition:{ scrollThreshold:400, speed:.89, sinkDepth:.42,
+               wobble:1.08, spin:1, sectionFade:1 }
+};
+const DEFAULT_CONFIG=JSON.parse(JSON.stringify(CONFIG));
+
+/* --------------------------------------------------------------------
+   THE RIDGE
+   One source of truth. JS draws the SVG polygons from it; the shader
+   evaluates the identical expression to refract the same mountains.
+   Heights are fractions of viewport height above the horizon.
+   -------------------------------------------------------------------- */
+const g=(x,c,s)=>Math.exp(-Math.pow((x-c)/s,2)*1.55);
+function ridgeHeight(x,layer){
+  if(layer===0){
+    return .052+.150*g(x,.30,.20)+.196*g(x,.615,.165)
+      +.092*g(x,.855,.135)+.058*g(x,.075,.125)
+      +Math.sin(x*21+.6)*.0055+Math.sin(x*47-1.2)*.0022;
+  }
+  if(layer===1){
+    return .030+.106*g(x,.175,.155)+.136*g(x,.475,.150)
+      +.101*g(x,.785,.175)+Math.sin(x*15+2.1)*.0048;
+  }
+  return .013+.055*g(x,.355,.215)+.046*g(x,.72,.20)
+    +Math.sin(x*11-.8)*.0030;
+}
+const RANGE_SPAN=.30; /* the .range boxes are 30vh tall */
+
+function buildRidges(){
+  document.querySelectorAll('.range').forEach(box=>{
+    const layer=Number(box.className.match(/r(\d)/)[1]);
+    const polygon=box.querySelector('polygon');
+    const points=[];
+    for(let i=0;i<=200;i++){
+      const x=i/200;
+      const h=ridgeHeight(x,layer);
+      points.push(`${(x*1000).toFixed(1)},${(400*(1-h/RANGE_SPAN)).toFixed(1)}`);
+    }
+    points.push('1000,400','0,400');
+    polygon.setAttribute('points',points.join(' '));
+  });
+}
+buildRidges();
+/* The reflection is the same three silhouettes, flipped by CSS. The
+   <defs> are dropped from the clones so the gradient ids stay unique;
+   url(#gFar) still resolves to the originals. */
+document.querySelector('#mirror').innerHTML=
+  [...document.querySelectorAll('.scene > .range')]
+    .map(n=>n.outerHTML.replace(/<defs>[\s\S]*?<\/defs>/,''))
+    .join('');
+
+/* --------------------------------------------------------------------
+   WEATHER — scattered once, animated by CSS from there on.
+   -------------------------------------------------------------------- */
+(function populate(){
+  const clouds=document.querySelector('#cloudsea');
+  for(let i=0;i<7;i++){
+    const n=document.createElement('i');
+    const back=i%2===1;
+    n.style.cssText=
+      `--pcb:${(13+seeded(i,7)*20).toFixed(0)}px;`+
+      `--pca:${back?'pcB':'pcA'} ${(46+seeded(i,11)*74).toFixed(0)}s ${(i*6.5).toFixed(0)}s;`+
+      `width:${(34+seeded(i,13)*54).toFixed(0)}vw;`+
+      `height:${(16+seeded(i,17)*20).toFixed(0)}vh;`+
+      `top:${(1+seeded(i,19)*26).toFixed(0)}%;`+
+      `left:${back?'120vw':'-24vw'};`+
+      `opacity:${(.34+seeded(i,23)*.34).toFixed(2)}`;
+    clouds.appendChild(n);
+  }
+  const shafts=document.querySelector('#shafts');
+  for(let i=0;i<5;i++){
+    const n=document.createElement('i');
+    n.style.cssText=
+      `left:${(14+i*17+seeded(i,29)*7).toFixed(1)}%;`+
+      `width:${(3.5+seeded(i,31)*7).toFixed(1)}vw;`+
+      `transform:rotate(${(-13+seeded(i,37)*26).toFixed(1)}deg);`+
+      `animation-delay:${(i*2.6).toFixed(1)}s;`+
+      `animation-duration:${(13+seeded(i,41)*11).toFixed(0)}s`;
+    shafts.appendChild(n);
+  }
+  const mist=document.querySelector('#mist');
+  for(let i=0;i<6;i++){
+    const n=document.createElement('i');
+    n.style.cssText=
+      `left:${(-12+seeded(i,43)*90).toFixed(0)}%;`+
+      `width:${(26+seeded(i,47)*46).toFixed(0)}%;`+
+      `top:${(12+seeded(i,53)*62).toFixed(0)}%;`+
+      `opacity:${(.22+seeded(i,59)*.44).toFixed(2)};`+
+      `animation-duration:${(34+seeded(i,61)*38).toFixed(0)}s;`+
+      `animation-delay:${(-i*7).toFixed(0)}s`;
+    mist.appendChild(n);
+  }
+  const birds=document.querySelector('#birds');
+  for(let i=0;i<7;i++){
+    const n=document.createElement('i');
+    n.style.cssText=
+      `top:${(12+seeded(i,67)*22).toFixed(1)}%;`+
+      `--bt:${(42+seeded(i,71)*46).toFixed(0)}s;`+
+      `--bf:${(.30+seeded(i,73)*.28).toFixed(2)}s;`+
+      `transform:scale(${(.6+seeded(i,79)*.8).toFixed(2)});`+
+      `animation-delay:${(-i*9.5).toFixed(1)}s,0s`;
+    birds.appendChild(n);
+  }
+})();
+
+/* ====================================================================
+   THE DROPLET — the page's only WebGL
+   ==================================================================== */
+const gl=canvas.getContext('webgl2',{
+  alpha:true,
+  premultipliedAlpha:false,
+  antialias:false,
+  depth:false,
+  stencil:false,
+  powerPreference:'high-performance'
+});
+if(!gl){
+  fallback.style.display='grid';
+  loader.classList.add('is-done');
+  throw new Error('WebGL2 unavailable');
+}
+
+const N_BUBBLES=CONFIG.bubbles.count;
+
+const vertexSource=`#version 300 es
+void main(){
+  vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);
+  gl_Position=vec4(p*2.-1.,0.,1.);
+}`;
+
+/* The raymarch, dispersion and lighting below follow the liquid-glass
+   post effect this study borrowed from; getSrc() is the one change —
+   instead of sampling a rasterised page it evaluates backdrop(), the
+   analytic twin of the CSS scene underneath the canvas. */
+const fragmentSource=`#version 300 es
+precision highp float;
+
+uniform vec2  resolution;
+uniform float time;
+uniform vec2  orbCenter;      /* px, y up */
+uniform float orbRadius;      /* p-space */
+uniform vec3  orbStretch;     /* fall stretch / impact squash */
+uniform float orbFade;
+uniform float clickTime;
+uniform float bubbleData[${N_BUBBLES*4}];
+uniform float uHorizon;       /* 0 at bottom, 1 at top */
+uniform float uSunX;
+uniform float uMorph;
+uniform float uWaveAmp;
+uniform float uWaveFreq;
+uniform float uWaveSpeed;
+uniform float uTwist;
+uniform float uBreath;
+uniform float uDistort;
+uniform float uTouch;
+uniform vec2  uTouchDir;
+uniform float uTouchRadius;
+uniform float uDispersion;
+uniform float uScatter;
+uniform float uAbsorb;
+uniform float uSpec;
+uniform float uGlow;
+uniform float uIrid;
+uniform float uBlend;
+uniform float uGlints;
+uniform float uRefract;
+uniform float uInvert;
+uniform float uHaze;
+uniform float uRidge;
+uniform float uSnow;
+uniform float uCaustics;
+
+out vec4 outColor;
+
+const int   N_BUBBLES=${N_BUBBLES};
+const int   DISP_STEPS=12;
+const float DISP=0.025;
+const vec3  ABSORB=vec3(2.0,1.2,1.0)*3.0;
+
+float smin(float a,float b,float k){
+  float h=clamp(0.5+0.5*(b-a)/k,0.0,1.0);
+  return mix(b,a,h)-k*h*(1.0-h);
+}
+vec2 hash22(vec2 p){
+  vec3 p3=fract(vec3(p.xyx)*vec3(0.1031,0.1030,0.0973));
+  p3+=dot(p3,p3.yzx+33.33);
+  return fract((p3.xx+p3.yz)*p3.zy)*2.0-1.0;
+}
+mat2 rot(float t){float c=cos(t),s=sin(t);return mat2(c,-s,s,c);}
+float sdSphere(vec3 p,float r){return length(p)-r;}
+
+/* ---------------- the backdrop, matched to the CSS ---------------- */
+float gs(float x,float c,float s){return exp(-pow((x-c)/s,2.0)*1.55);}
+float ridgeHeight(float x,int layer){
+  if(layer==0){
+    return 0.052+0.150*gs(x,0.30,0.20)+0.196*gs(x,0.615,0.165)
+      +0.092*gs(x,0.855,0.135)+0.058*gs(x,0.075,0.125)
+      +sin(x*21.0+0.6)*0.0055+sin(x*47.0-1.2)*0.0022;
+  }
+  if(layer==1){
+    return 0.030+0.106*gs(x,0.175,0.155)+0.136*gs(x,0.475,0.150)
+      +0.101*gs(x,0.785,0.175)+sin(x*15.0+2.1)*0.0048;
+  }
+  return 0.013+0.055*gs(x,0.355,0.215)+0.046*gs(x,0.72,0.20)
+    +sin(x*11.0-0.8)*0.0030;
+}
+/* linear-gradient(180deg,#c9dfe9 0,#e9eef1 48%,#f6e9e6 61%,#b7dce9 100%) */
+vec3 skyGradient(float t){
+  vec3 a=vec3(0.7882,0.8745,0.9137);
+  vec3 b=vec3(0.9137,0.9333,0.9451);
+  vec3 c=vec3(0.9647,0.9137,0.9020);
+  vec3 d=vec3(0.7176,0.8627,0.9137);
+  if(t<0.48) return mix(a,b,t/0.48);
+  if(t<0.61) return mix(b,c,(t-0.48)/0.13);
+  return mix(c,d,(t-0.61)/0.39);
+}
+vec3 rangeColor(int layer,float f){ /* f: 0 at the crest, 1 at the base */
+  vec3 snow,mid,base;
+  if(layer==0){snow=vec3(0.894,0.925,0.937);mid=vec3(0.659,0.749,0.792);base=vec3(0.616,0.714,0.761);}
+  else if(layer==1){snow=vec3(0.863,0.898,0.910);mid=vec3(0.663,0.753,0.796);base=vec3(0.498,0.616,0.667);}
+  else {snow=vec3(0.776,0.839,0.867);mid=vec3(0.561,0.655,0.702);base=vec3(0.435,0.573,0.635);}
+  snow=mix(mid,snow,uSnow);
+  return f<0.36?mix(snow,mid,f/0.36):mix(mid,base,(f-0.36)/0.64);
+}
+vec3 backdrop(vec2 uv){
+  float hz=uHorizon;
+  vec3 col=skyGradient(clamp(1.0-uv.y,0.0,1.0));
+
+  /* low sun and its warm bloom */
+  vec2 sp=vec2((uv.x-uSunX)*1.0,(uv.y-(hz+0.055))*1.35);
+  float sun=exp(-dot(sp,sp)*13.0);
+  col+=vec3(1.0,0.86,0.78)*sun*0.42;
+  col+=vec3(1.0,0.78,0.70)*exp(-dot(sp,sp)*300.0)*0.85;
+
+  /* drifting cloud sea, cheap and slow like the CSS layer */
+  float cl=0.0;
+  for(int i=0;i<3;i++){
+    float fi=float(i);
+    float cx=fract(uv.x*(0.55+fi*0.22)+time*(0.006+fi*0.004)+fi*0.37);
+    float cy=(uv.y-(0.80-fi*0.07))/(0.055+fi*0.016);
+    cl+=exp(-pow((cx-0.5)*3.4,2.0)-cy*cy)*(0.30-fi*0.06);
+  }
+  col=mix(col,vec3(0.98,0.99,1.0),clamp(cl,0.0,0.55));
+
+  if(uv.y>hz){
+    /* --- above the waterline: the three walls, far to near --- */
+    for(int L=0;L<3;L++){
+      float h=ridgeHeight(uv.x,L)*uRidge;
+      if(uv.y<hz+h){
+        float f=clamp((hz+h-uv.y)/max(h,1e-4),0.0,1.0);
+        col=mix(col,rangeColor(L,f),1.0);
+      }
+    }
+    /* horizon haze — the study's fog term */
+    float haze=smoothstep(hz+0.150,hz,uv.y)*0.86*uHaze;
+    col=mix(col,vec3(0.7804,0.8588,0.8941),haze);
+  }else{
+    /* --- the water --- */
+    float depth=clamp((hz-uv.y)/max(hz,1e-4),0.0,1.0);
+    vec3 shallow=vec3(0.7412,0.9020,0.9490);
+    vec3 deep=vec3(0.1961,0.4353,0.5529);
+    vec3 w=mix(shallow,deep,smoothstep(0.0,0.62,depth));
+
+    /* flipped range, compressed and softened as the CSS mirror is */
+    float mh=(ridgeHeight(uv.x,1)*0.55+ridgeHeight(uv.x,2)*0.45)*uRidge;
+    float md=(hz-uv.y)/0.62;
+    if(md<mh){
+      float f=clamp(1.0-md/max(mh,1e-4),0.0,1.0);
+      w=mix(w,rangeColor(1,1.0-f),0.42*(1.0-smoothstep(0.55,1.0,md/max(mh,1e-4))));
+    }
+    /* caustics, stretched the way calm water reads from a low camera */
+    float bend=sin(uv.x*42.0+time*0.18)*0.010+sin(uv.x*17.0-time*0.11)*0.006;
+    float a=abs(sin((uv.y+bend)*168.0-time*0.38));
+    float b=abs(sin((uv.y-bend*0.7)*74.0+time*0.26));
+    float fine=pow(1.0-a,18.0);
+    float broad=pow(1.0-b,22.0);
+    w+=vec3(0.64,0.89,0.98)*(fine*0.16+broad*0.10)*uCaustics;
+
+    /* Sun road. Scaled by the same glint setting the CSS layer uses —
+       unscaled it pushed the water past white and the glass with it. */
+    float road=exp(-pow((uv.x-uSunX)*5.6,2.0))*smoothstep(0.0,0.34,1.0-depth);
+    w+=vec3(1.0,0.94,0.90)*road*0.62*uGlints;
+
+    col=w;
+    col=mix(col,vec3(0.7804,0.8588,0.8941),smoothstep(hz-0.045,hz,uv.y)*0.55*uHaze);
+  }
+  return col;
+}
+vec4 getSrc(vec2 uv){return vec4(backdrop(clamp(uv,0.0,1.0)),1.0);}
+
+/* ---------------- the droplet ---------------- */
+float map(vec3 p,vec3 c){
+  vec3 q=(p-c)/max(orbStretch,vec3(0.24));
+
+  float tt=clickTime*5.0;
+  float bounce=exp(-tt)*sin(tt)*5.0+(1.0-exp(-tt));
+  float s=bounce*0.5+0.5;
+  q/=s;
+
+  vec3 sp=q;
+  /* SHAPE: 0 keeps the pure sphere, 1 lets the liquid wave take over */
+  float m=uMorph;
+  sp.y+=sin(sp.z*(29.0*uWaveFreq/4.8)+time*6.5*uWaveSpeed)*0.010*(0.35+m);
+  sp.z+=sin(sp.x*23.0+sp.y*11.0+time*7.0*uWaveSpeed)*0.010*(0.35+m);
+  sp.y+=sin(sp.x*uWaveFreq*9.0-time*uWaveSpeed*2.2)*uWaveAmp*m*0.45;
+  sp.xy*=rot(time*1.3*(0.25+m*0.75)+q.z*uTwist*22.0);
+  sp.xz*=rot(time*1.1*(0.25+m*0.75));
+
+  float r=orbRadius*(1.0+sin(time*1.6)*uBreath);
+  float d=sdSphere(sp,r);
+  d+=sin(sp.x*38.0+time*2.1)*sin(sp.z*33.0-time*1.7)*uDistort*0.012;
+
+  /* hover: the surface leans into the pointer instead of ignoring it */
+  float lean=dot(normalize(q+1e-6),vec3(uTouchDir,-0.25));
+  d-=uTouch*r*0.42*smoothstep(1.0-uTouchRadius,1.0,lean);
+
+  for(int i=0;i<N_BUBBLES;i++){
+    int b=i*4;
+    vec3 bPos=vec3(bubbleData[b],bubbleData[b+1],bubbleData[b+2]);
+    float br=bubbleData[b+3];
+    d=smin(d,sdSphere(q-bPos,max(br,0.001)),orbRadius*uBlend);
+  }
+  return d*s;
+}
+vec3 calcNormal(vec3 p,vec3 c){
+  vec2 e=vec2(0.0008,0.0);
+  return normalize(vec3(
+    map(p+e.xyy,c)-map(p-e.xyy,c),
+    map(p+e.yxy,c)-map(p-e.yxy,c),
+    map(p+e.yyx,c)-map(p-e.yyx,c)
+  ));
+}
+vec3 spectrum(float x){
+  return clamp(vec3(
+    1.5-abs(4.0*x-1.0),
+    1.5-abs(4.0*x-2.0),
+    1.5-abs(4.0*x-3.0)
+  ),0.0,1.0);
+}
+
+void main(){
+  vec2 uv=gl_FragCoord.xy/resolution;
+  float aspect=resolution.y/resolution.x;
+
+  vec2 p=(uv-0.5)*vec2(1.0,aspect);
+  vec2 mp=(orbCenter/resolution-0.5)*vec2(1.0,aspect);
+
+  vec3 ro=vec3(0.0,0.0,-2.0);
+  vec3 rd=normalize(vec3(p,2.0));
+  vec3 c=vec3(mp,0.0);
+
+  /* Cheap bound: outside the droplet's shell the canvas stays clear, so
+     the fullscreen pass costs almost nothing away from the orb. */
+  float bound=orbRadius*2.35*max(max(orbStretch.x,orbStretch.y),1.0);
+  vec3 oc=ro-c;
+  float bB=dot(oc,rd);
+  float bC=dot(oc,oc)-bound*bound;
+  if(orbFade<=0.002||bB*bB-bC<0.0){outColor=vec4(0.0);return;}
+
+  vec3 firstN=vec3(0.0);
+  vec3 lastN=vec3(0.0);
+  int hitCount=0;
+  float thickness=0.0;
+  float tEntry=0.0;
+  float t=max(-bB-sqrt(bB*bB-bC),0.0);
+  float nearest=1e9;
+  bool inside=false;
+
+  for(int i=0;i<64;i++){
+    if(t>6.0) break;
+    vec3 pos=ro+rd*t;
+    float d=map(pos,c);
+    if(hitCount==0) nearest=min(nearest,d);
+    float step=inside?-d:d;
+    if(step<3e-4){
+      vec3 n=calcNormal(pos,c);
+      if(hitCount==0) firstN=n;
+      lastN=n;
+      if(!inside) tEntry=t; else thickness+=t-tEntry;
+      hitCount++;
+      if(hitCount>=4) break;
+      inside=!inside;
+      t+=0.008;
+    }else{
+      /* Capped so a small inner bubble is never stepped straight over —
+         an overshoot leaves a hollow ring where a droplet should be. */
+      t+=min(step,orbRadius*0.55);
+    }
+  }
+
+  if(hitCount==0){
+    /* Feather the silhouette using how close the march came: a hard
+       raymarched edge over DOM would alias badly. */
+    float px=1.5/resolution.y*aspect;
+    float edge=1.0-smoothstep(0.0,px*2.0,nearest);
+    if(edge<=0.004){outColor=vec4(0.0);return;}
+    vec3 rim=getSrc(uv).rgb*1.06+0.06;
+    outColor=vec4(rim,edge*0.55*orbFade);
+    return;
+  }
+
+  vec2 baseDisp=-(firstN.xy+lastN.xy)*0.5*DISP*uDispersion;
+  float NdotR=max(dot(firstN,-rd),0.0);
+  float scatter=pow(1.0-NdotR,2.0)*0.03*uScatter;
+
+  /* A ball of water does not merely smear what is behind it, it inverts
+     and magnifies it. Reflecting the sample point through the orb's
+     centre is what turns a displaced page into a lens. */
+  vec2 orbUV=orbCenter/resolution;
+  vec2 invUV=orbUV-(uv-orbUV)*uInvert;
+  vec2 lensUV=mix(uv,invUV,uRefract*(1.0-NdotR*0.35));
+
+  vec3 acc=vec3(0.0);
+  vec3 wsum=vec3(0.0);
+  for(int i=0;i<DISP_STEPS;i++){
+    float wl=float(i)/float(DISP_STEPS-1);
+    float k=wl*(1.3+float(hitCount)*0.2);
+    vec2 h=hash22(uv*1000.0+float(i)*7.13+time)*scatter;
+    vec3 w=spectrum(wl);
+    acc+=getSrc(lensUV+baseDisp*k+h).rgb*w;
+    wsum+=w;
+  }
+  vec3 col=acc/wsum*0.99;
+  col-=float(hitCount)*0.05;
+  /* The effect this came from sat on a white page. Over a mid-tone
+     landscape the same lift reads as milk, so the glow and the rim gain
+     are dialled back and exposed for tuning. */
+  col+=uGlow;
+
+  float fres=pow(1.0-NdotR,5.0);
+  col*=1.0+fres;
+
+  float f2=1.0-pow(NdotR,3.0);
+  col*=mix(vec3(1.0),exp(-ABSORB*uAbsorb*thickness),f2);
+  col*=1.0+f2*0.5;
+
+  vec3 ld=normalize(vec3(0.5,0.9,-0.3));
+  col+=pow(max(dot(reflect(-ld,firstN),-rd),0.0),200.0)*30.0*uSpec;
+  ld=normalize(vec3(-0.9,0.4,-0.3));
+  col+=pow(max(dot(reflect(-ld,firstN),-rd),0.0),300.0)*3.0*uSpec;
+  ld=normalize(vec3(-0.1,-0.9,-0.1));
+  col+=pow(max(dot(reflect(-ld,firstN),-rd),0.0),30.0)*0.5*uSpec;
+
+  col=min(col,vec3(1.0));
+  /* The fold is what makes the edge iridesce. Applied flat it inverts
+     hue at the silhouette — over a blue scene the rim turned brown —
+     so it is mixed, and floored so it can only tint, never darken the
+     edge into mud. */
+  vec3 folded=1.0-abs(col+fres*0.5-1.0);
+  col=mix(col,max(folded,col*0.82),uIrid);
+
+  outColor=vec4(col,orbFade);
+}`;
+
+function compile(type,source){
+  const shader=gl.createShader(type);
+  gl.shaderSource(shader,source);
+  gl.compileShader(shader);
+  if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){
+    console.error(gl.getShaderInfoLog(shader));
+    throw new Error('Orb shader failed to compile');
+  }
+  return shader;
+}
+const program=gl.createProgram();
+gl.attachShader(program,compile(gl.VERTEX_SHADER,vertexSource));
+gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragmentSource));
+gl.linkProgram(program);
+if(!gl.getProgramParameter(program,gl.LINK_STATUS)){
+  console.error(gl.getProgramInfoLog(program));
+  fallback.style.display='grid';
+  loader.classList.add('is-done');
+  throw new Error('Orb program failed to link');
+}
+gl.useProgram(program);
+gl.bindVertexArray(gl.createVertexArray());
+gl.disable(gl.DEPTH_TEST);
+gl.enable(gl.BLEND);
+gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+gl.clearColor(0,0,0,0);
+
+const U={};
+for(const name of [
+  'resolution','time','orbCenter','orbRadius','orbStretch','orbFade',
+  'clickTime','bubbleData','uHorizon','uSunX','uMorph','uWaveAmp',
+  'uWaveFreq','uWaveSpeed','uTwist','uBreath','uDistort','uTouch',
+  'uTouchDir','uTouchRadius','uDispersion','uScatter','uAbsorb','uSpec',
+  'uGlow','uIrid','uBlend','uGlints','uRefract','uInvert',
+  'uHaze','uRidge','uSnow','uCaustics'
+]){
+  U[name]=gl.getUniformLocation(program,name);
+}
+
+const bubbles=new Float32Array(N_BUBBLES*4);
+const rot2d=(x,y,t)=>{
+  const c=Math.cos(t),s=Math.sin(t);
+  return [x*c-y*s,x*s+y*c];
+};
+function updateBubbles(time){
+  const R=CONFIG.orb.radius;
+  for(let i=0;i<N_BUBBLES;i++){
+    const life=fract(time*CONFIG.bubbles.speed+i/N_BUBBLES);
+    /* Kept riding the skin rather than flying off it: the source effect
+       let bubbles escape upward, which over a landscape reads as loose
+       rings floating beside the droplet instead of as one body. The
+       orbit and rise are bounded so every bubble always overlaps the
+       sphere while still bulging through its surface. */
+    const orbitR=R*(0.55+life*0.30);
+    const angle=time*(0.8+fract(i*0.618)*0.7)+i*1.256;
+    let bx=Math.cos(angle)*orbitR;
+    let by=0;
+    let bz=Math.sin(angle)*orbitR;
+    [bx,by]=rot2d(bx,by,i*2.3);
+    [by,bz]=rot2d(by,bz,i*1.8);
+    by+=(life-0.5)*R*0.42;
+    bx+=Math.sin(time*2.7+i*4.1)*R*0.05*life;
+    bz+=Math.cos(time*3.1+i*3.7)*R*0.05*life;
+    const range=CONFIG.bubbles.max-CONFIG.bubbles.min;
+    const maxR=(CONFIG.bubbles.min+range*fract(i*0.618))*R;
+    const j=i*4;
+    bubbles[j]=bx;
+    bubbles[j+1]=by;
+    bubbles[j+2]=bz;
+    bubbles[j+3]=maxR*Math.sin(life*Math.PI);
+  }
+}
+
+/* --------------------------------------------------------------------
+   WORLD → SCREEN
+   The study framed the drop with a 38° camera at (0,3.25,17.5) looking
+   at (0,2.4,-7.4). Rather than re-derive that projection, the two
+   heights that matter are pinned: the rest position and the waterline.
+   Physics can then stay in the original world units and keep its feel.
+   -------------------------------------------------------------------- */
+const REST_SCREEN=.455;   /* drop at rest, fraction from the top */
+const WATER_SCREEN=.780;  /* where it meets the surface */
+function worldToScreenY(y){
+  const t=(CONFIG.physics.startY-y)/
+    Math.max(.0001,CONFIG.physics.startY-CONFIG.physics.waterY);
+  return REST_SCREEN+t*(WATER_SCREEN-REST_SCREEN);
+}
+
+/* --------------------------------------------------------------------
+   DROP PHYSICS — ported unchanged in spirit from the study: fall under
+   gravity, merge at the surface, hand the energy to a radial ripple,
+   throw spray, wait, repeat.
+   -------------------------------------------------------------------- */
+const dropState={phase:'idle',timer:0,y:CONFIG.physics.startY,velocity:0,impactAge:99,impactSpeed:0};
+const dropTouch={hovered:false,strength:0,dirX:0,dirY:1};
+const pointer={x:0,y:0,nx:0,ny:0,inside:false};
+let clickTime=99;
+let orbFade=1;
+let orbStretch=[1,1,1];
+let orbScreen={x:.5,y:REST_SCREEN};
+
+/* The orb's radius in the shader's p-space (normalised by width). At the
+   sphere's depth the frame is one focal length across, so the projected
+   radius on screen is this same number. */
+const orbRadiusP=()=>
+  CONFIG.orb.radius*CONFIG.orb.size*(canvas.height/Math.max(1,canvas.width));
+
+function spawnRipple(x,y,strength){
+  const ring=document.createElement('div');
+  ring.className='ring';
+  const size=Math.min(innerWidth,innerHeight)*.16;
+  ring.style.cssText=
+    `left:${x*100}%;top:${y*100}%;width:${size}px;height:${size}px;`+
+    `--rs:${(4.2+strength*4.4).toFixed(2)};`+
+    `--ro:${(.34+strength*.42).toFixed(3)};`+
+    `--rt:${(1.5+CONFIG.physics.damping*.5).toFixed(2)}s`;
+  impacts.appendChild(ring);
+  requestAnimationFrame(()=>ring.classList.add('go'));
+  setTimeout(()=>ring.remove(),3200);
+}
+function spawnSplash(x,y,strength){
+  const count=Math.round(16*CONFIG.physics.splash)+6;
+  for(let i=0;i<count;i++){
+    const drop=document.createElement('div');
+    drop.className='spray';
+    const angle=(i/count)*Math.PI*2+.37;
+    const reach=(40+seeded(i,83)*120)*CONFIG.physics.splash*(.5+strength);
+    drop.style.cssText=
+      `left:${x*100}%;top:${y*100}%;`+
+      `--sx:${(Math.cos(angle)*reach).toFixed(1)}px;`+
+      `--sy:${(-Math.abs(Math.sin(angle))*reach*1.15-30*strength).toFixed(1)}px;`+
+      `--st:${(.8+seeded(i,89)*.7).toFixed(2)}s;`+
+      `transform:scale(${(.5+seeded(i,97)*.9).toFixed(2)})`;
+    impacts.appendChild(drop);
+    requestAnimationFrame(()=>drop.classList.add('go'));
+    setTimeout(()=>drop.remove(),2200);
+  }
+  const puff=document.createElement('div');
+  puff.className='puff';
+  puff.style.cssText=`left:${x*100}%;top:${y*100}%`;
+  impacts.appendChild(puff);
+  requestAnimationFrame(()=>puff.classList.add('go'));
+  setTimeout(()=>puff.remove(),2400);
+}
+function clearImpacts(){impacts.textContent='';}
+
+function resetDropSimulation(startFalling=false){
+  dropState.phase=startFalling?'fall':'idle';
+  dropState.timer=0;
+  dropState.y=CONFIG.physics.startY;
+  dropState.velocity=0;
+  dropState.impactAge=99;
+  dropState.impactSpeed=0;
+  orbFade=1;
+  orbStretch=[1,1,1];
+}
+function triggerWaterImpact(speed){
+  dropState.phase='merge';
+  dropState.timer=0;
+  dropState.impactAge=0;
+  dropState.impactSpeed=clamp(speed/7.5,.35,1.45);
+  dropState.velocity=0;
+  clickTime=0;
+  const strength=dropState.impactSpeed*CONFIG.physics.impact;
+  /* The ripple belongs to the water, so it is spawned into the DOM
+     rather than drawn by the orb pass. */
+  spawnRipple(orbScreen.x,waterlineScreenY(),strength);
+  setTimeout(()=>spawnRipple(orbScreen.x,waterlineScreenY(),strength*.6),210);
+  spawnSplash(orbScreen.x,waterlineScreenY(),strength);
+}
+/* The waterline sits inside .water, whose top edge is the horizon. */
+function waterlineScreenY(){
+  const hz=CONFIG.scene.horizon;
+  return (WATER_SCREEN-hz)/(1-hz);
+}
+
+function updateDropPhysics(dt,time){
+  const contactY=CONFIG.physics.waterY;
+
+  if(reduceMotion){
+    dropState.phase='idle';
+    dropState.y=CONFIG.physics.startY;
+    orbFade=1;
+    orbStretch=[1,1,1];
+    orbScreen.x=.5;
+    orbScreen.y=worldToScreenY(dropState.y);
+    return;
+  }
+
+  const touchHold=dropTouch.hovered&&dropState.phase!=='merge';
+  if(!touchHold)dropState.timer+=dt;
+
+  let fallStretch=0;
+  let fallSway=0;
+  let fluidPulse=0;
+  let fade=1;
+
+  if(dropState.phase==='idle'){
+    dropState.y=CONFIG.physics.startY;
+    dropState.velocity=0;
+    /* Idle only ends on its own when the loop is armed; otherwise the
+       droplet hovers until DROP NOW or the scroll hand-off moves it. */
+    if(CONFIG.physics.enabled>=.5&&dropState.timer>.35)dropState.phase='fall';
+    if(CONFIG.physics.enabled<.5){
+      orbFade=1;
+      orbStretch=[1,1,1];
+      orbScreen.x=.5;
+      orbScreen.y=worldToScreenY(dropState.y)+Math.sin(time*.46)*.002;
+      return;
+    }
+  }
+
+  if(touchHold&&dropState.phase!=='merge'){
+    dropState.velocity*=Math.exp(-dt*10);
+    dropState.y+=dropState.velocity*dt;
+    if(dropState.y<CONFIG.physics.startY){
+      dropState.y+=(CONFIG.physics.startY-dropState.y)*Math.min(1,dt*3.2);
+    }
+  }else if(dropState.phase==='fall'){
+    dropState.velocity-=CONFIG.physics.gravity*dt;
+    dropState.velocity*=Math.exp(-CONFIG.physics.airDrag*dt);
+    dropState.y+=dropState.velocity*dt;
+    const speedRatio=clamp(Math.abs(dropState.velocity)/8.5,0,1.35);
+    fallStretch=speedRatio*CONFIG.physics.fallStretch*(.88+.12*Math.sin(time*8.4));
+    fallSway=Math.sin(time*7.1)*speedRatio*CONFIG.physics.fluidity*.0016;
+    if(dropState.y<=contactY){
+      dropState.y=contactY;
+      triggerWaterImpact(Math.abs(dropState.velocity));
+    }
+  }else if(dropState.phase==='merge'){
+    const age=dropState.timer;
+    const softness=CONFIG.physics.impactSoftness;
+    const decay=lerp(5.2,2.25,softness);
+    fluidPulse=Math.sin(age*10.8)*Math.exp(-age*decay)
+      *CONFIG.physics.fluidity*dropState.impactSpeed*CONFIG.physics.impact;
+    const mergeDuration=lerp(.56,1.02,softness);
+    const merge=smooth01((age-.10)/mergeDuration);
+    dropState.y=contactY-merge*.30-Math.max(0,fluidPulse)*.05;
+    fade=1-smooth01((age-mergeDuration*.38)/(mergeDuration*.67));
+    if(age>CONFIG.physics.loopDelay){
+      resetDropSimulation(false);
+      return;
+    }
+  }
+
+  orbFade=Math.max(0,fade);
+  orbScreen.x=.5+fallSway;
+  orbScreen.y=worldToScreenY(dropState.y)
+    +(dropState.phase==='idle'?Math.sin(time*.46)*.002:0);
+  orbStretch=[
+    Math.max(.3,1-fallStretch*.24+fluidPulse*.28),
+    Math.max(.24,1+fallStretch-fluidPulse*.52),
+    Math.max(.3,1-fallStretch*.18+fluidPulse*.28)
+  ];
+}
+
+/* --------------------------------------------------------------------
+   SECTION TWO
+   -------------------------------------------------------------------- */
+let videoWarmed=false;
+let videoPlaying=false;
+function warmSectionTwoVideo(){
+  if(videoWarmed||!sectionTwoVideo)return;
+  videoWarmed=true;
+  sectionTwoVideo.preload='auto';
+  sectionTwoVideo.load();
+}
+if(sectionTwoVideo){
+  const markReady=()=>sectionTwo.classList.add('is-video-ready');
+  sectionTwoVideo.addEventListener('canplay',markReady,{once:true});
+  sectionTwoVideo.addEventListener('loadeddata',markReady,{once:true});
+  sectionTwoVideo.addEventListener('error',()=>{
+    console.error('Section two film failed to load:',sectionTwoVideo.currentSrc);
+  });
+}
+const styleCache=new WeakMap();
+function cachedWrite(element,key,value,apply){
+  let entry=styleCache.get(element);
+  if(!entry){entry={};styleCache.set(element,entry);}
+  if(entry[key]===value)return;
+  entry[key]=value;
+  apply();
+}
+function writeStyle(element,property,value){
+  cachedWrite(element,property,value,()=>{element.style[property]=value;});
+}
+function writeVar(element,name,value){
+  cachedWrite(element,name,value,()=>{element.style.setProperty(name,value);});
+}
+const sectionTwoCta=document.querySelector('#sectionTwoCta');
+if(sectionTwoCta)sectionTwoCta.addEventListener('click',e=>e.preventDefault());
+
+function setSectionTwoPlayback(active){
+  if(!sectionTwoVideo||videoPlaying===active)return;
+  videoPlaying=active;
+  if(active){
+    warmSectionTwoVideo();
+    const attempt=sectionTwoVideo.play();
+    if(attempt&&attempt.catch)attempt.catch(()=>{});
+  }else{
+    sectionTwoVideo.pause();
+  }
+}
+const dropTransition={progress:0,target:0};
+function openSectionTwo(){
+  dropTransition.target=1;
+  dropTouch.hovered=false;
+  document.body.classList.remove('is-drop-hovered');
+  resetDropSimulation(false);
+  clearImpacts();
+}
+function closeSectionTwo(instant=false){
+  dropTransition.target=0;
+  if(instant)dropTransition.progress=0;
+}
+let flareFired=false;
+
+function updateDropTransition(dt){
+  if(reduceMotion){
+    dropTransition.progress=dropTransition.target;
+  }else{
+    const follow=1-Math.exp(-dt*CONFIG.transition.speed*2.25);
+    dropTransition.progress+=(dropTransition.target-dropTransition.progress)*follow;
+  }
+  if(Math.abs(dropTransition.target-dropTransition.progress)<.0005){
+    dropTransition.progress=dropTransition.target;
+  }
+  const progress=clamp(dropTransition.progress,0,1);
+  if(progress<=.001){
+    if(flareFired){flareFired=false;}
+    writeStyle(transitionFlash,'opacity','0');
+    writeVar(sectionTwo,'--s2-media','0');
+    writeStyle(sectionTwo,'opacity','0');
+    sectionTwo.classList.remove('is-active','is-in','is-live');
+    sectionTwo.setAttribute('aria-hidden','true');
+    setSectionTwoPlayback(false);
+    writeVar(document.documentElement,'--scene','1');
+    document.body.classList.remove('is-transitioning','is-section-two');
+    return false;
+  }
+
+  const fall=Math.pow(clamp(progress/.46,0,1),1.72);
+  const submerge=smooth01((progress-.46)/.20);
+  const dissolve=smooth01((progress-.50)/.17);
+  const flareExpand=smooth01((progress-.46)/.36);
+  const flareIgnition=smooth01((progress-.45)/.13);
+  const flareFade=1-smooth01((progress-.78)/.18);
+  const overlayAlpha=smooth01((progress-.69)/.27)*CONFIG.transition.sectionFade;
+
+  /* The drop traces one clean vertical line into the surface. */
+  const restY=worldToScreenY(CONFIG.physics.startY);
+  const contact=worldToScreenY(CONFIG.physics.waterY);
+  orbScreen.x=.5;
+  orbScreen.y=lerp(lerp(restY,contact,fall),
+    contact+CONFIG.transition.sinkDepth*.10,submerge);
+  orbFade=1-dissolve;
+  orbStretch=[1,1,1];
+
+  if(!flareFired&&progress>=.45){
+    flareFired=true;
+    spawnRipple(.5,waterlineScreenY(),CONFIG.transition.wobble);
+    setTimeout(()=>spawnRipple(.5,waterlineScreenY(),CONFIG.transition.wobble*.6),190);
+    spawnSplash(.5,waterlineScreenY(),CONFIG.transition.wobble);
+  }
+
+  const mediaReveal=smooth01((progress-.58)/.26);
+  const settle=smooth01((progress-.60)/.38);
+  writeStyle(sectionTwo,'opacity',overlayAlpha.toFixed(4));
+  writeVar(sectionTwo,'--s2-media',mediaReveal.toFixed(4));
+  writeVar(sectionTwo,'--s2-scale',(1.075-settle*.075).toFixed(4));
+  sectionTwo.classList.toggle('is-active',overlayAlpha>.001);
+  sectionTwo.classList.toggle('is-in',progress>.88);
+  sectionTwo.classList.toggle('is-live',progress>.95);
+  sectionTwo.setAttribute('aria-hidden',overlayAlpha>.5?'false':'true');
+  setSectionTwoPlayback(progress>.40);
+
+  /* Scene and orb bow out together once the film covers the frame. */
+  const sceneFade=(1-smooth01((progress-.72)/.20)).toFixed(4);
+  writeVar(document.documentElement,'--scene',sceneFade);
+  writeStyle(canvas,'opacity',sceneFade);
+  document.body.classList.toggle('is-transitioning',progress>.035&&progress<.96);
+  document.body.classList.toggle('is-section-two',progress>.82);
+
+  const flashAlpha=flareIgnition*flareFade*CONFIG.details.transitionFlash;
+  transitionFlash.style.opacity=flashAlpha.toFixed(4);
+  transitionFlash.style.transform=
+    `scale(${(.08+flareExpand*1.20).toFixed(4)},`+
+    `${(.035+Math.pow(flareExpand,1.35)*1.14).toFixed(4)})`;
+  transitionFlash.style.setProperty('--flare-x','50%');
+  transitionFlash.style.setProperty('--flare-y',`${(WATER_SCREEN*100).toFixed(2)}%`);
+  return true;
+}
+
+/* --------------------------------------------------------------------
+   INPUT
+   -------------------------------------------------------------------- */
+let wheelAccumulator=0;
+let wheelResetTimer=0;
+
+addEventListener('pointermove',event=>{
+  pointer.x=event.clientX;
+  pointer.y=event.clientY;
+  pointer.nx=event.clientX/innerWidth;
+  pointer.ny=event.clientY/innerHeight;
+  pointer.inside=true;
+},{passive:true});
+addEventListener('pointerleave',()=>{pointer.inside=false;},{passive:true});
+canvas.addEventListener('pointerdown',()=>{
+  /* A poke: knock the drop loose and let the surface ring. */
+  if(dropTransition.progress>.03)return;
+  clickTime=0;
+  dropTouch.hovered=false;
+  document.body.classList.remove('is-drop-hovered');
+  if(dropState.phase!=='merge')dropState.phase='fall';
+},{passive:true});
+
+addEventListener('wheel',event=>{
+  if(tuner.contains(event.target))return;
+  wheelAccumulator+=clamp(event.deltaY,-140,140);
+  clearTimeout(wheelResetTimer);
+  wheelResetTimer=setTimeout(()=>{wheelAccumulator=0;},520);
+  if(wheelAccumulator>=CONFIG.transition.scrollThreshold){
+    wheelAccumulator=0;
+    openSectionTwo();
+  }else if(wheelAccumulator<=-CONFIG.transition.scrollThreshold){
+    wheelAccumulator=0;
+    closeSectionTwo(false);
+  }
+},{passive:true});
+
+function updateDropTouch(dt){
+  /* Screen-space hit test against the orb's projected disc — no scene
+     graph to raycast into, and it is exact enough for a sphere. */
+  let hovered=false;
+  if(pointer.inside&&orbFade>.4&&dropTransition.progress<.035&&!reduceMotion){
+    const aspect=innerHeight/innerWidth;
+    const px=(pointer.nx-.5);
+    const py=((1-pointer.ny)-.5)*aspect;
+    const ox=(orbScreen.x-.5);
+    const oy=((1-orbScreen.y)-.5)*aspect;
+    const r=orbRadiusP()*1.18;
+    hovered=Math.hypot(px-ox,py-oy)<r;
+    if(hovered){
+      const dx=px-ox,dy=py-oy;
+      const len=Math.hypot(dx,dy)||1;
+      dropTouch.dirX=dx/len;
+      dropTouch.dirY=dy/len;
+    }
+  }
+  dropTouch.hovered=hovered;
+  document.body.classList.toggle('is-drop-hovered',hovered);
+  dropTouch.strength+=((hovered?1:0)-dropTouch.strength)
+    *(1-Math.exp(-dt*(hovered?13:5.2)));
+}
+
+/* --------------------------------------------------------------------
+   TUNING
+   -------------------------------------------------------------------- */
+function applyConfig(){
+  const root=document.documentElement;
+  root.style.setProperty('--hz',`${(CONFIG.scene.horizon*100).toFixed(2)}%`);
+  root.style.setProperty('--clouds',CONFIG.details.clouds.toFixed(3));
+  root.style.setProperty('--shafts',CONFIG.details.shafts.toFixed(3));
+  root.style.setProperty('--mist',CONFIG.details.mist.toFixed(3));
+  root.style.setProperty('--birds',CONFIG.details.birds.toFixed(3));
+  root.style.setProperty('--glints',CONFIG.details.glints.toFixed(3));
+  root.style.setProperty('--caustics',CONFIG.details.caustics.toFixed(3));
+  root.style.setProperty('--haze',CONFIG.scene.haze.toFixed(3));
+  root.style.setProperty('--ridge',CONFIG.scene.ridge.toFixed(3));
+  document.querySelector('.sun').style.left=`${(CONFIG.scene.sun*100).toFixed(1)}%`;
+  document.querySelector('.road').style.left=`${(CONFIG.scene.sun*100).toFixed(1)}%`;
+  canvas.style.filter=`brightness(${CONFIG.scene.exposure.toFixed(3)})`;
+}
+
+const tuningGroups=[
+  ['WATER DROP',[
+    ['SHAPE','distortion','waveMorph',0,1,.01],
+    ['SIZE','orb','size',.25,3,.01],
+    ['RADIUS','orb','radius',.03,.30,.001],
+    ['THICK','orb','thickness',0,3,.01],
+    ['REFRACT','orb','refract',0,1,.01],
+    ['INVERT','orb','invert',0,5,.05],
+    ['DISPERSE','orb','dispersion',0,3,.01],
+    ['SCATTER','orb','scatter',0,4,.01],
+    ['ABSORB','orb','absorb',0,3,.01],
+    ['SPECULAR','orb','spec',0,3,.01],
+    ['GLOW','orb','glow',0,.35,.005],
+    ['IRIDESCE','orb','irid',0,1,.01]
+  ]],
+  ['DROP DISTORTION',[
+    ['DISTORT','distortion','amount',0,2,.01],
+    ['WAVE AMP','distortion','waveAmplitude',0,.30,.001],
+    ['WAVE FREQ','distortion','waveFrequency',.2,12,.05],
+    ['WAVE SPEED','distortion','waveSpeed',0,5,.01],
+    ['TWIST','distortion','twist',0,.35,.001],
+    ['BREATH','distortion','breathing',0,.15,.001]
+  ]],
+  ['INNER BUBBLES',[
+    ['SPEED','bubbles','speed',0,3,.01],
+    ['MIN SIZE','bubbles','min',0,1,.01],
+    ['MAX SIZE','bubbles','max',0,1.4,.01],
+    ['BLEND','bubbles','blend',.02,.6,.005]
+  ]],
+  ['HOVER TOUCH',[
+    ['TOUCH FORCE','physics','touchForce',0,2,.01],
+    ['TOUCH SIZE','physics','touchRadius',.08,1.5,.01]
+  ]],
+  ['DROP PHYSICS',[
+    ['AUTO LOOP','physics','enabled',0,1,1],
+    ['GRAVITY','physics','gravity',.5,18,.05],
+    ['AIR DRAG','physics','airDrag',0,.6,.005],
+    ['STRETCH','physics','fallStretch',0,1.2,.01],
+    ['FLUIDITY','physics','fluidity',0,3,.01],
+    ['SOFTNESS','physics','impactSoftness',0,1,.01],
+    ['LOOP WAIT','physics','loopDelay',.4,6,.05]
+  ]],
+  ['IMPACT',[
+    ['IMPACT','physics','impact',0,2,.01],
+    ['RIPPLE SPD','physics','rippleSpeed',.2,8,.05],
+    ['RIPPLE DAMP','physics','damping',.1,4,.01],
+    ['SPLASH','physics','splash',0,2,.01]
+  ]],
+  ['SCENE',[
+    ['HORIZON','scene','horizon',.20,.70,.005],
+    ['SUN X','scene','sun',0,1,.005],
+    ['EXPOSURE','scene','exposure',.4,1.6,.01],
+    ['RANGE','scene','ridge',0,1.6,.01],
+    ['SNOW','scene','snow',0,1,.01],
+    ['HAZE','scene','haze',0,2,.01]
+  ]],
+  ['LIGHT DETAILS',[
+    ['CLOUDS','details','clouds',0,1.4,.01],
+    ['SHAFTS','details','shafts',0,2,.01],
+    ['MIST','details','mist',0,2,.01],
+    ['BIRDS','details','birds',0,1,.01],
+    ['WATER GLINT','details','glints',0,1,.01],
+    ['CAUSTICS','details','caustics',0,2,.01],
+    ['TRANS FLASH','details','transitionFlash',0,2,.01]
+  ]],
+  ['SCROLL TRANSITION',[
+    ['SCROLL TRIG','transition','scrollThreshold',20,400,5],
+    ['SPEED','transition','speed',.2,4,.01],
+    ['SINK DEPTH','transition','sinkDepth',0,1.5,.01],
+    ['IMPACT ENERGY','transition','wobble',0,3,.01],
+    ['SECTION FADE','transition','sectionFade',.6,1,.01]
+  ]]
+];
+
+const sliderRefs=[];
+for(const [title,items] of tuningGroups){
+  const group=document.createElement('section');
+  group.className='tune-group';
+  const heading=document.createElement('h3');
+  heading.textContent=title;
+  group.appendChild(heading);
+  for(const [label,groupKey,key,min,max,step] of items){
+    const row=document.createElement('div');
+    row.className='tune-row';
+    if(key==='waveMorph')row.classList.add('is-morph');
+    const caption=document.createElement('label');
+    caption.textContent=label;
+    const input=document.createElement('input');
+    input.type='range';
+    input.min=min;
+    input.max=max;
+    input.step=step;
+    input.value=CONFIG[groupKey][key];
+    input.setAttribute('aria-label',`${title} ${label}`);
+    const value=document.createElement('span');
+    value.className='tune-value';
+    const digits=step<.001?4:step<.01?3:2;
+    const refresh=()=>{value.textContent=Number(CONFIG[groupKey][key]).toFixed(digits);};
+    input.addEventListener('input',()=>{
+      CONFIG[groupKey][key]=Number(input.value);
+      refresh();
+      applyConfig();
+      if(groupKey==='physics'&&['enabled'].includes(key)){
+        resetDropSimulation(false);
+        clearImpacts();
+      }
+    });
+    refresh();
+    row.append(caption,input,value);
+    group.appendChild(row);
+    sliderRefs.push({input,value,groupKey,key,digits});
+  }
+  tunerBody.appendChild(group);
+}
+function syncTunerValues(){
+  for(const ref of sliderRefs){
+    ref.input.value=CONFIG[ref.groupKey][ref.key];
+    ref.value.textContent=Number(CONFIG[ref.groupKey][ref.key]).toFixed(ref.digits);
+  }
+}
+const actions=document.createElement('div');
+actions.className='tuner-actions';
+function makeButton(text,handler){
+  const button=document.createElement('button');
+  button.type='button';
+  button.textContent=text;
+  button.addEventListener('click',handler);
+  return button;
+}
+actions.append(
+  makeButton('OPEN SECTION 2',()=>openSectionTwo()),
+  makeButton('PURE SPHERE',()=>{
+    CONFIG.distortion.waveMorph=0;
+    syncTunerValues();applyConfig();
+  }),
+  makeButton('FULL WAVE',()=>{
+    CONFIG.distortion.waveMorph=1;
+    syncTunerValues();applyConfig();
+  }),
+  makeButton('BACK SECTION 1',()=>closeSectionTwo(false)),
+  makeButton('DROP NOW',()=>{
+    clearImpacts();
+    resetDropSimulation(true);
+  }),
+  makeButton('RESET',()=>{
+    for(const key of Object.keys(DEFAULT_CONFIG))Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);
+    syncTunerValues();
+    applyConfig();
+    resetDropSimulation(false);
+    clearImpacts();
+    closeSectionTwo(true);
+  })
+);
+const copyButton=makeButton('COPY VALUES',async()=>{
+  const json=JSON.stringify(CONFIG,null,2);
+  try{
+    await navigator.clipboard.writeText(json);
+    copyButton.textContent='COPIED';
+  }catch{
+    console.info('INDEX 04 CONFIG',json);
+    copyButton.textContent='SEE CONSOLE';
+  }
+  setTimeout(()=>{copyButton.textContent='COPY VALUES';},1200);
+});
+actions.append(copyButton);
+tunerBody.appendChild(actions);
+
+tunerToggle.addEventListener('click',()=>{
+  const folded=tuner.classList.toggle('is-folded');
+  tunerToggle.textContent=folded?'+':'−';
+  tunerToggle.setAttribute('aria-label',folded?'Expand controls':'Collapse controls');
+});
+
+/* --------------------------------------------------------------------
+   MOTION
+   -------------------------------------------------------------------- */
+let dpr=1;
+function resize(){
+  dpr=Math.min(devicePixelRatio||1,1.65);
+  canvas.width=Math.round(innerWidth*dpr);
+  canvas.height=Math.round(innerHeight*dpr);
+  gl.viewport(0,0,canvas.width,canvas.height);
+}
+addEventListener('resize',resize,{passive:true});
+
+const start=performance.now()/1000;
+let last=start;
+let firstFrame=true;
+
+function frame(){
+  const now=performance.now()/1000;
+  const dt=Math.min(now-last,.04);
+  last=now;
+  const time=now-start;
+  if(clickTime<90)clickTime+=dt;
+
+  updateDropTouch(dt);
+  const inTransition=updateDropTransition(dt);
+  if(!inTransition)updateDropPhysics(dt,time);
+  updateBubbles(time);
+
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform2f(U.resolution,canvas.width,canvas.height);
+  gl.uniform1f(U.time,time);
+  /* y is flipped: the physics thinks in page coordinates, GL does not. */
+  gl.uniform2f(U.orbCenter,
+    orbScreen.x*canvas.width,
+    (1-orbScreen.y)*canvas.height);
+  /* p-space is normalised by WIDTH, so the aspect factor is what keeps a
+     given radius the same number of vh on any window shape. */
+  gl.uniform1f(U.orbRadius,orbRadiusP());
+  gl.uniform3f(U.orbStretch,orbStretch[0],orbStretch[1],orbStretch[2]);
+  gl.uniform1f(U.orbFade,orbFade);
+  gl.uniform1f(U.clickTime,clickTime);
+  gl.uniform1fv(U.bubbleData,bubbles);
+  gl.uniform1f(U.uHorizon,1-CONFIG.scene.horizon);
+  gl.uniform1f(U.uSunX,CONFIG.scene.sun);
+  gl.uniform1f(U.uMorph,CONFIG.distortion.waveMorph);
+  gl.uniform1f(U.uWaveAmp,CONFIG.distortion.waveAmplitude);
+  gl.uniform1f(U.uWaveFreq,CONFIG.distortion.waveFrequency);
+  gl.uniform1f(U.uWaveSpeed,CONFIG.distortion.waveSpeed);
+  gl.uniform1f(U.uTwist,CONFIG.distortion.twist);
+  gl.uniform1f(U.uBreath,CONFIG.distortion.breathing);
+  gl.uniform1f(U.uDistort,CONFIG.distortion.amount);
+  gl.uniform1f(U.uTouch,dropTouch.strength*CONFIG.physics.touchForce);
+  gl.uniform2f(U.uTouchDir,dropTouch.dirX,dropTouch.dirY);
+  gl.uniform1f(U.uTouchRadius,CONFIG.physics.touchRadius);
+  gl.uniform1f(U.uDispersion,CONFIG.orb.dispersion);
+  gl.uniform1f(U.uScatter,CONFIG.orb.scatter);
+  gl.uniform1f(U.uAbsorb,CONFIG.orb.absorb*CONFIG.orb.thickness/.27);
+  gl.uniform1f(U.uSpec,CONFIG.orb.spec);
+  gl.uniform1f(U.uGlow,CONFIG.orb.glow);
+  gl.uniform1f(U.uIrid,CONFIG.orb.irid);
+  gl.uniform1f(U.uBlend,CONFIG.bubbles.blend);
+  gl.uniform1f(U.uGlints,CONFIG.details.glints);
+  gl.uniform1f(U.uRefract,CONFIG.orb.refract);
+  gl.uniform1f(U.uInvert,CONFIG.orb.invert);
+  gl.uniform1f(U.uHaze,CONFIG.scene.haze);
+  gl.uniform1f(U.uRidge,CONFIG.scene.ridge);
+  gl.uniform1f(U.uSnow,CONFIG.scene.snow);
+  gl.uniform1f(U.uCaustics,CONFIG.details.caustics);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+
+  if(firstFrame){
+    firstFrame=false;
+    loaderNote.textContent='SCENE READY';
+    requestAnimationFrame(()=>{
+      document.body.classList.add('is-ready');
+      loader.classList.add('is-done');
+      warmSectionTwoVideo();
+    });
+  }
+  requestAnimationFrame(frame);
+}
+
+applyConfig();
+resize();
+resetDropSimulation(false);
+frame();
+
+window.index4={
+  CONFIG,applyConfig,openSectionTwo,closeSectionTwo,
+  resetDropSimulation,ridgeHeight,buildRidges,gl
+};
+</script>
+</body>
+</html>

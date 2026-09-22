@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#bfc0be">
+<title>Design in Motion — MONTIS</title>
+<style>
+:root{color-scheme:light;--paper:#bfc0be;--ink:#232522}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+button,a,input{-webkit-tap-highlight-color:transparent}button{color:inherit;font:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:5px}
+.frame{position:fixed;inset:12px;z-index:4;border:1px solid #23252223;border-radius:20px;pointer-events:none}
+.header{position:fixed;inset:0 0 auto;height:90px;padding:32px 40px;z-index:5;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+.brand{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:800;letter-spacing:-.045em;text-decoration:none;color:inherit;pointer-events:auto}
+.brand svg{width:22px;height:26px;fill:currentColor}.brand sup{font-size:8px;align-self:flex-start;margin-top:2px}
+.nav{display:flex;align-items:center;gap:8px;pointer-events:auto}
+.nav button{font-size:10px;letter-spacing:.035em;height:27px;padding:0 15px;border:1px solid #23252250;border-radius:30px}
+.nav .primary{color:var(--paper);background:var(--ink);border-color:var(--ink)}.nav .replay{border:0;padding:0 5px;font-size:15px}
+main{width:100%;height:100%}
+h1{margin:0;font-size:clamp(58px,6.1vw,118px);font-weight:500;line-height:.88;letter-spacing:-.075em}
+.headline{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:43vw;min-width:310px;z-index:0;pointer-events:none}
+.headline span{display:block;white-space:nowrap;will-change:transform}.headline .line-two{margin-top:13px;text-align:right}
+.eyebrow{font-size:7px;letter-spacing:-.015em;line-height:1.15;font-weight:400;text-align:center;margin:9px 0 8px}
+#scene{position:fixed;inset:0;width:100%;height:100%;z-index:2;touch-action:none;cursor:grab;outline:0}#scene:active{cursor:grabbing}
+.footer{position:fixed;bottom:39px;left:40px;z-index:5;max-width:240px;font-size:10px;letter-spacing:-.015em;line-height:1.28;pointer-events:none}.footer p{margin:0}
+.controls{position:fixed;right:40px;bottom:36px;z-index:5;display:flex;align-items:center;gap:18px}
+.controls button{padding:5px 0;font-size:9px;font-weight:500;letter-spacing:.05em}.controls button:hover{opacity:.55}
+.view-switch{display:flex;gap:8px;align-items:center;border-bottom:1px solid #23252260;padding-bottom:3px}.view-switch span{opacity:.32}
+.view-switch button[aria-pressed="false"]{opacity:.45}#play{display:grid;place-items:center;width:18px}#play svg{width:10px;height:10px;fill:currentColor}
+.seek{position:fixed;z-index:6;bottom:14px;left:40px;right:40px;height:10px;display:flex;align-items:center;opacity:.32;transition:opacity .2s}
+.seek:hover,.seek:focus-within{opacity:1}
+.seek input{appearance:none;-webkit-appearance:none;height:1px;width:100%;margin:0;background:linear-gradient(to right,var(--ink) var(--progress,0%),#23252244 var(--progress,0%));cursor:ew-resize}
+.seek input::-webkit-slider-thumb{appearance:none;height:5px;width:5px;border-radius:50%;background:var(--ink)}
+.seek input::-moz-range-thumb{height:5px;width:5px;border:0;border-radius:50%;background:var(--ink)}
+.hint{position:fixed;z-index:4;left:50%;bottom:43px;transform:translateX(-50%);font-size:8px;letter-spacing:.06em;opacity:.48;white-space:nowrap;pointer-events:none;transition:opacity .6s}
+#loading{position:fixed;z-index:7;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;letter-spacing:.15em;transition:opacity .5s;pointer-events:none}body.ready #loading{opacity:0}
+#error{display:none;position:fixed;z-index:10;inset:0;padding:12vh 8vw;background:var(--paper);overflow:auto}#error p{max-width:550px;line-height:1.6}
+#fallback-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:30px}#fallback-gallery img{width:100%;aspect-ratio:1.46;object-fit:cover}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:700px){
+.frame{inset:7px;border-radius:14px}.header{height:70px;padding:24px}.brand{font-size:12px}.brand svg{width:18px;height:22px}
+.nav button{font-size:9px;height:24px;padding:0 10px}.headline{width:78vw;min-width:0}h1{font-size:12.8vw}
+.eyebrow{font-size:6px}.headline .line-two{margin-top:10px}.footer{left:24px;bottom:69px;font-size:8px;width:190px}
+.controls{bottom:32px;right:24px;gap:16px}.controls button{font-size:8px}.hint{bottom:103px;font-size:7px}.seek{bottom:13px;left:24px;right:24px}
+#fallback-gallery{grid-template-columns:repeat(2,1fr)}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="frame" aria-hidden="true"></div>
+<header class="header">
+  <a class="brand" href="./slide.html" aria-label="重新開啟 MONTIS 動態展示">
+    <svg viewBox="0 0 100 112" aria-hidden="true"><path d="M49 3C21 12 8 30 7 51l5 1C19 35 31 27 49 20V3ZM50 25v23C22 59 19 76 31 91c13 16 40 15 53-3C100 65 85 38 50 25Zm4 9C79 45 91 65 77 85c-10 14-30 17-41 4-12-15-2-30 18-37V34Z"/></svg>
+    MONTIS<sup>®</sup>
+  </a>
+  <nav class="nav" aria-label="展示控制">
+    <button class="replay" id="replay" title="重新播放 (R)" aria-label="重新播放">↺</button>
+    <button class="primary" id="explore">EXPLORE ↗</button>
+    <button id="menu" aria-pressed="false" title="作品網格 (G)">INDEX ≡</button>
+  </nav>
+</header>
+<main>
+  <div class="headline" id="headline">
+    <h1><span class="line-one">DESIGN IN</span><span class="sr-only"> </span><span class="line-two">MOTION</span></h1>
+    <p class="eyebrow" id="eyebrow">A COLLECTION OF IDEAS.<br>EXPLORATIONS, IN EVERY DIRECTION.</p>
+  </div>
+  <canvas id="scene" tabindex="0" aria-label="3D 開放螺旋作品長帶，可拖曳或使用方向鍵沿螺旋前進，滾輪控制進度，G 鍵切換網格。"></canvas>
+  <div id="loading" role="status">LOADING MOTION · <span id="load-count">0</span>%</div>
+  <div id="error" role="alert"><h2>Design in Motion</h2><p id="error-message"></p><div id="fallback-gallery"></div></div>
+</main>
+<footer class="footer"><p>Concepts, explorations, and interface<br>experiments—a playground for ideas<br>and possibilities in motion.</p></footer>
+<div class="hint" id="hint">SCROLL TO EXPLORE · DRAG TO FLOW</div>
+<div class="controls">
+  <button id="play" title="暫停 / 播放 (空白鍵)" aria-label="暫停動畫"></button>
+  <div class="view-switch" role="group" aria-label="排列模式"><button id="orbit" aria-pressed="true">SPIRAL</button><span>/</span><button id="grid" aria-pressed="false">GRID</button></div>
+  <button id="reset" title="重新開始">REPLAY ↗</button>
+</div>
+<label class="seek"><span class="sr-only">動畫進度</span><input id="progress" type="range" min="0" max="1000" value="0" aria-label="動畫進度"></label>
+<script src="./slide.js"></script>
+</body>
+</html>

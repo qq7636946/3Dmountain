@@ -1,12 +1,12 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-canyon-watershed.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
-import { createConfluenceEffects } from './water-confluence-fx-463.js?v=logo-463-1';
-export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx-463.js?v=logo-463-1';
+import { createConfluenceEffects } from './water-confluence-fx-463.js?v=index463-20261001-1da9d12021';
+export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx-463.js?v=index463-20261001-1da9d12021';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
 /** One continuous alpine watershed; every tributary drains into the same trunk. */
-export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null,logoTerrain=null}) {
+export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial=rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null,logoTerrain=null}) {
   // shoreDetail (opt-in): sharper aretes, finer drainage, baked crease tone and a per-vertex
   // shore attribute on every river. Omitted, every line below behaves exactly as before.
   const detail=!!shoreDetail;
@@ -22,7 +22,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const terrainSettings={...WATERSHED_TERRAIN_DEFAULTS};
   const terrainNumber=(key,min,max)=>{const value=Number(terrainConfig?.[key]??WATERSHED_TERRAIN_DEFAULTS[key]);return Math.max(min,Math.min(max,Number.isFinite(value)?value:WATERSHED_TERRAIN_DEFAULTS[key]));};
   const readTerrainSettings=()=>R
-    ?{height:terrainNumber('height',.5,1.8),ridge:terrainNumber('ridge',0,2),relief:terrainNumber('relief',0,2),reliefRidge:reliefNumber('ridge',0,2),reliefErosion:reliefNumber('erosion',0,2)}
+    ?{height:terrainNumber('height',.5,1.8),ridge:terrainNumber('ridge',0,2),relief:terrainNumber('relief',0,2),reliefRidge:reliefNumber('ridge',0,2),reliefErosion:reliefNumber('erosion',0,2),tone:reliefNumber('tone',0,1.5,1)}
     :{height:terrainNumber('height',.5,1.8),ridge:terrainNumber('ridge',0,2),relief:terrainNumber('relief',0,2)};
   Object.assign(terrainSettings,readTerrainSettings());
   const lerp=THREE.MathUtils.lerp, clamp=x=>Math.max(0,Math.min(1,x));
@@ -46,7 +46,8 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     moat:logoNumber('moat',5,120,58),plain:logoNumber('plain',0,300,40),slot:logoNumber('slot',.1,1,.40),lakeInset:logoNumber('lakeInset',0,400,270),
     lineOverLake:logoNumber('lineOverLake',0,1,.06),warp:logoNumber('warp',0,150,40),wallSlope:logoNumber('wallSlope',.4,3,.88),
     gully:logoNumber('gully',0,4,1),saddle:logoNumber('saddle',0,1,1),startLow:logoNumber('startLow',.2,1,.5),
-    saddleSharp:logoNumber('saddleSharp',.6,1.6,1.1),ringTone:logoNumber('ringTone',0,1,.72)}:null;
+    saddleSharp:logoNumber('saddleSharp',.6,1.6,1.1),ringTone:logoNumber('ringTone',0,1,.72),
+    headwall:logoNumber('headwall',1,2.4,1.6),bands:logoNumber('bands',0,.8,.45),bandStep:logoNumber('bandStep',80,200,120)}:null;
   // Signed distance fields of logo.svg (svg units, negative inside): band, fin and the band's hole.
   // Rasterised once (Path2D), hole = sealed-slit flood fill, two-pass Felzenszwalb EDT.
   function buildLogoField(){
@@ -158,14 +159,20 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     const startTaper=1-(1-LGP.startLow)*smooth(672,676,lu)*(1-smooth(680,736,lu))*(1-smooth(336,356,lv));
     // dOut+dLake is the section's foot-to-foot width (constant across it), so the tallest crest
     // that fits under the wall slope is known at every point: the band height is only a ceiling.
-    const fit=k*(dOut+dLake)*.5/1.3;
-    const crestB=Math.min(LGP.bandHeight*(.52+.48*smooth(2,14,sB)),fit)*crestVar*startTaper,runB=1.3*crestB/k;
-    const ringB=crestB*logoSmin(ramp(dOut,runB),ramp(dLake,runB),.1);
+    // The two walls always meet in one crest line: each run was set from the crest AFTER its variation
+    // (below 1 all round), so they stopped short and left a flat, rounded top: the clay berm. The far
+    // inner wall is a steeper headwall (HEADWALL) facing the camera over the lake; the near one is not.
+    const kIn=k*lerp(1,LGP.headwall,smooth(405,365,lv)),W=dOut+dLake,fit=W/(1.3/k+1.3/kIn);
+    const crestB=Math.min(LGP.bandHeight*(.52+.48*smooth(2,14,sB)),fit)*crestVar*startTaper;
+    const runIn=1.3*crestB/kIn,runOut=Math.max(1.3*crestB/k,W-runIn);
+    const ringB=crestB*logoSmin(ramp(dOut,runOut),ramp(dLake,runIn),.1);
     // Fin: a hogback, highest at its thick root, tapering to its tip; a little steeper than the band.
     const sF=-f,dFin=Math.max(0,sF+flankF)*S,kF=k*1.2;
     const crestF=Math.min(LGP.finHeight*(.45+.55*smooth(1,10,sF)),kF*(.8*logoField.finDepth+flankF)*S/1.3)*(.9+.2*crestVar);
     const ringF=crestF*ramp(dFin,1.3*crestF/kF);
     let ring=Math.max(ringB,ringF);
+    if(LGP.bands>0){const B=LGP.bandStep*(lite?1.5:1),hs=ring+.07*(x-LGP.cx)+(noise(x*.004+7,z*.004-3)-.5)*30,fr=hs/B-Math.floor(hs/B);
+      ring+=LGP.bands*B*(smooth(.3,.9,fr)-fr)*smooth(.3,.55,ring/Math.max(1,crestB,crestF));}
     // The fin-band gap: a V saddle down to the plain on the gap's midline (b = f). Its height climbs
     // away from the midline (|b-f|/2) and past the gap's ends (b+f beyond 13) at no more than the
     // fin's own wall slope (|grad b|, |grad f| <= 1/S), and it is combined as a true minimum with a
@@ -201,7 +208,11 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   // The first downstream row must share the original river's full width.
   // A 57 -> 124 unit jump at the old boundary left a visible triangular notch.
   const trunkWidth=z=>refined
-    ?(LG?lerp(1,LGP.slot,smooth(LGP.cz+1250,LGP.cz+1120,z)*(1-smooth(LGP.cz-1870,LGP.cz-2090,z))):1)*(lerp(widthAt(1),90,smooth(-1880,-2700,z))+60*smooth(-2700,-3900,z))
+    ?(LG
+      // LOGO: the tributaries meet in the lake now, not in the trunk, so the trunk stays one river's
+      // width until the eye, and carries the whole watershed only out of it, past the far shore.
+      ?lerp(1,LGP.slot,smooth(LGP.cz+1250,LGP.cz+1120,z)*(1-smooth(LGP.cz-1870,LGP.cz-2090,z)))*(lerp(widthAt(1),78,smooth(-1880,-2700,z))+72*smooth(LGP.cz-700,LGP.cz-1300,z))
+      :lerp(widthAt(1),90,smooth(-1880,-2700,z))+60*smooth(-2700,-3900,z))
     :(z>=-1880?57:lerp(124,90,smooth(-1880,-2700,z))+60*smooth(-2700,-3900,z));
   const mainRows=[];
   for(let i=0;i<=900;i++){const t=i/900,p=curve.getPointAt(t),n=curve.getTangentAt(t);mainRows.push({x:p.x,z:p.z,t,width:widthAt(t),nx:-n.z,nz:n.x});}
@@ -219,12 +230,66 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     [[1040,1700],[910,850],[1110,300],[820,-240],[990,-730],[770,-1160],[930,-1550],[580,-1910],[470,-2300],[240,-2510]],
     [[2370,1700],[2200,870],[1860,200],[2110,-420],[1770,-1000],[1990,-1510],[1550,-2060],[1190,-2330],[1090,-2870],[660,-3140],[370,-3480]]
   ];
+  // LOGO: the four tributaries no longer join the trunk. Each keeps its own valley and runs on into
+  // the lake through its own gorge in the ring, so all five rivers meet in the eye of the mark — the
+  // lake is the confluence. Their upper courses are the page's own; from where each used to turn for
+  // the trunk, a few waypoints carry it down its own valley (clear of the trunk and of each other),
+  // and the last reach is radial and worked out from the mark's own field: from past the foot of the
+  // ring's apron, across the stroke, over the beach and into the water, at clock positions that
+  // spread the five mouths round the near side of the eye — about 4:40, 5:35, the trunk at 6:30,
+  // 7:05 and 7:55. Kept within about forty-five degrees of six o'clock, so from the aerial camera
+  // every river comes up into the eye on a diagonal; further round, the outer two ran across the
+  // front of the ring and hooked in sideways. Worked out from the field, the mouths follow the mark
+  // if it is moved or scaled.
+  const logoMouths=[],lakeEye=v(0,0);
+  if(LG){
+    const keep=[6,6,7,8],clock=[7.9,7.1,5.6,4.7];
+    const bridges=[[[-1560,-2700],[-1520,-3350]],[[-560,-2100],[-620,-2700],[-700,-3300]],[[470,-2300],[330,-2800],[330,-3250]],[[1150,-3350],[1250,-3850]]];
+    // The eye's centre: the mean of the open water in the field.
+    let sx=0,sz=0,n=0;const hb=logoField.holeBox;
+    for(let w=hb.v0;w<=hb.v1;w+=2)for(let u=hb.u0;u<=hb.u1;u+=2){const x=logoField.toX(u),z=logoField.toZ(w);if(logoShore(logoAt(x,z).h)<0){sx+=x;sz+=z;n++;}}
+    const ex=n?sx/n:LGP.cx,ez=n?sz/n:LGP.cz;
+    lakeEye.set(ex,0,ez);
+    for(let k=0;k<4;k++){
+      // Clock 6 points at the viewer (+z), 3 to +x.
+      const a=(clock[k]-6)/12*Math.PI*2,dx=-Math.sin(a),dz=Math.cos(a);
+      let shore=null,inStroke=false,out=null,apron=null;
+      for(let r=0;r<3000&&apron===null;r+=5){
+        const L=logoAt(ex+dx*r,ez+dz*r),stroke=L.b<0||L.f<0;
+        if(shore===null&&logoShore(L.h)>=0)shore=r;
+        if(shore!==null&&stroke)inStroke=true;
+        if(inStroke&&out===null&&!stroke)out=r;
+        if(out!==null&&L.o>LGP.flankOut)apron=r;
+      }
+      shore??=600;out??=shore+400;apron??=out+380;
+      const at=r=>[ex+dx*r,ez+dz*r];
+      /* Not a spoke: the last reach swings gently from side to side down to the water, each river
+         the opposite way to its neighbour, and straightens only over the beach. The swing is
+         sideways in x alone, so the rows stay strictly ordered in z. */
+      const sway=k%2?1:-1,swing=(r,x)=>{const [px,pz]=at(r);return [px+x*sway,pz];};
+      const approach=[swing(apron+260,130),swing(apron+40,-85),swing(out-10,50),at(shore+30),at(Math.max(40,shore-150))];
+      const lead=approach[0][1];
+      tributaryPoints[k]=[...tributaryPoints[k].slice(0,keep[k]+1),...bridges[k].filter(p=>p[1]>lead+120),...approach];
+      joinZ[k]=approach.at(-1)[1];
+      logoMouths.push(v(...at(shore)));
+    }
+  }
   const descriptors=[];
   for(let k=0;k<4;k++){
-    const end=mainAt(joinZ[k]),points=[[tributaryPoints[k][0][0]-160,5500],[tributaryPoints[k][0][0]+130,3500],...tributaryPoints[k],[end.x,joinZ[k]]],c=path(points);
-    const width=t=>37+8*Math.sin(t*8+k)**2+12*smooth(.45,1,t);
+    const tail=LG?[]:[[mainAt(joinZ[k]).x,joinZ[k]]];
+    const points=[[tributaryPoints[k][0][0]-160,5500],[tributaryPoints[k][0][0]+130,3500],...tributaryPoints[k],...tail],c=path(points);
+    // Through the ring each tributary narrows to a slot, as the trunk does, so it cuts a gorge in the
+    // stroke instead of breaking it.
+    const width=t=>{
+      let w=37+8*Math.sin(t*8+k)**2+12*smooth(.45,1,t);
+      if(LG){const p=c.getPointAt(t),L=logoAt(p.x,p.z);w*=lerp(1,.62,1-smooth(LGP.flankOut*.6,LGP.flankOut+4,Math.max(0,Math.min(L.b,L.f))));
+        /* ...and opens into a mouth over the last stretch of beach, as a river meeting still water
+           does, instead of running into the lake at the width of the gorge. */
+        w*=lerp(1,1.85,smooth(190,0,logoShore(L.h)));}
+      return w;
+    };
     const river=createRiver(THREE,c,width,{lengthSegments:lite?560:960,widthSegments:lite?8:12,bankOverlap:refined?1.34:1.12});
-    river.mesh.name=`Alpine tributary ${k+1} → main river`;group.add(river.mesh);rivers.push(river);
+    river.mesh.name=LG?`Alpine tributary ${k+1} → the logo lake`:`Alpine tributary ${k+1} → main river`;group.add(river.mesh);rivers.push(river);
     const rows=Array.from({length:801},(_,i)=>{const p=c.getPointAt(i/800);return{x:p.x,z:p.z,width:width(i/800),nx:-c.getTangentAt(i/800).z};});
     descriptors.push({curve:c,widthAt:width,rows,joinZ:joinZ[k],main:false});
   }
@@ -254,11 +319,37 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   }
   extensions.forEach((r,i)=>{r.mesh.name=i?'The joined river beyond the confluence':'Original river upstream';group.add(r.mesh);});
   const peaks=[[-2650,500,710,590],[-1390,-230,830,460],[470,-250,720,350],[1530,-320,860,470],[-2580,-1530,1130,750],[-1180,-1310,960,380],[470,-1220,1040,370],[1450,-1740,1130,400],[-1060,-2740,1150,650],[720,-2910,1290,520],[2280,-3250,1350,780],[-2440,-3820,1550,850],[-710,-4250,1460,740],[970,-4600,1720,750],[2720,-5600,1450,1080],[-1790,-5790,1840,1100],[460,-6370,1660,1000],[-5200,-9000,2500,1750],[-2700,-9000,2650,1550],[-520,-9800,2900,1700],[1940,-9400,2700,1650],[4560,-9900,2850,1800],[6500,-8500,2400,1900]];
+  // Relief: the near massifs stand LIFT times their old height (the client wants them tall, as with the
+  // terrain height slider at ~1.8, but without that slider stretching every summit into a needle: the
+  // summits are rounded below, PEAK ROUND). The logo ring and the far range are not lifted.
+  const lift=R?reliefNumber('lift',.5,3.5,1.4):1,density=R?reliefNumber('density',0,3,1):0;
   const massifs=peaks.map(([x,z,height,radius],i)=>{
     const angle=-.58+(hash(i+7,18)-.5)*.75;
-    const heightScale=z>-4600?.53:z>-7000?.60:.76;
-    return{x,z,height:height*heightScale,radius:radius*1.14,c:Math.cos(angle),s:Math.sin(angle),length:1.65+hash(i,24)*.75,width:.88+hash(i,31)*.34,bend:hash(i,41)*6.28,skew:(hash(i,63)-.5)*.34};
+    const heightScale=(z>-4600?.53:z>-7000?.60:.76)*(z>-7000?lift:1);
+    // A lifted massif is a bigger mountain, not a stretched one: its base widens with the lift.
+    return{x,z,height:height*heightScale,radius:radius*1.14*(z>-7000?1+.35*(lift-1):1),c:Math.cos(angle),s:Math.sin(angle),length:1.65+hash(i,24)*.75,width:.88+hash(i,31)*.34,bend:hash(i,41)*6.28,skew:(hash(i,63)-.5)*.34,
+      k:3+Math.floor(hash(i,71)*3),asym:.75+hash(i,79)*.5};
   });
+  // More mountains (DENSITY): secondary massifs over the open ground between the rivers, on a jittered grid,
+  // clear of the river channels, the canyon flight's corridor, the named peaks and the logo's plain, so the
+  // land between the rivers is a sea of mountains instead of a few cones on a plain.
+  if(density>0){
+    const chan=[mainRows,upstreamRows,downstreamRows,...descriptors.map(d=>d.rows)],named=massifs.length;
+    const riverGap=(x,z)=>{let d=Infinity;for(const rows of chan)for(let i=0;i<rows.length;i+=5){const r=rows[i];if(Math.abs(r.z-z)>d+60)continue;d=Math.min(d,Math.hypot(r.x-x,r.z-z)-(r.width||40));}return d;};
+    const cell=density>1.5?560*Math.sqrt(1.5/density):560;
+    for(let gz=1500;gz>-6900;gz-=cell)for(let gx=-3000;gx<=3000;gx+=cell){
+      if(hash(gx*.013+3.1,gz*.017-1.7)>.28+.5*density)continue;
+      const x=gx+(hash(gx*.021,gz*.019+5)-.5)*380,z=gz+(hash(gz*.023+2,gx*.029)-.5)*380;
+      if(z<=300&&z>=-2150&&Math.abs(x-lookup(mainRows,Math.min(0,Math.max(-1880,z))).x)<700)continue;
+      if(LG){const L=logoAt(x,z);if(Math.min(L.b,L.f,L.h)<LGP.moat*1.25)continue;}
+      if(massifs.slice(0,named).some(p=>Math.hypot(p.x-x,p.z-z)<p.radius*.8))continue;
+      if(riverGap(x,z)<330)continue;
+      const hh=hash(x*.011,z*.013),angle=-.58+(hash(x*.003+7,z*.004)-.5)*1.1;
+      const mh=(440+360*hh)*(z>-4600?.53:.60)*lift,mr=Math.max((300+220*hash(z*.017,x*.011+9))*1.14,mh*1.2);
+      massifs.push({x,z,height:mh,radius:mr,c:Math.cos(angle),s:Math.sin(angle),
+        length:1.25+hash(x*.7,z*.3)*.7,width:.8+hash(z*.7,x*.3)*.35,bend:hash(x*.2,z*.9)*6.28,skew:(hash(z*.2,x*.9)-.5)*.34,k:3,asym:1});
+    }
+  }
   // Elongated, offset shoulders carry the skyline. A bounded smooth maximum
   // joins neighbouring mountain bodies without either cone cusps or needles.
   const smoothMax=(a,b,k)=>{const h=Math.max(0,k-Math.abs(a-b))/k;return Math.max(a,b)+h*h*k*.25;};
@@ -302,31 +393,51 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   // gathers on the crests and the valleys stay calm. Octaves rotate ~37 deg to hide the lattice;
   // the shortest wavelength stays above ~3.5 terrain samples.
   const reliefOctaves=lite?3:4;
+  // On the near grid the last ridged octaves (91 and 190 units, 4-8 samples) stood as creases one or two
+  // cells wide: from the air, crumpled paper. RIDGE FINE 0 cuts them at ~6.5 samples, 1 = the old cut.
+  const ridgeFine=reliefNumber('ridgeFine',0,1,1);
   // Terrain sample spacing at (x,z), mirroring the xs/zs lattice below: an octave fades out
   // before its wavelength drops under ~4 samples, so the coarse far grid never grows needles.
-  const gridSpacingAt=(x,z)=>Math.abs(x)>=3200||z>1800||z< -7000?135:(refined&&Math.abs(x)<330&&z<80&&z>-1970?(lite?18:12):(lite?36:24));
+  // The canyon's fine band (|x|<330, 12-unit rows) is left out on purpose: it is there to resolve the
+  // carved banks, and letting it admit two more ridge/erosion octaves than the ground around it stood it
+  // up in the early aerial as a crumpled strip with a hard edge down each side.
+  // Past z -7000 the rows were 120 apart against 24-unit columns: the knife-edge crests aliased between rows
+  // into the needles and vertical curtains of the far skyline. Rows are now FAR_DZ apart there, the detail
+  // eases out over -7000..-7800 instead of switching off at a line, and far crests are rounded (FAR SOFT).
+  const FAR_DZ=lite?60:40,FAR_SOFT=reliefNumber('farSoft',0,.25,.08),crestSoft=reliefNumber('crestSoft',0,.25,.1);
+  const gridSpacingAt=(x,z)=>Math.abs(x)>=3200||z>1800?135:z>=-7000?(lite?36:24):lerp(FAR_DZ,135,smooth(-7000,-7800,z));
   function ridgedField(x,z,spacing=24){
     let sum=0,amp=1,weight=1,f=1/820,px=x,pz=z;
     for(let o=0;o<reliefOctaves;o++){
-      const fade=smooth(2.8*spacing,4.5*spacing,1/f);if(fade<=0)break;
-      let r=1-Math.abs(noise(px*f+o*17.3,pz*f-o*9.1)*2-1);r*=r;r*=weight;weight=clamp(r*1.75);
+      const fNear=smooth(lerp(6.5,2.8,ridgeFine)*spacing,lerp(10,4.5,ridgeFine)*spacing,1/f),fFar=smooth(2.8*spacing,4.5*spacing,1/f);
+      const fade=lerp(fNear,fFar,smooth(40,90,spacing));if(fade<=0)break;
+      const u=noise(px*f+o*17.3,pz*f-o*9.1)*2-1,sf=Math.max(FAR_SOFT*smooth(40,135,spacing),crestSoft);
+      let r=1-(sf>0?Math.hypot(u,sf)-sf:Math.abs(u));r*=r;r*=weight;weight=clamp(r*1.75);
       sum+=(r*fade+.3*(1-fade))*amp;amp*=.5;const nx=px*.8-pz*.6;pz=px*.6+pz*.8;px=nx;f*=2.08;
     }
     return sum;
   }
   // Massif envelope with a tent-shaped cross-section: a crisp main ridgeline along the spine,
   // long calm flanks, instead of the rounded dome.
+  // Near massifs are faceted: 3-5 aretes radiate from each summit with hollowed faces between them, and
+  // one flank is a steep headwall, the other a long slope. The far range keeps its plain crowns.
+  const facet=reliefNumber('facet',0,.45,0),asymK=reliefNumber('asym',0,1,0),peakRound=reliefNumber('peakRound',0,1.5,.8);
   function reliefMass(wx,wz,spacing=24,x=wx,z=wz){
     // On the coarse far lattice a knife crest aliases into needles: round it there.
-    const tent=1.1+.55*smooth(40,135,spacing);
+    // PEAK ROUND: the crown's cross-section goes from a knife tent (1.1) toward a rounded crest (2.0) with
+    // the same steep flanks, so tall massifs read as massive mountains, not needles.
+    const tent=Math.max(lerp(1.1,2,peakRound),1.1+.55*smooth(40,135,spacing));
     let mass=48;
     for(const p of massifs){
       const dx=(wx-p.x)/p.radius,dz=(wz-p.z)/p.radius;
       if(Math.abs(dx)>4.3||Math.abs(dz)>4.3)continue;
       const along=dx*p.c+dz*p.s,across=-dx*p.s+dz*p.c;
       const spine=across+p.skew*along+.12*Math.sin(along*2.6+p.bend);
-      const a=Math.pow(Math.abs(along/p.length),2.6),c=Math.abs(spine/p.width);
-      const crown=p.height*.80*Math.exp(-a*1.0-Math.pow(c,tent)*1.35);
+      const a=Math.pow(Math.abs(along/p.length),2.6),near=p.z>-7000;
+      const c=Math.abs(spine/p.width)*(near?lerp(1,spine>0?p.asym:1/p.asym,asymK):1);
+      let crown=p.height*.80*Math.exp(-a*1.0-Math.pow(c,tent)*1.35);
+      if(near&&facet>0){const rr=Math.hypot(along/p.length,spine/p.width);
+        if(rr>.12&&rr<3)crown*=1-facet*Math.abs(Math.sin(.5*p.k*Math.atan2(spine,along)))*smooth(.12,.7,rr)*(1-smooth(1.8,3,rr));}
       const shoulderDistance=Math.hypot((along-.46)/1.28,(spine+.28)/.91);
       const shoulder=p.height*.38*Math.exp(-Math.pow(shoulderDistance,1.45)*1.5);
       mass=smoothMax(mass,Math.max(crown,shoulder),44);
@@ -335,7 +446,10 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     return LG?logoMass(x,z,mass):mass;
   }
   // Macro height used only to orient the erosion (gradient by central differences).
-  const ridgeShare=(rid,mass)=>(rid-.42)*mass*.42*smooth(90,520,mass);
+  // The ridged detail grows with the mountain, but only a third as fast above ~520 (CREST TAME): scaled in full
+  // proportion, every tall massif sprouted proportionally tall crest spikes, the needles the client did not want.
+  const crestTame=reliefNumber('crestTame',0,1,.35);
+  const ridgeShare=(rid,mass)=>(rid-.42)*(mass<520?mass:520+(mass-520)*crestTame)*.42*smooth(90,520,mass);
   function reliefMacro(x,z,spacing=gridSpacingAt(x,z)){
     const wx=x+(noise(x*.0009,z*.0008)-.5)*170,wz=z+(noise(x*.0009+71,z*.0008)-.5)*145;
     const qx=wx+(noise(wx*.0013+3.7,wz*.0013)-.5)*300,qz=wz+(noise(wx*.0013,wz*.0013+8.1)-.5)*300;
@@ -345,7 +459,12 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   // Gabor-style erosion (after Clay John / IQ): stripes whose phase runs ACROSS the fall line,
   // so every groove runs downhill; later octaves follow the slope the earlier ones carved.
   const erosionOctaves=lite?[150]:[160,78];
-  function erosionField(x,z,gx,gz,spacing=24,octaves=erosionOctaves){
+  // The slopes' own drainage: main couloirs GULLY SPAN apart with tributaries at a half and a quarter,
+  // their period jittered cell by cell, and rock of uneven hardness (ERODIBILITY), so a massif is cut into
+  // buttresses and gullies of different sizes, not combed into even flutes.
+  const gullySpan=reliefNumber('gullySpan',260,640,440),erodK=reliefNumber('erodibility',0,1,1),branching=reliefNumber('branching',0,1,0)>=.5;
+  const slopeOctaves=lite?[gullySpan,gullySpan*.5]:[gullySpan,gullySpan*.5,Math.max(112,gullySpan*.255)];
+  function erosionField(x,z,gx,gz,spacing=24,octaves=erosionOctaves,jit=0){
     let total=0,amp=1,wsum=0;
     for(const L of octaves){
       // Same rule as the ridges: no groove narrower than ~4 terrain samples.
@@ -353,8 +472,8 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       const len=Math.hypot(gx,gz)||1e-6,dx=-gz/len,dz=gx/len;
       const cx=Math.floor(x/L),cz=Math.floor(z/L);let acc=0,w=0,ddx=0,ddz=0;
       for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
-        const ox=(cx+i+.2+hash(cx+i,cz+j)*.6)*L,oz=(cz+j+.2+hash(cz+j+7,cx+i)*.6)*L;
-        const px=(x-ox)/L,pz=(z-oz)/L,wt=Math.exp(-(px*px+pz*pz)*2.2),ph=(px*dx+pz*dz)*Math.PI*2;
+        const hA=hash(cx+i,cz+j),ox=(cx+i+.2+hA*.6)*L,oz=(cz+j+.2+hash(cz+j+7,cx+i)*.6)*L;
+        const px=(x-ox)/L,pz=(z-oz)/L,wt=Math.exp(-(px*px+pz*pz)*2.2),ph=(px*dx+pz*dz)*Math.PI*2*(1+jit*(2*fract(hA*7.13)-1));
         acc+=Math.cos(ph)*wt;ddx-=Math.sin(ph)*dx*wt;ddz-=Math.sin(ph)*dz*wt;w+=wt;
       }
       total+=acc/w*amp*fade;wsum+=amp;
@@ -368,9 +487,12 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     if(pre){m=pre.m;hx=pre.hx;hz=pre.hz;}
     else{const e=24,sp=gridSpacingAt(x,z);m=reliefMacro(x,z,sp);hx=(reliefMacro(x+e,z,sp).h-reliefMacro(x-e,z,sp).h)/(2*e);hz=(reliefMacro(x,z+e,sp).h-reliefMacro(x,z-e,sp).h)/(2*e);}
     const slope=Math.hypot(hx,hz);
-    const ero=erosionField(x,z,hx,hz,gridSpacingAt(x,z));
-    // Grooves only where water actually runs fast: steep, and above the valley floor.
-    const gullyDepth=(10+m.mass*.05)*smooth(.10,.55,slope)*smooth(70,260,m.mass);
+    // Grooves only where water actually runs fast: steep, and above the valley floor; deeper in soft rock.
+    // BRANCHING 0 (default) is the index4-6-1 erosion: fine flutes over every face. 1 = couloirs GULLY SPAN apart
+    // with tributaries, jittered, in rock of uneven hardness.
+    const erod=branching?lerp(1,.3+1.2*smooth(.28,.72,noise(x*.0011+31,z*.0011-17)),erodK):1;
+    const gullyDepth=branching?(16+m.mass*.1)*erod*smooth(.10,.55,slope)*smooth(70,260,m.mass):(10+m.mass*.05)*smooth(.10,.55,slope)*smooth(70,260,m.mass);
+    const ero=branching?(gullyDepth>0?erosionField(x,z,hx,hz,gridSpacingAt(x,z),slopeOctaves,.3):0):erosionField(x,z,hx,hz,gridSpacingAt(x,z));
     // Mid-scale structure the old version carried, kept but calmer.
     const wx=x+(noise(x*.0009,z*.0008)-.5)*170,wz=z+(noise(x*.0009+71,z*.0008)-.5)*145;
     const shoulder=1-Math.abs(noise(wx*.0048+18,wz*.0036-7)*2-1);
@@ -421,18 +543,33 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     if(LG){const L=logoAt(x,z);logoB=L.b;logoF=L.f;logoH=L.h;lakeD=logoShore(logoH);distance=Math.min(dRiver,lakeD);}
     const rs=R?reliefSample(x,z,pre):null;
     const shape=R?[rs.base,rs.ridgeCh,rs.reliefCh]:massifSample(x,z),mass=Math.max(24,shape[0]+shape[1]+shape[2]+(R?rs.rid+rs.ero:0)),detail=fbm(x*.013,z*.012),bankWarp=noise(x*.004+11,z*.005);
+    // Relief: the valley's own floor edge (the river wanders across the floor between them).
+    const dW=VT.length&&dRiver<950?Math.min(distance,valleyDistance(x,z)+16):distance;
     // Relief: a concave talus apron (steepening toward the wall foot), almost no lumps on the floor.
-    const talus=R?Math.pow(smooth(20,150,distance),1.6)*(1-smooth(150,260,distance))*(20+detail*6)
+    const talus=R?Math.pow(smooth(20,150,dW),1.6)*(1-smooth(150,260,dW))*(20+detail*6)
       :smooth(24,80,distance)*(1-smooth(118,225,distance))*(13+detail*18);
-    const brokenShoulder=R?smooth(60,190,distance)*smooth(70,450,mass)*(detail-.43)*8:smooth(45,170,distance)*smooth(70,450,mass)*(detail-.43)*22;
+    const brokenShoulder=R?smooth(60,190,dW)*smooth(70,450,mass)*(detail-.43)*8:smooth(45,170,distance)*smooth(70,450,mass)*(detail-.43)*22;
     // Relief: a wider, gentler bank so the water line is well sampled (no saw-tooth shoreline).
-    const bank=R?-10+smooth(-14,34,distance)*(15+detail*3):refined?-10+smooth(-9,16,distance)*(15+detail*5):-7+smooth(-8,28,distance)*(12+detail*12);
-    let massBlend=refined?smooth(16,390+bankWarp*65,distance):smooth(8,365+bankWarp*65,distance);
+    let bank=R?-10+smooth(-14,34,distance)*(15+detail*3):refined?-10+smooth(-9,16,distance)*(15+detail*5):-7+smooth(-8,28,distance)*(12+detail*12);
+    // VALLEY REACH: how far out the valley side runs before the full mountain stands. Short (steep walls, broad
+    // mountain bodies between the rivers) keeps the land between two rivers ~600 apart from being whittled into
+    // a narrow spine, which the lifted massifs turned into spires.
+    const vr=(390+bankWarp*65)*valleyReach;
+    let massBlend=refined?(VT.length?Math.max(smooth(16,vr,dW),.08*valleyK*smooth(16,90,distance)):smooth(16,vr,distance)):smooth(8,365+bankWarp*65,distance);
     // Inside the ring the trunk cuts a narrow gorge instead of erasing the ridge, and the inner
     // wall stands at the water like a river bank.
     // Both gorge walls are held under the same wall-slope cap as the ring (height ~ slope x distance).
     const ringZone=LG?1-smooth(LGP.flankOut*.6,LGP.flankOut+4,Math.max(0,Math.min(logoB,logoF))):0;
-    if(ringZone>0)massBlend=lerp(massBlend,Math.min(clamp(LGP.wallSlope*Math.max(0,dRiver-4)/Math.max(60,mass)),smooth(0,170,lakeD)),ringZone);
+    // SLOPE CAP: from any river the ground can climb no steeper than ~49 deg (60 + 1.15 x the distance from the
+    // channel). The land between two rivers a few hundred apart becomes a ridge, not a spire, while massifs away
+    // from the rivers keep their full height: tall mountains without needles. (Applied before the ring's own cap.)
+    if(R&&slopeCap>0&&dRiver<1400)massBlend=Math.min(massBlend,(60+slopeCap*Math.max(0,dRiver-16))/Math.max(60,mass));
+    // Each river's gorge through the ring opens into a funnel at the foot of the ring's outer slope, with
+    // spurs interlocking inside it (GAP), instead of a parallel-walled slot.
+    if(ringZone>0){const out=clamp(Math.max(0,Math.min(logoB,logoF))/LGP.flankOut),kg=LGP.wallSlope*(1-.45*gapK*smooth(.1,1,out));
+      const dg=Math.max(0,dRiver-4+gapK*50*(noise(x*.0028+7.3,z*.0028-2.1)-.5)*smooth(15,70,dRiver));
+      massBlend=lerp(massBlend,Math.min(clamp(kg*dg/Math.max(60,mass)),smooth(0,170,lakeD)),ringZone);}
+    if(fanK>0&&dRiver<700)bank+=fanHeight(x,z)*fanK*smooth(25,80,distance)*(1-ringZone);
     // The ring's own gullies: a finer Gabor octave down its fall line, so both faces are eroded.
     if(ringZone>0&&rs){
       // Groove direction on the ring, taken modulo sign from the stroke's own distance field (a 2x2
@@ -453,20 +590,30 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       // On the ring the page's groove offset (-.2) is dropped and its slope gate widened: that gate
       // snaps to zero on a crest line and would stand a 10-unit fin along every crest; a floor keeps
       // the grooves running over the crest instead (a notched, serrated skyline).
-      rs.ero=lerp(rs.ero,eroRing*(10+rs.macroMass*.05)*(.35+.65*smooth(.02,.5,rs.slope))*smooth(40,200,rs.macroMass)*ease,ringZone)+g*(8+mass*.045)*steep*ease;rs.groove=Math.max(rs.groove,clamp(.5-g*.5)*steep);}
+      const gv=lerp(.3,1.5,smooth(.4,.72,noise(x*.0026+41,z*.0026-9)));
+      rs.ero=lerp(rs.ero,eroRing*gv*(10+rs.macroMass*.05)*(.35+.65*smooth(.02,.5,rs.slope))*smooth(40,200,rs.macroMass)*ease,ringZone)+g*gv*(8+mass*.045)*steep*ease;rs.groove=Math.max(rs.groove,clamp(.5-g*.5)*steep);}
     let support=0,supportMix=0;
     if(z<=0&&z>=-1880){const r=lookup(mainRows,z),original=originalBank(x,z,r),endFade=smooth(0,90,-z)*(1-smooth(1770,1880,-z));
       // A buried interior lets the original detailed cliffs remain authoritative.
       const bankY=R?.bankHeight?R.bankHeight(r.t,x<r.x?-1:1,original.distance,x,z):original.height;
-      support=lerp(-9,bankY-3,smooth(195,245,original.distance));
-      supportMix=(1-smooth(245,390,original.distance))*endFade*smooth(0,95,tributaryDistance);
+      if(R?.bankHeight){
+        // Relief: the ground takes over from the canyon's bank from ~85 units out, and the scene lays the
+        // bank's outer rim onto this same surface (sunk under it by 245). The canyon is then cut into the
+        // mountains around it, not bordered by a strip of the bank's own crumpled highland with a seam
+        // down each side. Under ~55 units it stays buried beneath the bank's walls, as before.
+        support=lerp(-9,bankY-9,smooth(55,95,original.distance));
+        supportMix=(1-smooth(85,255,original.distance))*endFade*smooth(0,95,tributaryDistance);
+      }else{
+        support=lerp(-9,bankY-3,smooth(195,245,original.distance));
+        supportMix=(1-smooth(245,390,original.distance))*endFade*smooth(0,95,tributaryDistance);
+      }
     }
     // The refined trunk turns behind a massif before its final buried reach.
     // The closing ridge is curved in world space, never a straight Z dam.
     const ridgeStart=refined?-8650-Math.sin(x*.0017)*165:-7000;
     const ridgeEnd=refined?-9500-Math.sin(x*.0017)*165:-8100;
     const out=[...shape,bank,massBlend,talus,brokenShoulder,support,supportMix,smooth(ridgeStart,ridgeEnd,z)];
-    if(R)out.push(rs.rid,rs.ero,LG?rs.groove*(1-logoLakeMask(logoH)):rs.groove);
+    if(R)out.push(rs.rid,rs.ero,(LG?rs.groove*(1-logoLakeMask(logoH)):rs.groove)*(VT.length?smooth(-20,60,dW):1));
     return out;
   }
   function heightFromSample(samples,offset=0){
@@ -480,7 +627,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const xs=[],zs=[];
   const spacing=lite?36:24;
   for(let x=-9000;x< -3200;x+=140)xs.push(x);for(let x=-3200;x<3200;x+=refined&&Math.abs(x)<330?(lite?18:12):spacing)xs.push(x);xs.push(3200);for(let x=3340;x<=9000;x+=140)xs.push(x);
-  for(let z=4800;z>1800;z-=120)zs.push(z);for(let z=1800;z>-7000;z-=refined&&z<80&&z>-1970?(lite?18:12):spacing)zs.push(z);zs.push(-7000);for(let z=-7120;z>=-12000;z-=120)zs.push(z);
+  for(let z=4800;z>1800;z-=120)zs.push(z);for(let z=1800;z>-7000;z-=refined&&z<80&&z>-1970?(lite?18:12):spacing)zs.push(z);zs.push(-7000);for(let z=-7000-FAR_DZ;z>=-12000;z-=FAR_DZ)zs.push(z);if(zs.at(-1)>-12000)zs.push(-12000);
   const positions=new Float32Array(xs.length*zs.length*3),colors=new Float32Array(positions.length),indices=[];
   // Store noise/carving once. Slider updates only evaluate this short expression
   // and refresh the same geometry buffers, rather than rebuilding the scene.
@@ -488,6 +635,73 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const heightSamples=terrainConfig||R?new Float64Array(xs.length*zs.length*stride):null;
   const dark=rockDark??new THREE.Color('#526676'),pale=rockPale??new THREE.Color('#a0acb4'),summit=new THREE.Color('#b7c4cd'),color=new THREE.Color();
   let maxHeight=0;
+  // ---- Valleys (relief) ----
+  // A valley is not a parallel copy of its river: that is what made every river read as a road cut, two
+  // identical shoulders following each wiggle from source to lake. Each river now gets a valley AXIS (its
+  // rows blurred twice over +-520 units of its own length) and a floor half-width per side and per reach:
+  // wider downstream and on low ground, narrow where the massifs close in (measured on the massifs
+  // themselves), varying along the valley. Talus, shoulders and the wall blend rise from the FLOOR's edge,
+  // not the water's, so the river wanders across a floor and cuts into the wall on the outside of its
+  // bends. Alluvial fans spill from the walls onto the floor. VALLEY 0 and FAN 0 = the old terrain. The
+  // canyon trunk (mainRows) is left as it was.
+  const valleyReach=reliefNumber('valleyReach',.4,1.8,.9);
+  const slopeCap=reliefNumber('slopeCap',0,3,1.15);
+  const valleyK=R&&refined?reliefNumber('valley',0,2,0):0,fanK=R&&refined?reliefNumber('fan',0,2,1):0,gapK=reliefNumber('gap',0,1.5,1);
+  const VT=[],fans=[];
+  (function buildValleyTables(){
+    if(valleyK<=0)return;
+    const tables=[...descriptors.map((d,k)=>({rows:d.rows,seed:k*7.3+1.1,fade:()=>1})),
+      {rows:upstreamRows,seed:31.7,fade:z=>smooth(0,420,z)},
+      {rows:downstreamRows,seed:47.9,fade:z=>smooth(-1880,-2300,z)*(LG?1-smooth(LGP.cz+900,LGP.cz,z):1)}];
+    for(const T of tables){
+      const rows=T.rows,n=rows.length;
+      let len=0;for(let i=1;i<n;i++)len+=Math.hypot(rows[i].x-rows[i-1].x,rows[i].z-rows[i-1].z);
+      const step=len/(n-1),half=Math.max(1,Math.round(520/step));
+      const px=new Float64Array(n),pz=new Float64Array(n);for(let i=0;i<n;i++){px[i]=rows[i].x;pz[i]=rows[i].z;}
+      // The ends are mirrored through their endpoints, so the blurred z keeps strictly decreasing.
+      const at=(arr,i)=>i<0?2*arr[0]-arr[Math.min(n-1,-i)]:i>=n?2*arr[n-1]-arr[Math.max(0,2*(n-1)-i)]:arr[i];
+      const blur=src=>{const out=new Float64Array(n);let sum=0;for(let j=-half;j<=half;j++)sum+=at(src,j);
+        for(let i=0;i<n;i++){out[i]=sum/(2*half+1);sum+=at(src,i+half+1)-at(src,i-half);}return out;};
+      const ax=blur(blur(px)),az=blur(blur(pz)),table=[];
+      for(let i=0;i<n;i+=4){
+        const i0=Math.max(0,i-2),i1=Math.min(n-1,i+2);let tx=ax[i1]-ax[i0],tz=az[i1]-az[i0];const tl=Math.hypot(tx,tz)||1;tx/=tl;tz/=tl;
+        let nx=-tz,nz=tx;if(nx<0){nx=-nx;nz=-nz;}
+        let A=0;for(let j=Math.max(0,i-half);j<=Math.min(n-1,i+half);j++)A=Math.max(A,Math.abs((rows[j].x-ax[j])*nx+(rows[j].z-az[j])*nz));
+        const w=rows[i].width,z=az[i],fade=T.fade(z),F=[w,w];
+        for(const side of [-1,1]){
+          const reach=A+w+260,conf=smooth(160,520,reliefMacro(ax[i]+side*nx*reach,az[i]+side*nz*reach).mass);
+          let extra=Math.min(300,(40+.9*A+110*smooth(.3,.9,i/(n-1)))*(.6+.8*noise(i*step*.0008+T.seed,3+2*side))*(1-.75*conf))*valleyK*fade;
+          // Beside the canyon the floor keeps well clear of its rim.
+          if(z<=0&&z>=-1880){const m=lookup(mainRows,z);if(Math.sign(m.x-ax[i])===side)extra=Math.min(extra,Math.max(0,Math.abs(ax[i]-m.x)*nx-m.width-340-w));}
+          F[side>0?1:0]=w+extra;
+          if(fanK>0&&conf>.2&&i%16===(side>0?0:8)){const h=hash(i*1.7+T.seed,side*9.1+3.3),d=w+extra+45;
+            fans.push({x:ax[i]+side*nx*d,z:az[i]+side*nz*d,dx:-side*nx,dz:-side*nz,R:160+150*h,H:(14+20*h)*(.4+.6*conf)});}
+        }
+        table.push({x:ax[i],z,c:nx,fl:F[0],fr:F[1]});
+      }
+      const clean=[table[0]];for(let i=1;i<table.length;i++)if(table[i].z<clean.at(-1).z)clean.push(table[i]);
+      if(clean.length>1)VT.push(clean);
+    }
+    fans.sort((a,b)=>b.z-a.z);
+  })();
+  function valleyDistance(x,z){
+    let d=Infinity;
+    for(const t of VT){
+      if(z>t[0].z||z<t.at(-1).z)continue;
+      let a=0,b=t.length-1;while(b-a>1){const m=(a+b)>>1;if(t[m].z>z)a=m;else b=m;}
+      const A=t[a],B=t[b],u=(z-A.z)/(B.z-A.z||1),o=(x-lerp(A.x,B.x,u))*lerp(A.c,B.c,u);
+      d=Math.min(d,Math.abs(o)-(o<0?lerp(A.fl,B.fl,u):lerp(A.fr,B.fr,u)));
+    }
+    return d;
+  }
+  function fanHeight(x,z){
+    if(!fans.length)return 0;
+    let lo=0,hi=fans.length;while(lo<hi){const m=(lo+hi)>>1;if(fans[m].z>z+310)lo=m+1;else hi=m;}
+    let best=0;
+    for(let i=lo;i<fans.length&&fans[i].z>=z-310;i++){const F=fans[i],qx=x-F.x,qz=z-F.z,r=Math.hypot(qx,qz);if(r>=F.R)continue;
+      const cos=r>1e-3?(qx*F.dx+qz*F.dz)/r:1;best=Math.max(best,F.H*Math.pow(1-r/F.R,1.7)*smooth(-.15,.45,cos));}
+    return best;
+  }
   let macroGrid=null;
   const logoInkW=LG?new Float32Array(xs.length*zs.length):null;
   if(R){
@@ -502,23 +716,43 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   for(let i=0;i<zs.length;i++){const z=zs[i],channels=channelsAt(z);for(let j=0;j<xs.length;j++){const x=xs[j],sample=makeHeightSample(x,z,channels,preAt(i,j)),y=heightFromSample(sample),n=fbm(x*.009+51,z*.009),o=(i*xs.length+j)*3;positions.set([x,y,z],o);if(heightSamples)heightSamples.set(sample,(i*xs.length+j)*stride);maxHeight=Math.max(maxHeight,y);
     color.copy(dark).multiplyScalar(.73).lerp(pale,.16+n*.39+smooth(190,1200,y)*.10);color.lerp(summit,smooth(1000,2300,y)*(.07+n*.12));
     const wet=1-smooth(.3,18,y);color.multiplyScalar(1-wet*.27);if(LG)logoInkW[i*xs.length+j]=logoTint(x,z,color);colors.set([color.r,color.g,color.b],o);
-    if(i<zs.length-1&&j<xs.length-1){const a=i*xs.length+j,b=a+xs.length;if((i+j)%2)indices.push(a,a+1,b+1,a,b+1,b);else indices.push(a,a+1,b,b,a+1,b+1);}
   }}
+  // Triangulation. Near ground keeps the alternating diagonals. On the far rows and the side strips, where a
+  // cell is tall and steep in the frame, alternating diagonals zigzag the shading into vertical stripes (the
+  // last of the skyline 'curtains'); there each quad is split along its flatter diagonal, so the triangles
+  // follow the ridges and gullies instead of crossing them.
+  {const W=xs.length;for(let i=0;i<zs.length-1;i++)for(let j=0;j<W-1;j++){const a=i*W+j,b=a+W;
+    let diagA=(i+j)%2===1;
+    if(zs[i]< -6900||Math.abs(xs[j])>=3150)diagA=Math.abs(positions[a*3+1]-positions[(b+1)*3+1])<Math.abs(positions[(a+1)*3+1]-positions[b*3+1]);
+    if(diagA)indices.push(a,a+1,b+1,a,b+1,b);else indices.push(a,a+1,b,b,a+1,b+1);}}
   const baseColors=detail?colors.slice():null;
   // Relief: per-vertex (convexity, erosion groove, 0) for the terrain's own material.
   const reliefAttr=R?new Float32Array(positions.length):null;
+  // Relief: height against its neighbourhood over 3 and 9 cells (~72 and 216 units), so crests, spurs and
+  // hollows are toned at their own scale instead of every vertex speckling (TONE scales it, live).
+  const W0=xs.length,H0=zs.length,boxT=R?new Float32Array(W0*H0):null,mean3=R?new Float32Array(W0*H0):null,mean9=R?new Float32Array(W0*H0):null;
+  function boxMean(r,out){const n=2*r+1,cl=(v,m)=>v<0?0:v>m?m:v;
+    for(let i=0;i<H0;i++){const o=i*W0;let s=0;for(let j=-r;j<=r;j++)s+=positions[(o+cl(j,W0-1))*3+1];
+      for(let j=0;j<W0;j++){boxT[o+j]=s/n;s+=positions[(o+cl(j+r+1,W0-1))*3+1]-positions[(o+cl(j-r,W0-1))*3+1];}}
+    for(let j=0;j<W0;j++){let s=0;for(let i=-r;i<=r;i++)s+=boxT[cl(i,H0-1)*W0+j];
+      for(let i=0;i<H0;i++){out[i*W0+j]=s/n;s+=boxT[cl(i+r+1,H0-1)*W0+j]-boxT[cl(i-r,H0-1)*W0+j];}}}
   function bakeCreases(){
     // Grid curvature → tone: drainage creases darken, crests lift. Recomputed after slider edits.
     if(!detail)return;
     const W=xs.length;
+    if(R){boxMean(3,mean3);boxMean(9,mean9);}
     for(let i=0;i<zs.length;i++)for(let j=0;j<W;j++){
       const k=i*W+j,y=positions[k*3+1];
       const jw=Math.max(0,j-1),je=Math.min(W-1,j+1),iN=Math.max(0,i-1),iS=Math.min(zs.length-1,i+1);
-      const hx=Math.max(1,(xs[je]-xs[jw])*.5),hz=Math.max(1,(zs[iN]-zs[iS])*.5);
-      const cx=((positions[(i*W+jw)*3+1]+positions[(i*W+je)*3+1])*.5-y)/hx;
-      const cz=((positions[(iN*W+j)*3+1]+positions[(iS*W+j)*3+1])*.5-y)/hz;
-      const shade=1-Math.max(-.14,Math.min(.30,(cx+cz)*.55));
-      if(reliefAttr){reliefAttr[k*3]=Math.max(-1,Math.min(1,-(cx+cz)*1.6));reliefAttr[k*3+1]=heightSamples[k*stride+12];}
+      const hx=Math.max(1,(xs[je]-xs[jw])*.5),hz=Math.max(1,(zs[iN]-zs[iS])*.5),ref=lite?36:24;
+      const cx=((positions[(i*W+jw)*3+1]+positions[(i*W+je)*3+1])*.5-y)/hx*Math.min(1,ref/hx);
+      const cz=((positions[(iN*W+j)*3+1]+positions[(iS*W+j)*3+1])*.5-y)/hz*Math.min(1,ref/hz);
+      let shade=1-Math.max(-.14,Math.min(.30,(cx+cz)*.55));
+      if(reliefAttr){
+        const c1=-(cx+cz),w=(1-smooth(2900,3200,Math.abs(xs[j])))*(1-smooth(1500,1800,zs[i]))*smooth(-7000,-6700,zs[i]);
+        const cN=Math.max(-1,Math.min(1,(c1*.3+(y-mean3[k])/72+1.4*(y-mean9[k])/216)*terrainSettings.tone));
+        shade=1+Math.max(-.30,Math.min(.14,lerp(c1*.55,cN*.30,w)));
+        reliefAttr[k*3]=lerp(Math.max(-1,Math.min(1,c1*1.6)),cN,w);reliefAttr[k*3+1]=heightSamples[k*stride+12];}
       colors[k*3]=baseColors[k*3]*shade;colors[k*3+1]=baseColors[k*3+1]*shade;colors[k*3+2]=baseColors[k*3+2]*shade;
     }
   }
@@ -553,7 +787,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     slabGeometry.setAttribute('color',new THREE.BufferAttribute(c,3));slabGeometry.computeVertexNormals();ownedGeometries.push(slabGeometry);
   }
   const bankPaths=flowPaths.slice(1),slabCount=lite?144:288;
-  const slabs=new THREE.InstancedMesh(slabGeometry,rockMaterial,slabCount),dummy=new THREE.Object3D(),slabSamples=[];
+  const slabs=new THREE.InstancedMesh(slabGeometry,instancedPlainRockMaterial,slabCount),dummy=new THREE.Object3D(),slabSamples=[];
   for(let i=0;i<slabCount;i++){
     const d=bankPaths[i%bankPaths.length],t=.08+hash(i,82)*.84,p=d.curve.getPointAt(t),tangent=d.curve.getTangentAt(t),side=i%2?1:-1;
     const large=i%7===0,size=(large?17:4)+Math.pow(hash(i,46),1.7)*(large?23:13);
@@ -564,15 +798,21 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     if(LG&&logoShore(logoAt(x,z).h)<40)dummy.scale.set(0,0,0);dummy.updateMatrix();slabs.setMatrixAt(i,dummy.matrix);if(terrainConfig)slabSamples.push({sample,burial:size*.22,matrix:dummy.matrix.clone()});
   }
   slabs.instanceMatrix.needsUpdate=true;slabs.name='Eroded bank slabs and craggy shoulders';slabs.castShadow=true;slabs.receiveShadow=true;group.add(slabs);
+  // The built terrain at (x,z), read bilinearly from the same grid the banks were built from: the
+  // rivers' shores and the logo lake's shore are baked from its height, and the scene lays the canyon
+  // bank's outer rim onto its height and colour (terrainAt below).
+  const gridCell={a:0,b:0,c:0,d:0,u:0,w:0};
+  const locate=(x,z)=>{
+    let a=0,b=xs.length-1;if(x<=xs[0])b=1;else if(x>=xs[b])a=b-1;else while(b-a>1){const m=(a+b)>>1;if(xs[m]>x)b=m;else a=m;}
+    let c=0,d=zs.length-1;if(z>=zs[0])d=1;else if(z<=zs[d])c=d-1;else while(d-c>1){const m=(c+d)>>1;if(zs[m]<z)d=m;else c=m;}
+    gridCell.a=a;gridCell.b=b;gridCell.c=c;gridCell.d=d;gridCell.u=clamp((x-xs[a])/(xs[b]-xs[a]));gridCell.w=clamp((z-zs[c])/(zs[d]-zs[c]));return gridCell;
+  };
+  const cellValue=(g,array,channel)=>{const W=xs.length,h=(i,j)=>array[(i*W+j)*3+channel];return lerp(lerp(h(g.c,g.a),h(g.c,g.b),g.u),lerp(h(g.d,g.a),h(g.d,g.b),g.u),g.w);};
+  const gridHeight=(x,z)=>cellValue(locate(x,z),positions,1);
+  // out = [height, r, g, b] (linear, as the vertex colours are stored).
+  const terrainAt=(x,z,out)=>{const g=locate(x,z);out[0]=cellValue(g,positions,1);out[1]=cellValue(g,colors,0);out[2]=cellValue(g,colors,1);out[3]=cellValue(g,colors,2);return out;};
   if(detail){
-    // Water side of every bank: (bed height, inward distance to the bank, wall height),
-    // read from the same terrain grid the banks were built from.
-    const gridHeight=(x,z)=>{
-      let a=0,b=xs.length-1;if(x<=xs[0])b=1;else if(x>=xs[b])a=b-1;else while(b-a>1){const m=(a+b)>>1;if(xs[m]>x)b=m;else a=m;}
-      let c=0,d=zs.length-1;if(z>=zs[0])d=1;else if(z<=zs[d])c=d-1;else while(d-c>1){const m=(c+d)>>1;if(zs[m]<z)d=m;else c=m;}
-      const u=clamp((x-xs[a])/(xs[b]-xs[a])),w=clamp((z-zs[c])/(zs[d]-zs[c])),W=xs.length,h=(i,j)=>positions[(i*W+j)*3+1];
-      return lerp(lerp(h(c,a),h(c,b),u),lerp(h(d,a),h(d,b),u),w);
-    };
+    // Water side of every bank: (bed height, inward distance to the bank, wall height).
     const bake=(river,width,overlap)=>{
       const g=river.mesh.geometry,p=g.attributes.position,uv=g.attributes.uv,info=river.mesh.userData.journeyRiver,columns=info.widthSegments+1,rows=p.count/columns;
       const data=new Float32Array(p.count*3);
@@ -595,27 +835,235 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   if(LG){
     const started=performance.now(),{toX,toZ}=logoField,axisX=toX(674.5);
     const smoother=n=>{const t=clamp(n);return t*t*t*(t*(t*6-15)+10);};
-    // The eye: a grid clipped to the hole, tucked under the inner wall. Opaque, fogged, flat
-    // vertex tone on the page palette (darker than the haze; paler toward the far shore; a thin
-    // frost line at the shore). Parked below the floor until the aerial reveal.
+    // The eye: a grid clipped to the hole, tucked under the inner wall — and made of the rivers'
+    // own water. It is drawn with the very material the five rivers share, with its shore baked
+    // in exactly as their banks are (bed height from the built terrain, distance in from the
+    // shore from the stroke's own field, the ring's inner wall standing over it), so the rivers
+    // run on into a lake of themselves — the same silver, the same moving reflections, the same
+    // lace of foam along the shore — instead of into a flat grey hole of another material.
+    // Parked below the floor until the aerial reveal.
     const hb=logoField.holeBox,step=lite?30:20,pad=2*step;
     const x0=toX(hb.u0)-pad,x1=toX(hb.u1)+pad,z0=toZ(hb.v0)-pad,z1=toZ(hb.v1)+pad;
     const cols=Math.ceil((x1-x0)/step)+1,rowsN=Math.ceil((z1-z0)/step)+1;
     const holeD=new Float32Array(cols*rowsN),inside=new Uint8Array(cols*rowsN);
     for(let r=0;r<rowsN;r++)for(let c=0;c<cols;c++){const i=r*cols+c;holeD[i]=logoShore(logoAt(x0+c*step,z0+r*step).h);inside[i]=holeD[i]<12?1:0;}
-    const remap=new Int32Array(cols*rowsN).fill(-1),lakePos=[],lakeCol=[],lakeIdx=[];
-    const toneBase=new THREE.Color(logoTerrain.lakeTone??'#6f8497'),sky=new THREE.Color('#aebfcc'),frost=new THREE.Color('#dfe8ef'),tone=new THREE.Color();
-    const zNear=toZ(hb.v1),zFar=toZ(hb.v0);
-    const vert=i=>{if(remap[i]<0){const c=i%cols,r=(i/cols)|0,x=x0+c*step,z=z0+r*step;remap[i]=lakePos.length/3;lakePos.push(x,0,z);
-      tone.copy(toneBase).lerp(sky,.35*smooth(zNear,zFar,z)).lerp(frost,.30*(1-smooth(0,60,-holeD[i])));
-      // Stored relative to the base tone, so CONFIG.lakeTone stays live through material.color.
-      lakeCol.push(tone.r/Math.max(1e-4,toneBase.r),tone.g/Math.max(1e-4,toneBase.g),tone.b/Math.max(1e-4,toneBase.b));}return remap[i];};
+    const remap=new Int32Array(cols*rowsN).fill(-1),lakePos=[],lakeNormal=[],lakeUv=[],lakeCell=[],lakeShore=[],lakeIdx=[];
+    // The outline is the shore, not the grid: every vertex beyond the contour is slid back along
+    // the field's own gradient onto it (the field is a true distance, so one step lands there).
+    // Under the ring's walls this changes nothing anyone sees; where the rivers' gorges open the
+    // wall, it is the difference between a smooth shore and a staircase.
+    const EDGE=10;
+    const vert=i=>{if(remap[i]<0){const c=i%cols,r=(i/cols)|0;let x=x0+c*step,z=z0+r*step;remap[i]=lakePos.length/3;
+      if(holeD[i]>EDGE){
+        const cl=Math.max(0,c-1),cr=Math.min(cols-1,c+1),rt=Math.max(0,r-1),rb=Math.min(rowsN-1,r+1);
+        const gx=(holeD[r*cols+cr]-holeD[r*cols+cl])/((cr-cl)*step),gz=(holeD[rb*cols+c]-holeD[rt*cols+c])/((rb-rt)*step),gl=Math.hypot(gx,gz);
+        if(gl>1e-4){const pull=(holeD[i]-EDGE)/gl;x-=gx/gl*pull;z-=gz/gl*pull;}
+      }
+      lakePos.push(x,0,z);lakeNormal.push(0,1,0);lakeUv.push(.5,0);lakeCell.push(step);
+      // The bed is held deep and even: the trunk's channel is carved through the lake floor, and a
+      // true bed would draw it across the eye as a pale line of shallow water. Only the real
+      // shoreline gets the shallows, the wall reflection and the foam.
+      lakeShore.push(-8,Math.max(0,-holeD[i]),160);}return remap[i];};
     for(let r=0;r<rowsN-1;r++)for(let c=0;c<cols-1;c++){const a=r*cols+c,b=a+cols;
       if(inside[a]||inside[a+1]||inside[b]||inside[b+1])lakeIdx.push(vert(a),vert(b),vert(a+1),vert(a+1),vert(b),vert(b+1));}
-    const lakeGeometry=new THREE.BufferGeometry();lakeGeometry.setAttribute('position',new THREE.Float32BufferAttribute(lakePos,3));lakeGeometry.setAttribute('color',new THREE.Float32BufferAttribute(lakeCol,3));
+    const lakeGeometry=new THREE.BufferGeometry();
+    lakeGeometry.setAttribute('position',new THREE.Float32BufferAttribute(lakePos,3));
+    lakeGeometry.setAttribute('normal',new THREE.Float32BufferAttribute(lakeNormal,3));
+    lakeGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(lakeUv,2));
+    lakeGeometry.setAttribute('aCell',new THREE.Float32BufferAttribute(lakeCell,1));
+    lakeGeometry.setAttribute('aShore',new THREE.Float32BufferAttribute(lakeShore,3));
     lakeGeometry.setIndex(lakeIdx);lakeGeometry.computeBoundingBox();lakeGeometry.computeBoundingSphere();ownedGeometries.push(lakeGeometry);
-    const lakeMaterial=new THREE.MeshBasicMaterial({color:toneBase,vertexColors:true,fog:true});ownedMaterials.push(lakeMaterial);
-    const lake=new THREE.Mesh(lakeGeometry,lakeMaterial);lake.name='Logo lake · the eye of the mark';lake.position.y=-60;group.add(lake);
+    // ---- The eye: a glacial lake, and the rivers pouring into it (匯集) ----
+    // Seen from the air in mist, water reads as water through a handful of things, and the lake is built
+    // from exactly those: a flat body darker than the snow round it, a thin fringe of shallows where the
+    // bed shows, the rivers' pale water running on into it as sediment plumes that open, streak along
+    // their flow, bend the same way and fade into the deep water, wind on the surface (long glassy slicks
+    // between rougher bands, drifting cat's paws, chop where each river comes in, fine ripples inside the
+    // rough water), and the misty sky's sheen over all of it, in the same air as the land. The rivers'
+    // light does not stop at the shore: it rides each plume a little way as a soft glow, and the pulses
+    // that run down the rivers carry on into it and fade. Nothing is drawn on the water: drawn rings and
+    // fronts were tried and read as graphics.
+    const mouthAt=curve=>{
+      let t=1;for(let i=0;i<=600;i++){const p=curve.getPointAt(i/600);if(logoShore(logoAt(p.x,p.z).h)<0){t=i/600;break;}}
+      const p=curve.getPointAt(t),q=curve.getPointAt(Math.min(1,t+.004));
+      return{x:p.x,z:p.z,dx:q.x-p.x,dz:q.z-p.z,t};
+    };
+    const mouths=[...descriptors,flowPaths[6]].map(path=>{const m=mouthAt(path.curve);
+      // The river light's own distance coordinate at the mouth (t x length + the drainage offset), so a
+      // pulse leaves the mouth exactly as that river's packet reaches it.
+      m.flow=(path.flowOffset||0)+m.t*path.curve.getLength();return m;});
+    // Shared by the water and the light that rides it, so a plume and its glow are the same shape.
+    const lakeShared={
+      uLakeMouth:{value:mouths.map(m=>new THREE.Vector2(m.x,m.z))},
+      /* The direction each river is running as it reaches the water, eased toward the eye. */
+      uLakeHeading:{value:mouths.map(m=>{const toEye=new THREE.Vector2(lakeEye.x-m.x,lakeEye.z-m.z).normalize(),run=new THREE.Vector2(m.dx,m.dz).normalize();return run.lerp(toEye,.55).normalize();})},
+      uLakeSpan:{value:mouths.map(m=>Math.max(80,Math.hypot(lakeEye.x-m.x,lakeEye.z-m.z)))},
+      uLakeReach:{value:0},uLakeCurl:{value:1.4},uLakePlume:{value:0}
+    };
+    const LAKE_GLSL=`
+      float lkHash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float lkNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+        return mix(mix(lkHash(i),lkHash(i+vec2(1.,0.)),f.x),mix(lkHash(i+vec2(0.,1.)),lkHash(i+vec2(1.)),f.x),f.y);}
+      /* A plume's own frame: distance along the river's run and across it; every plume bends the same
+         way (the first turn of the lake's slow circulation) and its axis sways as a current's does. */
+      vec2 lkPlume(vec2 wp,vec2 m,vec2 dir,float i,float t,float curl){
+        vec2 q=wp-m;float along=dot(q,dir),across=dot(q,vec2(-dir.y,dir.x));
+        across-=curl*.00028*along*along;
+        across-=(lkNoise(vec2(along*.0045,i*3.7+t*.02))-.5)*(14.+max(along,0.)*.22);
+        return vec2(along,across);
+      }`;
+    const water=rivers[0].mesh.material;
+    const lakeSheen={value:logoNumber('lakeSheen',0,1,.3)},lakeDepth={value:logoNumber('lakeDepth',0,1,1)};
+    const lakeTexture={value:logoNumber('lakeTexture',0,2,1)},lakeHaze={value:logoNumber('lakeHaze',0,1,.08)};
+    const FINAL='gl_FragColor=vec4(max(col,vec3(0.)),1.);';
+    let lakeMaterial=water;
+    if(water.isShaderMaterial&&water.fragmentShader.includes(FINAL)&&water.fragmentShader.includes('float riverFog')){
+      lakeMaterial=new THREE.ShaderMaterial({
+        name:'Logo lake · glacial water',
+        uniforms:{...water.uniforms,...lakeShared,uLakeSheen:lakeSheen,uLakeDepth:lakeDepth,uLakeTexture:lakeTexture,uLakeHaze:lakeHaze},defines:{...water.defines},
+        vertexShader:water.vertexShader,
+        fragmentShader:water.fragmentShader.replace('void main(){',`uniform vec2 uLakeMouth[5],uLakeHeading[5];
+          uniform float uLakeSpan[5];
+          uniform float uLakeReach,uLakeCurl,uLakePlume,uLakeSheen,uLakeDepth,uLakeTexture,uLakeHaze;
+          ${LAKE_GLSL}
+          void main(){`).replace(FINAL,`{
+          vec2 lp=vWorld.xz;
+          float lkIn=vShore.y,lkFoot=(fwidth(lp.x)+fwidth(lp.y))*.5+1e-3;
+          /* The body: glacial water is darker than the snow round it, paler where the bed shows. */
+          vec3 lkShallow=mix(uWatershedBase,uWatershedHighlight,.55);
+          vec3 lkDeep=uWatershedBase*vec3(.74,.84,.96);
+          vec3 lk=mix(lkShallow,lkDeep,smoothstep(6.,120.,lkIn)*uLakeDepth);
+          /* The rivers' pale water, running on into the lake as sediment plumes. */
+          float lkSilt=0.,lkChop=0.;
+          for(int i=0;i<5;i++){
+            vec2 f=lkPlume(lp,uLakeMouth[i],uLakeHeading[i],float(i),uSeaTime,uLakeCurl);
+            float w=13.+max(f.x,0.)*.2,reach=uLakeSpan[i]*mix(.3,.85,uLakeReach);
+            /* Its edges are eddies, not a soft ramp: the silt rolls over in lobes along both sides. */
+            f.y+=(lkNoise(vec2(f.x*.021-uSeaTime*.05,f.y*.028+float(i)*9.1))-.5)*w*.9;
+            float body=exp(-f.y*f.y/(w*w)*1.6)*smoothstep(-25.,30.,f.x)*(1.-smoothstep(reach*.3,reach,f.x));
+            float streak=.6+.4*smoothstep(.25,.8,lkNoise(vec2(f.x*.009-uSeaTime*.03,f.y/w*2.6+float(i)*5.1)));
+            lkSilt=1.-(1.-lkSilt)*(1.-body*streak);
+            lkChop=max(lkChop,body*exp(-max(f.x,0.)/150.));
+          }
+          lk=mix(lk,mix(uWatershedBase,uWatershedHighlight,.58),lkSilt*.55*uLakePlume);
+          /* Wind: long glassy slicks along it with rougher bands between, cat's paws drifting over them,
+             and the inflow's own chop. Rough water holds more of the sky; slicks stay dark and clean. */
+          vec2 lkWd=vec2(.34,-.94),lkWn=vec2(.94,.34);
+          float lkSlick=lkNoise(vec2(dot(lp,lkWd)*.0021+uSeaTime*.003,dot(lp,lkWn)*.0105+lkNoise(lp*.0037+7.)*1.5));
+          float lkPaws=lkNoise(lp*.0034+vec2(uSeaTime*.012,-uSeaTime*.008))*.6+lkNoise(lp*.0083-uSeaTime*.01)*.4;
+          float lkRough=clamp(smoothstep(.38,.72,lkSlick)*.6+smoothstep(.45,.8,lkPaws)*.5+lkChop*.9*uLakePlume,0.,1.)*uLakeTexture;
+          /* Fine ripples inside the rough water: crossing wavelets, drawn only where they resolve. */
+          float lkDrift=lkNoise(lp*.0105+vec2(uSeaTime*.021,-uSeaTime*.017))*6.2832;
+          float lkRip=(sin(dot(lp,vec2(.940,.342))*.16+lkDrift*.8-uSeaTime*.9)+.75*sin(dot(lp,vec2(.574,.819))*.21+lkDrift*.6+uSeaTime*.7)
+            +.55*sin(dot(lp,vec2(.988,-.156))*.27+lkDrift*1.1-uSeaTime*1.1))/2.3*(1.-smoothstep(.18,.34,lkFoot/23.));
+          /* The misty sky in the water: more at a glance, more where the wind has roughened it. */
+          vec3 lkSky=mix(uRiverFogColor,uWatershedHighlight,.35);
+          float lkGlance=pow(1.-clamp(V.y,0.,1.),3.);
+          float lkSheen=(.10+lkGlance*.9)*uLakeSheen*(1.+lkRough*.9)+lkRough*.11;
+          lk=mix(lk,lkSky,clamp(lkSheen,0.,.85));
+          lk*=1.+lkRip*lkRough*.12;
+          lk+=lkSky*max(lkRip,0.)*lkRough*.07;
+          /* Rough water reads lighter, glassy slicks darker: the wind's pattern from the air. */
+          lk*=mix(.94,1.06,clamp(lkRough,0.,1.));
+          /* The shore: a thin fringe of shallows over the bed, and a faint line of lace. */
+          /* The shallows are not a band of even width: they widen over gentle beds and vanish under steep ones. */
+          float lkFringe=1.-smoothstep(0.,3.+15.*lkNoise(lp*.011+3.3)+lkFoot,lkIn);
+          lk=mix(lk,mix(lkShallow,uWatershedHighlight,.3),lkFringe*.24);
+          float lkLace=(1.-smoothstep(0.,2.+lkFoot*1.2,lkIn))*(.6+.4*lkNoise(lp*.09+uSeaTime*.05));
+          lk=mix(lk,uShoreFoamColor,lkLace*.22);
+          /* The same air as the land round it: the rivers' haze, and the valley's own pooled mist. */
+          lk=mix(lk,uRiverFogColor,clamp(riverFog+uLakeHaze*smoothstep(1400.,5200.,vDist),0.,.85));
+          col=mix(col,lk,uJourneyNight);
+        }
+        ${FINAL}`),
+        fog:water.fog,transparent:water.transparent,depthWrite:water.depthWrite,side:water.side
+      });
+      ownedMaterials.push(lakeMaterial);
+    }
+    const lake=new THREE.Mesh(lakeGeometry,lakeMaterial);lake.name='Logo lake · the eye of the mark';
+    lake.position.y=-60;lake.frustumCulled=false;lake.renderOrder=1;group.add(lake);
+    // The rivers' light on the water: a soft glow riding each plume's axis, widening and fading as it
+    // diffuses, with every pulse that reaches the mouth carried on into it (same phase, slowing uSlow-fold)
+    // and fading out; plus sparse twinkling glints on the open water. Additive, like the rivers' light.
+    const lakeLightUniforms={
+      ...lakeShared,uSeaTime:water.uniforms.uSeaTime||{value:0},
+      uMouthFlow:{value:mouths.map(m=>m.flow)},
+      uTravel:{value:0},uSpacing:{value:1},uFill:{value:0},uTime:{value:0},uBrightness:{value:1},uDepthFade:{value:.75},
+      uRipple:{value:1},uSlow:{value:4},uGlint:{value:1},
+      uFlowColor:{value:new THREE.Color('#dcecf4')},
+      ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog)
+    };
+    const lakeLightMaterial=new THREE.ShaderMaterial({
+      name:'Logo lake · the rivers\' light, diffusing',uniforms:lakeLightUniforms,
+      transparent:true,depthWrite:false,depthTest:true,blending:THREE.AdditiveBlending,toneMapped:false,fog:true,
+      vertexShader:`attribute vec3 aShore;
+        varying vec3 vWorld;varying float vInward;
+        #include <fog_pars_vertex>
+        void main(){vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;vInward=aShore.y;
+          vec4 mvPosition=viewMatrix*w;gl_Position=projectionMatrix*mvPosition;
+          #include <fog_vertex>
+        }`,
+      fragmentShader:`
+        uniform vec2 uLakeMouth[5],uLakeHeading[5];
+        uniform float uLakeSpan[5],uMouthFlow[5];
+        uniform float uLakeReach,uLakeCurl,uLakePlume,uSeaTime;
+        uniform float uTravel,uSpacing,uFill,uTime,uBrightness,uDepthFade,uRipple,uSlow,uGlint;
+        uniform vec3 uFlowColor;
+        varying vec3 vWorld;varying float vInward;
+        #include <fog_pars_fragment>
+        ${LAKE_GLSL}
+        float hash11(float n){return fract(sin(n*127.1+51.713)*43758.5453);}
+        float bell(float d,float s){return exp(-.5*d*d/(s*s));}
+        void main(){
+          vec2 p=vWorld.xz;
+          float px=max(length(vec2(dFdx(p.x),dFdy(p.x)))+length(vec2(dFdx(p.y),dFdy(p.y))),1e-3)*.5;
+          /* The rivers' first strand, exactly as the river light computes it: spacing, speed and phase. */
+          float h1=hash11(1.7),h2=hash11(9.2),h3=hash11(4.4);
+          float S=(520.+340.*h2)*uSpacing,k=.80+.40*h1,c=max(uSlow,1.);
+          const float H=.86;
+          float period=S/c,glow=0.;
+          for(int i=0;i<5;i++){
+            vec2 f=lkPlume(p,uLakeMouth[i],uLakeHeading[i],float(i),uSeaTime,uLakeCurl);
+            float along=max(f.x,0.);
+            /* The light diffuses as it goes: wider, dimmer, gone within about a third of the way in. */
+            float spread=max(7.+along*.16,px*1.2);
+            float fade=exp(-along/(uLakeSpan[i]*.3+50.))*smoothstep(-25.,8.,f.x);
+            float core=exp(-f.y*f.y/(spread*spread))*fade*(7./spread*.6+.4);
+            float u=(uMouthFlow[i]+along*c-uTravel*k)/S+h3;
+            float b=fract(H-fract(u))*period;
+            if(b>period-40.)b-=period;
+            float pulse=b<0.?bell(b,12.):exp(-b/70.);
+            glow+=core*(.3+1.1*pulse);
+          }
+          /* Glints: a sparse random point per 44-unit cell, twinkling; never under a pixel. */
+          vec2 g=p/44.,id=floor(g),fr=fract(g);
+          float rr=lkHash(id+17.3);
+          vec2 at=vec2(lkHash(id+3.1),lkHash(id+7.7))*.7+.15;
+          float cellPx=px/44.,size=max(.06,cellPx*.8);
+          vec2 d=(fr-at)/size;
+          float tw=pow(.5+.5*sin(uTime*(1.3+2.6*rr)+rr*61.),8.);
+          float glint=exp(-dot(d,d))*tw*step(.66,rr)*sqrt(min(1.,.06/size))*(1.-smoothstep(.12,.3,cellPx));
+          vec3 white=vec3(.97,.985,1.),tint=uFlowColor*vec3(.80,.90,1.04);
+          vec3 emission=((white*.35+tint*.65)*glow*.34*uRipple+white*glint*.4*uGlint)*smoothstep(3.,20.,vInward)*uFill*uBrightness;
+          #ifdef USE_FOG
+            #ifdef FOG_EXP2
+              float fogAmount=1.-exp(-fogDensity*fogDensity*vFogDepth*vFogDepth);
+            #else
+              float fogAmount=smoothstep(fogNear,fogFar,vFogDepth);
+            #endif
+            emission*=1.-clamp(fogAmount*1.35,0.,1.)*uDepthFade;
+          #endif
+          if(max(emission.r,max(emission.g,emission.b))<.0015)discard;
+          gl_FragColor=vec4(emission,1.);
+          #include <colorspace_fragment>
+        }`
+    });
+    ownedMaterials.push(lakeLightMaterial);
+    const lakeLight=new THREE.Mesh(lakeGeometry,lakeLightMaterial);lakeLight.name='Logo lake · the rivers\' light on the water';
+    lakeLight.position.y=.6;lakeLight.frustumCulled=false;lakeLight.renderOrder=2;lake.add(lakeLight);
+    // Each tributary's own light line hands over at its mouth: it fades out over the first ~60 units of
+    // open water, where the glow on its plume takes over. (The trunk already dims across the eye.)
+    for(let k=1;k<=4;k++){const own=flowPaths[k].flowDimAt;flowPaths[k].flowDimAt=(x,z)=>(own?own(x,z):1)*(1-smooth(-15,60,-logoShore(logoAt(x,z).h)));}
     // Gendarmes: a few dark rock needles on the thick shoulder and the fin root. Same material as
     // the bank slabs, so no new shader program.
     const pinCount=lite?Math.round(LGP.pinnacles/2):LGP.pinnacles,pinSamples=[];let pins=null;
@@ -624,7 +1072,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       const pc=new Float32Array(cone.attributes.position.count*3);color.copy(dark).multiplyScalar(.62);
       for(let i=0;i<pc.length;i+=3){pc[i]=color.r;pc[i+1]=color.g;pc[i+2]=color.b;}
       cone.setAttribute('color',new THREE.BufferAttribute(pc,3));ownedGeometries.push(cone);
-      pins=new THREE.InstancedMesh(cone,rockMaterial,pinCount);
+      pins=new THREE.InstancedMesh(cone,instancedPlainRockMaterial,pinCount);
       const chosen=[];
       for(let n=0;n<6000&&chosen.length<pinCount;n++){
         const u=600+hash(n,91)*150,w=285+hash(n,93)*170,x=toX(u),z=toZ(w),L=logoAt(x,z),sb=-L.b,sf=-L.f;
@@ -658,11 +1106,29 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     zOut=Math.min(zOut,toZ(338));
     const passage=z=>zIn>zOut?smooth(zIn+110,zIn-110,z)*(1-smooth(zOut+110,zOut-110,z)):0;
     flowPaths[6].flowDimAt=(x,z)=>lerp(1,LGP.lineOverLake,passage(z))*(1-smooth(LGP.cz-1900,LGP.cz-2200,z));
-    let lastTone='';
+    // The light gathers as it goes: every river's light burns at little more than half in the reaches
+    // nearest the lens and at full as it comes down to the eye, so the brightest thing in the last
+    // shot is where the five meet — not the fat near reaches along the bottom edge of the frame.
+    const gathering=z=>lerp(.55,1,smooth(-1200,-3900,z));
+    flowPaths.forEach(path=>{const own=path.flowDimAt;path.flowDimAt=own?(x,z)=>own(x,z)*gathering(z):(x,z)=>gathering(z);});
     logo={config:logoTerrain,field:logoField,lake,pinnacles:pins,markers,axisX,heightSample:makeHeightSample,
       update(reveal=0,confluence=0){
-        lake.position.y=lerp(-60,logoNumber('lakeLevel',.6,3,1.6),smoother((reveal-.30)/.06));
-        const toneKey=String(logoTerrain.lakeTone??'#6f8497');if(toneKey!==lastTone){lastTone=toneKey;lakeMaterial.color.set(toneKey);}
+        const raised=smoother((reveal-.30)/.06);
+        lake.position.y=lerp(-60,logoNumber('lakeLevel',.6,14,8),raised);
+        /* 匯集: the plumes run in as soon as the rivers are lit and reach further into the eye as the
+           journey arrives over it; the glow on them rides the rivers' own light (its clock, packet
+           spacing, colour, brightness and haze fade). GATHER scales both. */
+        const gather=logoNumber('gather',0,2,1),fx=effects.uniforms,u=lakeLightUniforms;
+        lakeShared.uLakeReach.value=smoother((confluence-.05)/.9);
+        lakeShared.uLakePlume.value=Math.min(1.6,gather)*fx.uReveal.value;
+        u.uTime.value=fx.uTime.value;u.uTravel.value=fx.uFlowTravel.value;
+        u.uSpacing.value=fx.uHeadSpacing?fx.uHeadSpacing.value:1;u.uDepthFade.value=fx.uFlowDepth?fx.uFlowDepth.value:.75;
+        u.uFlowColor.value.copy(fx.uFlowColor.value);u.uBrightness.value=fx.uFlowBrightness.value;
+        u.uFill.value=raised*fx.uReveal.value*Math.min(1.6,gather);
+        u.uRipple.value=logoNumber('lakeRipple',0,2,1);u.uSlow.value=logoNumber('lakeRippleSlow',1,10,4);u.uGlint.value=logoNumber('lakeGlint',0,2,1);
+        lakeLight.visible=u.uFill.value>.001;
+        lakeSheen.value=logoNumber('lakeSheen',0,1,.3);lakeDepth.value=logoNumber('lakeDepth',0,1,1);
+        lakeTexture.value=logoNumber('lakeTexture',0,2,1);lakeHaze.value=logoNumber('lakeHaze',0,1,.08);
         if(markers)markers.material.opacity=logoNumber('markerGlow',0,.35,.30)*smoother((confluence-.5)/.5);
       },
       sync(){
@@ -674,7 +1140,9 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     };
     logo.stats.buildMs=Math.round(logoField.fieldMs+performance.now()-started);
   }
-  const joins=joinZ.map(z=>v(mainAt(z).x,z));
+  // LOGO: the confluences are the four river mouths on the lake shore, so the light gathers where each
+  // river runs into the eye.
+  const joins=LG&&logoMouths.length===4?logoMouths:joinZ.map(z=>v(mainAt(z).x,z));
   const effects=createConfluenceEffects(THREE,{paths:flowPaths,sampleHeight,lite,joins,flowConfig});group.add(effects.group);
   let drawCalls=0;group.traverse(o=>{if(o.isMesh||o.isPoints)drawCalls++;});
   const riverVertices=[...rivers,...extensions].reduce((sum,r)=>sum+r.mesh.geometry.attributes.position.count,0);
@@ -703,7 +1171,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     stats.maxHeight=maxHeight;stats.terrainRevision++;stats.lastTerrainUpdateMs=performance.now()-started;stats.terrainUpdatePending=false;
     appliedTerrainKey=key;pendingTerrain=null;return true;
   }
-  return {group,rivers,stats,bounds:terrainBounds,descriptors,downstream,sampleHeight,mainAt,effects,flowPaths,riverDistance,syncTerrain,...(logo?{logo}:{}),
+  return {group,rivers,stats,bounds:terrainBounds,descriptors,downstream,sampleHeight,mainAt,effects,flowPaths,riverDistance,syncTerrain,terrainAt,...(logo?{logo}:{}),
     update(time,reveal=0,confluence=0,reduced=false){if(disposed)return false;const changed=syncTerrain();if(logo)logo.update(reveal,confluence);effects.update(time,reveal,confluence,reduced);for(const r of [...rivers,...extensions])r.update(time);return changed;},
     dispose(){if(disposed)return;disposed=true;effects.dispose();for(const r of [...rivers,...extensions])r.dispose?.();for(const g of ownedGeometries)g.dispose();for(const m of ownedMaterials)m.dispose();group.clear();}
   };

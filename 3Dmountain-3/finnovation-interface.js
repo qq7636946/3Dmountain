@@ -1,4 +1,4 @@
-import { STORY_CHAPTERS } from './water-journey-story.js?v=five-rivers-only-1';
+import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-20261001-1da9d12021';
 
 const chapters = [
   { id:'knowledge', en:'KNOWLEDGE', zh:'以知為本', title:['OMNI INVESTMENT','STRATEGIES'], text:'洞悉市場，全方位資產佈局', kicker:'KNOWLEDGE · CAPITAL · INNOVATION', cta:'EXPLORE OUR WORLD' },

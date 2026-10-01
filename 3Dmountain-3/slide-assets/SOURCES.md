@@ -33,3 +33,15 @@ All crops below were decoded directly from that original recording, never from a
 | `headphones.jpg` | 1.75 s | Perspective-rectified from TL `(936,559)`, TR `(1127,618)`, BL `(911,688)`, BR `(1106,734)`; output 1000×700. |
 
 The four flat-grid video cards contain only about 130×92 source pixels. Their larger dimensions on the page are presentation scaling, not recovered detail. The rectified near-view cards also remain limited by the recording. Keep these limitations in mind for large close-ups.
+
+## Water-drop photographs (`index4-6-3.html`, `water-logo-drops.js`)
+
+The water drops around the logo are lenses, so each photograph is seen magnified across the drop. The 133×92 video crops are too coarse for that. Three of the drop photographs are therefore downscaled from the official public originals above instead (whole frame, aspect kept, JPEG quality 86):
+
+| Local file | Derived from | Size |
+| --- | --- | --- |
+| `drop-digital-agency.jpg` | `digital-agency.png` (3200×2400) | 1024×768 |
+| `drop-alone-journey.jpg` | `alone-journey.png` (1600×1200) | 1024×768 |
+| `drop-style-crew.jpg` | `style-crew.png` (3200×2560) | 1024×819 |
+
+The drops show eight works, cycling past eight drops: `drop-digital-agency.jpg`, `drop-alone-journey.jpg`, `swank-flat.jpg`, `dfz-watch.jpg`, `drop-style-crew.jpg`, `novaglam.jpg`, `headphones.jpg`, `editorial.jpg`. The same provenance and permission notes apply to them as to their sources.

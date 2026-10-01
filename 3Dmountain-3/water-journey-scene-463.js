@@ -1,6 +1,6 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-journey-scene.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
-import { createCanyonWatershed } from './water-canyon-watershed-463.js?v=logo-463-1';
+import { createCanyonWatershed } from './water-canyon-watershed-463.js?v=index463-20261001-1da9d12021';
 
 // Opt in per page; existing journey pages retain their original night palette.
 export const WATERSHED_STYLE_DEFAULTS = Object.freeze({
@@ -31,7 +31,30 @@ export const RELIEF_DEFAULTS = Object.freeze({
   erosion: 1,     // 沖蝕溝紋：順著坡往下的沖蝕溝（幾何 + 著色）
   ridgeFrost: 1,  // 稜線霜白：只落在凸起稜線與高處的霜
   layers: 1,      // 遠山層次：一層一層往後退的空氣透視
-  bankWater: 1    // 近岸水色：近岸水面的深色反射提亮、壓平，不再是一塊塊深藍
+  bankWater: 1,   // 近岸水色：近岸水面的深色反射提亮、壓平，不再是一塊塊深藍
+  aerialGrain: 1,  // 空拍岩面顆粒：空拍時 22 單位等向小凹凸的保留比例（1＝舊的皺紙感，.3＝從高空看的岩面）
+  ridgeFine: 1,    // 山脊細碎（重整生效）：近處網格最細的兩層稜紋（91／190 單位）保留多少；0＝不再像皺紙，1＝舊的樣子
+  tone: 1,         // 稜谷明暗層級：以 72／216 單位的地形尺度上明暗（稜亮、谷暗），不再逐頂點雜點
+  branching: 0,    // 分枝沖蝕溝（重整生效）：0＝index4-6-1 的細密順坡溝紋；1＝主溝＋支溝、間距不一、岩性軟硬不同
+  gullySpan: 440,  // 主溝間距（重整生效）：坡面主沖蝕溝的間距，另有 1/2、1/4 的支溝匯進來
+  erodibility: 1,  // 岩性差異（重整生效）：軟岩溝深、硬岩幾乎不破，同一座山上的溝深淺不一
+  facet: 0,        // 山峰稜面（重整生效）：每座近山從山頂放射 3–5 道刀鋒稜，稜間是凹下的坡面
+  asym: 0,         // 山坡不對稱（重整生效）：一側陡壁、一側長坡
+  rockBands: 1,    // 岩帶：45° 以上的陡壁出現斷續的深色岩層帶（空拍）
+  snow: .6,        // 雪溝積雪：雪積在平台與沖蝕溝裡、沿溝往下延伸（空拍）；霧裡的雪，不是白漆
+  snowLine: 600,   // 雪線高度（世界單位）：山抬高之後雪線跟著上移，雪只留在高處
+  lift: 1.4,       // 山體抬高（重整生效）：近處山體的高度倍數（像把山體高度拉到 1.8 的高度，但不拉尖；LOGO 環山與遠山不動）
+  peakRound: .8,   // 山頂圓潤（重整生效）：0＝刀鋒尖頂，1＝圓潤的稜頂＋同樣陡的山坡
+  crestSoft: .1,   // 稜線柔化（重整生效）：稜紋的刀鋒稍微圓一點，高山上不會冒出一根根尖刺
+  density: 1,      // 山的數量（重整生效）：河與河之間的空地補上更多山體
+  slopeCap: 1.15,  // 河谷坡度上限（重整生效）：從河邊往上最陡約 49°，兩河之間是山脊不是尖塔；0＝不限
+  crestTame: .35,  // 山頂不尖（重整生效）：稜紋細節在高山上只按比例長三分之一，山高但頂不會長成針（1＝舊的比例）
+  valleyReach: .9,  // 谷坡寬度（重整生效）：河谷兩側爬升到整座山高所需的距離；越小山谷越陡、河間的山體越厚實（不會被削成尖塔）
+  farSoft: .08,    // 遠山稜線柔化（重整生效）：遠處網格的刀鋒稜線圓一點，不再是一根根針
+  horizon: .6,     // 地平線霧化：越遠的山越淡、山腳沉進霧裡，一層一層往後退，不再像剪紙
+  valley: 0,       // 谷底寬度（重整生效）：河在一片谷底上蜿蜒（谷軸較直、下游較寬、山夾處較窄），不再是兩條跟著河彎的路肩
+  fan: 1,          // 沖積扇（重整生效）：谷壁腳下往谷底攤開的扇狀堆積，打破山腳與谷底之間那條乾淨的線
+  gap: 1           // 環山峽口（重整生效）：河穿過環山的峽谷在外坡腳張開成漏斗，谷內山嘴交錯，不再是兩道平行的牆
 });
 
 /* 第一人稱山道視角（opt-in）：只有傳入 viewConfig 的頁面讀這些值，每一幀即時讀取。
@@ -271,7 +294,7 @@ export function createJourneyScene(THREE, { createRiver, watershedStyle = null, 
     rockMaterial.customProgramCacheKey = () => 'montis-canyon-mineral-palette-v5-shore-1';
   }
   let terrainMaterial = null;
-  const reliefUniforms = relief ? { uReliefErosion: { value: 1 }, uReliefFrost: { value: 1 }, uReliefLayers: { value: 1 } } : null;
+  const reliefUniforms = relief ? { uReliefErosion: { value: 1 }, uReliefFrost: { value: 1 }, uReliefLayers: { value: 1 }, uAerialGrain: { value: .3 }, uRockBands: { value: 1 }, uSnow: { value: 1 }, uSnowLine: { value: 450 }, uHorizonMist: { value: 1 }, uRingFrost: { value: 0 }, uBranching: { value: 0 } } : null;
   if (relief) {
     const shoreCompile = rockMaterial.onBeforeCompile;
     rockMaterial.onBeforeCompile = shader => {
@@ -285,10 +308,12 @@ export function createJourneyScene(THREE, { createRiver, watershedStyle = null, 
       swap('diffuseColor.rgb*= (.82+rockLarge*.30+fine*.19-ledge*.075-fracture*.20);',
         `float baseFoot=length(fwidth(vRockWorld))+1e-4;
       float fineW=1.-smoothstep(.12,.45,baseFoot),largeW=1.-smoothstep(1.5,5.,baseFoot),fracW=1.-smoothstep(.35,1.2,baseFoot);
-      diffuseColor.rgb*= (.82+mix(.15,rockLarge,largeW)*.30+mix(.5,fine,fineW)*.19-ledge*.075-fracture*fracW*.20);`);
+      diffuseColor.rgb*= (.82+mix(.15,rockLarge,largeW)*.30+mix(.5,fine,fineW)*.19-ledge*largeW*.075-fracture*fracW*.20);`);
       swap('float erosion=.85+(strata-.5)*.13+(rockLarge-.5)*.20-vein*.10;', 'float erosion=.85+(strata-.5)*.13+(rockLarge-.5)*.20*largeW-vein*.10;');
       // The isotropic 90-unit bump was the other half of the foil: keep a trace of it.
-      swap('float microRelief=uRockMicro*(w0*m0*9.+', 'float microRelief=uRockMicro*(w0*m0*3.2+');
+      // From the air the 90- and 22-unit isotropic bumps flip light/dark every few pixels along the backlit
+      // terminator (the 'crumpled paper' of the aerial frames); AERIAL GRAIN keeps only a share of them there.
+      swap('float microRelief=uRockMicro*(w0*m0*9.+w1*m1*2.4+', 'float aerialGrain=mix(1.,uAerialGrain,uOverview);\n      float microRelief=uRockMicro*((w0*m0*3.2+w1*m1*2.4)*aerialGrain+');
       swap('      float yFoot=max(fwidth(rp.y),1e-3);', `
       // ---- relief mode: downslope erosion streaks, ridge frost, gully tone ----
       vec2 fall=rockN.xz;float fallLen=length(fall);
@@ -299,6 +324,8 @@ export function createJourneyScene(THREE, { createRiver, watershedStyle = null, 
       if(eroW1>.001){
         // Break the flutes along their length so walls read as couloirs, not corrugated iron.
         float run=.55+.45*rockNoise(vec3(rp.xz*.05,rp.y*.035)+4.);
+        // From the air the fine runnels live inside the terrain's own couloirs, not combed over every face.
+        run*=mix(1.,.25+.75*smoothstep(.55,.9,max(vRelief.y,-vRelief.x)),step(-.5,vRelief.z)*uOverview*uBranching);
         ero=reliefStreak(rp.xz/36.,across)*eroW1*run;
         if(eroW2>.001)ero+=reliefStreak(rp.xz/15.+7.3,across)*.55*eroW2*run;
       }
@@ -330,19 +357,38 @@ export function createJourneyScene(THREE, { createRiver, watershedStyle = null, 
       float convex=vRelief.x*isTerrain,gully=vRelief.y*isTerrain;
       diffuseColor.rgb*=1.-uReliefErosion*gully*.20+max(convex,0.)*.07;
       // Frost settles on the crests and the ribs between gullies, high up; never in the grooves.
-      float frostLine=smoothstep(uFrostRange.x*.85,uFrostRange.y*.95,rp.y+(m1-.5)*120.+(m0-.5)*220.);
+      // The logo ring's crest (~450) sat wholly under the frost line (~700): RING FROST lowers it on the stroke.
+      float ringSnow=clamp(vRelief.z,0.,1.)*uRingFrost*isTerrain;
+      float frostLine=smoothstep(mix(uFrostRange.x*.85,110.,ringSnow),mix(uFrostRange.y*.95,400.,ringSnow),rp.y+(m1-.5)*120.+(m0-.5)*220.);
       float crest=max(smoothstep(.10,.55,convex),smoothstep(.25,.75,ero)*.45);
+      // Far off, the ribs on a steep face are narrower than a few pixels: frost traced on them hung down the
+      // far ranges as thin white drips. There it settles to an even pale tone instead.
+      crest=mix(.3,crest,1.-smoothstep(9.,22.,rockFoot));
       float ridgeFrost=uReliefFrost*frostLine*crest*(1.-groove)*(1.-gully*.8)*(.65+.35*m1);
       diffuseColor.rgb=mix(diffuseColor.rgb,uFrostColor*uIceExposure,clamp(ridgeFrost,0.,1.)*.62*uOverview);
+      // Aerial slope zoning (near terrain only): broken dark rock bands on faces past ~45 deg, snow held on
+      // benches and fingering down the couloirs above SNOW LINE, calm scree on the mid-slopes.
+      float zT=isTerrain*uOverview*smoothstep(-7000.,-6600.,rp.z)*(1.-smoothstep(2900.,3200.,abs(rp.x)));
+      float sN=1.-rockN.y,cliffZ=smoothstep(.30,.50,sN);
+      float bandZ=smoothstep(.6,.92,abs(sin(3.1416*(rp.y+(m0-.5)*110.)/120.)))*smoothstep(.4,.7,rockNoise(rp*vec3(.004,.02,.004)+9.));
+      diffuseColor.rgb*=1.-uRockBands*.22*bandZ*cliffZ*zT;
+      float hold=clamp(smoothstep(.55,.9,gully)+max(-convex,0.)*1.2,0.,1.);
+      float snowZ=smoothstep(uSnowLine-110.,uSnowLine+110.,rp.y+hold*170.+(m0-.5)*150.)*(1.-smoothstep(.26,.44,sN));
+      diffuseColor.rgb=mix(diffuseColor.rgb,uFrostColor*uIceExposure,clamp(snowZ*uSnow,0.,1.)*.36*zT);
+      microRelief*=1.-.6*zT*max(snowZ*min(uSnow,1.),smoothstep(.12,.2,sN)*(1.-cliffZ));
 ` + '      float yFoot=max(fwidth(rp.y),1e-3);');
       swap('gl_FragColor.rgb=mix(gl_FragColor.rgb,fogColor,mix(dayFogAmount,nightFogAmount,uOverview));',
         'gl_FragColor.rgb=mix(gl_FragColor.rgb,fogColor,mix(dayFogAmount,nightFogAmount,uOverview));' + `
         // Relief: aerial perspective in layers - haze pools in the valleys between ranges and each
         // range further back steps paler, so ridgelines separate instead of merging into one texture.
         float layerDepth=smoothstep(3200.,10000.,nightDepth);
-        float pool=exp(-max(vRockWorld.y,0.)/210.)*smoothstep(1400.,5200.,nightDepth);
+        float pool=exp(-max(vRockWorld.y,0.)/mix(210.,650.,smoothstep(7000.,12000.,nightDepth)*uHorizonMist))*smoothstep(1400.,5200.,nightDepth);
         float layerHaze=clamp((layerDepth*.18+pool*.14)*uReliefLayers,0.,.45)*uOverview;
         gl_FragColor.rgb=mix(gl_FragColor.rgb,fogColor,layerHaze);
+        // Past ~10 km the haze kept stepping up to 12.5 km and then stopped, so every far range was one flat
+        // tone (cut-outs). HORIZON MIST keeps grading it: each range paler than the one in front.
+        float horizonHaze=clamp(smoothstep(9500.,17000.,nightDepth)*.85*uHorizonMist,0.,.9)*uOverview;
+        gl_FragColor.rgb=mix(gl_FragColor.rgb,fogColor,horizonHaze);
 `);
       swap('normal=normalize(abs(determinant)*normal-microGradient);', 'normal=normalize(abs(determinant)*normal-microGradient);\n      normal=normalize(normal+(viewMatrix*vec4(facetTilt,0.)).xyz);');
       if (lite) shader.fragmentShader = '#define RELIEF_LITE\n' + shader.fragmentShader;
@@ -352,7 +398,7 @@ export function createJourneyScene(THREE, { createRiver, watershedStyle = null, 
       // Joints are cracks in steep faces; on a flat shelf the same noise drew curved 'tyre marks'.
       swap('*(1.-smoothstep(.04,.12,rockFoot));', '*(1.-smoothstep(.04,.12,rockFoot))*smoothstep(.35,.75,1.-rockN.y);');
       // After rockHash/rockNoise (prepended by the base program), before main().
-      swap('void main() {', `uniform float uReliefErosion,uReliefFrost,uReliefLayers;
+      swap('void main() {', `uniform float uReliefErosion,uReliefFrost,uReliefLayers,uAerialGrain,uRockBands,uSnow,uSnowLine,uHorizonMist,uRingFrost,uBranching;
 varying vec3 vRelief;
 // Gabor-style erosion streaks (after Clay John / IQ): cosines whose phase runs across the
 // fall line, blended over jittered cells, so every groove runs straight downhill.
@@ -362,7 +408,7 @@ float reliefStreak(vec2 p,vec2 dir){
     vec2 o=vec2(float(i),float(j));
     vec2 h=vec2(rockHash(vec3(ip+o,1.7)),rockHash(vec3(ip+o,5.3)))*.6+.2;
     vec2 pp=fp-o-h;float w=exp(-dot(pp,pp)*2.2);wt+=w;
-    va+=cos(dot(pp,dir)*6.2831853)*w;
+    va+=cos(dot(pp,dir)*6.2831853*(1.+(h.x-.5)*.9*uOverview*uBranching))*w;
   }
   return va/wt;
 }
@@ -394,6 +440,18 @@ float reliefStreak(vec2 p,vec2 dir){
     terrainMaterial.onBeforeCompile = rockMaterial.onBeforeCompile;
     terrainMaterial.customProgramCacheKey = () => 'montis-canyon-mineral-palette-v5-shore-1-relief-3-terrain-logo-1';
   }
+  /* Each draw kind gets its own copy of the rock material: plain meshes (rockMaterial), instanced
+     meshes with per-instance tint (instancedRockMaterial) and instanced meshes without it
+     (instancedPlainRockMaterial). They used to share one, and three sorts opaque draws by
+     material then depth, so the kinds alternated on it: its `instancing` / `instancingColor`
+     flags flipped on every switch and getParameters()/getProgramCacheKey() re-ran 42x a frame.
+     Same shader, same programs; only the bookkeeping stops churning. */
+  const instancedRockMaterial = rockMaterial.clone();
+  instancedRockMaterial.onBeforeCompile = rockMaterial.onBeforeCompile;
+  instancedRockMaterial.customProgramCacheKey = rockMaterial.customProgramCacheKey;
+  const instancedPlainRockMaterial = rockMaterial.clone();
+  instancedPlainRockMaterial.onBeforeCompile = rockMaterial.onBeforeCompile;
+  instancedPlainRockMaterial.customProgramCacheKey = rockMaterial.customProgramCacheKey;
   const longitudinal = shore ? (lite ? 460 : 660) : 380, lateral = shore ? (lite ? 62 : 84) : 53;
   const rockDark = new THREE.Color('#526676'), rockPale = new THREE.Color('#a0acb4'), lichen = new THREE.Color('#687875');
   let terrainVertices = 0;
@@ -566,9 +624,37 @@ float reliefStreak(vec2 p,vec2 dir){
       geometry.setIndex(indices); geometry.computeVertexNormals(); geometry.computeBoundingSphere();
       const bank = new THREE.Mesh(geometry, rockMaterial);
       bank.name = side < 0 ? 'West stratified cliffs · shore detail' : 'East stratified cliffs · shore detail';
+      if (relief) { bank.userData.rim = { y: Float32Array.from({ length: rows * columns }, (_, k) => positions[k * 3 + 1]), color: colors.slice(), rows, columns }; shoreBankMeshes.push(bank); }
       scene.add(bank); vertices += rows * columns;
     }
     return vertices;
+  }
+  // Relief: past ~70 units from the water the banks hand over to the watershed's own ground. Their outer
+  // rim (the crumpled highland of |sin| ridges and 60-unit fbm) is laid onto the terrain in height and in
+  // colour, and by 245 units it lies 5 under it, where the terrain (which takes over from 85, see the
+  // watershed's canyon support) carries on. From the air the canyon is cut into the same mountains as
+  // everything around it, and the rock fades out over ~175 units instead of ending at a line. The cliffs
+  // the flight looks at, under 70 units, are untouched.
+  const shoreBankMeshes = [];
+  const RIM_IN = 70, RIM_OUT = 245;
+  function blendBankRims(terrainAt) {
+    const sample = [0, 0, 0, 0];
+    for (const bank of shoreBankMeshes) {
+      const { y, color, rows, columns } = bank.userData.rim, geometry = bank.geometry;
+      const pos = geometry.attributes.position.array, col = geometry.attributes.color.array;
+      for (let j = 0; j < columns; j++) {
+        const w = smooth(RIM_IN, RIM_OUT, lateralDistance(j));
+        if (w <= 0) continue;
+        for (let i = 0; i < rows; i++) {
+          const k = i * columns + j, o = k * 3;
+          terrainAt(pos[o], pos[o + 2], sample);
+          pos[o + 1] = y[k] + (sample[0] - 5 - y[k]) * w;
+          col[o] = color[o] + (sample[1] - color[o]) * w; col[o + 1] = color[o + 1] + (sample[2] - color[o + 1]) * w; col[o + 2] = color[o + 2] + (sample[3] - color[o + 2]) * w;
+        }
+      }
+      geometry.attributes.position.needsUpdate = true; geometry.attributes.color.needsUpdate = true;
+      geometry.computeVertexNormals(); geometry.computeBoundingSphere();
+    }
   }
   // Fractured rock: a noisy ellipsoid cut by a few planes. A face lying on a
   // cut keeps that plane's normal (a fresh, flat break with a crisp edge);
@@ -671,7 +757,7 @@ float reliefStreak(vec2 p,vec2 dir){
     }
     const dummy = new THREE.Object3D(), meshes = [];
     const instance = (geometry, list, name, seed) => {
-      const mesh = new THREE.InstancedMesh(geometry, rockMaterial, list.length);
+      const mesh = new THREE.InstancedMesh(geometry, instancedRockMaterial, list.length);
       list.forEach((q, i) => {
         dummy.position.set(q.x, q.y, q.z); dummy.rotation.set(q.rx, q.ry, q.rz); dummy.scale.set(q.sx, q.sy, q.sz);
         dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
@@ -822,7 +908,7 @@ float reliefStreak(vec2 p,vec2 dir){
     }
     const dummy = new THREE.Object3D(), meshes = [];
     const instance = (geometry, list, name, seed, pebble = false) => {
-      const mesh = new THREE.InstancedMesh(geometry, rockMaterial, list.length);
+      const mesh = new THREE.InstancedMesh(geometry, instancedRockMaterial, list.length);
       list.forEach((q, i) => {
         dummy.position.set(q.x, q.y, q.z); dummy.rotation.set(q.rx, q.ry, q.rz); dummy.scale.set(q.sx, q.sy, q.sz);
         dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
@@ -889,7 +975,7 @@ float reliefStreak(vec2 p,vec2 dir){
   const bn=[];
   for(let i=0;i<bp.count;i++){const n=new THREE.Vector3(bp.getX(i),bp.getY(i),bp.getZ(i)).normalize();bn.push(n.x,n.y,n.z);}
   boulderGeometry.setAttribute('normal',new THREE.Float32BufferAttribute(bn,3));
-  const boulders = new THREE.InstancedMesh(boulderGeometry,rockMaterial,116);
+  const boulders = new THREE.InstancedMesh(boulderGeometry,instancedPlainRockMaterial,116);
   const dummy = new THREE.Object3D();
   for(let i=0;i<116;i++){
     const side=i%2===0?-1:1;
@@ -938,11 +1024,13 @@ float reliefStreak(vec2 p,vec2 dir){
   const cachedFrame = (t, side) => { const k = Math.round(t * 8192) * 2 + (side > 0 ? 1 : 0); let f = frameCache.get(k); if (!f) { f = rowFrame(Math.round(t * 8192) / 8192, side); frameCache.set(k, f); } return f; };
   const watershed=shore
     ?(relief
-      ?createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,shoreDetail:true,mainOverlap,logoTerrain,
+      ?createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,shoreDetail:true,mainOverlap,logoTerrain,
         relief:{config:relief,material:terrainMaterial,bankHeight:(t,side,d,x,z)=>bankHeight(cachedFrame(t,side),d,x,z)}})
-      :createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,shoreDetail:true,mainOverlap,logoTerrain}))
-    :createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig});
+      :createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,shoreDetail:true,mainOverlap,logoTerrain}))
+    :createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig});
   if (shore) shoreUniforms.uFrostRange.value.set(watershed.stats.maxHeight * .40, watershed.stats.maxHeight * .80);
+  const rimBlend = shoreBankMeshes.length && typeof watershed.terrainAt === 'function';
+  if (rimBlend) blendBankRims(watershed.terrainAt);
   scene.add(watershed.group);
   const shotDirection=new THREE.Vector3(),shotFocus=new THREE.Vector3();
   const logoShotFocus=new THREE.Vector3(),logoShotDirection=new THREE.Vector3();
@@ -1021,6 +1109,7 @@ float reliefStreak(vec2 p,vec2 dir){
       // The stroke's ink grows with the same camera term: a dark rim up the trunk at FOUR PATHS, the
       // full dark mark once the camera has landed on it (pure function of confluence).
       logoInkUniform.value=num('ringContrast',0,.8,.5)*(lc?.enabled?1:0)*(.35+.65*b);
+      if(reliefUniforms)reliefUniforms.uRingFrost.value=num('ringFrost',0,1,.6)*(lc?.enabled?1:0);
       if(b>0){
         const pitch=THREE.MathUtils.degToRad(num('camPitch',10,80,37));
         logoShotFocus.set(num('camFocusX',-4000,4000,60),0,num('camFocusZ',-9000,0,-3900));
@@ -1051,6 +1140,12 @@ float reliefStreak(vec2 p,vec2 dir){
       reliefUniforms.uReliefErosion.value=reliefNumber('erosion',0,2);
       reliefUniforms.uReliefFrost.value=reliefNumber('ridgeFrost',0,2);
       reliefUniforms.uReliefLayers.value=reliefNumber('layers',0,2);
+      reliefUniforms.uAerialGrain.value=reliefNumber('aerialGrain',0,1);
+      reliefUniforms.uRockBands.value=reliefNumber('rockBands',0,2);
+      reliefUniforms.uSnow.value=reliefNumber('snow',0,2);
+      reliefUniforms.uSnowLine.value=reliefNumber('snowLine',150,2000);
+      reliefUniforms.uHorizonMist.value=reliefNumber('horizon',0,1.5);
+      reliefUniforms.uBranching.value=reliefNumber('branching',0,1)>=.5?1:0;
     }
     if(watershedStyle) {
       atmosphere.uIceRockTint.value.set(styleValue('rockColor'));
@@ -1076,7 +1171,7 @@ float reliefStreak(vec2 p,vec2 dir){
     distantMaterial.opacity=1-smoother((u-.015)/.20);distant.visible=distantMaterial.opacity>.001;
     camera.updateProjectionMatrix();
     sky.position.copy(camera.position);
-    river.update(time);if(watershed.update(time,u,confluence,reduceMotion))sunlight.shadow.needsUpdate=true;
+    river.update(time);if(watershed.update(time,u,confluence,reduceMotion)){sunlight.shadow.needsUpdate=true;if(rimBlend)blendBankRims(watershed.terrainAt);}
   }
   function resize(width, height) {
     camera.aspect = width / Math.max(1, height);
@@ -1085,7 +1180,7 @@ float reliefStreak(vec2 p,vec2 dir){
   function dispose() {
     watershed.group.removeFromParent();watershed.dispose();
     scene.traverse(object => { if (object.isMesh && object !== river.mesh) object.geometry.dispose(); });
-    distantMaterial.dispose();rockMaterial.dispose();terrainMaterial?.dispose(); sky.material.dispose(); river.dispose?.();
+    distantMaterial.dispose();rockMaterial.dispose();instancedRockMaterial.dispose();instancedPlainRockMaterial.dispose();terrainMaterial?.dispose(); sky.material.dispose(); river.dispose?.();
   }
   update(0, 0, true);
   function setView(next = null) { view = next; }

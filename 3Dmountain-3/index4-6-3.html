@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="utf-8">
+  <meta name="build-version" content="index463-20261001-1da9d12021">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
   <title>恒灝創新 Finnovation — 科技賦能，金融加值</title>
@@ -1354,7 +1355,7 @@ body.has-finnovation-ui .tuner {
   <script type="importmap">
 {
   "imports":{
-    "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
     "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
   }
 }
@@ -1362,16 +1363,17 @@ body.has-finnovation-ui .tuner {
 
   <script type="module">
     import * as THREE from 'three';
-    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=logo-463-1';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=logo-463-1';
-    import { createJourneyRiver } from './water-journey-river.js';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=fluid-detail-1';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=depth-motion-1';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=interface-2';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=five-rivers-only-1';
+    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-20261001-1da9d12021';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-20261001-1da9d12021';
+    import { createJourneyRiver } from './water-journey-river.js?v=index463-20261001-1da9d12021';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-20261001-1da9d12021';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-20261001-1da9d12021';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-20261001-1da9d12021';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-20261001-1da9d12021';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=logo-cards-1';
-    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=logo-cards-1';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-20261001-1da9d12021';
+    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-20261001-1da9d12021';
+    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-20261001-1da9d12021';
     import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
     /* The parameter bar. On by default while the page is being worked on —
        a local file or a dev server — and off wherever it is actually
@@ -1421,9 +1423,12 @@ body.has-finnovation-ui .tuner {
 
     let renderer;
     try {
+      /* The canvas only ever receives the last full-screen quad of the post chain, so it needs
+         neither multisampling nor a depth buffer: MSAA lives on the scene target (see composer). */
       renderer = new THREE.WebGLRenderer({
         canvas,
-        antialias: true,
+        antialias: false,
+        depth: false,
         alpha: false,
         powerPreference: 'high-performance'
       });
@@ -1610,7 +1615,7 @@ body.has-finnovation-ui .tuner {
            串珠，不是一把扇。
            GRAVITY 9：半秒內沉 .25 個單位的緩弧。 */
         /* BEADS 6：主珠之外散出五顆瓣。 */
-        beads: 6, speed: 100, sizeSpeed: .05, drag: .35, sizeDrag: .50,
+        beads: 19, speed: 100, sizeSpeed: .05, drag: .35, sizeDrag: .50,
         gravity: 9, cone: 14, loft: .04, release: .16,
         breakAt: .22, launch: .06, satDelay: .10, satSpeed: .55,
         /* FUSE .5：芽和本體之間 smooth-min 的融合範圍（乘在水珠自己的
@@ -1638,8 +1643,11 @@ body.has-finnovation-ui .tuner {
          （journey 單位；散開整段是 2.6）。下游的河與品牌故事在這段期間停住。
          HEIGHT 是世界單位（水珠半徑 1.44；鏡頭距離 17 時畫面高 9.2）。 */
       logo: {
-        variant: ({2:2,3:3})[new URLSearchParams(location.search).get('logo')] || 1,
-        at:.75, fadeIn:.12, length:1.8, height:3.6, depth:2.4, turns:1, tilt:.22,
+        /* LOGO 3 is the default; ?logo=1 / ?logo=2 still pick the others. */
+        variant: ({1:1,2:2,3:3})[new URLSearchParams(location.search).get('logo')] || 3,
+        /* TURNS 0, TILT 0: the wordmark holds still and square to the lens —
+           the ring of drops does the moving around it. */
+        at:.75, fadeIn:.12, length:1.8, height:3.6, depth:2.4, turns:0, tilt:0,
         bevel:.013, bevelSize:.0038, bevelSegments:5, curveSegments:48, edge:.035,
         innerFrac:.30, innerY:-.12, dolly:1, pulse:.35,
         /* LOGO 3（text_logo3.svg 全字標，約 7.4:1）：等高會變成 25 單位寬的長條，
@@ -1667,17 +1675,22 @@ body.has-finnovation-ui .tuner {
          寬度 .10：新的光束中段本來就比兩端寬（脈衝時膨脹、尾巴收細），.14 會糊成一片。
          亮度 1.15：脈衝頭部會吃到 bloom 自己發亮，整條不需要再推高。 */
       watershedFlow: { ...WATERSHED_FLOW_DEFAULTS, count: 3, width: .10, brightness: 1.15 },
-      watershedTerrain: { ...WATERSHED_TERRAIN_DEFAULTS },
-      watershedWater: { base:'#778b9d', highlight:'#c8dbe8', reflection:.25 },
+      /* 初始狀態：客戶在 tuner 上定下的值（2026-09-23）。 */
+      watershedTerrain: { ...WATERSHED_TERRAIN_DEFAULTS, height: .99, ridge: 1.63, relief: 1.18 },
+      /* depth 河道深淺：空拍時主流中央較深較暗、兩側淺水較亮；mottle 河面隨水流的淡淡斑駁。兩者讓河不再是一條平均的灰帶。即時。 */
+      watershedWater: { base:'#778b9d', highlight:'#c8dbe8', reflection:.25, depth:.8, mottle:.7 },
       /* 河岸細節：河與山交界（浪花、淺水、岸壁倒影、濕岩帶）與岩面細節。只有這一頁傳給場景，
          index4-6 / 4-6-2 沒傳就完全是原樣。數值每幀即時讀取，拖曳不重建幾何。 */
-      shoreline: { ...SHORELINE_DEFAULTS },
+      shoreline: { ...SHORELINE_DEFAULTS, micro: 1.35, strata: 1.35 },
       /* 第一人稱視角（山道那一段貼水前進的鏡頭）：預設值就是原本寫死的構圖，
          拖曳即時生效；動態模糊組的 FOV 呼吸、俯衝、震動仍疊加在這之上。 */
       canyonView: { ...CANYON_VIEW_DEFAULTS },
       /* 山體與河岸第三輪細節（只有這一頁傳給場景）：山脊/山谷的層級、順著坡往下的沖蝕溝、
          稜線霜白、遠山空氣透視分層，以及近岸水色。數值每幀即時讀取。 */
-      relief: { ...RELIEF_DEFAULTS },
+      /* 遠山層次 1.6（這頁）：最後空拍的天際線是粗網格的遠山，陡坡上拉長的三角面會看成一條條直紋；
+         遠處多退一層進霧裡，天際線才是淡去的山影，而不是條紋。只在空拍（overview）作用。 */
+      relief: { ...RELIEF_DEFAULTS, layers: 1.1, ridge: 1, erosion: 1.3, aerialGrain: 1, tone: 1, rockBands: 1, snow: .65, snowLine: 1200,
+        lift: 2.2, peakRound: 1, crestSoft: .24, density: 1.5, valleyReach: 1.2, crestTame: 1, slopeCap: 1.15, horizon: .6, farSoft: .08, valley: 0 },
       /* LOGO 山道：讓五條河的終點長成品牌標誌——螺旋帶是一圈環形山脊（筆畫越粗山越高：細端是刀脊、粗端是主峰肩），中間的洞是一面靜湖（「眼」），魚鰭是另一道獨立的稜。主河從 6 點鐘切進湖、沿著標誌本身那條隱藏的垂直軸，從 12 點鐘粗細兩端交錯的縫流出。只有這一頁傳，其他頁完全原樣。 */
       logoTerrain: {
         enabled: true,
@@ -1687,23 +1700,39 @@ body.has-finnovation-ui .tuner {
         bandHeight: 700, finHeight: 900, finLite: 1.15, startLow: .5,
         /* 牆面坡度上限（牆面最陡處的高度 ÷ 水平距離，.88 ≈ 41°，加上頁面自己的稜紋、溝紋後最陡約 50°；山越高、坡就自動拉得越長，細段因此比粗端矮）：湖側和外側都從自己的山腳慢慢爬上去，不會出現垂直的「壓模圓框」。（重建生效） */
         wallSlope: .88,
-        /* 外側山腳寬（svg 單位）：凹形碎石裙，才像山而不是擠出的字。岸線不規則：整個標誌輕微扭動 2–3 svg 單位，湖岸和稜線才不會是完美的向量外框。（重建生效） */
-        flankOut: 20, serrate: .14, pinnacles: 10, warp: 40,
-        /* 環上的沖蝕溝：額外一層較細的順坡溝紋，只加在環和鰭上，內外兩面都看得到溝；溝的方向跟著筆畫本身的下坡方向走，已經很陡的面上會自動收淺，不會刻出直立的溝牆。（重建生效） */
-        gully: 1,
+        /* 外側山腳寬（svg 單位）：凹形碎石裙，才像山而不是擠出的字。岸線不規則：整個標誌輕微扭動 2–3 svg 單位，湖岸和稜線才不會是完美的向量外框。
+           稜線鋸齒收到 .06：跟四周的山一樣是自然起伏的稜，不是一排鋸齒。尖塔（稜上的尖錐）已移除，歸零。（重建生效） */
+        flankOut: 20, serrate: .06, pinnacles: 0, warp: 40,
+        /* 環上的沖蝕溝：額外一層較細的順坡溝紋。收到 .4——1 的時候整圈是一條條等距的放射溝，像梳過的火山口，和四周山體的沖蝕風格不一致；.4 只留一點順坡的紋理，其餘交給頁面本身的侵蝕。（重建生效） */
+        gully: .4,
+        /* 環脊的稜與壁（重建生效）：內外兩面牆現在一定在一條稜線上相會（以前各自提早停住，留下一段圓頂＝黏土感）；
+           headwall 遠側內壁比外側陡幾倍，在湖後面立起一面朝向鏡頭的岩壁（近側不變，湖不會被擋住）。
+           bands 岩層帶：環上 2–3 道傾斜的斷崖帶與平台（高度只重新分配、不會倒懸），bandStep 岩層間距。 */
+        headwall: 1.6, bands: .45, bandStep: 120,
+        /* 環脊霜線（即時）：環的稜高約 450，原本整圈都在霜線（約 700）以下，是畫面中央唯一沒有霜的山；霜落在稜線與平台邊緣，描出標誌的淡色輪廓。 */
+        ringFrost: .6,
         /* 鞍部：魚鰭和粗端之間是一道 V 形低鞍，兩側都用牆面坡度往上爬（saddleSharp 1.1 ≈ 44°），直接「吃」進鰭和主峰肩，而不是在筆畫邊緣切一刀——舊版在這裡是一整排近 80° 的斷崖。（重建生效） */
         saddle: 1, saddleSharp: 1.1,
-        /* 筆畫深淺：LOGO 是「淺底深字」，所以只把筆畫內部（依 svg 筆畫內深度，不是依高度）染成深岩色，山腳、沙灘、鞍部和霧谷保持淺色；粗的左肩最深、細的右側自然較淡，和 LOGO 的粗細一致。
-           ringTone 是建模時的底色（重建生效）；ringContrast 是霧後再壓暗的強度（即時）——這一段山在霧最濃的谷底，光改底色只差 4–5 階灰，看不出字形，所以要在霧之後再壓。.5：桌機筆畫比霧谷暗約 33 階、比湖暗約 30 階；手機 390 寬比霧谷暗約 35 階、比湖暗約 10 階。 */
-        ringTone: .72, ringContrast: .5,
+        /* 筆畫深色帶：已移除（歸零）。環脊和四周的山用同一種淺色岩、同一層霧——標誌的形狀由山脊和湖本身讀出來，不再在山上塗一圈深色。 */
+        ringTone: 0, ringContrast: 0,
         /* 留白霧谷：標誌周圍要有空地才讀得出形狀，就像參考圖的霧低地；靠觀眾這側淡出，保留匯流兩側的山。（重建生效） */
         moat: 58, plain: 40,
         /* 河道收窄：穿過環脊時只剩一道窄峽，不會把山脊整段沖平。（重建生效） */
         slot: .40,
         /* 湖岸內縮（世界單位）：水線往洞裡退 270，留出一段沙灘和碎石坡，內牆才有空間斜斜爬上去。（重建生效） */
         lakeInset: 270,
-        /* 湖面：一定要比霧暗，太亮會像畫面破洞（#8fa2b3 經過霧和色調映射後幾乎和霧一樣亮，所以再壓暗一階）。高度即時。 */
-        lakeLevel: 1.6, lakeTone: '#6f8497',
+        /* 湖面：從空中、在霧裡看，水之所以像水，靠的是這幾件事，湖就只用這幾件事來做——
+           一面比四周雪地暗的平靜水體（岸邊看得到湖床、較淺，湖心較深），河的淺色水帶著泥沙流進來、張開、沿水流拉成條紋、
+           五道往同一方向微彎、慢慢融進深水（沉積羽流），水面上的風（順風的平滑水帶和較粗糙的水帶交錯、隨風飄移的貓爪紋、
+           河口的碎浪、粗糙處的細小波紋），加上霧中天光的反光，和四周山谷同一層空氣。河的光不會在岸邊斷掉：
+           沿著每道羽流再走一小段、邊走邊擴散變淡，河上的光束頭也會接著流進去再淡掉。水面上不畫任何線——
+           畫出來的同心圓、波前都試過，從空中看就是圖形。
+           高度 8：主河的浪（空拍時仍有 ±3–5）會頂出較低的湖面，在湖上留一條亮線；8 以上蓋得住。
+           lakeSheen 天光反光、lakeDepth 湖心深色、lakeTexture 水面的風（平滑水帶／粗糙水帶／細紋）、lakeHaze 湖面霧氣（和四周山谷同一層霧）。全部即時。 */
+        lakeLevel: 8, lakeSheen: .3, lakeDepth: 1, lakeTexture: 1, lakeHaze: .08,
+        /* 湖心匯集：gather 河水入湖的總量（羽流濃度與河光，0 關閉，1 設計值）；鏡頭越接近終點，羽流伸得越遠。
+           lakeRipple 河光入湖的亮度、lakeRippleSlow 光束頭入湖後比河上慢幾倍、lakeGlint 湖面稀疏的閃光。全部即時。 */
+        gather: 1, lakeRipple: 1, lakeRippleSlow: 4, lakeGlint: 1,
         /* 湖上光線：主河的光進湖後幾乎熄滅（湖是靜的「眼」），在 12 點鐘的縫重新亮起，繞過魚鰭後淡出。（重建生效） */
         lineOverLake: .06,
         /* 鏡頭：最後幾張卡慢慢往前、往下看到約 37°（PRE-IPO 那張約 32°），五條河的扇形仍留在畫面下半。超過 40° 河就被切掉。即時。 */
@@ -1713,7 +1742,10 @@ body.has-finnovation-ui .tuner {
       },
       cursor: { ...CURSOR_DEFAULTS },
       logoGlass: { ...REFERENCE_LOGO_GLASS },
-      logoCards: { ...LOGO_CARD_DEFAULTS },
+      /* The flat cards are kept, but off: the ring of water drops below takes
+         their place on the same orbit. One switch brings them back. */
+      logoCards: { ...LOGO_CARD_DEFAULTS, enabled: 0 },
+      logoDrops: { ...LOGO_DROP_DEFAULTS },
       /* The drop carries no light of its own any more: its mote cloud, the
          orbiting sparkles, the painted highlights and the two soft glows are
          all at zero, so the water beads are lit only by the scene. The
@@ -3344,6 +3376,14 @@ vec3 montisDither(vec2 fc){
         float nearBank=1.-smoothstep(0.,22.,edge);
         float lift=uShoreTone.x*(1.-smoothstep(.16,.52,waterL))*vis*(.28+.42*nearBank)*(1.-.5*aer);
         col=mix(col,mix(col,liftTo,.6),clamp(lift,0.,.85));
+        /* 空拍時河也是水：主流中央較深、較暗，兩側淺水較亮——不是一條平均的灰帶（那樣像公路）；
+           表面還有隨水流飄動的淡淡斑駁。uShoreTone.y 河道深淺、.z 水面斑駁；只在空拍（uJourneyNight）生效。 */
+        if(uJourneyNight>.001&&uShoreTone.y+uShoreTone.z>.001){
+          /* 不乘 vis：vis 用的是開場海面的霧距，空拍距離下恆為 0（岸邊細節因此在空拍全部消失），這裡改用河自己的霧。 */
+          float thal=smoothstep(3.,42.,edge)*(1.-.6*riverFog);
+          float mott=seaNoise(vWorld.xz*.021+vec2(uSeaTime*.05,-uSeaTime*.03))*.6+seaNoise(vWorld.xz*.047-uSeaTime*.04)*.4;
+          col*=1.-uJourneyNight*(thal*.22*uShoreTone.y+(mott-.5)*.12*uShoreTone.z*(.4+.6*thal));
+        }
       }
       col+=montisDither(gl_FragCoord.xy)*mix(.004,.0006,uJourneyNight);
       gl_FragColor=vec4(max(col,vec3(0.)),1.);
@@ -3857,7 +3897,14 @@ vec3 montisDither(vec2 fc){
     const dropRoot = new THREE.Group();
     dropRoot.name = 'drop-controls';
     scene.add(dropRoot);
-    gltfLoader.load('drop_of_water/scene.gltf', gltf => {
+    /* With the droplet drawn by the SDF this 3.3 MB mesh is never rendered (layer 1) and is forced
+       invisible every frame (see updateDropTransition), so it can never be a pointer target either;
+       yet assetsReady waits for it. It is only fetched when the old orb is asked for with
+       ?orb=mesh. orbModelSkipped keeps rayHitsDropletSphere answering exactly as it did while the
+       model was loaded, so pointer behaviour is unchanged. */
+    const orbMeshRequested = new URLSearchParams(location.search).get('orb') === 'mesh';
+    const orbModelSkipped = dropSDF && !orbMeshRequested;
+    if (!orbModelSkipped) gltfLoader.load('drop_of_water/scene.gltf', gltf => {
       const meshes = [];
       gltf.scene.traverse(child => { if (child.isMesh) meshes.push(child); });
       const sourceMesh = meshes[0];
@@ -4456,6 +4503,10 @@ vec3 montisDither(vec2 fc){
     /* ------------------------------------------------------------------
        POST PROCESSING
        ------------------------------------------------------------------ */
+    /* MSAA belongs to the one pass that rasterises geometry. Everything after it is a full-screen
+       quad, where multisampling buys nothing and costs a 4x HalfFloat surface plus a depth resolve
+       per pass. So the scene gets its own multisampled target and the composer's ping-pong pair is
+       plain (the hand-off is in the main-pass wrapper further down). */
     const renderTarget = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
       type: THREE.HalfFloatType,
       format: THREE.RGBAFormat,
@@ -4463,7 +4514,19 @@ vec3 montisDither(vec2 fc){
       stencilBuffer: false,
       samples: 4
     });
-    const composer = new EffectComposer(renderer, renderTarget);
+    const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+      type: THREE.HalfFloatType,
+      format: THREE.RGBAFormat,
+      depthBuffer: false,
+      stencilBuffer: false
+    }));
+    /* The scene target is only ever read from: left to rotate into the write slot, the next pass
+       would draw into the multisampled surface again. */
+    composer.swapBuffers = function () {
+      const t = this.readBuffer;
+      this.readBuffer = this.writeBuffer;
+      this.writeBuffer = t === renderTarget ? this.renderTarget2 : t;
+    };
     const mainRenderPass = new RenderPass(scene, camera);
     composer.addPass(mainRenderPass);
     const bloom = new UnrealBloomPass(
@@ -5728,7 +5791,7 @@ vec3 montisDither(vec2 fc){
        load; then the sphere itself answers the pointer, so what is seen can
        be touched. */
     function rayHitsDropletSphere(ray, target) {
-      if (!dropSDF || dropRoot.userData.orbMesh || !dropletProxy.visible) return false;
+      if (!dropSDF || dropRoot.userData.orbMesh || orbModelSkipped || !dropletProxy.visible) return false;
       const base = Math.max(1e-4, CONFIG.drop.scale);
       _dropletSphere.center.copy(dropRoot.position);
       _dropletSphere.radius = currentDropRadius()
@@ -7022,6 +7085,16 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     }
     const logoCards = createLogoCards(THREE, { renderer, config:CONFIG.logoCards });
     logoRoot.add(logoCards.group);
+    /* The same orbit, in water: each drop carries a photograph and lenses it.
+       It shares the logo glass's room (sky, sea, sun, studio cube) by
+       reference, and it lives in logoRoot rather than logoSpin, so the glass
+       capture includes it and the wordmark bends the drops behind it. */
+    /* In the bloom a falling drop strikes the sea: its ring goes into the
+       page's own ripple field, the same one the hero drop's impact uses, so
+       the chrome water actually dents and rings. */
+    const logoDrops = createLogoDrops(THREE, { renderer, config:CONFIG.logoDrops, env:logoGlass.uniforms, lite:DROPLET_LITE,
+      onSplash:(x,y,z,strength)=>{spawnRipple(x,z,1.1*strength);queueRipple(x,z,.55*strength,.14);} });
+    logoRoot.add(logoDrops.group);
     /* Scroll-owned logo enlargement and optical focus. */
     const logoFlight = { t: 0, cx: .5, cy: .5 };
     const logoFocus = new THREE.Vector3();
@@ -7166,17 +7239,32 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
          寸帶一次彈簧過衝；浮現到一半泛光脈衝一下，像光收進玻璃裡。 */
       const reveal = smooth01((progress - (L.at - L.fadeIn)) / Math.max(.02, L.fadeIn));
       logoPulse = L.pulse * 4 * reveal * (1 - reveal);
-      logoRoot.visible = Boolean(logoMesh) && reveal > .001 && mix < .999;
-      const t = THREE.MathUtils.clamp((p - logoChapterStart()) / Math.max(.05, L.length), 0, 1);
+      /* The chapter's clock, clamped for the choreographies and unclamped for
+         the drops' entrance, which plays in the stretch before the chapter —
+         so the mark's root has to be up while the drops are arriving, even
+         before the mark itself has begun to show. */
+      const tRaw = (p - logoChapterStart()) / Math.max(.05, L.length);
+      const t = THREE.MathUtils.clamp(tRaw, 0, 1);
+      const D = CONFIG.logoDrops;
+      const dropsEntering = D.enabled > .5 && Math.round(D.entrance) > 0 && tRaw > D.enterStart && !reduceMotion;
+      logoRoot.visible = Boolean(logoMesh) && (reveal > .001 || dropsEntering) && mix < .999;
       logoCards.update({progress:t,reveal:logoRoot.visible?Math.pow(reveal,1.4):0,
         exit:smooth01(logoFlight.t/.68),time,reducedMotion:reduceMotion,
         palette:CONFIG.field,mobile:innerWidth<760});
-      if (!logoRoot.visible) return;
+      /* The drops also take the camera — they leave the frame, face the lens
+         and run along its axis — so they are updated after the mark has been
+         placed for this frame: read a frame late, the lens would jump on the
+         first frame they show and every drop would jolt. */
+      const dropArgs={progress:t,enter:tRaw,reveal:logoRoot.visible?Math.pow(reveal,1.4):0,
+        exit:smooth01(logoFlight.t/.68),time,reducedMotion:reduceMotion,
+        palette:CONFIG.field,mobile:innerWidth<760,camera,seaLevel:sea.position.y};
+      if (!logoRoot.visible) { logoDrops.update(dropArgs); return; }
       const settle = smooth01((progress - L.at) / .10);
       const overshoot = Math.sin(Math.PI * Math.min(1, reveal * 1.15)) * .06 * (1 - settle);
       logoRoot.position.set(CONFIG.drop.x, CONFIG.drop.y + (1 - reveal) * .35, CONFIG.drop.z);
       const zoom = reduceMotion ? 1 : 1 + (CONFIG.forwardTransition.zoom - 1) * easeJourney(logoFlight.t/.82);
       logoRoot.scale.setScalar(L.height * (.80 + .20 * reveal + overshoot) * zoom);
+      logoDrops.update(dropArgs);
       logoGlass.uniforms.uOpacity.value = Math.pow(reveal, 1.6);
       logoEdgeMaterial.opacity = (L.edge + (.40 - L.edge) * (1 - settle)) * Math.min(1, reveal * 2.5);
       /* 平轉：整章轉 TURNS 圈，純粹跟著捲動。轉動時帶一點傾側（banking）：
@@ -7215,14 +7303,17 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* 景深動態模糊要場景深度：composer 兩張畫布和河道轉場畫布都掛一張 DepthTexture
        （MSAA 解析時 three 會把深度一起 blit 過去，幾乎不花時間），比另外畫一次深度 prepass 便宜。
        dispose() 讓已建立的 framebuffer 下一次使用時帶著深度貼圖重建。 */
-    for(const rt of [composer.renderTarget1,composer.renderTarget2,canyonTarget]){rt.depthTexture=new THREE.DepthTexture(rt.width,rt.height);rt.dispose();}
+    for(const rt of [renderTarget,canyonTarget]){rt.depthTexture=new THREE.DepthTexture(rt.width,rt.height);rt.dispose();}
     const canyonMotion=createCanyonDepthMotion({config:CONFIG.canyonMotion,lite:DROPLET_LITE});
     canyonMotion.setDepth(canyonTarget.depthTexture);
     canyonMotion.warm(renderer);
     /* 主場景畫進哪一張畫布，深度就從那一張拿；轉場溶接時河道是另外畫在 canyonTarget。 */
     const renderMainPass=mainRenderPass.render.bind(mainRenderPass);
-    mainRenderPass.render=(r,writeBuffer,readBuffer,...rest)=>{renderMainPass(r,writeBuffer,readBuffer,...rest);
-      canyonMotion.pass.uniforms.tDepth.value=journeyBlend.enabled?canyonTarget.depthTexture:readBuffer.depthTexture;};
+    mainRenderPass.render=(r,writeBuffer,readBuffer,...rest)=>{
+      /* The scene is drawn into the one multisampled target; the plain ping-pong pair takes over from there. */
+      composer.readBuffer=renderTarget;composer.writeBuffer=composer.renderTarget1;
+      renderMainPass(r,composer.renderTarget1,renderTarget,...rest);
+      canyonMotion.pass.uniforms.tDepth.value=journeyBlend.enabled?canyonTarget.depthTexture:renderTarget.depthTexture;};
     /* 貼著水面往鏡頭掠過的水霧光點：固定在河道上，所以往回滾就倒著流，停下就消失。 */
     const canyonMotes=createCanyonSpeedMotes({curve:canyon.curve,widthAt:canyon.widthAt,lite:DROPLET_LITE});
     canyonMotes.warm(renderer,canyon.camera);
@@ -7230,12 +7321,15 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     canyonMotion.setOverlay((r,depth)=>canyonMotes.render(r,canyon.camera,depth));
     let journeyReady=false;
     async function warmJourney(){
-      await logoCards.ready;
+      await Promise.all([logoCards.ready,logoDrops.ready]);
       const warmTarget=new THREE.WebGLRenderTarget(64,64);
       try{
         {const ws=new THREE.Scene(),wg=new THREE.PlaneGeometry(1,1);
-          for(const m of [logoMaterial,logoBlueMaterial]){const o=new THREE.Mesh(wg,m);o.position.set(camera.position.x,camera.position.y,camera.position.z-3);o.frustumCulled=false;ws.add(o);}
-          const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(ws,camera);}finally{renderer.setRenderTarget(previous);wg.dispose();}}
+          for(const m of [logoMaterial,logoBlueMaterial,logoDrops.meshes[0].material]){const o=new THREE.Mesh(wg,m);o.position.set(camera.position.x,camera.position.y,camera.position.z-3);o.frustumCulled=false;ws.add(o);}
+          /* The spray and loose beads are instanced: warm that variant, not a plain mesh's. */
+          const warmBeads=new THREE.InstancedMesh(logoDrops.beads.geometry,logoDrops.beads.material,1);
+          warmBeads.setMatrixAt(0,new THREE.Matrix4().makeTranslation(camera.position.x,camera.position.y,camera.position.z-3));warmBeads.frustumCulled=false;ws.add(warmBeads);
+          const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(ws,camera);}finally{renderer.setRenderTarget(previous);wg.dispose();warmBeads.dispose();}}
         for(const stage of [canyon]){
           if(stage.ready)await stage.ready;
           stage.scene.environment=scene.environment;
@@ -7355,12 +7449,16 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       orbHighlights.forEach(h=>h.visible=false);
       // Keep the same silver-water light as 4-5 as the drops cross the lens.
       const lightMotion=reduceMotion?0:1;
-      bloom.strength=Math.min(1.85,CONFIG.scene.bloom+lightMotion*(flare*DZ.burst*.42+burst*DZ.burst*.58+logoPulse));
+      /* With a drop entrance the white curtain is mostly let go — the drops
+         coming back are the transition now, and the curtain would hide them —
+         and the flash of converging drops meeting goes into the bloom. */
+      const curtain=CONFIG.logoDrops.enabled>.5&&Math.round(CONFIG.logoDrops.entrance)>0?THREE.MathUtils.clamp(CONFIG.logoDrops.enterFlash,0,1):1;
+      bloom.strength=Math.min(1.85,CONFIG.scene.bloom+lightMotion*(flare*DZ.burst*.42*curtain+burst*DZ.burst*.58+logoPulse+logoDrops.state.pulse*.9));
       bloom.radius=.58+burst*.22*lightMotion;
       bloom.threshold=Math.max(1.95,CONFIG.scene.bloomCut-flareAtk*flareCut*DZ.cut*lightMotion);
       const preDip=1-.20*Math.exp(-Math.pow((progress-.33)/.035,2))*lightMotion;
       renderer.toneMappingExposure=Math.min(CONFIG.scene.exposure*1.34,CONFIG.scene.exposure*preDip*(1+burst*DZ.exposure*lightMotion));
-      const flashAlpha=Math.min(.72,flareIgnition*flareFade*CONFIG.details.transitionFlash*DZ.veil)*lightMotion;
+      const flashAlpha=Math.min(.72,flareIgnition*flareFade*CONFIG.details.transitionFlash*DZ.veil)*lightMotion*curtain;
       transitionFlash.style.opacity=flashAlpha.toFixed(4);
       transitionFlash.style.transform=`scale(${(.14+flareExpand*1.55).toFixed(4)},${(.12+Math.pow(flareExpand,1.25)*1.48).toFixed(4)})`;
       transitionGlow.position.set(CONFIG.drop.x,CONFIG.drop.y,CONFIG.drop.z);
@@ -7505,6 +7603,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       seaUniforms.uWatershedReflection.value=CONFIG.watershedWater.reflection;
       {const S=CONFIG.shoreline;seaUniforms.uShore.value.set(+S.foam||0,+S.shallow||0,+S.reflect||0,1);
        seaUniforms.uShoreTone.value.x=THREE.MathUtils.clamp(+CONFIG.relief.bankWater||0,0,2);
+       seaUniforms.uShoreTone.value.y=THREE.MathUtils.clamp(+CONFIG.watershedWater.depth||0,0,1.5);
+       seaUniforms.uShoreTone.value.z=THREE.MathUtils.clamp(+CONFIG.watershedWater.mottle||0,0,1.5);
        seaUniforms.uShoreFoamColor.value.set(S.foamColor);
        seaUniforms.uShoreBedColor.value.set(CONFIG.watershedStyle.rockColor).lerp(seaUniforms.uWatershedHighlight.value,.45);
        seaUniforms.uShoreWallColor.value.set(CONFIG.watershedStyle.rockColor).multiplyScalar(.62).lerp(canyon.scene.fog.color,.22);}
@@ -7744,7 +7844,30 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['岩面紋理','shoreline','micro',0,2.5,.05],
         ['岩層層理','shoreline','strata',0,2.5,.05],
         ['山脊銳利','relief','ridge',0,2,.05],
-        ['沖蝕溝紋','relief','erosion',0,2,.05]
+        ['沖蝕溝紋','relief','erosion',0,2,.05],
+        ['空拍岩面顆粒','relief','aerialGrain',0,1,.05],
+        ['稜谷明暗層級','relief','tone',0,1.5,.05],
+        ['岩帶','relief','rockBands',0,2,.05],
+        ['雪溝積雪','relief','snow',0,2,.05],
+        ['雪線高度','relief','snowLine',150,2000,10],
+        ['山體抬高（重整生效）','relief','lift',.5,3.5,.05],
+        ['山頂圓潤（重整生效）','relief','peakRound',0,1.5,.05],
+        ['稜線柔化（重整生效）','relief','crestSoft',0,.25,.01],
+        ['山的數量（重整生效）','relief','density',0,3,.05],
+        ['谷坡寬度（重整生效，小＝谷陡山厚）','relief','valleyReach',.4,1.8,.02],
+        ['山頂不尖（重整生效，小＝頂越圓）','relief','crestTame',0,1,.05],
+        ['河谷坡度上限（重整生效，0＝不限）','relief','slopeCap',0,3,.05],
+        ['地平線霧化','relief','horizon',0,1.5,.05],
+        ['遠山稜線柔化（重整生效）','relief','farSoft',0,.25,.01],
+        ['谷底寬度（重整生效）','relief','valley',0,2,.05],
+        ['沖積扇（重整生效）','relief','fan',0,2,.05],
+        ['環山峽口（重整生效）','relief','gap',0,1.5,.05],
+        ['山峰稜面（重整生效）','relief','facet',0,.45,.01],
+        ['山坡不對稱（重整生效）','relief','asym',0,1,.05],
+        ['分枝沖蝕溝（重整生效，0＝4-6-1 細溝）','relief','branching',0,1,1],
+        ['主溝間距（重整生效）','relief','gullySpan',260,640,10],
+        ['岩性差異（重整生效）','relief','erodibility',0,1,.05],
+        ['山脊細碎（重整生效）','relief','ridgeFine',0,1,.05]
       ]],
       ['LOGO 山道', [
         ['鏡頭起點','logoTerrain','camStart',0,.9,.01],
@@ -7752,11 +7875,22 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['鏡頭距離','logoTerrain','camDistance',4200,7500,50],
         ['焦點前後','logoTerrain','camFocusZ',-4600,-3300,10],
         ['直式距離倍率','logoTerrain','camPortrait',1,1.8,.01],
-        ['湖面高度','logoTerrain','lakeLevel',.6,3,.1],
+        ['湖面高度','logoTerrain','lakeLevel',.6,14,.1],
+        ['湖面天光反光','logoTerrain','lakeSheen',0,1,.01],
+        ['湖心深色','logoTerrain','lakeDepth',0,1,.01],
+        ['水面的風（平滑／粗糙水帶、細紋）','logoTerrain','lakeTexture',0,2,.01],
+        ['湖面霧氣','logoTerrain','lakeHaze',0,1,.01],
+        ['河水入湖（沉積羽流＋河光）','logoTerrain','gather',0,2,.01],
+        ['河光入湖亮度','logoTerrain','lakeRipple',0,2,.01],
+        ['光束頭入湖慢速（越大越慢）','logoTerrain','lakeRippleSlow',1,10,.1],
+        ['湖面閃光','logoTerrain','lakeGlint',0,2,.01],
         ['光點亮度','logoTerrain','markerGlow',0,.35,.01],
-        ['筆畫深淺','logoTerrain','ringContrast',0,.8,.01],
         ['開關（重整生效）','logoTerrain','enabled',0,1,1],
+        ['環脊霜線','logoTerrain','ringFrost',0,1,.01],
         ['環脊高（重整生效）','logoTerrain','bandHeight',200,700,10],
+        ['內壁陡度（重整生效）','logoTerrain','headwall',1,2.2,.05],
+        ['岩層帶（重整生效）','logoTerrain','bands',0,.8,.01],
+        ['岩層間距（重整生效）','logoTerrain','bandStep',80,200,1],
         ['魚鰭脊高（重整生效）','logoTerrain','finHeight',300,900,10],
         ['山腳寬（重整生效）','logoTerrain','flankOut',6,26,.5],
         ['牆面坡度（重整生效）','logoTerrain','wallSlope',.6,1.8,.05],
@@ -7764,12 +7898,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['環上溝紋（重整生效）','logoTerrain','gully',0,3,.1],
         ['魚鰭鞍部（重整生效）','logoTerrain','saddle',0,1,.05],
         ['鞍部坡度（重整生效）','logoTerrain','saddleSharp',.6,1.6,.05],
-        ['筆畫底色（重整生效）','logoTerrain','ringTone',0,1,.02],
         ['細端高度（重整生效）','logoTerrain','startLow',.2,1,.05],
         ['岸線不規則（重整生效）','logoTerrain','warp',0,120,1],
         ['稜線鋸齒（重整生效）','logoTerrain','serrate',0,.25,.01],
-        ['尖塔數（重整生效）','logoTerrain','pinnacles',0,16,1],
         ['霧谷半徑（重整生效）','logoTerrain','moat',30,90,1],
+        ['霧谷地面高度（重整生效）','logoTerrain','plain',0,300,5],
         ['河道收窄（重整生效）','logoTerrain','slot',.25,1,.01],
         ['湖上光線（重整生效）','logoTerrain','lineOverLake',0,1,.05],
         ['位置 X（重整生效）','logoTerrain','cx',-400,600,10],
@@ -7811,7 +7944,9 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['遠山層次','relief','layers',0,2,.05],
         ['河流底色','watershedWater','base'],
         ['銀色反射','watershedWater','highlight'],
-        ['水面反射強度','watershedWater','reflection',0,1,.05]
+        ['水面反射強度','watershedWater','reflection',0,1,.05],
+        ['河道深淺（主流較深）','watershedWater','depth',0,1.5,.01],
+        ['河面斑駁','watershedWater','mottle',0,1.5,.01]
       ]],
       ['河岸細節', [
         ['岸邊浪花','shoreline','foam',0,2,.05],
@@ -7928,6 +8063,103 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         ['銀藍統一色','logoCards','tintStrength',0,1,.01],['原圖彩度','logoCards','saturation',0,1,.01],
         ['對比','logoCards','contrast',.6,1.8,.01],['亮度','logoCards','brightness',.5,1.5,.01],
         ['手機尺寸','logoCards','mobileScale',.4,1,.01]
+      ]],
+      /* The water drops, in four parts: the orbit (the cards' own, one to
+         one), the drops and the photographs in them, the liquid physics, and
+         the light. The choice between cards and drops lives at the top of
+         the panel with the LOGO switches. */
+      /* How they move — 0 spiral, 1 lunge, 2 bloom (the buttons at the top
+         of the panel write this) — and the motion blur the lunge and the
+         bloom are drawn with. */
+      /* How the drops arrive after the hero drop has burst — the stretch
+         before the chapter, in the chapter's own (negative) units. The
+         buttons at the top of the panel write 進場. */
+      ['水滴 · 進場（接第一段散開）', [
+        ['進場 0淡入 1回流 2內聚','logoDrops','entrance',0,2,1],['開始進場','logoDrops','enterStart',-.6,-.05,.01],
+        ['先後間隔','logoDrops','enterStagger',0,.3,.01],['旋入圈數','logoDrops','enterSwirl',0,1.5,.01],
+        ['照片顯影時機','logoDrops','develop',0,.95,.01],['內聚匯合點','logoDrops','enterMerge',-.4,-.02,.01],
+        ['白光幕保留','logoDrops','enterFlash',0,1,.01]
+      ]],
+      ['水滴 · 動態模式', [
+        ['動態 0螺旋 1前撲 2綻放','logoDrops','mode',0,2,1],['動態模糊','logoDrops','blur',0,4,.01],
+        ['螺旋也模糊','logoDrops','blurSpiral',0,1,1],['遠處淡入空氣','logoDrops','haze',0,1,.01]
+      ]],
+      ['水滴 · 軌道', [
+        ['顯示水滴','logoDrops','enabled',0,1,1],['水滴數量','logoDrops','count',1,LOGO_DROP_MAX,1],
+        ['環繞半徑','logoDrops','radius',.55,2.2,.01],
+        ['路徑間距','logoDrops','spacing',.4,1.2,.01],['螺旋高度','logoDrops','pitch',0,.4,.005],
+        ['捲動圈數','logoDrops','turns',0,2.5,.05],['起始角度','logoDrops','phase',-180,180,1],
+        ['前後傾斜','logoDrops','tiltX',-35,35,1],['左右傾斜','logoDrops','tiltZ',-30,30,1],
+        ['垂直位置','logoDrops','offsetY',-.6,.6,.01],['尾端收束','logoDrops','tailTaper',0,.4,.01],
+        ['尾端景深','logoDrops','tailDepth',0,.5,.01],['波動幅度','logoDrops','wave',0,.15,.005],
+        ['自動旋轉速度','logoDrops','autoSpeed',-.5,.5,.01],['手機尺寸','logoDrops','mobileScale',.4,1,.01]
+      ]],
+      /* The end of the chapter: the string climbs off the top of the frame,
+         head first, until the last drop is gone. Times are the LOGO
+         chapter's own 0–1. */
+      ['水滴 · 螺旋離場', [
+        ['轉出上升','logoDrops','leave',0,1,1],['開始離場','logoDrops','leaveStart',0,.95,.01],
+        ['最後一顆消失','logoDrops','leaveEnd',.1,1,.01],['單顆上升時間','logoDrops','leaveClimb',.04,.6,.01],
+        ['上升追加圈數','logoDrops','leaveSpin',0,1.5,.01],['衝出高度','logoDrops','leaveRise',1,2.5,.01],
+        ['上升半徑','logoDrops','leaveRadius',.3,1.6,.01]
+      ]],
+      /* The lunge: out of the distance behind the mark, one after another,
+         straight at the lens. Times are the chapter's own 0–1. */
+      ['水滴 · 前撲', [
+        ['開始前撲','logoDrops','lungeStart',0,.9,.01],['最後一顆飛過','logoDrops','lungeEnd',.1,1,.01],
+        ['單顆飛行時間','logoDrops','lungeFlight',.04,.8,.01],['起點深度','logoDrops','lungeDepth',1,20,.1],
+        ['散開範圍','logoDrops','lungeSpread',.2,2,.01],['一路漂近（不停頓）','logoDrops','lungeDrift',0,.5,.01],
+        ['前撲加速曲線','logoDrops','lungeCurve',1,4,.05],['後縮蓄力（0＝無）','logoDrops','lungeRecoil',0,3,.01],
+        ['散珠迎面流速','logoDrops','stream',0,4,.01]
+      ]],
+      /* The bloom: a burst from behind the mark into a constellation that
+         turns while it hangs, then — one drop after another — a pounce at
+         the lens (結尾 0, the default: no crouch, one smooth run from rest)
+         or a fall into the sea (結尾 1). */
+      ['水滴 · 綻放', [
+        ['綻放時間點','logoDrops','bloomAt',0,.6,.01],['綻放時長','logoDrops','bloomTime',.04,.6,.01],
+        ['星座寬度','logoDrops','bloomSpread',.3,1.8,.01],['星座深度','logoDrops','bloomDepth',0,2.5,.01],
+        ['星座旋轉速度','logoDrops','bloomTurn',-120,120,1],['持續展開（不停頓）','logoDrops','bloomDrift',0,3,.01],
+        ['結尾 0前撲 1落海','logoDrops','bloomEnd',0,1,1],['前撲加速曲線','logoDrops','pounceCurve',1,4,.05],
+        ['開始離場','logoDrops','rainStart',.1,.95,.01],
+        ['最後一顆離場','logoDrops','rainEnd',.2,1,.01],['單顆離場時間','logoDrops','rainFall',.04,.6,.01],
+        ['落海位置（只在落海）','logoDrops','rainLand',-1,-.3,.01],['落海水花（只在落海）','logoDrops','splash',0,3,.01]
+      ]],
+      ['水滴 · 大小與相片', [
+        ['平均大小','logoDrops','size',.08,.5,.005],['大小差異','logoDrops','sizeVar',0,1.5,.01],
+        ['相片縮放','logoDrops','zoom',1,2.5,.01],['融合範圍','logoDrops','fuse',0,1,.01],
+        ['水中朦朧','logoDrops','veil',0,.6,.01],
+        ['銀藍統一色','logoDrops','tintStrength',0,1,.01],['原圖彩度','logoDrops','saturation',0,1,.01],
+        ['對比','logoDrops','contrast',.6,1.8,.01],['亮度','logoDrops','brightness',.5,1.6,.01],
+        ['透明度','logoDrops','opacity',.15,1,.01]
+      ]],
+      /* The liquid: squirm at rest, then how the water answers the ring's
+         motion — the inertial spring (drive, frequency, damping), the
+         stretch and tear at speed, its weight, its roll, and the picture's
+         slosh. */
+      ['水滴 · 液體物理', [
+        ['蠕動幅度','logoDrops','wobble',0,.2,.001],['蠕動速度','logoDrops','wobbleSpeed',0,3,.01],
+        ['蠕動尺度','logoDrops','wobbleScale',.4,4,.01],
+        ['慣性甩動','logoDrops','inertia',0,2,.01],['彈性頻率','logoDrops','jiggle',2,20,.1],
+        ['彈性阻尼','logoDrops','damping',.02,1.2,.01],
+        ['速度拉長','logoDrops','stretch',0,3,.01],['水滴拖尾','logoDrops','tail',0,3,.01],
+        ['重力下垂','logoDrops','sag',0,.25,.005],['表面滾動','logoDrops','roll',0,1.5,.01],
+        ['內部晃動','logoDrops','slosh',0,3,.01],['變形上限','logoDrops','limit',.05,.9,.01]
+      ]],
+      /* The small water: spray shed by the moving drops, and the loose beads
+         hanging in the air around the mark. None of it is round. */
+      ['水滴 · 飛濺與散珠', [
+        ['飛濺量','logoDrops','spray',0,2.5,.01],['飛濺持續','logoDrops','sprayLife',.2,2.5,.01],
+        ['飛濺大小','logoDrops','spraySize',.3,2.5,.01],
+        ['散珠數量','logoDrops','ambient',0,1,.01],['散珠大小','logoDrops','ambientSize',.3,2.5,.01],
+        ['散珠視差','logoDrops','parallax',-1,1,.01],['散珠漂浮','logoDrops','float',0,3,.01],
+        ['小水滴不規則','logoDrops','beadLump',0,.5,.01],['小水滴蠕動速度','logoDrops','beadWobble',0,3,.01]
+      ]],
+      ['水滴 · 光線', [
+        ['折射率','logoDrops','ior',1.1,1.8,.005],['色散','logoDrops','dispersion',0,.06,.001],
+        ['表面反射','logoDrops','reflect',0,2,.01],['高光','logoDrops','spec',0,3,.01],
+        ['邊緣墨色','logoDrops','rim',0,1,.01],['背光弧','logoDrops','caustic',0,2,.01],
+        ['水的染色','logoDrops','absorb',0,1.5,.01],['光核亮度','logoDrops','glow',0,2,.01]
       ]],
       ['相機', [
         ['位置 X', 'camera', 'x', -8, 8, .01], ['位置 Y', 'camera', 'y', 0, 12, .01], ['位置 Z', 'camera', 'z', 5, 32, .01],
@@ -8193,13 +8425,93 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       for(const [id,button] of logoChoiceButtons){const item=logoVariants.get(id);button.disabled=!item.shapes?.length;button.setAttribute('aria-pressed',String(selected===id));button.title=item.error?'SVG 載入失敗':item.url;}
       logoCompareStatus.textContent=variant.error?'此款 LOGO 載入失敗，請重新整理。':!variant.shapes?.length?'LOGO 載入中…':variant.label+(variant.wordmark?' · 共用玻璃材質 · 品牌藍弧 · 等寬置中':' · 共用玻璃材質 · 等高置中');
     };
-    logoCompare.append(logoCompareHeading,logoSwitches,logoCompareStatus,compareActions);tunerBody.appendChild(logoCompare);syncLogoComparison();
+    /* The ring around the mark: cards, drops, or both. It writes the two
+       groups' own on/off switches, so the sliders below stay the truth and
+       this only mirrors them — moving 顯示卡牌 or 顯示水滴 by hand lights the
+       matching button here. */
+    const ringHeading=document.createElement('h3');ringHeading.textContent='環繞樣式';
+    const ringSwitches=document.createElement('div');ringSwitches.className='tuner-actions logo-switches';
+    ringSwitches.style.setProperty('--logo-count','3');
+    const ringButtons=new Map();
+    const ringMode=()=>{const cards=CONFIG.logoCards.enabled>.5,drops=CONFIG.logoDrops.enabled>.5;return cards&&drops?'both':cards?'cards':drops?'drops':'none';};
+    const syncRing=()=>{const mode=ringMode();for(const [id,button] of ringButtons)button.setAttribute('aria-pressed',String(mode===id));};
+    for(const [id,label] of [['cards','卡牌'],['drops','水滴'],['both','兩者']]){
+      const button=document.createElement('button');button.type='button';button.textContent=label;
+      button.setAttribute('aria-label','環繞樣式：'+label);button.setAttribute('aria-pressed','false');
+      button.addEventListener('click',()=>{CONFIG.logoCards.enabled=id==='drops'?0:1;CONFIG.logoDrops.enabled=id==='cards'?0:1;syncTunerValues();applyConfig();syncRing();});
+      ringSwitches.appendChild(button);ringButtons.set(id,button);
+    }
+    const ringActions=document.createElement('div');ringActions.className='tuner-actions';
+    const jumpTo=title=>{const group=tunerBody.querySelector('[data-title="'+title+'"]');if(group)tunerBody.scrollTo({top:group.offsetTop-tunerBody.offsetTop-logoCompare.offsetHeight-5,behavior:reduceMotion?'auto':'smooth'});};
+    const editDrops=document.createElement('button');editDrops.type='button';editDrops.textContent='水滴細項';
+    editDrops.addEventListener('click',()=>jumpTo('水滴 · 軌道'));
+    const editCards=document.createElement('button');editCards.type='button';editCards.textContent='卡牌細項';
+    editCards.addEventListener('click',()=>jumpTo('LOGO 卡牌環繞'));
+    ringActions.append(editDrops,editCards);
+    tunerBody.addEventListener('input',syncRing);
+    tunerBody.addEventListener('click',()=>setTimeout(syncRing,0));
+    /* How the drops move: spiral, lunge or bloom. It writes 動態模式 and
+       mirrors it, as the ring switches do; choosing one also turns the drops
+       on. ▶ plays the LOGO chapter through from its start, so a whole
+       choreography can be watched without scrolling — any wheel, touch or
+       key hands the scroll back. */
+    const motionHeading=document.createElement('h3');motionHeading.textContent='水滴動態';
+    const motionSwitches=document.createElement('div');motionSwitches.className='tuner-actions logo-switches';
+    motionSwitches.style.setProperty('--logo-count','3');
+    const motionButtons=new Map();
+    const syncMotion=()=>{const mode=Math.round(CONFIG.logoDrops.mode);for(const [id,button] of motionButtons)button.setAttribute('aria-pressed',String(mode===id));};
+    for(const [id,label] of [[0,'螺旋'],[1,'前撲'],[2,'綻放']]){
+      const button=document.createElement('button');button.type='button';button.textContent=label;
+      button.setAttribute('aria-label','水滴動態：'+label);button.setAttribute('aria-pressed','false');
+      button.addEventListener('click',()=>{CONFIG.logoDrops.mode=id;CONFIG.logoDrops.enabled=1;syncTunerValues();applyConfig();syncRing();syncMotion();});
+      motionSwitches.appendChild(button);motionButtons.set(id,button);
+    }
+    const motionActions=document.createElement('div');motionActions.className='tuner-actions';
+    let chapterPlay=0;
+    const stopChapter=()=>{if(chapterPlay)cancelAnimationFrame(chapterPlay);chapterPlay=0;};
+    /* Runs the journey from FROM to TO over SPAN ms, as a steady scroll would. */
+    const playJourney=(from,to,span)=>{
+      if(!assetsReady)return;
+      stopChapter();skipEntry();
+      const begin=performance.now();
+      journey.velocity=0;journey.progress=journey.target=from;
+      const run=now=>{const u=Math.min(1,(now-begin)/span);journey.target=from+(to-from)*u;chapterPlay=u<1?requestAnimationFrame(run):0;};
+      chapterPlay=requestAnimationFrame(run);
+    };
+    const playChapter=document.createElement('button');playChapter.type='button';playChapter.textContent='▶ 播放本章';
+    playChapter.addEventListener('click',()=>playJourney(logoChapterStart(),logoChapterEnd()-.02,8000));
+    /* From just before the hero drop bursts, on through the drops' entrance
+       into the chapter: the seam between the first block and the second. */
+    const playSeam=document.createElement('button');playSeam.type='button';playSeam.textContent='▶ 從散開接續';
+    playSeam.addEventListener('click',()=>playJourney(.35,logoChapterStart()+CONFIG.logo.length*.3,9000));
+    for(const type of ['wheel','touchstart','keydown'])addEventListener(type,stopChapter,{passive:true});
+    const editMotion=document.createElement('button');editMotion.type='button';editMotion.textContent='動態細項';
+    editMotion.addEventListener('click',()=>jumpTo('水滴 · 動態模式'));
+    motionActions.append(playSeam,playChapter,editMotion);
+    tunerBody.addEventListener('input',syncMotion);
+    tunerBody.addEventListener('click',()=>setTimeout(syncMotion,0));
+    /* How the drops arrive after the burst: fade, return, converge. Writes
+       進場 and mirrors it, as the switches above do. */
+    const enterHeading=document.createElement('h3');enterHeading.textContent='水滴進場（接第一段散開）';
+    const enterSwitches=document.createElement('div');enterSwitches.className='tuner-actions logo-switches';
+    enterSwitches.style.setProperty('--logo-count','3');
+    const enterButtons=new Map();
+    const syncEnter=()=>{const mode=Math.round(CONFIG.logoDrops.entrance);for(const [id,button] of enterButtons)button.setAttribute('aria-pressed',String(mode===id));};
+    for(const [id,label] of [[0,'淡入'],[1,'回流'],[2,'內聚']]){
+      const button=document.createElement('button');button.type='button';button.textContent=label;
+      button.setAttribute('aria-label','水滴進場：'+label);button.setAttribute('aria-pressed','false');
+      button.addEventListener('click',()=>{CONFIG.logoDrops.entrance=id;CONFIG.logoDrops.enabled=1;syncTunerValues();applyConfig();syncRing();syncEnter();});
+      enterSwitches.appendChild(button);enterButtons.set(id,button);
+    }
+    tunerBody.addEventListener('input',syncEnter);
+    tunerBody.addEventListener('click',()=>setTimeout(syncEnter,0));
+    logoCompare.append(logoCompareHeading,logoSwitches,logoCompareStatus,compareActions,ringHeading,ringSwitches,ringActions,motionHeading,motionSwitches,enterHeading,enterSwitches,motionActions);tunerBody.appendChild(logoCompare);syncLogoComparison();syncRing();syncMotion();syncEnter();
 
     const logoActions=document.createElement('div');logoActions.className='tuner-actions logo-actions';
     const previewLogo=document.createElement('button');previewLogo.type='button';previewLogo.textContent='預覽 LOGO';
     previewLogo.addEventListener('click',()=>{skipEntry();journey.target=logoChapterStart()+CONFIG.logo.length*.44;});
     const resetLogo=document.createElement('button');resetLogo.type='button';resetLogo.textContent='重設 LOGO / 卡牌';
-    resetLogo.addEventListener('click',()=>{for(const key of ['logo','logoGlass','logoCards','forwardTransition','logoFraming'])Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);syncTunerValues();applyConfig();});
+    resetLogo.addEventListener('click',()=>{for(const key of ['logo','logoGlass','logoCards','logoDrops','forwardTransition','logoFraming'])Object.assign(CONFIG[key],DEFAULT_CONFIG[key]);syncTunerValues();applyConfig();});
     const resetCursor=document.createElement('button');resetCursor.type='button';resetCursor.textContent='重設游標';
     resetCursor.addEventListener('click',()=>{Object.assign(CONFIG.cursor,CURSOR_DEFAULTS);syncTunerValues();});
     const centerLogo=document.createElement('button');centerLogo.type='button';centerLogo.textContent='LOGO 置中';
@@ -8242,7 +8554,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       for (const [label, groupKey, key, min, max, step] of items) {
         const row = document.createElement('div');
         row.className = 'tune-row';
-        const isLogo=groupKey==='uiGlass'||['logo','logoGlass','logoCards','forwardTransition','cursor','logoFraming','canyonMotion','watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline','canyonView','relief','logoTerrain'].includes(groupKey);
+        const isLogo=groupKey==='uiGlass'||['logo','logoGlass','logoCards','logoDrops','forwardTransition','cursor','logoFraming','canyonMotion','watershedFlow','watershedStyle','watershedWater','watershedTerrain','shoreline','canyonView','relief','logoTerrain'].includes(groupKey);
         row.classList.toggle('is-logo',isLogo);
         if (key === 'waveMorph') row.classList.add('is-morph');
         const caption = document.createElement('label');
@@ -9063,11 +9375,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }
       /* Wrapped, not passed directly: rAF hands its callback a timestamp,
          which would arrive here as `manual` and stop the loop. */
-      if (!manual) requestAnimationFrame(() => frame());
+      if (!manual) requestAnimationFrame(tick);
     }
+    /* One bound callback for the life of the page, instead of a fresh closure every frame. */
+    const tick = () => frame();
 
     /* Read-only diagnostics for local verification; never shown in the visitor interface. */
-    window.__MONTIS_STUDY__ = { canyonMotion, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark:{root:logoRoot,spin:logoSpin,glass:logoGlass,cards:logoCards,variants:logoVariants,get activeVariant(){return activeLogoVariant;},get mesh(){return logoMesh;}}, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
+    window.__MONTIS_STUDY__ = { canyonMotion, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark:{root:logoRoot,spin:logoSpin,glass:logoGlass,cards:logoCards,drops:logoDrops,variants:logoVariants,get activeVariant(){return activeLogoVariant;},get mesh(){return logoMesh;}}, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
 
     function resize() {
       const width = innerWidth;
@@ -9082,6 +9396,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       sceneCursor.resize(width,height);
       composer.setPixelRatio(dpr);
       composer.setSize(width, height);
+      renderTarget.setSize(width * dpr, height * dpr);
       bloom.resolution.set(width * dpr, height * dpr);
       canyon.resize(width,height);
       canyonTarget.setSize(Math.round(width*Math.min(dpr,1.3)),Math.round(height*Math.min(dpr,1.3)));

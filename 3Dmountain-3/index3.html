@@ -2,7 +2,7 @@
 <html lang="zh-Hant" prefix="og: https://ogp.me/ns#">
 
 <head>
-  <meta name="build-version" content="index463-seo-20261004-742868f89b">
+  <meta name="build-version" content="index463-pagespeed-20261004-713f259ee4">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
@@ -159,8 +159,10 @@
       z-index: 3;
       opacity: .04;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
-      animation: grain .24s steps(2) infinite;
+
     }
+
+    body.is-ready .grain { animation: grain .24s steps(2) infinite; }
 
     @keyframes grain {
       0% {
@@ -355,7 +357,7 @@
     .loader {
       position: fixed;
       inset: 0;
-      z-index: 10;
+      z-index: 6;
       display: grid;
       place-items: center;
       background: #e4edf1;
@@ -1042,12 +1044,20 @@ html:not([data-tuning="true"]) .tuner { display:none; }
   z-index: 7;
   pointer-events: none;
   color: var(--ui-ink);
-  opacity: 0;
-  visibility: hidden;
+  opacity: 1;
+  visibility: visible;
   transition: opacity 1.2s ease, visibility 1.2s, color .7s ease;
   font-family: "Jost", "Noto Sans TC", sans-serif;
 }
 body.is-ready .finnovation-ui { opacity: 1; visibility: visible; }
+/* The SSR copy paints before WebGL; controls wait until their scene is ready. */
+body.is-booting:not(.is-ready) .fi-header-right,
+body.is-booting:not(.is-ready) .fi-rail,
+body.is-booting:not(.is-ready) .fi-footer,
+body.is-booting:not(.is-ready) .fi-copy-action,
+body.is-booting:not(.is-ready) .fi-brand { visibility: hidden; pointer-events: none; }
+/* Keep the brand artwork readable without exposing its unbound anchor. */
+body.is-booting:not(.is-ready) .fi-brand > * { visibility: visible; pointer-events: none; }
 body.is-watershed .finnovation-ui {
   --ui-ink: #203349;
   --ui-muted: #4f6275;
@@ -1445,7 +1455,7 @@ body.has-finnovation-ui .tuner {
       </div>
     </header>
     <nav class="fi-rail" aria-label="品牌篇章"><button data-chapter="0" aria-label="01 以知為本"><span class="fi-rail-number" aria-hidden="true">01</span>KNOWLEDGE</button><button data-chapter="1" aria-label="02 創新匯聚"><span class="fi-rail-number" aria-hidden="true">02</span>INNOVATION</button><button data-chapter="2" aria-label="03 科技與金融"><span class="fi-rail-number" aria-hidden="true">03</span>CONVERGENCE</button><button data-chapter="3" aria-label="04 長遠價值"><span class="fi-rail-number" aria-hidden="true">04</span>VALUE</button><button data-chapter="4" aria-label="05 洞察未來"><span class="fi-rail-number" aria-hidden="true">05</span>PERSPECTIVE</button><button data-chapter="5" aria-label="06 投資策略"><span class="fi-rail-number" aria-hidden="true">06</span>STRATEGIES</button></nav>
-    <main class="fi-copy" aria-label="恒灝創新的理念與投資策略"><article class="fi-copy-panel" id="chapter-knowledge" data-copy="knowledge"><p class="fi-copy-kicker">KNOWLEDGE · CAPITAL · INNOVATION</p><h1 lang="en"><span>OMNI INVESTMENT</span> <span>STRATEGIES</span></h1><p class="fi-copy-zh">洞悉市場，全方位資產佈局</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE OUR WORLD<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-innovation" data-copy="innovation"><p class="fi-copy-kicker">THE FINNOVATION SPIRIT</p><h2 lang="en"><span>IDEAS</span> <span>TAKE SHAPE</span></h2><p class="fi-copy-zh">匯聚科技知識，連結金融價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>FOLLOW THE FLOW<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-convergence" data-copy="convergence"><p class="fi-copy-kicker">OUR APPROACH</p><h2 lang="en"><span>TECHNOLOGY</span> <span>MEETS FINANCE</span></h2><p class="fi-copy-zh">科技知識賦能，金融元素加值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>DISCOVER OUR CONVICTION<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-value" data-copy="value"><p class="fi-copy-kicker">OUR CONVICTION</p><h2 lang="en"><span>VALUE</span> <span>IN MOTION</span></h2><p class="fi-copy-zh">以穩健誠信為本，探索產業的長遠價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>SEE THE BIGGER PICTURE<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-perspective" data-copy="perspective"><p class="fi-copy-kicker">INSIGHT WITH HUMANITY</p><h2 lang="en"><span>A WIDER</span> <span>PERSPECTIVE</span></h2><p class="fi-copy-zh">邏輯數據之外，看見產業，也看見人。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE OUR STRATEGIES<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-strategies" data-copy="strategies"><p class="fi-copy-kicker">INVESTMENT STRATEGIES</p><h2 lang="en"><span>FOUR PATHS</span> <span>ONE VISION</span></h2><p class="fi-copy-zh">四大投資領域，連結科技與金融的產業價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>DISCOVER THE FOUR PATHS<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-ai" data-copy="ai"><p class="fi-copy-kicker">01 / AI 量化交易</p><h2 lang="en"><span>AI</span> <span>QUANT TRADING</span></h2><p class="fi-copy-zh">以 AI 與量化思維，探索市場中的投資機會。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE THE NEXT PATH<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-public" data-copy="public"><p class="fi-copy-kicker">02 / 上市櫃投資</p><h2 lang="en"><span>PUBLIC</span> <span>EQUITIES</span></h2><p class="fi-copy-zh">關注上市櫃企業，洞察產業發展中的投資價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE THE NEXT PATH<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-private" data-copy="private"><p class="fi-copy-kicker">03 / 未上市與 PRE-IPO</p><h2 lang="en"><span>PRE-IPO</span> <span>INVESTMENT</span></h2><p class="fi-copy-zh">與具潛力的企業對話，探索上市前的成長契機。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE THE NEXT PATH<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-derivatives" data-copy="derivatives"><p class="fi-copy-kicker">04 / 衍生性商品</p><h2 lang="en"><span>DERIVATIVE</span> <span>STRATEGIES</span></h2><p class="fi-copy-zh">透過衍生性商品，拓展金融策略的可能。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>BACK TO THE BEGINNING<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article></main>
+    <main class="fi-copy" aria-label="恒灝創新的理念與投資策略"><article class="fi-copy-panel is-active" id="chapter-knowledge" data-copy="knowledge"><p class="fi-copy-kicker">KNOWLEDGE · CAPITAL · INNOVATION</p><h1 lang="en"><span>OMNI INVESTMENT</span> <span>STRATEGIES</span></h1><p class="fi-copy-zh">洞悉市場，全方位資產佈局</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE OUR WORLD<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-innovation" data-copy="innovation"><p class="fi-copy-kicker">THE FINNOVATION SPIRIT</p><h2 lang="en"><span>IDEAS</span> <span>TAKE SHAPE</span></h2><p class="fi-copy-zh">匯聚科技知識，連結金融價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>FOLLOW THE FLOW<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-convergence" data-copy="convergence"><p class="fi-copy-kicker">OUR APPROACH</p><h2 lang="en"><span>TECHNOLOGY</span> <span>MEETS FINANCE</span></h2><p class="fi-copy-zh">科技知識賦能，金融元素加值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>DISCOVER OUR CONVICTION<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-value" data-copy="value"><p class="fi-copy-kicker">OUR CONVICTION</p><h2 lang="en"><span>VALUE</span> <span>IN MOTION</span></h2><p class="fi-copy-zh">以穩健誠信為本，探索產業的長遠價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>SEE THE BIGGER PICTURE<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-perspective" data-copy="perspective"><p class="fi-copy-kicker">INSIGHT WITH HUMANITY</p><h2 lang="en"><span>A WIDER</span> <span>PERSPECTIVE</span></h2><p class="fi-copy-zh">邏輯數據之外，看見產業，也看見人。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE OUR STRATEGIES<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-strategies" data-copy="strategies"><p class="fi-copy-kicker">INVESTMENT STRATEGIES</p><h2 lang="en"><span>FOUR PATHS</span> <span>ONE VISION</span></h2><p class="fi-copy-zh">四大投資領域，連結科技與金融的產業價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>DISCOVER THE FOUR PATHS<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-ai" data-copy="ai"><p class="fi-copy-kicker">01 / AI 量化交易</p><h2 lang="en"><span>AI</span> <span>QUANT TRADING</span></h2><p class="fi-copy-zh">以 AI 與量化思維，探索市場中的投資機會。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE THE NEXT PATH<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-public" data-copy="public"><p class="fi-copy-kicker">02 / 上市櫃投資</p><h2 lang="en"><span>PUBLIC</span> <span>EQUITIES</span></h2><p class="fi-copy-zh">關注上市櫃企業，洞察產業發展中的投資價值。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE THE NEXT PATH<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-private" data-copy="private"><p class="fi-copy-kicker">03 / 未上市與 PRE-IPO</p><h2 lang="en"><span>PRE-IPO</span> <span>INVESTMENT</span></h2><p class="fi-copy-zh">與具潛力的企業對話，探索上市前的成長契機。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>EXPLORE THE NEXT PATH<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article><article class="fi-copy-panel" id="chapter-derivatives" data-copy="derivatives"><p class="fi-copy-kicker">04 / 衍生性商品</p><h2 lang="en"><span>DERIVATIVE</span> <span>STRATEGIES</span></h2><p class="fi-copy-zh">透過衍生性商品，拓展金融策略的可能。</p><button class="fi-copy-action" data-next><span><span class="fi-grid-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>BACK TO THE BEGINNING<svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></span></button></article></main>
     <footer class="fi-footer">
       <button class="fi-sound" aria-pressed="false" aria-label="開啟環境水聲"><svg class="fi-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3zM13 7c2 1.5 2 4.5 0 6m2-9c4 3 4 9 0 12"/></svg><span>SOUND OFF</span></button>
       <div class="fi-footer-center"><span class="fi-footer-current">KNOWLEDGE</span><span class="fi-footer-progress" aria-hidden="true"><i></i></span><span class="fi-footer-total">01 / 06</span></div>
@@ -1462,7 +1472,11 @@ body.has-finnovation-ui .tuner {
 
   <script>
     // Independent of WebGL/modules so the same HTML remains usable if 3D cannot start.
+    document.body.classList.add('is-booting');
     window.showFinnovationText = function () {
+      document.documentElement.dataset.renderMode = "text";
+      window.dispatchEvent(new Event("finnovation:text-mode"));
+      document.body.classList.remove('is-booting');
       if (!document.getElementById("finnovation-readable")) {
         const style = document.createElement("link");
         style.id = "finnovation-readable"; style.rel = "stylesheet";
@@ -1485,17 +1499,17 @@ body.has-finnovation-ui .tuner {
 
   <script type="module" id="journeyModule" onerror="showFinnovationText()">
     import * as THREE from 'three';
-    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-seo-20261004-742868f89b';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-seo-20261004-742868f89b';
-    import { createJourneyRiver } from './water-journey-river.js?v=index463-seo-20261004-742868f89b';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-seo-20261004-742868f89b';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-seo-20261004-742868f89b';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-seo-20261004-742868f89b';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-seo-20261004-742868f89b';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createJourneyRiver } from './water-journey-river.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-pagespeed-20261004-713f259ee4';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-seo-20261004-742868f89b';
-    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-seo-20261004-742868f89b';
-    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-seo-20261004-742868f89b';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-pagespeed-20261004-713f259ee4';
     import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
     /* Build the workshop only on request: T or ?tune=1. Its 547 controls
        are useful while editing, but should not delay the first view. */
@@ -1528,6 +1542,10 @@ body.has-finnovation-ui .tuner {
     import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
     import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 
+    async function startJourneyScene() {
+    // Let the real HTML headline paint before shader/model initialization.
+    await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+    document.documentElement.dataset.renderMode = 'starting';
     const canvas = document.querySelector('#gl');
     const loader = document.querySelector('#loader');
     const loaderNote = document.querySelector('.loader-note');
@@ -1540,12 +1558,30 @@ body.has-finnovation-ui .tuner {
     const tunerToggle = document.querySelector('#tunerToggle');
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let renderer;
+    let renderer, sceneStopped = false;
+    let stopChapterPlayback = () => {};
+    const pendingCompileMaterials = new Set();
+    const cancelShaderWarmups = () => {
+      // r170 compileAsync polls the Set returned by compile(). Drain it before
+      // dispose clears material properties, so pending polls settle safely.
+      for (const materials of pendingCompileMaterials) materials.clear();
+      pendingCompileMaterials.clear();
+    };
+    let stopScene = () => { sceneStopped = true; cancelShaderWarmups(); renderer?.dispose(); };
+    window.addEventListener('finnovation:text-mode', () => stopScene(), { once: true });
+    canvas.addEventListener('webglcontextlost', () => window.showFinnovationText(), { once: true });
     try {
+      // Ask the browser for a suitable WebGL2 context for every visitor.
+      // Do not start heavy scene work on a context with a major performance caveat.
+      const context = canvas.getContext('webgl2', {
+        antialias: false, depth: false, alpha: false,
+        powerPreference: 'high-performance', failIfMajorPerformanceCaveat: true
+      });
+      if (!context) { window.showFinnovationText(); return; }
       /* The canvas only ever receives the last full-screen quad of the post chain, so it needs
          neither multisampling nor a depth buffer: MSAA lives on the scene target (see composer). */
       renderer = new THREE.WebGLRenderer({
-        canvas,
+        canvas, context,
         antialias: false,
         depth: false,
         alpha: false,
@@ -1554,7 +1590,8 @@ body.has-finnovation-ui .tuner {
     } catch (error) {
       window.showFinnovationText();
       loader.classList.add('is-done');
-      throw error;
+      console.warn('The interactive scene is unavailable; showing the page content.', error);
+      return;
     }
 
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
@@ -2407,6 +2444,7 @@ vec3 montisDither(vec2 fc){
     let envTarget = null;
     let envBakeTimer = 0, envBakePending = false;
     function bakeEnvironment() {
+      if(sceneStopped)return;
       envBakeTimer=0;
       if(document.hidden&&envTarget){envBakePending=true;return;}
       envBakePending=false;
@@ -2417,7 +2455,7 @@ vec3 montisDither(vec2 fc){
     }
     /* A bake costs the better part of a frame. Never per frame, and never on
        slider input. */
-    function queueEnvBake() { clearTimeout(envBakeTimer);envBakePending=true;envBakeTimer=document.hidden?0:setTimeout(bakeEnvironment,250); }
+    function queueEnvBake() { if(sceneStopped)return;clearTimeout(envBakeTimer);envBakePending=true;envBakeTimer=document.hidden?0:setTimeout(bakeEnvironment,250); }
     bakeEnvironment();
     /* pmrem is deliberately NOT disposed: the palette is live-tunable, so the
        generator has to survive to rebuild the probe. */
@@ -7402,6 +7440,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const journeyLabel=document.querySelector('#journeyLabel');
     const journeyChapter=document.querySelector('#journeyChapter');
     const canyon=await createJourneySceneAsync(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,shoreConfig:CONFIG.shoreline,viewConfig:CONFIG.canyonView,reliefConfig:CONFIG.relief,logoTerrain:CONFIG.logoTerrain,lite:DROPLET_LITE,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
+    if(sceneStopped)return;
     canyon.scene.environment=scene.environment;
     const canyonTarget=new THREE.WebGLRenderTarget(innerWidth,innerHeight,{type:THREE.HalfFloatType,depthBuffer:true});
     // Only a full-frame dissolve under the zoom smear. No circular scene window.
@@ -7437,6 +7476,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let journeyReady=false,logoReady=false,warmPromise=null;
     const yieldToBrowser=()=>new Promise(resolve=>setTimeout(resolve,0));
     function warmJourney(){
+      if(sceneStopped)return Promise.resolve();
       if(!warmPromise)warmPromise=prepareJourney().catch(error=>{
         // An optional chapter must never leave the visitor trapped behind a loading gate.
         console.warn('Scene warmup failed',error);logoReady=journeyReady=true;
@@ -7444,24 +7484,34 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       return warmPromise;
     }
     async function compileForTarget(warmScene,warmCamera,target){
+      if(sceneStopped)return;
       // Shader output depends on the target. Start compilation in the same
       // linear HDR target used by the real scene, then restore before awaiting:
       // the live hero continues rendering while the driver compiles.
-      const previous=renderer.getRenderTarget();let compilation;
+      const previous=renderer.getRenderTarget(), compile=renderer.compile;let compilation,materials;
       try{
         renderer.setRenderTarget(target);
-        compilation=renderer.compileAsync?renderer.compileAsync(warmScene,warmCamera):renderer.compile(warmScene,warmCamera);
-      }finally{renderer.setRenderTarget(previous);}
-      await compilation;
+        if(renderer.compileAsync){
+          // Only wrap the synchronous setup; keep Three's own readiness polling.
+          renderer.compile=function(...args){
+            materials=compile.apply(this,args);pendingCompileMaterials.add(materials);return materials;
+          };
+          compilation=renderer.compileAsync(warmScene,warmCamera);
+        }else compilation=compile.call(renderer,warmScene,warmCamera);
+      }finally{renderer.compile=compile;renderer.setRenderTarget(previous);}
+      try{await compilation;}finally{if(materials)pendingCompileMaterials.delete(materials);}
     }
     function renderWarmScene(warmScene,warmCamera,target){
+      if(sceneStopped)return;
       const previous=renderer.getRenderTarget();
       try{renderer.setRenderTarget(target);renderer.render(warmScene,warmCamera);}
       finally{renderer.setRenderTarget(previous);}
     }
     async function prepareJourney(){
+      if(sceneStopped)return;
       await Promise.all([logoVariants.get(selectedLogoVariant()).ready,CONFIG.logoCards.enabled>.5?logoCards.ready:null,CONFIG.logoDrops.enabled>.5?logoDrops.ready:null]);
       await yieldToBrowser();
+      if(sceneStopped)return;
       const warmTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});
       try{
         const ws=new THREE.Scene(),wg=new THREE.PlaneGeometry(1,1);
@@ -7976,7 +8026,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
        只有名稱換成中文，鍵名維持不變，所以複製出來的設定檔跟程式碼一致。 */
     let tunerInitialized=false,logoCompare=null;
     function initializeTuner(){
-      if(tunerInitialized)return;
+      if(sceneStopped||tunerInitialized)return;
       tunerInitialized=true;
     const tuningGroups = [
       /* 介面毛玻璃：頁首按鈕、CTA、頁尾、選單共用一套。雙擊名稱還原單一參數。 */
@@ -8628,15 +8678,16 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const motionActions=document.createElement('div');motionActions.className='tuner-actions';
     let chapterPlay=0,chapterPlayEpoch=0;
     const stopChapter=()=>{chapterPlayEpoch++;if(chapterPlay)cancelAnimationFrame(chapterPlay);chapterPlay=0;};
+    stopChapterPlayback=stopChapter;
     /* Runs the journey from FROM to TO over SPAN ms, as a steady scroll would. */
     const playJourney=async(from,to,span)=>{
-      if(!assetsReady)return;
+      if(sceneStopped||!assetsReady)return;
       stopChapter();const epoch=chapterPlayEpoch;
-      await warmJourney();if(epoch!==chapterPlayEpoch)return;
+      await warmJourney();if(sceneStopped||epoch!==chapterPlayEpoch)return;
       skipEntry();
       const begin=performance.now();
       journey.velocity=0;journey.progress=journey.target=from;
-      const run=now=>{const u=Math.min(1,(now-begin)/span);journey.target=from+(to-from)*u;chapterPlay=u<1?requestAnimationFrame(run):0;};
+      const run=now=>{if(sceneStopped)return;const u=Math.min(1,(now-begin)/span);journey.target=from+(to-from)*u;chapterPlay=u<1?requestAnimationFrame(run):0;};
       chapterPlay=requestAnimationFrame(run);
     };
     const playChapter=document.createElement('button');playChapter.type='button';playChapter.textContent='▶ 播放本章';
@@ -9410,12 +9461,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let sceneTime = 0;
     let animationFrame=0;
     document.addEventListener('visibilitychange',()=>{
+      if(sceneStopped)return;
       clock.getDelta();journey.velocity=0;
       if(document.hidden){cancelAnimationFrame(animationFrame);animationFrame=0;clearTimeout(envBakeTimer);envBakeTimer=0;}
       else{if(envBakePending)queueEnvBake();if(!animationFrame)animationFrame=requestAnimationFrame(tick);}
     });
     function frame(manual, fixedDelta) {
-      if(!manual&&document.hidden)return;
+      if(sceneStopped||(!manual&&document.hidden))return;
       if(resizeFrame){cancelAnimationFrame(resizeFrame);resize();}
       const realDelta = clock.getDelta();
       const scrollDt=Math.min(fixedDelta === undefined ? realDelta : fixedDelta,.18);
@@ -9519,6 +9571,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       if (firstFrame && assetsReady && (!requestedPreview || journeyReady)) {
         firstFrame = false;
         requestAnimationFrame(() => {
+          if(sceneStopped)return;
           const preview=requestedPreview;
           if(preview==='transition')journey.progress=journey.target=logoChapterEnd()-.16;
           if(preview==='logo')journey.progress=journey.target=logoChapterStart()+CONFIG.logo.length*.44;
@@ -9528,6 +9581,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           if(preview==='zoom')journey.progress=journey.target=logoChapterEnd()+forwardLength()*.55;
           if(preview==='logo-compare')journey.progress=journey.target=logoChapterEnd()-.0001;
           if(preview==='finale')journey.progress=journey.target=journey.max;
+          document.documentElement.dataset.renderMode = 'webgl';
           document.body.classList.add('is-ready');
           // Reveal the already-rendered hero before fetching/compiling later chapters.
           setTimeout(warmJourney,0);
@@ -9559,6 +9613,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let lastWidth=0,lastHeight=0,lastDpr=0,resizeFrame=0;
     function resize() {
       resizeFrame=0;
+      if(sceneStopped)return;
       const width=innerWidth,height=innerHeight,dpr=Math.min(devicePixelRatio,1.65);
       if(width===lastWidth&&height===lastHeight&&dpr===lastDpr)return;
       const dprChanged=dpr!==lastDpr;
@@ -9578,10 +9633,24 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       canyon.resize(width,height);
       canyonTarget.setSize(Math.round(width*Math.min(dpr,1.3)),Math.round(height*Math.min(dpr,1.3)));
     }
-    addEventListener('resize',()=>{if(!resizeFrame)resizeFrame=requestAnimationFrame(resize);},{passive:true});
+    stopScene = () => {
+      sceneStopped = true;
+      cancelAnimationFrame(animationFrame); animationFrame = 0;
+      cancelAnimationFrame(resizeFrame); resizeFrame = 0;
+      stopChapterPlayback();
+      clearTimeout(envBakeTimer); envBakeTimer = 0;
+      cancelShaderWarmups();
+      renderer.dispose();
+    };
+    addEventListener('resize',()=>{if(!sceneStopped&&!resizeFrame)resizeFrame=requestAnimationFrame(resize);},{passive:true});
     resize();
     if(requestedPreview)warmJourney();
     frame();
+    }
+    startJourneyScene().catch(error => {
+      console.warn('The interactive scene could not start; showing the page content.', error);
+      window.showFinnovationText();
+    });
   </script>
 </body>
 

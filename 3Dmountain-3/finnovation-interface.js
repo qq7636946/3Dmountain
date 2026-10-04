@@ -1,4 +1,4 @@
-import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-seo-20261004-742868f89b';
+import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-pagespeed-20261004-713f259ee4';
 
 const chapters = [
   { id:'knowledge', en:'KNOWLEDGE', zh:'以知為本', title:['OMNI INVESTMENT','STRATEGIES'], text:'洞悉市場，全方位資產佈局', kicker:'KNOWLEDGE · CAPITAL · INNOVATION', cta:'EXPLORE OUR WORLD' },
@@ -28,7 +28,7 @@ export function renderJourneyInterface(){
       </div>
     </header>
     <nav class="fi-rail" aria-label="品牌篇章">${chapters.map((c,i)=>`<button data-chapter="${i}" aria-label="${String(i+1).padStart(2,'0')} ${c.zh}"><span class="fi-rail-number" aria-hidden="true">${String(i+1).padStart(2,'0')}</span>${c.en}</button>`).join('')}</nav>
-    <main class="fi-copy" aria-label="恒灝創新的理念與投資策略">${copies.map((c,i)=>`<article class="fi-copy-panel" id="chapter-${c.id}" data-copy="${c.id}"><p class="fi-copy-kicker">${c.kicker}</p><${i?'h2':'h1'} lang="en">${c.title.map(line=>`<span>${line}</span>`).join(' ')}</${i?'h2':'h1'}><p class="fi-copy-zh">${c.text}</p><button class="fi-copy-action" data-next><span>${grid}${c.cta}${arrow}</span></button></article>`).join('')}</main>
+    <main class="fi-copy" aria-label="恒灝創新的理念與投資策略">${copies.map((c,i)=>`<article class="fi-copy-panel${i===0?' is-active':''}" id="chapter-${c.id}" data-copy="${c.id}"><p class="fi-copy-kicker">${c.kicker}</p><${i?'h2':'h1'} lang="en">${c.title.map(line=>`<span>${line}</span>`).join(' ')}</${i?'h2':'h1'}><p class="fi-copy-zh">${c.text}</p><button class="fi-copy-action" data-next><span>${grid}${c.cta}${arrow}</span></button></article>`).join('')}</main>
     <footer class="fi-footer">
       <button class="fi-sound" aria-pressed="false" aria-label="開啟環境水聲">${speaker}<span>SOUND OFF</span></button>
       <div class="fi-footer-center"><span class="fi-footer-current">KNOWLEDGE</span><span class="fi-footer-progress" aria-hidden="true"><i></i></span><span class="fi-footer-total">01 / 06</span></div>

@@ -1,15 +1,16 @@
 /** Lazy, self-contained worker. A failed/unsupported worker uses the identical geometry algorithm. */
 export function createLogoGeometryBuilder(THREE, {
-  workerUrl = new URL('./water-logo-geometry-worker.bundle.js?v=index463-scroll-20261004-035e8e9957', import.meta.url),
+  workerUrl = new URL('./water-logo-geometry-worker.bundle.js?v=index463-scroll-20261004-78fa788ddc', import.meta.url),
   workerFactory = url => new Worker(url),
   timeoutMs = 30000,
-  onFallback = null
+  onFallback = null,
+  preload = false
 } = {}) {
   let worker = null, unavailable = false, disposed = false, nextId = 0;
   let helperPromise = null, fallbackPromise = null, activeEntry = null, queuedEntry = null;
   const pending = new Map();
   const abortError = (message = 'Logo geometry builder disposed.') => Object.assign(new Error(message), { name: 'AbortError' });
-  const helpers = () => helperPromise ||= import('./water-logo-geometry.js?v=index463-scroll-20261004-035e8e9957');
+  const helpers = () => helperPromise ||= import('./water-logo-geometry.js?v=index463-scroll-20261004-78fa788ddc');
   const disposeResult = result => { result?.geometry.dispose(); result?.edgeGeometry.dispose(); };
   function settle(entry, error, result) {
     if (pending.get(entry.id) !== entry) { disposeResult(result); return; }
@@ -85,6 +86,11 @@ export function createLogoGeometryBuilder(THREE, {
     disposed = true; worker?.terminate(); worker = null;
     for (const entry of pending.values()) { clearTimeout(entry.timer); entry.reject(abortError()); }
     pending.clear(); activeEntry = queuedEntry = null;
+  }
+  if (preload) {
+    // Start critical code together; keep the original promise for build/fallback errors.
+    try { ensureWorker(); } catch (error) { disableWorker(error); }
+    void helpers().catch(() => {});
   }
   return { build, dispose };
 }

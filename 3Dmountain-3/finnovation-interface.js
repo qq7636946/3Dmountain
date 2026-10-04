@@ -1,4 +1,4 @@
-import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-scroll-20261004-035e8e9957';
+import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-scroll-20261004-78fa788ddc';
 
 const chapters = [
   { id:'knowledge', en:'KNOWLEDGE', zh:'以知為本', title:['OMNI INVESTMENT','STRATEGIES'], text:'洞悉市場，全方位資產佈局', kicker:'KNOWLEDGE · CAPITAL · INNOVATION', cta:'EXPLORE OUR WORLD' },

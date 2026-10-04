@@ -1,7 +1,7 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-canyon-watershed.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
-import { createConfluenceEffects } from './water-confluence-fx-463.js?v=index463-scroll-20261004-035e8e9957';
-export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx-463.js?v=index463-scroll-20261004-035e8e9957';
+import { createConfluenceEffects } from './water-confluence-fx-463.js?v=index463-scroll-20261004-78fa788ddc';
+export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx-463.js?v=index463-scroll-20261004-78fa788ddc';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 

@@ -2,7 +2,7 @@
 <html lang="zh-Hant" prefix="og: https://ogp.me/ns#">
 
 <head>
-  <meta name="build-version" content="index463-scroll-20261004-035e8e9957">
+  <meta name="build-version" content="index463-scroll-20261004-78fa788ddc">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
@@ -1499,18 +1499,18 @@ body.has-finnovation-ui .tuner {
 
   <script type="module" id="journeyModule" onerror="showFinnovationText()">
     import * as THREE from 'three';
-    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-scroll-20261004-035e8e9957';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-scroll-20261004-035e8e9957';
-    import { createJourneyRiver } from './water-journey-river.js?v=index463-scroll-20261004-035e8e9957';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-scroll-20261004-035e8e9957';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-scroll-20261004-035e8e9957';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-scroll-20261004-035e8e9957';
-    import { createLogoGeometryBuilder } from './water-logo-geometry-client.js?v=index463-scroll-20261004-035e8e9957';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-scroll-20261004-035e8e9957';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-scroll-20261004-78fa788ddc';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-scroll-20261004-78fa788ddc';
+    import { createJourneyRiver } from './water-journey-river.js?v=index463-scroll-20261004-78fa788ddc';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-scroll-20261004-78fa788ddc';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-scroll-20261004-78fa788ddc';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-scroll-20261004-78fa788ddc';
+    import { createLogoGeometryBuilder } from './water-logo-geometry-client.js?v=index463-scroll-20261004-78fa788ddc';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-scroll-20261004-78fa788ddc';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-scroll-20261004-035e8e9957';
-    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-scroll-20261004-035e8e9957';
-    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-scroll-20261004-035e8e9957';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-scroll-20261004-78fa788ddc';
+    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-scroll-20261004-78fa788ddc';
+    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-scroll-20261004-78fa788ddc';
     import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
     /* Build the workshop only on request: T or ?tune=1. Its 547 controls
        are useful while editing, but should not delay the first view. */
@@ -7268,7 +7268,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let logoPulse = 0;
     const logoEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: CONFIG.logo.edge, depthWrite: false });
     let logoMesh = null;
-    logoGeometryBuilder = createLogoGeometryBuilder(THREE);
+    logoGeometryBuilder = createLogoGeometryBuilder(THREE, { preload:true });
     const logoVariants = new Map([
       [1, {id:1,url:'logo.svg',label:'LOGO 1',shapes:null,mesh:null,key:'',error:false}],
       [2, {id:2,url:'text_logo2.svg',label:'LOGO 2',shapes:null,mesh:null,key:'',error:false}],
@@ -7476,11 +7476,12 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     }
     async function prepareJourney(){
       if(sceneStopped)return;
-      // Photographs enrich individual drops/cards as they arrive. A slow image must
-      // not pin scroll at the hero dispersal gate or delay shader preparation.
+      // Finish the small critical model before optional photographs compete for
+      // bandwidth. Photos enrich drops/cards progressively and never gate scrolling.
+      await logoVariants.get(selectedLogoVariant()).ready;
+      if(sceneStopped)return;
       if(CONFIG.logoCards.enabled>.5)void logoCards.loadAssets();
       if(CONFIG.logoDrops.enabled>.5)void logoDrops.loadAssets();
-      await logoVariants.get(selectedLogoVariant()).ready;
       await yieldToBrowser();
       if(sceneStopped)return;
       const warmTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});

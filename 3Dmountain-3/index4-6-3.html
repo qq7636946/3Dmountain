@@ -2,7 +2,7 @@
 <html lang="zh-Hant" prefix="og: https://ogp.me/ns#">
 
 <head>
-  <meta name="build-version" content="index463-pagespeed-20261004-713f259ee4">
+  <meta name="build-version" content="index463-smooth-20261004-b030a95175">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
@@ -1499,17 +1499,18 @@ body.has-finnovation-ui .tuner {
 
   <script type="module" id="journeyModule" onerror="showFinnovationText()">
     import * as THREE from 'three';
-    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { createJourneyRiver } from './water-journey-river.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-smooth-20261004-b030a95175';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-smooth-20261004-b030a95175';
+    import { createJourneyRiver } from './water-journey-river.js?v=index463-smooth-20261004-b030a95175';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-smooth-20261004-b030a95175';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-smooth-20261004-b030a95175';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-smooth-20261004-b030a95175';
+    import { createLogoGeometryBuilder } from './water-logo-geometry-client.js?v=index463-smooth-20261004-b030a95175';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-smooth-20261004-b030a95175';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-pagespeed-20261004-713f259ee4';
-    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-pagespeed-20261004-713f259ee4';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-smooth-20261004-b030a95175';
+    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-smooth-20261004-b030a95175';
+    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-smooth-20261004-b030a95175';
     import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
     /* Build the workshop only on request: T or ?tune=1. Its 547 controls
        are useful while editing, but should not delay the first view. */
@@ -1558,7 +1559,7 @@ body.has-finnovation-ui .tuner {
     const tunerToggle = document.querySelector('#tunerToggle');
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let renderer, sceneStopped = false;
+    let renderer, sceneStopped = false, logoGeometryBuilder = null;
     let stopChapterPlayback = () => {};
     const pendingCompileMaterials = new Set();
     const cancelShaderWarmups = () => {
@@ -1567,7 +1568,7 @@ body.has-finnovation-ui .tuner {
       for (const materials of pendingCompileMaterials) materials.clear();
       pendingCompileMaterials.clear();
     };
-    let stopScene = () => { sceneStopped = true; cancelShaderWarmups(); renderer?.dispose(); };
+    let stopScene = () => { sceneStopped = true; logoGeometryBuilder?.dispose(); cancelShaderWarmups(); renderer?.dispose(); };
     window.addEventListener('finnovation:text-mode', () => stopScene(), { once: true });
     canvas.addEventListener('webglcontextlost', () => window.showFinnovationText(), { once: true });
     try {
@@ -2096,13 +2097,13 @@ body.has-finnovation-ui .tuner {
          of the frame, exactly behind the bead. The small sideways offset
          breaks the symmetry, so it reads as a light and not as a target. */
       uEnvCoreDir: { value: new THREE.Vector3(-.04, .1226, -.9925).normalize() },
-      uEnvCore: { value: new THREE.Vector4(2.70, .30, .115, .030) },
-      uEnvBands: { value: new THREE.Vector4(6.2, .145, .40, .82) },
+      uEnvCore: { value: new THREE.Vector4(CONFIG.field.core, .30 * CONFIG.field.coreSpread, .115 * CONFIG.field.coreSpread, .030 * CONFIG.field.coreSpread) },
+      uEnvBands: { value: new THREE.Vector4(CONFIG.chrome.bands, CONFIG.chrome.bandPhase, CONFIG.chrome.bandLight, CONFIG.chrome.bandInk) },
       /* 細絲原本固定在每單位仰角 38 個週期。在十四單位外的海面上，那等於
          一個像素裡塞四分之一個週期——那不是線條，是固定樣式的雜訊，也是整
          片海看起來像鋁箔紙的最大元兇。降到 7.5 之後它才真的是一條線。 */
       uEnvFil: { value: new THREE.Vector2(7.5, .118) },
-      uEnvRail: { value: new THREE.Vector2(.40, 1.9) },
+      uEnvRail: { value: new THREE.Vector2(CONFIG.chrome.railY, CONFIG.chrome.rail) },
       uEnvSpin: { value: .7 },
       /* The drop's own studio: how far its reflected elevation is squashed,
          the black card, the ink it turns toward, and the key. */
@@ -2442,20 +2443,29 @@ vec3 montisDither(vec2 fc){
     const envScene = new THREE.Scene();
     envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 48, 32), envProbeMaterial));
     let envTarget = null;
-    let envBakeTimer = 0, envBakePending = false;
+    let envBakeTimer = 0, envBakePending = false, bakedEnvironmentKey = null;
+    const environmentKey = () => JSON.stringify(Object.values(envProbeMaterial.uniforms).map(({value}) => value?.toArray ? value.toArray() : value));
     function bakeEnvironment() {
       if(sceneStopped)return;
       envBakeTimer=0;
       if(document.hidden&&envTarget){envBakePending=true;return;}
       envBakePending=false;
+      const key = environmentKey();
+      if(envTarget && key === bakedEnvironmentKey)return;
       const next = pmrem.fromScene(envScene, .02);
       if (envTarget) envTarget.dispose();
       envTarget = next;
       scene.environment = next.texture;
+      bakedEnvironmentKey = key;
     }
     /* A bake costs the better part of a frame. Never per frame, and never on
        slider input. */
-    function queueEnvBake() { if(sceneStopped)return;clearTimeout(envBakeTimer);envBakePending=true;envBakeTimer=document.hidden?0:setTimeout(bakeEnvironment,250); }
+    function queueEnvBake() {
+      if(sceneStopped)return;
+      clearTimeout(envBakeTimer);envBakeTimer=0;
+      envBakePending=environmentKey()!==bakedEnvironmentKey;
+      if(envBakePending&&!document.hidden)envBakeTimer=setTimeout(bakeEnvironment,250);
+    }
     bakeEnvironment();
     /* pmrem is deliberately NOT disposed: the palette is live-tunable, so the
        generator has to survive to rebuild the probe. */
@@ -7258,6 +7268,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let logoPulse = 0;
     const logoEdgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: CONFIG.logo.edge, depthWrite: false });
     let logoMesh = null;
+    logoGeometryBuilder = createLogoGeometryBuilder(THREE);
     const logoVariants = new Map([
       [1, {id:1,url:'logo.svg',label:'LOGO 1',shapes:null,mesh:null,key:'',error:false}],
       [2, {id:2,url:'text_logo2.svg',label:'LOGO 2',shapes:null,mesh:null,key:'',error:false}],
@@ -7268,86 +7279,41 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     let logoBuiltShape = '';
     const selectedLogoVariant = () => { const v=Math.round(Number(CONFIG.logo.variant)); return logoVariants.has(v)?v:1; };
     const logoShapeKey=()=>[selectedLogoVariant(),...['depth','bevel','bevelSize','bevelSegments','curveSegments'].map(k=>CONFIG.logo[k])].join('|');
-    function flipLogoWinding(g) {
-      const a = g.attributes.position.array;
-      for (let i = 0; i < a.length; i += 9) {
-        for (let k = 0; k < 3; k++) { const t = a[i + 3 + k]; a[i + 3 + k] = a[i + 6 + k]; a[i + 6 + k] = t; }
-      }
-      g.attributes.position.needsUpdate = true;
-    }
     function buildLogoMark() {
+      if(sceneStopped)return Promise.resolve(null);
       const variant=logoVariants.get(selectedLogoVariant());
-      if (!variant.shapes?.length) return;
+      if(!variant.shapes?.length)return Promise.resolve(null);
       const shapeKey=logoShapeKey();
-      if (variant.mesh && variant.key===shapeKey) {
+      if(variant.mesh&&variant.key===shapeKey){
         if(logoMesh!==variant.mesh){logoMesh?.removeFromParent();logoMesh=variant.mesh;logoSpin.add(logoMesh);}
-        activeLogoVariant=variant.id;logoBuiltShape=shapeKey;syncLogoComparison();return;
+        activeLogoVariant=variant.id;logoBuiltShape=shapeKey;syncLogoComparison();return Promise.resolve(variant.mesh);
       }
-      const logoShapes=variant.shapes;
-      const box = new THREE.Box2();
-      const blueShapes=variant.blueShapes||[];
-      for (const shape of [...logoShapes,...blueShapes]) for (const pt of shape.extractPoints(48).shape) box.expandByPoint(pt);
-      const size = box.getSize(new THREE.Vector2());
-      /* 字標以字高當厚度基準（否則 7:1 的長條會擠出比字還高的厚度）。 */
-      const span = (variant.wordmark ? size.y : Math.max(size.x, size.y)) || 1;
-      const extrude = shapes => new THREE.ExtrudeGeometry(shapes, {
-        depth: span * .06, curveSegments: Math.max(8, Math.round(CONFIG.logo.curveSegments * (variant.wordmark ? .5 : 1))), bevelEnabled: true,
-        bevelThickness: CONFIG.logo.bevel * span, bevelSize: Math.min(.0045,CONFIG.logo.bevelSize) * span, bevelOffset: 0, bevelSegments: Math.round(CONFIG.logo.bevelSegments)
-      });
-      let g;
-      if(blueShapes.length){
-        const parts=[extrude(logoShapes),extrude(blueShapes)].map(p=>{const q=p.index?p.toNonIndexed():p;if(q!==p)p.dispose();q.clearGroups();return q;});
-        g=BufferGeometryUtils.mergeGeometries(parts,true);parts.forEach(p=>p.dispose());
-      } else g = extrude(logoShapes);
-      if(g.index) g = g.toNonIndexed();
-      for (const name of Object.keys(g.attributes)) if (name !== 'position') g.deleteAttribute(name);
-      /* SVG 的 y 朝下，場景的 y 朝上。 */
-      g.scale(1, -1, 1);
-      flipLogoWinding(g);
-      g.computeBoundingBox();
-      const c = new THREE.Vector3();
-      g.boundingBox.getCenter(c);
-      g.translate(-c.x, -c.y, -c.z);
-      /* 單位高度；HEIGHT 掛在 logoRoot 的 scale 上，改高度不必重建。 */
-      const k = 1 / Math.max(1e-6, g.boundingBox.max.y - g.boundingBox.min.y);
-      g.scale(k, k, k * CONFIG.logo.depth);
-      g.computeVertexNormals();
-      g = BufferGeometryUtils.toCreasedNormals(g, Math.PI / 3);
-      // index.html uses face-planar UVs for its cast-glass normal map.
-      const P=g.attributes.position,N=g.attributes.normal,uv=new Float32Array(P.count*2);
-      for(let f=0;f<P.count;f+=3){
-        const nx=Math.abs(N.getX(f)),ny=Math.abs(N.getY(f)),nz=Math.abs(N.getZ(f));
-        for(let v=f;v<f+3;v++){
-          const x=P.getX(v)*2.4,y=P.getY(v)*2.4,z=P.getZ(v)*2.4;
-          uv[v*2]=nz>=nx&&nz>=ny?x:nx>=ny?y:x;
-          uv[v*2+1]=nz>=nx&&nz>=ny?y:z;
+      if(variant.failedKey===shapeKey)return Promise.resolve(null);
+      if(variant.pendingKey===shapeKey)return variant.pendingBuild;
+      variant.pendingKey=shapeKey;
+      const job=logoGeometryBuilder.build({shapes:variant.shapes,blueShapes:variant.blueShapes||[],
+        wordmark:!!variant.wordmark,config:{...CONFIG.logo}}).then(result=>{
+        // A tuner edit can finish out of order; only the latest selected shape may attach.
+        if(sceneStopped||variant.pendingBuild!==job||variant.pendingKey!==shapeKey||selectedLogoVariant()!==variant.id||logoShapeKey()!==shapeKey){
+          result.geometry.dispose();result.edgeGeometry.dispose();return null;
         }
-      }
-      g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
-      g.computeBoundingBox();
-      variant.aspect=g.boundingBox.max.x-g.boundingBox.min.x;
-      const blueGroup=blueShapes.length?g.groups.find(q=>q.materialIndex===1):null;
-      if(blueGroup){
-        // Swoosh extent in the shader's vObj space (position*2.4) for the A→B gradient.
-        let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
-        for(let v=blueGroup.start;v<blueGroup.start+blueGroup.count;v++){const x=P.getX(v),y=P.getY(v);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
-        variant.blueBox=new THREE.Vector4(x0*2.4,x1*2.4,y0*2.4,y1*2.4);
-      }
-      // Retain one model per variant; switching never recreates the shared glass.
-      logoMesh?.removeFromParent();
-      if(variant.mesh){variant.mesh.geometry.dispose();variant.mesh.children.forEach(c=>c.geometry?.dispose());}
-      logoMesh = new THREE.Mesh(g, blueGroup ? [logoMaterial, logoBlueMaterial] : logoMaterial);
-      logoMesh.name=variant.label+' · shared cast glass';
-      logoMesh.userData.logoVariant=variant.id;
-      logoMesh.renderOrder = 5;
-      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(g, 28), logoEdgeMaterial);
-      edge.renderOrder = 6;
-      logoMesh.add(edge);
-      logoSpin.add(logoMesh);
-      variant.mesh=logoMesh;variant.key=shapeKey;
-      activeLogoVariant=variant.id;logoBuiltShape=shapeKey;syncLogoComparison();
+        logoMesh?.removeFromParent();
+        if(variant.mesh){variant.mesh.geometry.dispose();variant.mesh.children.forEach(child=>child.geometry?.dispose());}
+        const mesh=new THREE.Mesh(result.geometry,result.hasBlueGroup?[logoMaterial,logoBlueMaterial]:logoMaterial);
+        mesh.name=variant.label+' · shared cast glass';mesh.userData.logoVariant=variant.id;mesh.renderOrder=5;
+        const edge=new THREE.LineSegments(result.edgeGeometry,logoEdgeMaterial);edge.renderOrder=6;mesh.add(edge);
+        logoMesh=mesh;logoSpin.add(mesh);
+        variant.mesh=mesh;variant.key=shapeKey;variant.aspect=result.aspect;variant.blueBox=result.blueBox;variant.error=false;variant.failedKey=null;
+        activeLogoVariant=variant.id;logoBuiltShape=shapeKey;syncLogoComparison();return mesh;
+      }).catch(error=>{
+        if(!sceneStopped&&variant.pendingBuild===job&&error.name!=='AbortError'){variant.error=true;variant.failedKey=shapeKey;console.warn(variant.url+' could not be built',error);}
+        return null;
+      }).finally(()=>{
+        if(variant.pendingBuild===job){variant.pendingBuild=null;variant.pendingKey=null;}
+      });
+      variant.pendingBuild=job;return job;
     }
-    for(const variant of logoVariants.values()) variant.ready=new Promise(resolve=>new THREE.FileLoader().load(variant.url, txt => {
+    for(const variant of logoVariants.values()) variant.ready=new Promise(resolve=>new THREE.FileLoader().load(variant.url, async txt => {
       try {
         const parsed=new SVGLoader().parse(txt);
         const filled=parsed.paths.filter(path=>path.userData?.style?.fill!=='none');
@@ -7355,7 +7321,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         variant.shapes=filled.filter(path=>!isBlue(path)).flatMap(path=>SVGLoader.createShapes(path));
         if(variant.blueOutsideGroup)variant.blueShapes=filled.filter(isBlue).flatMap(path=>SVGLoader.createShapes(path));
         if(!variant.shapes.length)throw new Error('SVG has no filled shapes');
-        if(selectedLogoVariant()===variant.id)buildLogoMark();
+        if(selectedLogoVariant()===variant.id)await buildLogoMark();
       } catch(e){variant.error=true;console.warn(variant.url+' could not be built',e);}
       syncLogoComparison();resolve(!variant.error);
     }, undefined, e => {variant.error=true;syncLogoComparison();console.warn(variant.url+' did not load',e);resolve(false);}));
@@ -7474,12 +7440,13 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* 光點本身就畫成拖影，所以放在模糊之後疊上去，免得被再糊一次。 */
     canyonMotion.setOverlay((r,depth)=>canyonMotes.render(r,canyon.camera,depth));
     let journeyReady=false,logoReady=false,warmPromise=null;
-    const yieldToBrowser=()=>new Promise(resolve=>setTimeout(resolve,0));
+    // Let the hero paint between warmup stages instead of chaining zero-delay tasks.
+    const yieldToBrowser=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
     function warmJourney(){
       if(sceneStopped)return Promise.resolve();
       if(!warmPromise)warmPromise=prepareJourney().catch(error=>{
         // An optional chapter must never leave the visitor trapped behind a loading gate.
-        console.warn('Scene warmup failed',error);logoReady=journeyReady=true;
+        if(!sceneStopped){console.warn('Scene warmup failed',error);logoReady=journeyReady=true;}
       });
       return warmPromise;
     }
@@ -9639,6 +9606,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       cancelAnimationFrame(resizeFrame); resizeFrame = 0;
       stopChapterPlayback();
       clearTimeout(envBakeTimer); envBakeTimer = 0;
+      logoGeometryBuilder?.dispose();
       cancelShaderWarmups();
       renderer.dispose();
     };

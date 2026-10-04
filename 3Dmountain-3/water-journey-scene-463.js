@@ -1,6 +1,6 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-journey-scene.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
-import { createCanyonWatershedBuilder } from './water-canyon-watershed-463.js?v=index463-pagespeed-20261004-713f259ee4';
+import { createCanyonWatershedBuilder } from './water-canyon-watershed-463.js?v=index463-smooth-20261004-b030a95175';
 
 // Opt in per page; existing journey pages retain their original night palette.
 export const WATERSHED_STYLE_DEFAULTS = Object.freeze({

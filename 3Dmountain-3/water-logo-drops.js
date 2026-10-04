@@ -274,7 +274,7 @@ const STRETCH_GLSL = /* glsl */`
   }
 `;
 
-export function createLogoDrops(THREE, { config, renderer, env, lite = false, onSplash = null }) {
+export function createLogoDrops(THREE, { config, renderer, env, lite = false, onSplash = null, deferTextures = false }) {
   const group = new THREE.Group();
   group.name = 'logo-water-drops';
   group.visible = false;
@@ -913,8 +913,13 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
   }
 
   const loader = new THREE.TextureLoader();
-  const ready = Promise.all(PHOTOS.map(([file], photo) => new Promise(resolve => {
+  let ready = null, disposed = false;
+  function loadAssets() {
+    if (disposed) return Promise.resolve([]);
+    if (ready) return ready;
+    ready = Promise.all(PHOTOS.map(([file], photo) => new Promise(resolve => {
     loader.load('./slide-assets/' + file, texture => {
+      if (disposed) { texture.dispose(); resolve(false); return; }
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       textures.push(texture);
@@ -928,6 +933,9 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
       resolve(true);
     }, undefined, error => { console.warn('Logo drop photo unavailable:', file, error); resolve(false); });
   })));
+    return ready;
+  }
+  if (!deferTextures) loadAssets();
 
   const tilt = new THREE.Euler(), orientation = new THREE.Quaternion();
   const own = new THREE.Euler(0, 0, 0, 'YXZ'), ownQuaternion = new THREE.Quaternion();
@@ -1131,6 +1139,7 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
       if (wasVisible) { sprayLife.fill(0); beads.count = 0; }
       return;
     }
+    loadAssets();
     const count = THREE.MathUtils.clamp(Math.round(C.count), 1, LOGO_DROP_MAX);
     const mode = THREE.MathUtils.clamp(Math.round(C.mode), 0, 2);
     /* Coming back into view, changing how many drops there are or how they
@@ -1716,8 +1725,9 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
   }
 
   return {
-    group, meshes, beads, ready, update, state,
+    group, meshes, beads, get ready() { return loadAssets(); }, loadAssets, update, state,
     dispose() {
+      disposed = true;
       geometry.dispose();
       beadGeometry.dispose();
       beadMaterial.dispose();

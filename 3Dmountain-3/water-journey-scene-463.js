@@ -1,6 +1,6 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-journey-scene.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
-import { createCanyonWatershed } from './water-canyon-watershed-463.js?v=index463-20261001-1da9d12021';
+import { createCanyonWatershedBuilder } from './water-canyon-watershed-463.js?v=index463-perf-20261004-1c8393e634';
 
 // Opt in per page; existing journey pages retain their original night palette.
 export const WATERSHED_STYLE_DEFAULTS = Object.freeze({
@@ -73,7 +73,25 @@ export const CANYON_VIEW_DEFAULTS = Object.freeze({
 });
 
 /** A bounded, deterministic river canyon. All camera positions share the river's arc-length coordinates. */
-export function createJourneyScene(THREE, { createRiver, watershedStyle = null, flowConfig = null, terrainConfig = null, shoreConfig = null, viewConfig = null, reliefConfig = null, logoTerrain = null, lite = typeof innerWidth === 'number' && innerWidth < 760 }) {
+export function createJourneyScene(THREE, options) {
+  const builder=buildJourneyScene(THREE,options);
+  let step=builder.next();while(!step.done)step=builder.next();return step.value;
+}
+
+export async function createJourneySceneAsync(THREE, options) {
+  const builder=buildJourneyScene(THREE,options);
+  let step=builder.next();
+  while(!step.done){
+    if(globalThis.scheduler?.yield)await globalThis.scheduler.yield();
+    else await new Promise(resolve=>setTimeout(resolve,0));
+    step=builder.next();
+  }
+  return step.value;
+}
+
+function* buildJourneyScene(THREE, { createRiver, watershedStyle = null, flowConfig = null, terrainConfig = null, shoreConfig = null, viewConfig = null, reliefConfig = null, logoTerrain = null, lite = typeof innerWidth === 'number' && innerWidth < 760 }) {
+  let sliceStart=performance.now();
+  const sliceExpired=()=>performance.now()-sliceStart>=6;
   const shore = shoreConfig;
   // setView() swaps it at runtime (null = the authored framing, the legacy code path).
   let view = viewConfig;
@@ -491,6 +509,7 @@ float reliefStreak(vec2 p,vec2 dir){
         color.lerp(lichen, smooth(70, 155, y) * noise(x * .028, z * .028) * .20);
         colors.push(color.r, color.g, color.b);
       }
+      if(sliceExpired()){yield;sliceStart=performance.now();}
     }
     for (let i = 0; i < longitudinal; i++) for (let j = 0; j < lateral; j++) {
       const a = i * (lateral + 1) + j, b = a + lateral + 1;
@@ -584,7 +603,7 @@ float reliefStreak(vec2 p,vec2 dir){
     return out;
   }
   const lateralDistance = j => Math.pow(j / lateral, 1.62) * 250;
-  function buildShoreBanks() {
+  function* buildShoreBanks() {
     let vertices = 0;
     const columns = lateral + 1, rows = longitudinal + 1, point = { x: 0, y: 0, z: 0 };
     const segment = curve.getLength() / longitudinal;
@@ -596,11 +615,12 @@ float reliefStreak(vec2 p,vec2 dir){
           bankPoint(f, lateralDistance(j), point);
           positions.set([point.x, point.y, point.z], (i * columns + j) * 3);
         }
+        if(sliceExpired()){yield;sliceStart=performance.now();}
       }
       // Crease/ridge tone baked from the grid's own curvature: gullies, ledge
       // undersides and the notch at the waterline darken, arete crests lift.
       const color = new THREE.Color();
-      for (let i = 0; i < rows; i++) for (let j = 0; j < columns; j++) {
+      for (let i = 0; i < rows; i++) { for (let j = 0; j < columns; j++) {
         const o = (i * columns + j) * 3, x = positions[o], y = positions[o + 1], z = positions[o + 2];
         const yAt = (a, b) => positions[(Math.max(0, Math.min(rows - 1, a)) * columns + Math.max(0, Math.min(columns - 1, b))) * 3 + 1];
         const dL = lateralDistance(Math.max(0, j - 1)), dR = lateralDistance(Math.min(lateral, j + 1));
@@ -612,7 +632,7 @@ float reliefStreak(vec2 p,vec2 dir){
         color.lerp(lichen, smooth(70, 155, y) * noise(x * .028, z * .028) * .20);
         color.multiplyScalar(1 - THREE.MathUtils.clamp(concave * .55, -.10, .22));
         colors.set([color.r, color.g, color.b], o);
-      }
+      }if(sliceExpired()){yield;sliceStart=performance.now();}}
       for (let i = 0; i < longitudinal; i++) for (let j = 0; j < lateral; j++) {
         const a = i * columns + j, b = a + columns;
         if (side < 0) indices.push(a, b, a + 1, b, b + 1, a + 1);
@@ -929,7 +949,7 @@ float reliefStreak(vec2 p,vec2 dir){
   }
   // Water side of the junction: per-vertex (bed height, inward distance to the
   // bank, wall height). The shared water shader reads it only on river meshes.
-  function bakeMainShore() {
+  function* bakeMainShore() {
     const g = river.mesh.geometry, pos = g.attributes.position, uv = g.attributes.uv;
     const { lengthSegments, widthSegments } = river.mesh.userData.journeyRiver, columns = widthSegments + 1;
     const data = new Float32Array(pos.count * 3), point = { x: 0, y: 0, z: 0 };
@@ -943,6 +963,7 @@ float reliefStreak(vec2 p,vec2 dir){
         data[i * 3 + 1] = -d;
         data[i * 3 + 2] = Math.max(0, wall[side]);
       }
+      if((row&7)===7&&sliceExpired()){yield;sliceStart=performance.now();}
     }
     const length = curve.getLength();
     for (const ob of shoreObstacles) {
@@ -957,7 +978,8 @@ float reliefStreak(vec2 p,vec2 dir){
     }
     g.setAttribute('aShore', new THREE.BufferAttribute(data, 3));
   }
-  if (shore) terrainVertices += buildShoreBanks();
+  if (shore) terrainVertices += yield* buildShoreBanks();
+  yield;sliceStart=performance.now();
 
   // Irregular, partially submerged talus breaks the continuous shoreline into individual masses.
   let boulderGeometry = null;
@@ -992,6 +1014,7 @@ float reliefStreak(vec2 p,vec2 dir){
   }
   const shoreRocks = shore ? (relief ? buildReliefRocks() : buildShoreRocks()) : null;
   if (shore) boulderGeometry = shoreRocks.slabGeometry;
+  yield;sliceStart=performance.now();
 
   // A second atmospheric range closes the far horizon without loading large terrain assets.
   const distantGeometry = new THREE.PlaneGeometry(3800, 1500, 150, 20);
@@ -1018,16 +1041,14 @@ float reliefStreak(vec2 p,vec2 dir){
   distant.name = 'Atmospheric far range'; scene.add(distant);
 
   // All five rivers exist in this same world, using the original water and rock.
-  if (shore) bakeMainShore();
+  if (shore) yield* bakeMainShore();
   // Relief: the watershed asks for the canyon bank under ~40k terrain vertices; rows are shared.
   const frameCache = new Map();
   const cachedFrame = (t, side) => { const k = Math.round(t * 8192) * 2 + (side > 0 ? 1 : 0); let f = frameCache.get(k); if (!f) { f = rowFrame(Math.round(t * 8192) / 8192, side); frameCache.set(k, f); } return f; };
-  const watershed=shore
-    ?(relief
-      ?createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,shoreDetail:true,mainOverlap,logoTerrain,
-        relief:{config:relief,material:terrainMaterial,bankHeight:(t,side,d,x,z)=>bankHeight(cachedFrame(t,side),d,x,z)}})
-      :createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,shoreDetail:true,mainOverlap,logoTerrain}))
-    :createCanyonWatershed(THREE,{curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig});
+  const watershedOptions={curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig};
+  if(shore)Object.assign(watershedOptions,{shoreDetail:true,mainOverlap,logoTerrain});
+  if(relief)watershedOptions.relief={config:relief,material:terrainMaterial,bankHeight:(t,side,d,x,z)=>bankHeight(cachedFrame(t,side),d,x,z)};
+  const watershed=yield* createCanyonWatershedBuilder(THREE,watershedOptions);
   if (shore) shoreUniforms.uFrostRange.value.set(watershed.stats.maxHeight * .40, watershed.stats.maxHeight * .80);
   const rimBlend = shoreBankMeshes.length && typeof watershed.terrainAt === 'function';
   if (rimBlend) blendBankRims(watershed.terrainAt);

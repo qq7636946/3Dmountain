@@ -13,7 +13,7 @@ const ARTWORK=[
   ['headphones.jpg','Every Note'],['editorial.jpg','Selected Work']
 ];
 const STRIP_ORDER=[0,1,3,7,2,5,4,6];
-export function createLogoCards(THREE,{config,renderer}){
+export function createLogoCards(THREE,{config,renderer,deferTextures=false}){
   const group=new THREE.Group();group.name='logo-slide-card-helix';group.visible=false;
   const geometry=new THREE.PlaneGeometry(1,1,48,4),meshes=[],textures=[];
   const fallbackCanvas=document.createElement('canvas');fallbackCanvas.width=2;fallbackCanvas.height=2;
@@ -70,13 +70,21 @@ export function createLogoCards(THREE,{config,renderer}){
     mesh.renderOrder=4;group.add(mesh);meshes.push(mesh);
   }
   const loader=new THREE.TextureLoader();
-  const ready=Promise.all(ARTWORK.map(([file],index)=>new Promise(resolve=>{
+  let ready=null,disposed=false;
+  function loadAssets(){
+    if(disposed)return Promise.resolve([]);
+    if(ready)return ready;
+    ready=Promise.all(ARTWORK.map(([file],index)=>new Promise(resolve=>{
     loader.load('./slide-assets/'+file,texture=>{
+      if(disposed){texture.dispose();resolve(false);return;}
       texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
       textures.push(texture);meshes[index].material.uniforms.uTexture.value=texture;
       meshes[index].userData.aspect=texture.image.width/texture.image.height;resolve(true);
     },undefined,error=>{console.warn('Logo card image unavailable:',file,error);resolve(false)});
   })));
+    return ready;
+  }
+  if(!deferTextures)loadAssets();
   const rotation=new THREE.Euler(),orientation=new THREE.Quaternion();
   let lastTime=null,autoAngle=0;
   function update({progress=0,reveal=1,exit=0,time=0,reducedMotion=false,palette,mobile=false}={}){
@@ -86,6 +94,7 @@ export function createLogoCards(THREE,{config,renderer}){
     const fade=reveal*(1-exit)*C.opacity;
     group.visible=C.enabled>.5&&fade>.001;
     if(!group.visible)return;
+    loadAssets();
     const fit=mobile?C.mobileScale:1;group.scale.setScalar(fit);
     rotation.set(THREE.MathUtils.degToRad(C.tiltX),0,THREE.MathUtils.degToRad(C.tiltZ));orientation.setFromEuler(rotation);
     const phase=THREE.MathUtils.degToRad(C.phase),spin=phase-progress*C.turns*Math.PI*2;
@@ -103,5 +112,5 @@ export function createLogoCards(THREE,{config,renderer}){
       if(palette){u.uPaper.value.set(palette.horizon);u.uInk.value.set(palette.ink);}
     }
   }
-  return {group,meshes,ready,update,dispose(){geometry.dispose();placeholder.dispose();textures.forEach(t=>t.dispose());meshes.forEach(m=>m.material.dispose());}};
+  return {group,meshes,get ready(){return loadAssets();},loadAssets,update,dispose(){disposed=true;geometry.dispose();placeholder.dispose();textures.forEach(t=>t.dispose());meshes.forEach(m=>m.material.dispose());}};
 }

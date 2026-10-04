@@ -13,7 +13,10 @@ export const STORY_CHAPTERS = [
   {id:'derivatives',from:12.82,to:13.65,en:['DERIVATIVE','STRATEGIES'],zh:'透過衍生性商品，拓展金融策略的可能。',kicker:'04 / 衍生性商品',side:'left'},
 ];
 const ease=x=>{const t=Math.max(0,Math.min(1,x));return t*t*t*(t*(t*6-15)+10)};
-export function mountJourneyStory(){
+export function mountJourneyStory({enabled=true}={}){
+  // The current interface owns this copy. Skip the hidden legacy tree when
+  // that interface is mounted; older pages keep their original default.
+  if(!enabled)return {update(){},root:null,chapters:STORY_CHAPTERS};
   const root=document.createElement('section');root.className='journey-story';root.setAttribute('aria-label','恒灝創新的投資理念與核心業務');
   const scrim=document.createElement('div');scrim.className='story-scrim';scrim.setAttribute('aria-hidden','true');root.append(scrim);
   const cards=STORY_CHAPTERS.map(c=>{

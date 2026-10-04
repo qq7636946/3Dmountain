@@ -2,16 +2,19 @@
 <html lang="zh-Hant">
 
 <head>
+  <meta name="build-version" content="index463-perf-20261004-1c8393e634">
   <meta charset="utf-8">
-  <meta name="build-version" content="index463-20261001-1da9d12021">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
   <title>恒灝創新 Finnovation — 科技賦能，金融加值</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&family=Noto+Sans+TC:wght@200;300;400&display=swap"
-    rel="stylesheet">
+    rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&amp;family=Noto+Sans+TC:wght@200;300;400&amp;display=swap"></noscript>
   <style>
     :root {
       --ink: #2f5f8a;
@@ -1363,43 +1366,40 @@ body.has-finnovation-ui .tuner {
 
   <script type="module">
     import * as THREE from 'three';
-    import { createJourneyScene, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-20261001-1da9d12021';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-20261001-1da9d12021';
-    import { createJourneyRiver } from './water-journey-river.js?v=index463-20261001-1da9d12021';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-20261001-1da9d12021';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-20261001-1da9d12021';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-20261001-1da9d12021';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-20261001-1da9d12021';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-perf-20261004-1c8393e634';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-perf-20261004-1c8393e634';
+    import { createJourneyRiver } from './water-journey-river.js?v=index463-perf-20261004-1c8393e634';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-perf-20261004-1c8393e634';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-perf-20261004-1c8393e634';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-perf-20261004-1c8393e634';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-perf-20261004-1c8393e634';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-20261001-1da9d12021';
-    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-20261001-1da9d12021';
-    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-20261001-1da9d12021';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-perf-20261004-1c8393e634';
+    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-perf-20261004-1c8393e634';
+    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-perf-20261004-1c8393e634';
     import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-    /* The parameter bar. On by default while the page is being worked on —
-       a local file or a dev server — and off wherever it is actually
-       published, so a visitor never meets it. `?tune=1` forces it on
-       anywhere, `?tune=0` off, and T toggles it at any time (ignored while
-       a slider has focus, or the key would fight the arrow keys). */
+    /* Build the workshop only on request: T or ?tune=1. Its 547 controls
+       are useful while editing, but should not delay the first view. */
     const tuneFlag=new URLSearchParams(location.search).get('tune');
-    const tuneLocal=location.protocol==='file:'
-      ||/^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname)
-      ||/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname);
+    const requestedPreview=new URLSearchParams(location.search).get('view');
+    let ensureTuner=()=>{};
     const setTuning=on=>{
       document.documentElement.dataset.tuning=String(!!on);
       if(on){
+        ensureTuner();
         document.querySelector('#tuner')?.classList.remove('is-folded');
         const toggle=document.querySelector('#tunerToggle');
         if(toggle){toggle.textContent='−';toggle.setAttribute('aria-label','Collapse controls');}
       }
     };
-    setTuning(tuneFlag===null?tuneLocal:!/^(0|false|off)$/i.test(tuneFlag));
+    setTuning(tuneFlag!==null&&!/^(0|false|off)$/i.test(tuneFlag));
     addEventListener('keydown',event=>{
       if(event.key!=='t'&&event.key!=='T')return;
       if(event.metaKey||event.ctrlKey||event.altKey)return;
       if(event.target.closest&&event.target.closest('input,textarea,select,button'))return;
       setTuning(document.documentElement.dataset.tuning!=='true');
     });
-    const brandStory=mountJourneyStory();
+    const brandStory=mountJourneyStory({enabled:false});
     import { Water } from 'three/addons/objects/Water.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -2286,8 +2286,11 @@ vec3 montisDither(vec2 fc){
     const envScene = new THREE.Scene();
     envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 48, 32), envProbeMaterial));
     let envTarget = null;
-    let envBakeTimer = 0;
+    let envBakeTimer = 0, envBakePending = false;
     function bakeEnvironment() {
+      envBakeTimer=0;
+      if(document.hidden&&envTarget){envBakePending=true;return;}
+      envBakePending=false;
       const next = pmrem.fromScene(envScene, .02);
       if (envTarget) envTarget.dispose();
       envTarget = next;
@@ -2295,7 +2298,7 @@ vec3 montisDither(vec2 fc){
     }
     /* A bake costs the better part of a frame. Never per frame, and never on
        slider input. */
-    function queueEnvBake() { clearTimeout(envBakeTimer); envBakeTimer = setTimeout(bakeEnvironment, 250); }
+    function queueEnvBake() { clearTimeout(envBakeTimer);envBakePending=true;envBakeTimer=document.hidden?0:setTimeout(bakeEnvironment,250); }
     bakeEnvironment();
     /* pmrem is deliberately NOT disposed: the palette is live-tunable, so the
        generator has to survive to rebuild the probe. */
@@ -3741,16 +3744,7 @@ vec3 montisDither(vec2 fc){
     /* The authored river belonged to the valley. It is off with it. */
     riverRoot.visible = false;
     scene.add(riverRoot);
-    gltfLoader.load('river_water_runtime/scene.gltf', gltf => {
-      const model = gltf.scene;
-      model.traverse(child => {
-        if (!child.isMesh) return;
-        child.material = riverMaterial;
-        child.receiveShadow = true;
-        child.renderOrder = 3;
-      });
-      riverRoot.add(fitAsset(model, 52, false));
-    }, undefined, error => console.error('River model:', error));
+    // The current journey uses its procedural rivers; riverRoot stays hidden.
 
     const dropMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xf4fbff,
@@ -3904,6 +3898,8 @@ vec3 montisDither(vec2 fc){
        model was loaded, so pointer behaviour is unchanged. */
     const orbMeshRequested = new URLSearchParams(location.search).get('orb') === 'mesh';
     const orbModelSkipped = dropSDF && !orbMeshRequested;
+    // No manager request is started in SDF mode, so there is nothing to wait for.
+    if (orbModelSkipped) assetsReady = true;
     if (!orbModelSkipped) gltfLoader.load('drop_of_water/scene.gltf', gltf => {
       const meshes = [];
       gltf.scene.traverse(child => { if (child.isMesh) meshes.push(child); });
@@ -7083,7 +7079,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       logoBlueUniforms.uBlueDensity.value=L.logo3Blue;logoBlueUniforms.uBlueGlow.value=L.logo3Glow;logoBlueUniforms.uBlueMirror.value=L.logo3Mirror;
       if(variant?.blueBox)logoBlueUniforms.uBlueBox.value.copy(variant.blueBox);
     }
-    const logoCards = createLogoCards(THREE, { renderer, config:CONFIG.logoCards });
+    const logoCards = createLogoCards(THREE, { renderer, config:CONFIG.logoCards, deferTextures:true });
     logoRoot.add(logoCards.group);
     /* The same orbit, in water: each drop carries a photograph and lenses it.
        It shares the logo glass's room (sky, sea, sun, studio cube) by
@@ -7092,7 +7088,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* In the bloom a falling drop strikes the sea: its ring goes into the
        page's own ripple field, the same one the hero drop's impact uses, so
        the chrome water actually dents and rings. */
-    const logoDrops = createLogoDrops(THREE, { renderer, config:CONFIG.logoDrops, env:logoGlass.uniforms, lite:DROPLET_LITE,
+    const logoDrops = createLogoDrops(THREE, { renderer, config:CONFIG.logoDrops, env:logoGlass.uniforms, lite:DROPLET_LITE, deferTextures:true,
       onSplash:(x,y,z,strength)=>{spawnRipple(x,z,1.1*strength);queueRipple(x,z,.55*strength,.14);} });
     logoRoot.add(logoDrops.group);
     /* Scroll-owned logo enlargement and optical focus. */
@@ -7194,7 +7190,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       variant.mesh=logoMesh;variant.key=shapeKey;
       activeLogoVariant=variant.id;logoBuiltShape=shapeKey;syncLogoComparison();
     }
-    for(const variant of logoVariants.values()) new THREE.FileLoader().load(variant.url, txt => {
+    for(const variant of logoVariants.values()) variant.ready=new Promise(resolve=>new THREE.FileLoader().load(variant.url, txt => {
       try {
         const parsed=new SVGLoader().parse(txt);
         const filled=parsed.paths.filter(path=>path.userData?.style?.fill!=='none');
@@ -7204,8 +7200,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         if(!variant.shapes.length)throw new Error('SVG has no filled shapes');
         if(selectedLogoVariant()===variant.id)buildLogoMark();
       } catch(e){variant.error=true;console.warn(variant.url+' could not be built',e);}
-      syncLogoComparison();
-    }, undefined, e => {variant.error=true;syncLogoComparison();console.warn(variant.url+' did not load',e);});
+      syncLogoComparison();resolve(!variant.error);
+    }, undefined, e => {variant.error=true;syncLogoComparison();console.warn(variant.url+' did not load',e);resolve(false);}));
 
     /* 章節的位置（journey 單位）。散開整段是 progress·2.6，河原本在
        handoff·2.6 = 1.404 開始混入；現在那一刻被推到 LOGO 章節結束。 */
@@ -7286,7 +7282,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const journeyCue=document.querySelector('#journeyCue');
     const journeyLabel=document.querySelector('#journeyLabel');
     const journeyChapter=document.querySelector('#journeyChapter');
-    const canyon=createJourneyScene(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,shoreConfig:CONFIG.shoreline,viewConfig:CONFIG.canyonView,reliefConfig:CONFIG.relief,logoTerrain:CONFIG.logoTerrain,lite:DROPLET_LITE,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
+    const canyon=await createJourneySceneAsync(THREE,{watershedStyle:CONFIG.watershedStyle,flowConfig:CONFIG.watershedFlow,terrainConfig:CONFIG.watershedTerrain,shoreConfig:CONFIG.shoreline,viewConfig:CONFIG.canyonView,reliefConfig:CONFIG.relief,logoTerrain:CONFIG.logoTerrain,lite:DROPLET_LITE,createRiver:(T,curve,widthAt,options={})=>createJourneyRiver(T,curve,widthAt,{material:seaMaterial,lite:DROPLET_LITE,...options})});
     canyon.scene.environment=scene.environment;
     const canyonTarget=new THREE.WebGLRenderTarget(innerWidth,innerHeight,{type:THREE.HalfFloatType,depthBuffer:true});
     // Only a full-frame dissolve under the zoom smear. No circular scene window.
@@ -7319,24 +7315,60 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     canyonMotes.warm(renderer,canyon.camera);
     /* 光點本身就畫成拖影，所以放在模糊之後疊上去，免得被再糊一次。 */
     canyonMotion.setOverlay((r,depth)=>canyonMotes.render(r,canyon.camera,depth));
-    let journeyReady=false;
-    async function warmJourney(){
-      await Promise.all([logoCards.ready,logoDrops.ready]);
-      const warmTarget=new THREE.WebGLRenderTarget(64,64);
+    let journeyReady=false,logoReady=false,warmPromise=null;
+    const yieldToBrowser=()=>new Promise(resolve=>setTimeout(resolve,0));
+    function warmJourney(){
+      if(!warmPromise)warmPromise=prepareJourney().catch(error=>{
+        // An optional chapter must never leave the visitor trapped behind a loading gate.
+        console.warn('Scene warmup failed',error);logoReady=journeyReady=true;
+      });
+      return warmPromise;
+    }
+    async function compileForTarget(warmScene,warmCamera,target){
+      // Shader output depends on the target. Start compilation in the same
+      // linear HDR target used by the real scene, then restore before awaiting:
+      // the live hero continues rendering while the driver compiles.
+      const previous=renderer.getRenderTarget();let compilation;
       try{
-        {const ws=new THREE.Scene(),wg=new THREE.PlaneGeometry(1,1);
-          for(const m of [logoMaterial,logoBlueMaterial,logoDrops.meshes[0].material]){const o=new THREE.Mesh(wg,m);o.position.set(camera.position.x,camera.position.y,camera.position.z-3);o.frustumCulled=false;ws.add(o);}
-          /* The spray and loose beads are instanced: warm that variant, not a plain mesh's. */
-          const warmBeads=new THREE.InstancedMesh(logoDrops.beads.geometry,logoDrops.beads.material,1);
-          warmBeads.setMatrixAt(0,new THREE.Matrix4().makeTranslation(camera.position.x,camera.position.y,camera.position.z-3));warmBeads.frustumCulled=false;ws.add(warmBeads);
-          const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(ws,camera);}finally{renderer.setRenderTarget(previous);wg.dispose();warmBeads.dispose();}}
-        for(const stage of [canyon]){
-          if(stage.ready)await stage.ready;
-          stage.scene.environment=scene.environment;
-          if(renderer.compileAsync)await renderer.compileAsync(stage.scene,stage.camera);else renderer.compile(stage.scene,stage.camera);
-          const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(warmTarget);renderer.render(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);}
-          /* 河流光線在空拍前是隱藏的，compileAsync 不會編到它；這裡用「半浮點合成目標」先編好（和實際畫面同一支程式），捲到空拍時才不會卡一下。 */
-          {const flowFx=stage.watershed?.effects?.group;if(flowFx){const shown=flowFx.visible,fxTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});flowFx.visible=true;try{renderer.setRenderTarget(fxTarget);renderer.compile(stage.scene,stage.camera);}finally{renderer.setRenderTarget(previous);fxTarget.dispose();flowFx.visible=shown;}}}
+        renderer.setRenderTarget(target);
+        compilation=renderer.compileAsync?renderer.compileAsync(warmScene,warmCamera):renderer.compile(warmScene,warmCamera);
+      }finally{renderer.setRenderTarget(previous);}
+      await compilation;
+    }
+    function renderWarmScene(warmScene,warmCamera,target){
+      const previous=renderer.getRenderTarget();
+      try{renderer.setRenderTarget(target);renderer.render(warmScene,warmCamera);}
+      finally{renderer.setRenderTarget(previous);}
+    }
+    async function prepareJourney(){
+      await Promise.all([logoVariants.get(selectedLogoVariant()).ready,CONFIG.logoCards.enabled>.5?logoCards.ready:null,CONFIG.logoDrops.enabled>.5?logoDrops.ready:null]);
+      await yieldToBrowser();
+      const warmTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});
+      try{
+        const ws=new THREE.Scene(),wg=new THREE.PlaneGeometry(1,1);
+        for(const m of [logoMaterial,logoBlueMaterial,logoDrops.meshes[0].material]){
+          const o=new THREE.Mesh(wg,m);o.position.set(camera.position.x,camera.position.y,camera.position.z-3);o.frustumCulled=false;ws.add(o);
+        }
+        const warmBeads=new THREE.InstancedMesh(logoDrops.beads.geometry,logoDrops.beads.material,1);
+        warmBeads.setMatrixAt(0,new THREE.Matrix4().makeTranslation(camera.position.x,camera.position.y,camera.position.z-3));warmBeads.frustumCulled=false;ws.add(warmBeads);
+        try{
+          await compileForTarget(ws,camera,warmTarget);
+          await yieldToBrowser();renderWarmScene(ws,camera,warmTarget);
+        }finally{wg.dispose();warmBeads.dispose();}
+        logoReady=true;
+        await yieldToBrowser();
+        if(canyon.ready)await canyon.ready;
+        canyon.scene.environment=scene.environment;
+        await compileForTarget(canyon.scene,canyon.camera,warmTarget);
+        await yieldToBrowser();renderWarmScene(canyon.scene,canyon.camera,warmTarget);
+        // Hidden aerial light ribbons need their own variant. Only reveal
+        // them for the synchronous compilation setup, never across an await.
+        const flowFx=canyon.watershed?.effects?.group;
+        if(flowFx){
+          const shown=flowFx.visible;let compilation;
+          try{flowFx.visible=true;compilation=compileForTarget(canyon.scene,canyon.camera,warmTarget);}
+          finally{flowFx.visible=shown;}
+          await compilation;
         }
       }finally{warmTarget.dispose();journeyReady=true;}
     }
@@ -7357,7 +7389,14 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       const J=journey,S=gatherState;
       flightDelta=scrollDt;
       J.max=13.8+journeyShift();
+      const requestedTarget=J.target;
+      if(!logoReady||!journeyReady){
+        const logoLimit=Math.max(0,Math.min(logoChapterStart()+Math.min(0,CONFIG.logoDrops.enterStart)*CONFIG.logo.length,(CONFIG.logo.at-CONFIG.logo.fadeIn)*2.6)-.05);
+        const readyLimit=logoReady?logoChapterEnd():logoLimit;
+        if(requestedTarget>readyLimit){warmJourney();J.target=Math.min(requestedTarget,readyLimit);}
+      }
       stepJourneyMotion(J,scrollDt,reduceMotion);
+      J.target=requestedTarget;
       const p=J.progress;
       // Replay index4-5's exact dispersal under the reversible scroll clock.
       const progress=THREE.MathUtils.clamp(p/2.6,0,1);
@@ -7459,8 +7498,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       const preDip=1-.20*Math.exp(-Math.pow((progress-.33)/.035,2))*lightMotion;
       renderer.toneMappingExposure=Math.min(CONFIG.scene.exposure*1.34,CONFIG.scene.exposure*preDip*(1+burst*DZ.exposure*lightMotion));
       const flashAlpha=Math.min(.72,flareIgnition*flareFade*CONFIG.details.transitionFlash*DZ.veil)*lightMotion*curtain;
-      transitionFlash.style.opacity=flashAlpha.toFixed(4);
-      transitionFlash.style.transform=`scale(${(.14+flareExpand*1.55).toFixed(4)},${(.12+Math.pow(flareExpand,1.25)*1.48).toFixed(4)})`;
+      writeStyle(transitionFlash,'opacity',flashAlpha.toFixed(4));
+      writeStyle(transitionFlash,'transform',`scale(${(.14+flareExpand*1.55).toFixed(4)},${(.12+Math.pow(flareExpand,1.25)*1.48).toFixed(4)})`);
       transitionGlow.position.set(CONFIG.drop.x,CONFIG.drop.y,CONFIG.drop.z);
       transitionScreen.copy(transitionGlow.position).project(camera);
       writeVar(transitionFlash,'--flare-x',`${((transitionScreen.x*.5+.5)*100).toFixed(2)}%`);
@@ -7472,17 +7511,14 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       waterGlints.material.uniforms.uTransition.value=impactPulse*.24*lightMotion;
       airMotes.material.uniforms.uOpacity.value=.30*(1-J.mix);
       applyWaterRipple(0,0,0,1,0);impactKick=0;sceneDim=1-J.mix;
-      writeStyle(canvas,'opacity','1');writeStyle(sectionTwo,'opacity','0');sectionTwo.classList.remove('is-active','is-live','is-in');sectionTwo.setAttribute('aria-hidden','true');setSectionTwoPlayback(false);
+      writeStyle(canvas,'opacity','1');writeStyle(sectionTwo,'opacity','0');sectionTwo.classList.remove('is-active','is-live','is-in');if(sectionTwo.getAttribute('aria-hidden')!=='true')sectionTwo.setAttribute('aria-hidden','true');setSectionTwoPlayback(false);
       document.body.classList.remove('is-transitioning','is-section-two');document.body.classList.toggle('is-journey-moving',p>.09);
       const phase=p<logoChapterStart()?'disperse':p<logoChapterEnd()?'mark':q<1.976?'enter':q<6.4?'flow':'aerial';
       if(J.phase!==phase||!journeyCue.dataset.ready){J.phase=phase;journeyCue.dataset.ready='true';
         const labels={disperse:'01 / 05 · DISPERSE',mark:'02 / 05 · THE MARK',enter:'03 / 05 · ENTER THE FLOW',flow:'04 / 05 · FLOW',aerial:'05 / 05 · WIDER PERSPECTIVE'};
         journeyChapter.textContent=labels[phase];}
-      journeyLabel.textContent=p>J.max-.05?'重新探索 ↑':'向下探索 ↓';
-      journeyCue.setAttribute('aria-label',p>J.max-.05?'重新探索恒灝創新':'前往下一個品牌篇章');
-      brandStory.update(q,reduceMotion);
+      // The legacy cue/story is permanently hidden by the Finnovation interface.
       journeyUI.update({progress:p,max:J.max,logoStart:logoChapterStart(),logoEnd:logoChapterEnd(),shift:journeyShift()});
-      writeVar(journeyCue,'--journey-p',(p/J.max).toFixed(4));
     }
     function updateJourneyCamera(time){
       /* 河、夜、鳥瞰都用停住過的時鐘：LOGO 章節期間它們一格不動。 */
@@ -7819,6 +7855,10 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
 
     /* 面板以中文標示。每一列是 [名稱, 設定群組, 鍵名, 最小, 最大, 每step]，
        只有名稱換成中文，鍵名維持不變，所以複製出來的設定檔跟程式碼一致。 */
+    let tunerInitialized=false,logoCompare=null;
+    function initializeTuner(){
+      if(tunerInitialized)return;
+      tunerInitialized=true;
     const tuningGroups = [
       /* 介面毛玻璃：頁首按鈕、CTA、頁尾、選單共用一套。雙擊名稱還原單一參數。 */
       ['介面毛玻璃', [
@@ -8401,7 +8441,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       ]]
     ];
 
-    const logoCompare=document.createElement('section');logoCompare.className='tune-group logo-compare';
+    logoCompare=document.createElement('section');logoCompare.className='tune-group logo-compare';
     logoCompare.setAttribute('aria-label','3D LOGO 對照');
     const logoCompareHeading=document.createElement('h3');logoCompareHeading.textContent='3D LOGO 對照';
     const logoSwitches=document.createElement('div');logoSwitches.className='tuner-actions logo-switches';
@@ -8415,7 +8455,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       logoSwitches.appendChild(button);logoChoiceButtons.set(variant.id,button);
     }
     const faceLogo=document.createElement('button');faceLogo.type='button';faceLogo.textContent='正面對照';
-    faceLogo.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=logoChapterEnd()-.0001;});
+    faceLogo.addEventListener('click',async()=>{await warmJourney();skipEntry();journey.velocity=0;journey.progress=journey.target=logoChapterEnd()-.0001;});
     const compareActions=document.createElement('div');compareActions.className='tuner-actions';
     const editLogo=document.createElement('button');editLogo.type='button';editLogo.textContent='大小 / 厚度 / 倒角';
     editLogo.addEventListener('click',()=>{const group=tunerBody.querySelector('[data-title="品牌 LOGO"]');if(group)tunerBody.scrollTo({top:group.offsetTop-tunerBody.offsetTop-logoCompare.offsetHeight-5,behavior:reduceMotion?'auto':'smooth'});});
@@ -8467,12 +8507,14 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       motionSwitches.appendChild(button);motionButtons.set(id,button);
     }
     const motionActions=document.createElement('div');motionActions.className='tuner-actions';
-    let chapterPlay=0;
-    const stopChapter=()=>{if(chapterPlay)cancelAnimationFrame(chapterPlay);chapterPlay=0;};
+    let chapterPlay=0,chapterPlayEpoch=0;
+    const stopChapter=()=>{chapterPlayEpoch++;if(chapterPlay)cancelAnimationFrame(chapterPlay);chapterPlay=0;};
     /* Runs the journey from FROM to TO over SPAN ms, as a steady scroll would. */
-    const playJourney=(from,to,span)=>{
+    const playJourney=async(from,to,span)=>{
       if(!assetsReady)return;
-      stopChapter();skipEntry();
+      stopChapter();const epoch=chapterPlayEpoch;
+      await warmJourney();if(epoch!==chapterPlayEpoch)return;
+      skipEntry();
       const begin=performance.now();
       journey.velocity=0;journey.progress=journey.target=from;
       const run=now=>{const u=Math.min(1,(now-begin)/span);journey.target=from+(to-from)*u;chapterPlay=u<1?requestAnimationFrame(run):0;};
@@ -8517,11 +8559,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const centerLogo=document.createElement('button');centerLogo.type='button';centerLogo.textContent='LOGO 置中';
     centerLogo.addEventListener('click',()=>{Object.assign(CONFIG.logoFraming,{x:0,y:0});syncTunerValues();});
     const previewCanyon=document.createElement('button');previewCanyon.type='button';previewCanyon.textContent='預覽山道';
-    previewCanyon.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=4.6+journeyShift();});
+    previewCanyon.addEventListener('click',async()=>{await warmJourney();skipEntry();journey.velocity=0;journey.progress=journey.target=4.6+journeyShift();});
     const previewRivers=document.createElement('button');previewRivers.type='button';previewRivers.textContent='預覽五河';
-    previewRivers.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=10.98+journeyShift();});
+    previewRivers.addEventListener('click',async()=>{await warmJourney();skipEntry();journey.velocity=0;journey.progress=journey.target=10.98+journeyShift();});
     const previewWater=document.createElement('button');previewWater.type='button';previewWater.textContent='預覽水面銜接';
-    previewWater.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=8.7+journeyShift();});
+    previewWater.addEventListener('click',async()=>{await warmJourney();skipEntry();journey.velocity=0;journey.progress=journey.target=8.7+journeyShift();});
     const resetTerrain=document.createElement('button');resetTerrain.type='button';resetTerrain.textContent='重設山體';
     resetTerrain.addEventListener('click',()=>{Object.assign(CONFIG.watershedTerrain,DEFAULT_CONFIG.watershedTerrain);syncTunerValues();});
     const resetRivers=document.createElement('button');resetRivers.type='button';resetRivers.textContent='重設山景 / 光流';
@@ -8529,7 +8571,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     const resetView=document.createElement('button');resetView.type='button';resetView.textContent='重設視角';
     resetView.addEventListener('click',()=>{Object.assign(CONFIG.canyonView,CANYON_VIEW_DEFAULTS);syncTunerValues();});
     const previewView=document.createElement('button');previewView.type='button';previewView.textContent='預覽視角';
-    previewView.addEventListener('click',()=>{skipEntry();journey.velocity=0;journey.progress=journey.target=6.2;});
+    previewView.addEventListener('click',async()=>{await warmJourney();skipEntry();journey.velocity=0;journey.progress=journey.target=6.2;});
     logoActions.append(previewWater,previewRivers,resetTerrain,resetRivers,previewView,resetView,centerLogo,previewLogo,previewCanyon,resetLogo,resetCursor);
     for(const [text,title] of [['山體參數','山體建模'],['光流參數','河流光線'],['山景參數','山景色調'],['河岸參數','河岸細節'],['視角參數','第一人稱視角'],['位置參數','LOGO 位置'],['山道參數','山道動態模糊'],['游標參數','游標流體'],['玻璃參數','介面毛玻璃'],['轉場參數','LOGO 向前轉場'],['材質參數','LOGO 材質 · index'],['卡牌參數','LOGO 卡牌環繞']]){
       const button=document.createElement('button');button.type='button';button.textContent=text;
@@ -8729,6 +8771,9 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       tunerToggle.textContent = folded ? '+' : '−';
       tunerToggle.setAttribute('aria-label', folded ? 'Expand controls' : 'Collapse controls');
     });
+    }
+    ensureTuner=initializeTuner;
+    if(document.documentElement.dataset.tuning==='true')ensureTuner();
     applyConfig();
     resetDropSimulation(false);
     window.index4 = {
@@ -9244,8 +9289,15 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
        clock, so a caller can hand in a fixed step and replay the timeline
        deterministically. */
     let sceneTime = 0;
-    document.addEventListener('visibilitychange',()=>{clock.getDelta();journey.velocity=0;});
+    let animationFrame=0;
+    document.addEventListener('visibilitychange',()=>{
+      clock.getDelta();journey.velocity=0;
+      if(document.hidden){cancelAnimationFrame(animationFrame);animationFrame=0;clearTimeout(envBakeTimer);envBakeTimer=0;}
+      else{if(envBakePending)queueEnvBake();if(!animationFrame)animationFrame=requestAnimationFrame(tick);}
+    });
     function frame(manual, fixedDelta) {
+      if(!manual&&document.hidden)return;
+      if(resizeFrame){cancelAnimationFrame(resizeFrame);resize();}
       const realDelta = clock.getDelta();
       const scrollDt=Math.min(fixedDelta === undefined ? realDelta : fixedDelta,.18);
       const dt = Math.min(scrollDt,.04);
@@ -9345,10 +9397,10 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       if(logoRoot.visible)logoGlass.capture(scene,camera,logoSpin);
       sceneCursor.update(dt,time);
       composer.render();
-      if (firstFrame && assetsReady && journeyReady) {
+      if (firstFrame && assetsReady && (!requestedPreview || journeyReady)) {
         firstFrame = false;
         requestAnimationFrame(() => {
-          const preview=new URLSearchParams(location.search).get('view');
+          const preview=requestedPreview;
           if(preview==='transition')journey.progress=journey.target=logoChapterEnd()-.16;
           if(preview==='logo')journey.progress=journey.target=logoChapterStart()+CONFIG.logo.length*.44;
           if(preview==='water-transition')journey.progress=journey.target=8.7+journeyShift();
@@ -9358,10 +9410,12 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           if(preview==='logo-compare')journey.progress=journey.target=logoChapterEnd()-.0001;
           if(preview==='finale')journey.progress=journey.target=journey.max;
           document.body.classList.add('is-ready');
+          // Reveal the already-rendered hero before fetching/compiling later chapters.
+          setTimeout(warmJourney,0);
           loader.classList.add('is-done');
           if(preview==='water-transition')requestAnimationFrame(()=>{
             const section=tunerBody.querySelector('[data-title="山體建模"]');
-            if(section)tunerBody.scrollTop=section.offsetTop-tunerBody.offsetTop-logoCompare.offsetHeight-5;
+            if(section)tunerBody.scrollTop=section.offsetTop-tunerBody.offsetTop-(logoCompare?.offsetHeight||0)-5;
           });
           /* The hero surfaces as the loader clears; with reduced motion, or
              with INTRO off, it is simply already there, whole. */
@@ -9375,35 +9429,39 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }
       /* Wrapped, not passed directly: rAF hands its callback a timestamp,
          which would arrive here as `manual` and stop the loop. */
-      if (!manual) requestAnimationFrame(tick);
+      if (!manual && !document.hidden) animationFrame=requestAnimationFrame(tick);
     }
     /* One bound callback for the life of the page, instead of a fresh closure every frame. */
-    const tick = () => frame();
+    const tick = () => {animationFrame=0;frame();};
 
     /* Read-only diagnostics for local verification; never shown in the visitor interface. */
-    window.__MONTIS_STUDY__ = { canyonMotion, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark:{root:logoRoot,spin:logoSpin,glass:logoGlass,cards:logoCards,drops:logoDrops,variants:logoVariants,get activeVariant(){return activeLogoVariant;},get mesh(){return logoMesh;}}, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
+    window.__MONTIS_STUDY__ = { canyonMotion, get ready(){return warmJourney();}, get chapterReady(){return {logo:logoReady,journey:journeyReady};}, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark:{root:logoRoot,spin:logoSpin,glass:logoGlass,cards:logoCards,drops:logoDrops,variants:logoVariants,get activeVariant(){return activeLogoVariant;},get mesh(){return logoMesh;}}, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
 
+    let lastWidth=0,lastHeight=0,lastDpr=0,resizeFrame=0;
     function resize() {
-      const width = innerWidth;
-      const height = innerHeight;
-      const dpr = Math.min(devicePixelRatio, 1.65);
-      renderer.setPixelRatio(dpr);
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.fov = CONFIG.camera.fov + (width < 760 ? 8 : 0);
+      resizeFrame=0;
+      const width=innerWidth,height=innerHeight,dpr=Math.min(devicePixelRatio,1.65);
+      if(width===lastWidth&&height===lastHeight&&dpr===lastDpr)return;
+      const dprChanged=dpr!==lastDpr;
+      lastWidth=width;lastHeight=height;lastDpr=dpr;
+      if(renderer.getPixelRatio()!==dpr)renderer.setPixelRatio(dpr);
+      renderer.setSize(width,height,false);
+      camera.aspect=width/height;
+      camera.fov=CONFIG.camera.fov+(width<760?8:0);
       camera.updateProjectionMatrix();
       logoGlass.resize(width,height,dpr);
       sceneCursor.resize(width,height);
-      composer.setPixelRatio(dpr);
-      composer.setSize(width, height);
-      renderTarget.setSize(width * dpr, height * dpr);
-      bloom.resolution.set(width * dpr, height * dpr);
+      // Keep composer logical size stable on ordinary resize; DPR changes are rare.
+      if(dprChanged)composer.setPixelRatio(dpr);
+      composer.setSize(width,height);
+      renderTarget.setSize(width*dpr,height*dpr);
+      bloom.resolution.set(width*dpr,height*dpr);
       canyon.resize(width,height);
       canyonTarget.setSize(Math.round(width*Math.min(dpr,1.3)),Math.round(height*Math.min(dpr,1.3)));
     }
-    addEventListener('resize', resize, { passive: true });
+    addEventListener('resize',()=>{if(!resizeFrame)resizeFrame=requestAnimationFrame(resize);},{passive:true});
     resize();
-    warmJourney().catch(error=>console.warn('Scene warmup failed',error));
+    if(requestedPreview)warmJourney();
     frame();
   </script>
 </body>

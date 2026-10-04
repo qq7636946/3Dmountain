@@ -1,4 +1,4 @@
-import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-20261001-1da9d12021';
+import { STORY_CHAPTERS } from './water-journey-story.js?v=index463-perf-20261004-1c8393e634';
 
 const chapters = [
   { id:'knowledge', en:'KNOWLEDGE', zh:'以知為本', title:['OMNI INVESTMENT','STRATEGIES'], text:'洞悉市場，全方位資產佈局', kicker:'KNOWLEDGE · CAPITAL · INNOVATION', cta:'EXPLORE OUR WORLD' },
@@ -51,6 +51,7 @@ export function mountJourneyInterface({ navigate, reducedMotion = false }) {
   const currentLabel=root.querySelector('.fi-footer-current'), total=root.querySelector('.fi-footer-total');
   const nextLabel=root.querySelector('.fi-footer-next span');
   let targets=[0,2.8,6.7,9,11.3,12.5], lastState=null, active=-1, copyId='', progressKey='';
+  let renderedProgress=NaN,renderedMax=NaN,renderedLogoStart=NaN,renderedLogoEnd=NaN,renderedShift=NaN;
   const progressBar=root.querySelector('.fi-footer-progress i');
   const frame=root.querySelector('.fi-frame path');
   const resize=new ResizeObserver(()=>{
@@ -109,6 +110,10 @@ export function mountJourneyInterface({ navigate, reducedMotion = false }) {
   document.addEventListener('visibilitychange',()=>{if(!audio)return;if(document.hidden)audio.suspend();else if(soundOn)audio.resume().catch(()=>{});});
   function update(state){
     lastState=state;
+    // Water keeps rendering at rest, while this interface depends only on
+    // the journey state. Avoid rebuilding arrays and rechecking the DOM.
+    if(state.progress===renderedProgress&&state.max===renderedMax&&state.logoStart===renderedLogoStart&&state.logoEnd===renderedLogoEnd&&state.shift===renderedShift)return;
+    renderedProgress=state.progress;renderedMax=state.max;renderedLogoStart=state.logoStart;renderedLogoEnd=state.logoEnd;renderedShift=state.shift;
     const scene=state.progress-state.shift>3.8&&state.progress-state.shift<8.4?'canyon':'open';
     if(root.dataset.scene!==scene)root.dataset.scene=scene;
     targets=[0,state.logoStart+(state.logoEnd-state.logoStart)*.54,4.7+state.shift,6.85+state.shift,8.96+state.shift,10.15+state.shift];

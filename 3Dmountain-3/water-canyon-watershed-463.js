@@ -1,12 +1,20 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-canyon-watershed.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
-import { createConfluenceEffects } from './water-confluence-fx-463.js?v=index463-20261001-1da9d12021';
-export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx-463.js?v=index463-20261001-1da9d12021';
+import { createConfluenceEffects } from './water-confluence-fx-463.js?v=index463-perf-20261004-1c8393e634';
+export { WATERSHED_FLOW_DEFAULTS } from './water-confluence-fx-463.js?v=index463-perf-20261004-1c8393e634';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
 /** One continuous alpine watershed; every tributary drains into the same trunk. */
-export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial=rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null,logoTerrain=null}) {
+export function createCanyonWatershed(THREE, options) {
+  const builder=createCanyonWatershedBuilder(THREE,options);
+  let step=builder.next();while(!step.done)step=builder.next();return step.value;
+}
+
+// Both entry points consume this same ordered build; yields never expose partial geometry.
+export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial=rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null,logoTerrain=null}) {
+  let sliceStart=performance.now();
+  const sliceExpired=()=>performance.now()-sliceStart>=6;
   // shoreDetail (opt-in): sharper aretes, finer drainage, baked crease tone and a per-vertex
   // shore attribute on every river. Omitted, every line below behaves exactly as before.
   const detail=!!shoreDetail;
@@ -28,7 +36,17 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const lerp=THREE.MathUtils.lerp, clamp=x=>Math.max(0,Math.min(1,x));
   const smooth=(a,b,x)=>{const u=clamp((x-a)/(b-a));return u*u*(3-2*u);};
   const fract=x=>x-Math.floor(x),hash=(x,y)=>fract(Math.sin(x*127.1+y*311.7+81.73)*43758.5453);
-  function noise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);return lerp(lerp(hash(ix,iy),hash(ix+1,iy),ux),lerp(hash(ix,iy+1),hash(ix+1,iy+1),ux),uy);}
+  // Neighbouring terrain samples reuse the same integer noise lattice and erosion cells.
+  // Float64 retains the original hash exactly; coordinates are never rounded or wrapped.
+  // This bounded construction cache is released once the terrain is built.
+  let latticeHashValues=new Float64Array(512*512),latticeHashReady=new Uint8Array(512*512);
+  function latticeHash(x,y){
+    if(!latticeHashValues||x< -256||x>=256||y< -256||y>=256)return hash(x,y);
+    const index=(x+256)*512+y+256;
+    if(latticeHashReady[index])return latticeHashValues[index];
+    const value=hash(x,y);latticeHashValues[index]=value;latticeHashReady[index]=1;return value;
+  }
+  function noise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);return lerp(lerp(latticeHash(ix,iy),latticeHash(ix+1,iy),ux),lerp(latticeHash(ix,iy+1),latticeHash(ix+1,iy+1),ux),uy);}
   const fbm=(x,y)=>noise(x,y)*.57+noise(x*2.07+13,y*2.07)*.28+noise(x*4.13,y*4.13+19)*.15;
   const v=(x,z)=>new THREE.Vector3(x,0,z);
   // ---- logoTerrain (opt-in: index4-6-3 only, needs relief) -----------------------------------
@@ -50,7 +68,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     headwall:logoNumber('headwall',1,2.4,1.6),bands:logoNumber('bands',0,.8,.45),bandStep:logoNumber('bandStep',80,200,120)}:null;
   // Signed distance fields of logo.svg (svg units, negative inside): band, fin and the band's hole.
   // Rasterised once (Path2D), hole = sealed-slit flood fill, two-pass Felzenszwalb EDT.
-  function buildLogoField(){
+  function* buildLogoField(){
     const started=performance.now(),N=lite?512:800,U0=530,V0=226,SPAN=280,k=N/SPAN,NN=N*N;
     const canvas=typeof OffscreenCanvas==='function'?new OffscreenCanvas(N,N):Object.assign(document.createElement('canvas'),{width:N,height:N});
     const g=canvas.getContext('2d',{willReadFrequently:true});
@@ -77,20 +95,22 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     }
     // Euclidean distance (pixels) from every pixel to the nearest pixel where mask===target.
     // Uniform lines (all target / no target) skip the 1-D transform: most of the box is empty.
-    function edt(mask,target){
+    function* edt(mask,target){
       const a=new Float32Array(NN);for(let i=0;i<NN;i++)a[i]=mask[i]===target?0:INF;
       for(let x=0;x<N;x++){let hit=0;for(let y=0;y<N;y++){const e=a[y*N+x];f[y]=e;if(e===0)hit++;}
-        if(hit===0||hit===N)continue;edt1();for(let y=0;y<N;y++)a[y*N+x]=d[y];}
+        if(hit!==0&&hit!==N){edt1();for(let y=0;y<N;y++)a[y*N+x]=d[y];}
+        if((x&15)===15&&sliceExpired()){yield;sliceStart=performance.now();}}
       for(let y=0;y<N;y++){const o=y*N;let finite=0,zero=0;for(let x=0;x<N;x++){const e=a[o+x];f[x]=e;if(e<INF)finite++;if(e===0)zero++;}
-        if(zero===N)continue;if(finite===0){a.fill(INF,o,o+N);continue;}edt1();for(let x=0;x<N;x++)a[o+x]=Math.sqrt(d[x]);}
+        if(zero!==N){if(finite===0)a.fill(INF,o,o+N);else{edt1();for(let x=0;x<N;x++)a[o+x]=Math.sqrt(d[x]);}}
+        if((y&15)===15&&sliceExpired()){yield;sliceStart=performance.now();}}
       return a;
     }
     // Half-pixel correction keeps the zero crossing on the pixel edge instead of a 2px step.
-    const signed=m=>{const out=edt(m,1),inn=edt(m,0),r=new Float32Array(NN);for(let i=0;i<NN;i++)r[i]=(Math.max(0,out[i]-.5)-Math.max(0,inn[i]-.5))/k;return r;};
+    function* signed(m){const out=yield* edt(m,1),inn=yield* edt(m,0),r=new Float32Array(NN);for(let i=0;i<NN;i++)r[i]=(Math.max(0,out[i]-.5)-Math.max(0,inn[i]-.5))/k;return r;}
     // O: the ring's outer silhouette (band + lake), so the outer apron always climbs from the
     // band's OUTER edge (the band's own field cannot tell its inner edge from its outer one).
     // Outside the silhouette that distance is the band's own; only the inside needs one more pass.
-    const B=signed(band),F=signed(fin),H=signed(hole),toOut=edt(outside,1),O=new Float32Array(NN);
+    const B=yield* signed(band),F=yield* signed(fin),H=yield* signed(hole),toOut=yield* edt(outside,1),O=new Float32Array(NN);
     for(let i=0;i<NN;i++)O[i]=outside[i]?B[i]:-Math.max(0,toOut[i]-.5)/k;
     let bandDepth=0,finDepth=0;for(let i=0;i<NN;i++){bandDepth=Math.max(bandDepth,-B[i]);finDepth=Math.max(finDepth,-F[i]);}
     const res={b:99,f:99,h:99,o:99,u:0,v:0};
@@ -118,7 +138,8 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       }
     };
   }
-  const logoField=LG?buildLogoField():null;
+  const logoField=LG?(yield* buildLogoField()):null;
+  yield;sliceStart=performance.now();
   // A gentle domain warp (~2-3 svg units) so shores and crests wander like real ground instead of
   // a perfect offset of the vector outline. Every logo term reads the same warped field.
   // Low frequency on purpose: the warp's stretch also steepens every wall that reads this field.
@@ -472,7 +493,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       const len=Math.hypot(gx,gz)||1e-6,dx=-gz/len,dz=gx/len;
       const cx=Math.floor(x/L),cz=Math.floor(z/L);let acc=0,w=0,ddx=0,ddz=0;
       for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
-        const hA=hash(cx+i,cz+j),ox=(cx+i+.2+hA*.6)*L,oz=(cz+j+.2+hash(cz+j+7,cx+i)*.6)*L;
+        const hA=latticeHash(cx+i,cz+j),ox=(cx+i+.2+hA*.6)*L,oz=(cz+j+.2+latticeHash(cz+j+7,cx+i)*.6)*L;
         const px=(x-ox)/L,pz=(z-oz)/L,wt=Math.exp(-(px*px+pz*pz)*2.2),ph=(px*dx+pz*dz)*Math.PI*2*(1+jit*(2*fract(hA*7.13)-1));
         acc+=Math.cos(ph)*wt;ddx-=Math.sin(ph)*dx*wt;ddz-=Math.sin(ph)*dz*wt;w+=wt;
       }
@@ -593,7 +614,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
       const gv=lerp(.3,1.5,smooth(.4,.72,noise(x*.0026+41,z*.0026-9)));
       rs.ero=lerp(rs.ero,eroRing*gv*(10+rs.macroMass*.05)*(.35+.65*smooth(.02,.5,rs.slope))*smooth(40,200,rs.macroMass)*ease,ringZone)+g*gv*(8+mass*.045)*steep*ease;rs.groove=Math.max(rs.groove,clamp(.5-g*.5)*steep);}
     let support=0,supportMix=0;
-    if(z<=0&&z>=-1880){const r=lookup(mainRows,z),original=originalBank(x,z,r),endFade=smooth(0,90,-z)*(1-smooth(1770,1880,-z));
+    if(z<=0&&z>=-1880){const r=lookup(mainRows,z),original=R?.bankHeight?{distance:Math.max(0,Math.abs(x-r.x)-r.nx*r.width)}:originalBank(x,z,r),endFade=smooth(0,90,-z)*(1-smooth(1770,1880,-z));
       // A buried interior lets the original detailed cliffs remain authoritative.
       const bankY=R?.bankHeight?R.bankHeight(r.t,x<r.x?-1:1,original.distance,x,z):original.height;
       if(R?.bankHeight){
@@ -706,7 +727,10 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const logoInkW=LG?new Float32Array(xs.length*zs.length):null;
   if(R){
     macroGrid=new Array(xs.length*zs.length);
-    for(let i=0;i<zs.length;i++)for(let j=0;j<xs.length;j++)macroGrid[i*xs.length+j]=reliefMacro(xs[j],zs[i]);
+    for(let i=0;i<zs.length;i++){
+      for(let j=0;j<xs.length;j++)macroGrid[i*xs.length+j]=reliefMacro(xs[j],zs[i]);
+      if(sliceExpired()){yield;sliceStart=performance.now();}
+    }
   }
   const preAt=(i,j)=>{
     if(!macroGrid)return null;
@@ -716,7 +740,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   for(let i=0;i<zs.length;i++){const z=zs[i],channels=channelsAt(z);for(let j=0;j<xs.length;j++){const x=xs[j],sample=makeHeightSample(x,z,channels,preAt(i,j)),y=heightFromSample(sample),n=fbm(x*.009+51,z*.009),o=(i*xs.length+j)*3;positions.set([x,y,z],o);if(heightSamples)heightSamples.set(sample,(i*xs.length+j)*stride);maxHeight=Math.max(maxHeight,y);
     color.copy(dark).multiplyScalar(.73).lerp(pale,.16+n*.39+smooth(190,1200,y)*.10);color.lerp(summit,smooth(1000,2300,y)*(.07+n*.12));
     const wet=1-smooth(.3,18,y);color.multiplyScalar(1-wet*.27);if(LG)logoInkW[i*xs.length+j]=logoTint(x,z,color);colors.set([color.r,color.g,color.b],o);
-  }}
+  }if(sliceExpired()){yield;sliceStart=performance.now();}}
   // Triangulation. Near ground keeps the alternating diagonals. On the far rows and the side strips, where a
   // cell is tall and steep in the frame, alternating diagonals zigzag the shading into vertical stripes (the
   // last of the skyline 'curtains'); there each quad is split along its flatter diagonal, so the triangles
@@ -757,6 +781,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     }
   }
   bakeCreases();
+  yield;sliceStart=performance.now();
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();ownedGeometries.push(geo);
   if(reliefAttr)geo.setAttribute('aRelief',new THREE.BufferAttribute(reliefAttr,3));
   // LOGO: aRelief.z (unused by the terrain until now, 0) carries the stroke's ink weight.
@@ -796,6 +821,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     dummy.position.set(x,y-size*.22,z);dummy.rotation.set((hash(i,17)-.5)*.42,Math.atan2(tangent.x,tangent.z)+(hash(i,26)-.5)*1.1,(hash(i,51)-.5)*.32);
     dummy.scale.set(size*(1.12+hash(i,36)*.55),size*(.35+hash(i,40)*.40),size*(.76+hash(i,44)*.7));
     if(LG&&logoShore(logoAt(x,z).h)<40)dummy.scale.set(0,0,0);dummy.updateMatrix();slabs.setMatrixAt(i,dummy.matrix);if(terrainConfig)slabSamples.push({sample,burial:size*.22,matrix:dummy.matrix.clone()});
+    if((i&15)===15&&sliceExpired()){yield;sliceStart=performance.now();}
   }
   slabs.instanceMatrix.needsUpdate=true;slabs.name='Eroded bank slabs and craggy shoulders';slabs.castShadow=true;slabs.receiveShadow=true;group.add(slabs);
   // The built terrain at (x,z), read bilinearly from the same grid the banks were built from: the
@@ -813,7 +839,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
   const terrainAt=(x,z,out)=>{const g=locate(x,z);out[0]=cellValue(g,positions,1);out[1]=cellValue(g,colors,0);out[2]=cellValue(g,colors,1);out[3]=cellValue(g,colors,2);return out;};
   if(detail){
     // Water side of every bank: (bed height, inward distance to the bank, wall height).
-    const bake=(river,width,overlap)=>{
+    function* bake(river,width,overlap){
       const g=river.mesh.geometry,p=g.attributes.position,uv=g.attributes.uv,info=river.mesh.userData.journeyRiver,columns=info.widthSegments+1,rows=p.count/columns;
       const data=new Float32Array(p.count*3);
       for(let r=0;r<rows;r++){
@@ -824,12 +850,13 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
           data[i*3+1]=wv*(1-Math.abs(lane)*overlap);
           data[i*3+2]=Math.max(0,gridHeight(x+dx/len*side*(wv+70),z+dz/len*side*(wv+70)));
         }
+        if((r&7)===7&&sliceExpired()){yield;sliceStart=performance.now();}
       }
       g.setAttribute('aShore',new THREE.BufferAttribute(data,3));
     };
-    rivers.forEach((r,k)=>bake(r,descriptors[k].widthAt,refined?1.34:1.12));
-    bake(extensions[0],()=>57,refined?1.26:1.08);
-    bake(extensions[1],t=>trunkWidth(downstream.getPointAt(t).z),refined?1.22:1.08);
+    for(let k=0;k<rivers.length;k++)yield* bake(rivers[k],descriptors[k].widthAt,refined?1.34:1.12);
+    yield* bake(extensions[0],()=>57,refined?1.26:1.08);
+    yield* bake(extensions[1],t=>trunkWidth(downstream.getPointAt(t).z),refined?1.22:1.08);
   }
   let logo=null;
   if(LG){
@@ -1171,6 +1198,7 @@ export function createCanyonWatershed(THREE, {curve,widthAt,createRiver,rockMate
     stats.maxHeight=maxHeight;stats.terrainRevision++;stats.lastTerrainUpdateMs=performance.now()-started;stats.terrainUpdatePending=false;
     appliedTerrainKey=key;pendingTerrain=null;return true;
   }
+  latticeHashValues=null;latticeHashReady=null;
   return {group,rivers,stats,bounds:terrainBounds,descriptors,downstream,sampleHeight,mainAt,effects,flowPaths,riverDistance,syncTerrain,terrainAt,...(logo?{logo}:{}),
     update(time,reveal=0,confluence=0,reduced=false){if(disposed)return false;const changed=syncTerrain();if(logo)logo.update(reveal,confluence);effects.update(time,reveal,confluence,reduced);for(const r of [...rivers,...extensions])r.update(time);return changed;},
     dispose(){if(disposed)return;disposed=true;effects.dispose();for(const r of [...rivers,...extensions])r.dispose?.();for(const g of ownedGeometries)g.dispose();for(const m of ownedMaterials)m.dispose();group.clear();}

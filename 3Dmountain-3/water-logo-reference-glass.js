@@ -192,6 +192,19 @@ function studioScene() {
     uSunDir:{value:new THREE.Vector3(-.35,.28,-.9).normalize()},uSunCol:{value:new THREE.Color('#ffffff')}
   };
   for(const [uniform,key] of Object.entries(floatKeys))uniforms[uniform]={value:config[key]};
+  // These bindings never change. Keep their arrays out of the animation loop.
+  const floatBindings=Object.entries(floatKeys).map(([uniform,key])=>[uniforms[uniform],key]);
+  const colorBindings=[['uTint','tint'],['uShadeColor','shadeColor'],['uSSSColor','sssColor']]
+    .map(([uniform,key])=>({uniform:uniforms[uniform],key,source:undefined,scale:undefined,ready:false}));
+  const paletteBindings=[['uSkyTop','top'],['uSkyLow','horizon'],['uSeaNear','lower'],['uSeaFar','ink']]
+    .map(([uniform,key],index)=>({uniform:uniforms[uniform],key,scaled:index>1,source:undefined,scale:undefined,ready:false}));
+  function syncColor(binding,source,scale=1){
+    // Color instances may be edited in place; primitive CSS colors are stable.
+    if(binding.ready&&binding.source===source&&binding.scale===scale&&(source===null||typeof source!=='object'))return;
+    binding.uniform.value.set(source);
+    if(scale!==1)binding.uniform.value.multiplyScalar(scale);
+    binding.source=source;binding.scale=scale;binding.ready=true;
+  }
   const material=new THREE.ShaderMaterial({
     name:'Logo · index optical glass',uniforms,transparent:true,depthWrite:true,
     defines:{SAMPLES:Math.round(config.samples)},
@@ -287,20 +300,22 @@ function studioScene() {
       }
     `
   });
-  let reliefKey=[config.tiles,config.swell,config.grain,config.reliefScale].join('|'),pendingKey=reliefKey,rebakeAt=0;
+  const reliefKeys=['tiles','swell','grain','reliefScale'];
+  const reliefInputs=reliefKeys.map(key=>config[key]);
+  let reliefKey=reliefInputs.join('|'),pendingKey=reliefKey,rebakeAt=0;
   function update({palette,opacity=1}={}){
-    for(const [uniform,key] of Object.entries(floatKeys))uniforms[uniform].value=config[key];
-    for(const [uniform,key] of [['uTint','tint'],['uShadeColor','shadeColor'],['uSSSColor','sssColor']])uniforms[uniform].value.set(config[key]);
+    for(let i=0;i<floatBindings.length;i++){const binding=floatBindings[i];binding[0].value=config[binding[1]];}
+    for(let i=0;i<colorBindings.length;i++){const binding=colorBindings[i];syncColor(binding,config[binding.key]);}
     uniforms.uOpacity.value=opacity;
     if(palette){
-      uniforms.uSkyTop.value.set(palette.top);uniforms.uSkyLow.value.set(palette.horizon);
-      uniforms.uSeaNear.value.set(palette.lower).multiplyScalar(config.mirrorSea);
-      uniforms.uSeaFar.value.set(palette.ink).multiplyScalar(config.mirrorSea);
+      for(let i=0;i<paletteBindings.length;i++){const binding=paletteBindings[i];syncColor(binding,palette[binding.key],binding.scaled?config.mirrorSea:1);}
     }
     const samples=THREE.MathUtils.clamp(Math.round(config.samples),4,12);
     if(material.defines.SAMPLES!==samples){material.defines.SAMPLES=samples;material.needsUpdate=true;}
-    const key=[config.tiles,config.swell,config.grain,config.reliefScale].join('|');
-    if(key!==pendingKey){pendingKey=key;rebakeAt=performance.now()+220;}
+    let reliefChanged=false;
+    for(let i=0;i<reliefKeys.length;i++){const value=config[reliefKeys[i]];if(!Object.is(reliefInputs[i],value)){reliefInputs[i]=value;reliefChanged=true;}}
+    if(reliefChanged){const key=reliefInputs.join('|');if(key!==pendingKey){pendingKey=key;rebakeAt=performance.now()+220;}}
+    const key=pendingKey;
     if(key!==reliefKey&&performance.now()>=rebakeAt){
       const old=normalMap;normalMap=stoneNormalTexture();uniforms.uNormalMap.value=normalMap;old.dispose();reliefKey=key;
     }

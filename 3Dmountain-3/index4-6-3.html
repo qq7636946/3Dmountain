@@ -2,7 +2,7 @@
 <html lang="zh-Hant" prefix="og: https://ogp.me/ns#">
 
 <head>
-  <meta name="build-version" content="index463-scroll-20261004-78fa788ddc">
+  <meta name="build-version" content="index463-loader-20261004-4ca719d50b">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
@@ -1044,20 +1044,18 @@ html:not([data-tuning="true"]) .tuner { display:none; }
   z-index: 7;
   pointer-events: none;
   color: var(--ui-ink);
-  opacity: 1;
-  visibility: visible;
+  opacity: 0;
+  visibility: hidden;
   transition: opacity 1.2s ease, visibility 1.2s, color .7s ease;
   font-family: "Jost", "Noto Sans TC", sans-serif;
 }
 body.is-ready .finnovation-ui { opacity: 1; visibility: visible; }
-/* The SSR copy paints before WebGL; controls wait until their scene is ready. */
+/* Reveal the interface with the ready scene; loading shows only the loader. */
 body.is-booting:not(.is-ready) .fi-header-right,
 body.is-booting:not(.is-ready) .fi-rail,
 body.is-booting:not(.is-ready) .fi-footer,
 body.is-booting:not(.is-ready) .fi-copy-action,
 body.is-booting:not(.is-ready) .fi-brand { visibility: hidden; pointer-events: none; }
-/* Keep the brand artwork readable without exposing its unbound anchor. */
-body.is-booting:not(.is-ready) .fi-brand > * { visibility: visible; pointer-events: none; }
 body.is-watershed .finnovation-ui {
   --ui-ink: #203349;
   --ui-muted: #4f6275;

@@ -2,7 +2,7 @@
 <html lang="zh-Hant" prefix="og: https://ogp.me/ns#">
 
 <head>
-  <meta name="build-version" content="index463-smooth-20261004-b030a95175">
+  <meta name="build-version" content="index463-scroll-20261004-035e8e9957">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#dceaf1">
@@ -1499,18 +1499,18 @@ body.has-finnovation-ui .tuner {
 
   <script type="module" id="journeyModule" onerror="showFinnovationText()">
     import * as THREE from 'three';
-    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-smooth-20261004-b030a95175';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-smooth-20261004-b030a95175';
-    import { createJourneyRiver } from './water-journey-river.js?v=index463-smooth-20261004-b030a95175';
-    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-smooth-20261004-b030a95175';
-    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-smooth-20261004-b030a95175';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-smooth-20261004-b030a95175';
-    import { createLogoGeometryBuilder } from './water-logo-geometry-client.js?v=index463-smooth-20261004-b030a95175';
-    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-smooth-20261004-b030a95175';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=index463-scroll-20261004-035e8e9957';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=index463-scroll-20261004-035e8e9957';
+    import { createJourneyRiver } from './water-journey-river.js?v=index463-scroll-20261004-035e8e9957';
+    import { createFinnovationCursor, CURSOR_DEFAULTS } from './finnovation-cursor.js?v=index463-scroll-20261004-035e8e9957';
+    import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from './water-forward-transition.js?v=index463-scroll-20261004-035e8e9957';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=index463-scroll-20261004-035e8e9957';
+    import { createLogoGeometryBuilder } from './water-logo-geometry-client.js?v=index463-scroll-20261004-035e8e9957';
+    import { mountJourneyStory, stepJourneyMotion } from './water-journey-story.js?v=index463-scroll-20261004-035e8e9957';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-smooth-20261004-b030a95175';
-    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-smooth-20261004-b030a95175';
-    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-smooth-20261004-b030a95175';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from './water-logo-reference-glass.js?v=index463-scroll-20261004-035e8e9957';
+    import { createLogoCards, LOGO_CARD_DEFAULTS } from './water-logo-cards.js?v=index463-scroll-20261004-035e8e9957';
+    import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from './water-logo-drops.js?v=index463-scroll-20261004-035e8e9957';
     import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
     /* Build the workshop only on request: T or ?tune=1. Its 547 controls
        are useful while editing, but should not delay the first view. */
@@ -7246,7 +7246,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       logoBlueUniforms.uBlueDensity.value=L.logo3Blue;logoBlueUniforms.uBlueGlow.value=L.logo3Glow;logoBlueUniforms.uBlueMirror.value=L.logo3Mirror;
       if(variant?.blueBox)logoBlueUniforms.uBlueBox.value.copy(variant.blueBox);
     }
-    const logoCards = createLogoCards(THREE, { renderer, config:CONFIG.logoCards, deferTextures:true });
+    const logoCards = createLogoCards(THREE, { renderer, config:CONFIG.logoCards, deferTextures:true, progressiveTextures:true });
     logoRoot.add(logoCards.group);
     /* The same orbit, in water: each drop carries a photograph and lenses it.
        It shares the logo glass's room (sky, sea, sun, studio cube) by
@@ -7255,7 +7255,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     /* In the bloom a falling drop strikes the sea: its ring goes into the
        page's own ripple field, the same one the hero drop's impact uses, so
        the chrome water actually dents and rings. */
-    const logoDrops = createLogoDrops(THREE, { renderer, config:CONFIG.logoDrops, env:logoGlass.uniforms, lite:DROPLET_LITE, deferTextures:true,
+    const logoDrops = createLogoDrops(THREE, { renderer, config:CONFIG.logoDrops, env:logoGlass.uniforms, lite:DROPLET_LITE, deferTextures:true, progressiveTextures:true,
       onSplash:(x,y,z,strength)=>{spawnRipple(x,z,1.1*strength);queueRipple(x,z,.55*strength,.14);} });
     logoRoot.add(logoDrops.group);
     /* Scroll-owned logo enlargement and optical focus. */
@@ -7476,7 +7476,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
     }
     async function prepareJourney(){
       if(sceneStopped)return;
-      await Promise.all([logoVariants.get(selectedLogoVariant()).ready,CONFIG.logoCards.enabled>.5?logoCards.ready:null,CONFIG.logoDrops.enabled>.5?logoDrops.ready:null]);
+      // Photographs enrich individual drops/cards as they arrive. A slow image must
+      // not pin scroll at the hero dispersal gate or delay shader preparation.
+      if(CONFIG.logoCards.enabled>.5)void logoCards.loadAssets();
+      if(CONFIG.logoDrops.enabled>.5)void logoDrops.loadAssets();
+      await logoVariants.get(selectedLogoVariant()).ready;
       await yieldToBrowser();
       if(sceneStopped)return;
       const warmTarget=new THREE.WebGLRenderTarget(64,64,{type:THREE.HalfFloatType});

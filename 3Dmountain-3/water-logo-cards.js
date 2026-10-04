@@ -13,7 +13,7 @@ const ARTWORK=[
   ['headphones.jpg','Every Note'],['editorial.jpg','Selected Work']
 ];
 const STRIP_ORDER=[0,1,3,7,2,5,4,6];
-export function createLogoCards(THREE,{config,renderer,deferTextures=false}){
+export function createLogoCards(THREE,{config,renderer,deferTextures=false,progressiveTextures=false}){
   const group=new THREE.Group();group.name='logo-slide-card-helix';group.visible=false;
   const geometry=new THREE.PlaneGeometry(1,1,48,4),meshes=[],textures=[];
   const fallbackCanvas=document.createElement('canvas');fallbackCanvas.width=2;fallbackCanvas.height=2;
@@ -70,7 +70,7 @@ export function createLogoCards(THREE,{config,renderer,deferTextures=false}){
     mesh.renderOrder=4;group.add(mesh);meshes.push(mesh);
   }
   const loader=new THREE.TextureLoader();
-  let ready=null,disposed=false;
+  let ready=null,disposed=false,lastTime=null;
   function loadAssets(){
     if(disposed)return Promise.resolve([]);
     if(ready)return ready;
@@ -79,14 +79,14 @@ export function createLogoCards(THREE,{config,renderer,deferTextures=false}){
       if(disposed){texture.dispose();resolve(false);return;}
       texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
       textures.push(texture);meshes[index].material.uniforms.uTexture.value=texture;
-      meshes[index].userData.aspect=texture.image.width/texture.image.height;resolve(true);
+      meshes[index].userData.aspect=texture.image.width/texture.image.height;meshes[index].userData.loadedAt=lastTime??0;resolve(true);
     },undefined,error=>{console.warn('Logo card image unavailable:',file,error);resolve(false)});
   })));
     return ready;
   }
   if(!deferTextures)loadAssets();
   const rotation=new THREE.Euler(),orientation=new THREE.Quaternion();
-  let lastTime=null,autoAngle=0;
+  let autoAngle=0;
   function update({progress=0,reveal=1,exit=0,time=0,reducedMotion=false,palette,mobile=false}={}){
     const C=config,dt=lastTime===null?0:Math.min(.05,Math.max(0,time-lastTime));lastTime=time;
     // Optional autoplay is integrated: changing its speed cannot jump the card positions.
@@ -106,7 +106,8 @@ export function createLogoCards(THREE,{config,renderer,deferTextures=false}){
       mesh.position.set(Math.sin(angle)*radius,-C.pitch*pathAngle+C.wave*Math.sin(pathAngle*1.6),Math.cos(angle)*radius-C.tailDepth*(1-frac));
       mesh.position.applyQuaternion(orientation);mesh.position.y+=centering;mesh.quaternion.copy(orientation);
       const u=mesh.material.uniforms;
-      const values={Radius:radius,Arc:arc,Height:radius*arc/1.46,Pitch:C.pitch,Wave:C.wave,Angle:angle,PathAngle:pathAngle,RadiusSlope:C.radius*C.tailTaper/((meshes.length-1)*C.spacing),DepthSlope:C.tailDepth/((meshes.length-1)*C.spacing),Opacity:fade,TintStrength:C.tintStrength,Saturation:C.saturation,Contrast:C.contrast,Brightness:C.brightness};
+      const photoFade=!progressiveTextures?1:mesh.userData.loadedAt===undefined?0:reducedMotion?1:THREE.MathUtils.smoothstep(time-mesh.userData.loadedAt,0,.28);
+      const values={Radius:radius,Arc:arc,Height:radius*arc/1.46,Pitch:C.pitch,Wave:C.wave,Angle:angle,PathAngle:pathAngle,RadiusSlope:C.radius*C.tailTaper/((meshes.length-1)*C.spacing),DepthSlope:C.tailDepth/((meshes.length-1)*C.spacing),Opacity:fade*photoFade,TintStrength:C.tintStrength,Saturation:C.saturation,Contrast:C.contrast,Brightness:C.brightness};
       for(const [key,value] of Object.entries(values))u['u'+key].value=value;
       const aspect=mesh.userData.aspect;u.uCrop.value.set(Math.min(1,1.46/aspect),Math.min(1,aspect/1.46));
       if(palette){u.uPaper.value.set(palette.horizon);u.uInk.value.set(palette.ink);}

@@ -274,7 +274,7 @@ const STRETCH_GLSL = /* glsl */`
   }
 `;
 
-export function createLogoDrops(THREE, { config, renderer, env, lite = false, onSplash = null, deferTextures = false }) {
+export function createLogoDrops(THREE, { config, renderer, env, lite = false, onSplash = null, deferTextures = false, progressiveTextures = false }) {
   const group = new THREE.Group();
   group.name = 'logo-water-drops';
   group.visible = false;
@@ -574,7 +574,7 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
       uniforms['u' + name] = { value: 0 };
     }
     uniforms.uClipY = { value: -1e9 };
-    uniforms.uDevelop = { value: 1 };
+    uniforms.uDevelop = { value: progressiveTextures ? 0 : 1 };
     const material = new THREE.ShaderMaterial({
       name: 'Water drop · ' + PHOTOS[photo][1],
       uniforms, vertexShader, fragmentShader,
@@ -913,7 +913,7 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
   }
 
   const loader = new THREE.TextureLoader();
-  let ready = null, disposed = false;
+  let ready = null, disposed = false, lastTime = null;
   function loadAssets() {
     if (disposed) return Promise.resolve([]);
     if (ready) return ready;
@@ -923,12 +923,13 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       textures.push(texture);
-      const aspect = texture.image.width / texture.image.height;
+      const aspect = texture.image.width / texture.image.height, loadedAt = lastTime ?? 0;
       /* One texture per photograph, shared by every drop that shows it. */
       for (const mesh of meshes) {
         if (mesh.userData.photo !== photo) continue;
         mesh.material.uniforms.uPhoto.value = texture;
         mesh.userData.aspect = aspect;
+        mesh.userData.loadedAt = loadedAt;
       }
       resolve(true);
     }, undefined, error => { console.warn('Logo drop photo unavailable:', file, error); resolve(false); });
@@ -950,7 +951,7 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
   const fallTarget = new THREE.Vector3();
   const beadMatrix = new THREE.Matrix4(), beadQuaternion = new THREE.Quaternion(), beadScale = new THREE.Vector3();
   const beadPosition = new THREE.Vector3(), flight = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
-  let lastTime = null, autoAngle = 0, lastCount = -1, lastMode = -1, lastProgress = null, progressRate = 0;
+  let autoAngle = 0, lastCount = -1, lastMode = -1, lastProgress = null, progressRate = 0;
   /* Read by the page each frame: PULSE is the flash of the converging drops
      meeting (0–1), ENTERING whether the entrance is playing. */
   const state = { pulse: 0, entering: false, core: 0 };
@@ -1530,7 +1531,8 @@ export function createLogoDrops(THREE, { config, renderer, env, lite = false, on
       u.uClipY.value = falling ? seaLevel : -1e9;
       /* Past the edge by now in any frame; the fade only makes sure. */
       u.uOpacity.value = fade * entryAlpha * (1 - smooth(vanish, .88, 1)) * (mode === 2 ? smooth(grow, .28, .45) : 1);
-      u.uDevelop.value = develop;
+      const photoFade = !progressiveTextures ? 1 : mesh.userData.loadedAt === undefined ? 0 : reducedMotion ? 1 : smooth(time - mesh.userData.loadedAt, 0, .28);
+      u.uDevelop.value = develop * photoFade;
       const distance = mesh.position.distanceTo(cameraLocal);
       u.uHaze.value = C.haze * Math.pow(clamp01((distance - logoDistance - .6) / 8), .8);
       u.uWobble.value = C.wobble * Math.pow(rel, .3) * motion * settle;

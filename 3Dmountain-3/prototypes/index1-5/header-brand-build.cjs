@@ -2,6 +2,11 @@
    symbol and its parameters are separate and must not be changed here. */
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const root=path.resolve(__dirname,'../..');
+function removeHeaderExplore(source){
+ const button=/<button\b[^>]*\bclass="fi-explore"[^>]*>[\s\S]*?<\/button>/g;
+ if((source.match(button)||[]).length>1)throw Error('Header Explore anchor is ambiguous');
+ return source.replace(button,'');
+}
 function artwork(){
  let svg=fs.readFileSync(path.join(root,'logo2.svg'),'utf8');
  svg=svg.slice(svg.indexOf('<svg')).replace(/<!--[^]*?-->/g,'');
@@ -20,7 +25,7 @@ function header(source,logo){
  let count=0;
  out=out.replace(re,(m,attrs)=>{count++;return '<p class="fi-brand-context" lang="en">KNOWLEDGE IN FLOW.<br><span>CAPITAL MOVING FORWARD.</span></p>\n      <a'+attrs.replace('class="fi-brand"','class="fi-brand fi-brand-logo2"')+'>'+logo+'</a>';});
  if(count!==1)throw Error('Header brand anchor: '+count);
- return out;
+ return removeHeaderExplore(out);
 }
 module.exports=({html,ui})=>{
  const logo=artwork();
@@ -33,3 +38,4 @@ module.exports=({html,ui})=>{
  else html=html.replace('</head>','  <link rel="stylesheet" data-header-brand href="'+href+'">\n</head>');
  return {html,ui};
 };
+module.exports.removeHeaderExplore=removeHeaderExplore;

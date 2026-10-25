@@ -20,7 +20,7 @@
     import { createJourneyRiver } from '../../../js/water-journey-river.js?v=index463-scroll-20261004-78fa788ddc';
     import { createFinnovationCursor, CURSOR_DEFAULTS } from '../../../js/finnovation-cursor.js?v=index463-scroll-20261004-78fa788ddc';
     import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from '../../../js/water-forward-transition.js?v=index463-scroll-20261004-78fa788ddc';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=i15-mvnjah6m';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=remove-explore-81c38af5182d';
     import { createLogoGeometryBuilder } from '../../../js/water-logo-geometry-client.js?v=index463-scroll-20261004-78fa788ddc';
     import { mountJourneyStory, stepJourneyMotion } from '../../../js/water-journey-story.js?v=index463-scroll-20261004-78fa788ddc';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';

@@ -114,7 +114,7 @@ export function renderJourneyInterface(){
       <a class="fi-brand fi-brand-logo2" style="color:inherit;text-decoration:none;font:inherit" href="https://qq7636946.github.io/3Dmountain/3Dmountain-3/index3.html" data-chapter="0" aria-label="恒灝創新，回到首頁">${logo}</a>
       <div class="fi-header-right">
         <nav class="fi-topnav" aria-label="主要導覽"><button data-chapter="0">ABOUT</button><button data-chapter="2">OUR APPROACH</button><button data-chapter="5">STRATEGIES</button></nav>
-        <div class="fi-header-actions"><button class="fi-explore" data-next>${arrow} EXPLORE</button><button class="fi-menu-toggle" aria-haspopup="dialog" aria-controls="fi-menu" aria-expanded="false">${grid} MENU</button></div>
+        <div class="fi-header-actions"><button class="fi-menu-toggle" aria-haspopup="dialog" aria-controls="fi-menu" aria-expanded="false">${grid} MENU</button></div>
       </div>
     </header>
     <nav class="fi-rail" aria-label="品牌篇章">${chapters.map((c,i)=>`<button data-chapter="${i}" aria-label="${String(i+1).padStart(2,'0')} ${c.zh}"><span class="fi-rail-number" aria-hidden="true">${String(i+1).padStart(2,'0')}</span>${c.en}</button>`).join('')}</nav>

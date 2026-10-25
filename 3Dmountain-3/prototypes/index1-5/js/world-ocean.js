@@ -410,7 +410,7 @@ function prepareDom(root) {
 }
 
 /* ---------------------------------------------------------------- module */
-export function createWorldOcean({ root, reducedMotion = false, config = () => null, small = false, go = () => {}, remeasure = () => {} }) {
+export function createWorldOcean({ root, reducedMotion = false, config = () => null, small = false, mobilePerformance = false, go = () => {}, remeasure = () => {} }) {
   const dom = prepareDom(root);
   if (!dom) return null;
   const { resp, dive, track, panels, ticks, N } = dom;
@@ -531,11 +531,13 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     // the planet as it is drawn, for the wave to refract (rendered only while the wave crosses)
     sceneRT = new THREE.WebGLRenderTarget(2, 2, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
     const quad = new THREE.PlaneGeometry(2, 2);
-    const size = small ? 256 : 512;
+    // Keep all 40 wave components; the phone's lower-resolution periodic field
+    // removes bake work while preserving the wind, height and animation clock.
+    const size = mobilePerformance ? 192 : small ? 256 : 512;   /* WORLD_MOBILE_WAVE_TARGET */
     const rtOptions = { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: true, depthBuffer: false };
     waveRT = new THREE.WebGLRenderTarget(size, size, rtOptions);
     noiseRT = new THREE.WebGLRenderTarget(256, 256, rtOptions);
-    waveRT.texture.anisotropy = noiseRT.texture.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy() || 1);
+    waveRT.texture.anisotropy = noiseRT.texture.anisotropy = Math.min(mobilePerformance ? 2 : 8, r.capabilities.getMaxAnisotropy() || 1);
     setWaves(num('wind', -180, 180));
     waveMat = new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: WAVE_BAKE, uniforms: { uK: { value: waveK }, uTime: { value: 0 } }, depthTest: false, depthWrite: false });
     noiseMat = new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: NOISE_BAKE, depthTest: false, depthWrite: false });

@@ -131,7 +131,8 @@ const NOISE_GLSL = /* glsl */`
 `;
 
 
-export function createReferenceLogoGlass(THREE, {renderer, config}) {
+export function createReferenceLogoGlass(THREE, {renderer, config, mobile = false}) {
+  /* MOBILE_OPTICAL_BUDGET */
   const RK=config;
 function jsHash(x, y, z) {
   const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453123;
@@ -277,7 +278,7 @@ function studioScene() {
   }
   const material=new THREE.ShaderMaterial({
     name:'Logo · index optical glass',uniforms,transparent:true,depthWrite:true,
-    defines:{SAMPLES:Math.round(config.samples)},
+    defines:{SAMPLES:mobile?4:Math.round(config.samples)},
     vertexShader:/* glsl */`
       varying vec3 vWorld,vNormal,vObj;
       varying vec2 vUv;
@@ -404,7 +405,7 @@ function studioScene() {
     if(palette){
       for(let i=0;i<paletteBindings.length;i++){const binding=paletteBindings[i];syncColor(binding,palette[binding.key],binding.scaled?config.mirrorSea:1);}
     }
-    const samples=THREE.MathUtils.clamp(Math.round(config.samples),4,12);
+    const samples=mobile?4:THREE.MathUtils.clamp(Math.round(config.samples),4,12);
     if(material.defines.SAMPLES!==samples){material.defines.SAMPLES=samples;material.needsUpdate=true;}
     let reliefChanged=false;
     for(let i=0;i<reliefKeys.length;i++){const value=config[reliefKeys[i]];if(!Object.is(reliefInputs[i],value)){reliefInputs[i]=value;reliefChanged=true;}}
@@ -422,7 +423,7 @@ function studioScene() {
     finally{logoSpin.visible=visible;renderer.setRenderTarget(previous);}
   }
   function resize(width,height,dpr=1){
-    const scale=Math.min(1.15,dpr)*Math.min(1,1440/width);
+    const scale=Math.min(mobile ? .75 : 1.15,dpr)*Math.min(1,1440/width);
     target.setSize(Math.max(2,Math.round(width*scale)),Math.max(2,Math.round(height*scale)));
   }
   return {material,uniforms,target,update,capture,resize,dispose(){normalMap.dispose();spectrum.dispose();cube.dispose();target.dispose();material.dispose();}};

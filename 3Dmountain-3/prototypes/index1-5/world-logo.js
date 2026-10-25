@@ -315,7 +315,7 @@ void main() {
 `;
 
 /* ---------------------------------------------------------------- module */
-export function createWorldLogo({ root, reducedMotion = false, small = false, config = () => null, go = () => { }, remeasure = () => { } }) {
+export function createWorldLogo({ root, reducedMotion = false, small = false, mobilePerformance = false, config = () => null, go = () => { }, remeasure = () => { } }) {
   const section = root.querySelector('[data-world-part="logo"]');
   if (!section) return null;
   const flag = (new URLSearchParams(location.search).get('logoseal') || '').toLowerCase();
@@ -470,7 +470,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, co
     if (dead(R0)) return;
     R0.daylight = await import('./scene-daylight.js').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
     renderer.getDrawingBufferSize(_size);
-    R0.lake = await step(R0, 'lake', () => sceneMod.createLakeScene({ THREE, renderer, width: Math.round(_size.x), height: Math.round(_size.y), palette: paletteHex(), assetBase, small, reducedMotion }), true);
+    R0.lake = await step(R0, 'lake', () => sceneMod.createLakeScene({ THREE, renderer, width: Math.round(_size.x), height: Math.round(_size.y), palette: paletteHex(), assetBase, small, mobilePerformance, reducedMotion }), true);
     if (dead(R0)) return;
     await step(R0,'lake preparation',()=>{
       R0.lake.setLook?.({...(cfg().logoLake||{})});

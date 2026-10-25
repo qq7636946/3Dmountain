@@ -13,14 +13,14 @@ export const LUNGE_BLUR_ROWS=[
 const COUNT=8;
 const GLSL=`
 uniform int uLungeCount;
-uniform vec4 uLungeBounds[8],uLungeMotion[8];
+uniform vec4 uLungeBounds[LUNGE_MASKS],uLungeMotion[LUNGE_MASKS];
 uniform vec2 uLungeViewport;
 uniform float uLungeLimit;
 vec4 lungeShutter(vec2 uv){
  vec4 base=texture2D(tDiffuse,uv);
  if(uLungeCount==0)return base;
  vec2 travel=vec2(0.);float cover=0.;
- for(int i=0;i<8;i++){
+ for(int i=0;i<LUNGE_MASKS;i++){
   if(i>=uLungeCount)break;
   vec4 b=uLungeBounds[i],m=uLungeMotion[i];
   float r=length((uv-b.xy)/max(b.zw,vec2(.0001)));
@@ -43,31 +43,38 @@ vec4 lungeShutter(vec2 uv){
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
 export function createOpeningLungeBlur({pass,camera,getConfig=()=>null,small=false,reducedMotion=false}){
- const bounds=Array.from({length:COUNT},()=>new THREE.Vector4()),motion=bounds.map(()=>new THREE.Vector4());
+ const phoneBudget=small&&!!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])');
+ const shaderMaskCount=phoneBudget?3:COUNT,maskCount=phoneBudget?3:small?6:COUNT,firstLimit=phoneBudget?8:24,secondaryLimit=phoneBudget?24:128,heroId=firstLimit,secondaryOffset=heroId+1;
+ const bounds=Array.from({length:shaderMaskCount},()=>new THREE.Vector4()),motion=bounds.map(()=>new THREE.Vector4());
  const U={uLungeCount:{value:0},uLungeBounds:{value:bounds},uLungeMotion:{value:motion},uLungeViewport:{value:new THREE.Vector2(1,1)},uLungeLimit:{value:28}};
- Object.assign(pass.uniforms,U);pass.material.defines={...pass.material.defines,LUNGE_TAPS:small?5:8};
+ Object.assign(pass.uniforms,U);pass.material.defines={...pass.material.defines,LUNGE_TAPS:phoneBudget?3:small?5:8,LUNGE_MASKS:shaderMaskCount};
  const anchor='vec4 c=texture2D(tDiffuse,vUv);';
  if(pass.material.fragmentShader.split(anchor).length!==2)throw Error('Opening lunge: final sample anchor missing');
  pass.material.fragmentShader=pass.material.fragmentShader.replace('    void main(){',GLSL+'\n    void main(){').replace(anchor,'vec4 c=lungeShutter(vUv);');
  pass.material.needsUpdate=true;
- const records=Array.from({length:153},(_,id)=>({id,ready:false,x:0,y:0,r:0,vx:0,vy:0,zoom:0,weight:0,score:0,rx:0,ry:0})),active=[];
+ const records=Array.from({length:secondaryOffset+secondaryLimit},(_,id)=>({id,epoch:0,ready:false,x:0,y:0,r:0,vx:0,vy:0,zoom:0,weight:0,score:0,rx:0,ry:0})),active=[];
  const matrix=new THREE.Matrix4(),world=new THREE.Matrix4(),centre=new THREE.Vector3(),view=new THREE.Vector3(),projected=new THREE.Vector3();
- const settings={...LUNGE_BLUR_DEFAULTS};let lastProgress=NaN,maxMotion=0,zoomEnergy=0,serial=0,spiralCount=0,secondVisible=false;
+ const settings={...LUNGE_BLUR_DEFAULTS};let lastProgress=NaN,maxMotion=0,zoomEnergy=0,serial=0,spiralCount=0,secondVisible=false,cleared=true,historyEpoch=0;
  const rank=(a,b)=>b.score-a.score;
- function clear(){U.uLungeCount.value=0;maxMotion=zoomEnergy=spiralCount=0;for(const r of records){r.ready=false;r.vx=r.vy=r.zoom=r.weight=0;}}
+ function clear(){U.uLungeCount.value=0;maxMotion=zoomEnergy=spiralCount=0;if(!cleared){historyEpoch++;cleared=true;}}
  function update({dt=0,progress=0,velocity=0,stage=0,mesh=null,hero=null,heroRadius=1,heroScale=1,secondary=null,width=innerWidth,height=innerHeight}={}){
   const C=Object.assign(settings,LUNGE_BLUR_DEFAULTS,getConfig()),jump=Number.isFinite(lastProgress)&&Math.abs(progress-lastProgress)>.3;lastProgress=progress;
+  // Config-off/reduced-motion frames do no hierarchy or bead-record scan.
+  if(reducedMotion||C.enabled<.5||C.strength<=0||dt<=0||dt>.1||jump){secondVisible=false;clear();return;}
   const firstEnvelope=smooth(.075,.18,stage)*(1.-smooth(.76,.94,stage));
   secondVisible=!!secondary?.group?.visible && (C.spiral ?? 1)>.5;
   if(secondVisible)for(let parent=secondary.group.parent;parent;parent=parent.parent)if(!parent.visible){secondVisible=false;break;}
   const envelope=Math.max(firstEnvelope,secondVisible?1:0);
-  if(reducedMotion||C.enabled<.5||C.strength<=0||envelope<.001||dt<=0||dt>.1||jump){clear();return;}
+  if(envelope<.001){clear();return;}
+  cleared=false;
   camera.updateMatrixWorld();mesh?.updateWorldMatrix(true,false);
   U.uLungeViewport.value.set(width,height);U.uLungeLimit.value=Math.min(small?26:48,Math.max(4,C.maxPixels));
   active.length=0;maxMotion=zoomEnergy=spiralCount=0;serial++;
   const shutter=clamp(C.shutter,.008,.065),drive=smooth(.006,.12,Math.abs(velocity)),blend=1.-Math.exp(-dt*24);
   function sample(id,position,radius,opacity,gain=firstEnvelope){
-   const r=records[id];r.seen=serial;view.copy(position).applyMatrix4(camera.matrixWorldInverse);const depth=-view.z;
+   const r=records[id];
+   if(r.epoch!==historyEpoch){r.ready=false;r.vx=r.vy=r.zoom=r.weight=0;r.epoch=historyEpoch;}
+   r.seen=serial;view.copy(position).applyMatrix4(camera.matrixWorldInverse);const depth=-view.z;
    if(depth<camera.near*1.5||radius<=0||opacity<.015){r.ready=false;return;}
    projected.copy(position).project(camera);
    const x=projected.x*.5+.5,y=projected.y*.5+.5,ry=Math.min(1.5,radius*camera.projectionMatrix.elements[5]/depth*.5),rx=ry*height/width;
@@ -81,8 +88,8 @@ export function createOpeningLungeBlur({pass,camera,getConfig=()=>null,small=fal
    r.score=r.weight*Math.max(8,ry*height);
    if(r.weight>.015){active.push(r);maxMotion=Math.max(maxMotion,Math.min(U.uLungeLimit.value,pixels));zoomEnergy=Math.max(zoomEnergy,Math.abs(r.zoom));}
   }
-  if(firstEnvelope>.001&&hero?.visible){hero.getWorldPosition(centre);sample(24,centre,heroRadius*Math.max(hero.scale.x,hero.scale.y,hero.scale.z)/Math.max(.01,heroScale),1);}
-  if(firstEnvelope>.001&&mesh?.visible){const extra=mesh.geometry.attributes.instanceExtra?.array;for(let i=0;i<Math.min(mesh.count,24);i++){
+  if(firstEnvelope>.001&&hero?.visible){hero.getWorldPosition(centre);sample(heroId,centre,heroRadius*Math.max(hero.scale.x,hero.scale.y,hero.scale.z)/Math.max(.01,heroScale),1);}
+  if(firstEnvelope>.001&&mesh?.visible){const extra=mesh.geometry.attributes.instanceExtra?.array;for(let i=0;i<Math.min(mesh.count,firstLimit);i++){
    const opacity=extra?extra[i*3]:1;if(opacity<.015){records[i].ready=false;continue;}
    mesh.getMatrixAt(i,matrix);world.multiplyMatrices(mesh.matrixWorld,matrix);centre.setFromMatrixPosition(world);
    const e=world.elements,radius=Math.max(Math.hypot(e[0],e[1],e[2]),Math.hypot(e[4],e[5],e[6]),Math.hypot(e[8],e[9],e[10]))*1.03;
@@ -90,22 +97,23 @@ export function createOpeningLungeBlur({pass,camera,getConfig=()=>null,small=fal
   }}
   if(secondVisible){
    // One hierarchy update; never raymarch each drop again for its blur.
-   secondary.group.updateWorldMatrix(true,true);
+   secondary.group.updateWorldMatrix(true,!phoneBudget);
    const meshes=secondary.meshes;
-   for(let i=0;i<Math.min(128,meshes.length);i++){
+   for(let i=0;i<Math.min(secondaryLimit,meshes.length);i++){
     const drop=meshes[i],u=drop.material?.uniforms;
     if(!drop.visible||(u?.uOpacity?.value??1)<.015)continue;
     // Some entrance modes already integrate a shutter inside the water shader.
     if((u?.uBlurOn?.value??0)>.5)continue;
+    if(phoneBudget)drop.updateWorldMatrix(drop.parent!==secondary.group,false);
     const e=drop.matrixWorld.elements;
     const radius=Math.max(Math.hypot(e[0],e[1],e[2]),Math.hypot(e[4],e[5],e[6]),Math.hypot(e[8],e[9],e[10]));
     centre.setFromMatrixPosition(drop.matrixWorld);
-    sample(25+i,centre,radius*1.03,u?.uOpacity?.value??1,1);
+    sample(secondaryOffset+i,centre,radius*1.03,u?.uOpacity?.value??1,1);
    }
   }
   for(const r of records)if(r.seen!==serial){r.ready=false;r.vx=r.vy=r.zoom=0;}
-  active.sort(rank);const n=Math.min(small?6:COUNT,active.length);U.uLungeCount.value=n;
-  for(let i=0;i<n;i++){const r=active[i];if(r.id>=25)spiralCount++;bounds[i].set(r.x,r.y,r.rx,r.ry);motion[i].set(r.vx,r.vy,r.zoom,r.weight);}
+  active.sort(rank);const n=Math.min(maskCount,active.length);U.uLungeCount.value=n;
+  for(let i=0;i<n;i++){const r=active[i];if(r.id>=secondaryOffset)spiralCount++;bounds[i].set(r.x,r.y,r.rx,r.ry);motion[i].set(r.vx,r.vy,r.zoom,r.weight);}
  }
- return {update,clear,get state(){return {active:U.uLungeCount.value>0,count:U.uLungeCount.value,maxMotionPixels:maxMotion,zoomEnergy,spiralCount,secondVisible,reducedMotion,samples:small?5:8};}};
+ return {update,clear,get state(){return {active:U.uLungeCount.value>0,count:U.uLungeCount.value,maxMotionPixels:maxMotion,zoomEnergy,spiralCount,secondVisible,reducedMotion,phoneBudget,samples:phoneBudget?3:small?5:8,recordCapacity:records.length,maskCapacity:maskCount};}};
 }

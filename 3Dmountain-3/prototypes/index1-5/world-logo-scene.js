@@ -698,10 +698,12 @@ void main() {
 `;
 
 /* ---------------------------------------------------------------- the scene */
-export function createLakeScene({ THREE, renderer, width = 1280, height = 720, palette = null, assetBase = null, small = false, reducedMotion = false } = {}) {
+export function createLakeScene({ THREE, renderer, width = 1280, height = 720, palette = null, assetBase = null, small = false, mobilePerformance = false, reducedMotion = false } = {}) {
   let disposed = false, W = Math.max(2, width | 0), H = Math.max(2, height | 0);
   const OCT = small ? 3 : 4, LAYERS = small ? 1 : 2;
-  const mirrorScale = .75;
+  // The water already distorts/filters this reflection; its phone targets can
+  // be smaller without changing the sharp glass mark rendered on the canvas.
+  const mirrorScale = mobilePerformance ? .5 : .75;   /* WORLD_MOBILE_MIRROR_TARGET */
   const L = { ...LAKE_DEFAULTS };
   const paletteOv = {};                                   // the valley palette; the dusk look keeps it, the glacier look has its own
   if (palette) {

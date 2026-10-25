@@ -27,14 +27,15 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
+import { createOceanPanelSnap } from './ocean-panel-snap.js?v=mobile-perf-mvnvuyle'; /* MOBILE_OCEAN_SNAP */
 import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=mobile-3a47e5c1f47b'; /* MOBILE_TOUCH_WORLD */
 import { loadWorldImage } from './world-image-source.js?v=mobile-9d010315e826';   /* MOBILE_WORLD_IMAGE_FALLBACK */
 import { globeScrollDegrees } from './world-globe-motion.js?v=i15-globe-wheel-mvnr95kv';   /* WORLD_GLOBE_SCROLL */
 import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvnjah6m';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=i15-mvnjah6m';
-import { createWorldOcean } from './world-ocean.js?v=mobile-57f7a7e43d4c';
-import { createWorldLogo } from './world-logo.js?v=i15-spin-panel-mvnjpyjv';
+import { createWorldOcean } from './world-ocean.js?v=mobile-perf-mvnvuyle';
+import { createWorldLogo } from './world-logo.js?v=mobile-perf-mvnvuyle';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=i15-mvnjah6m';
 import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvnjah6m';
@@ -255,6 +256,10 @@ void main() {
 
 export function mountWorld({ root, reducedMotion = false, epilogue = () => null, carry = null, grade = () => null, mist = () => null, video: look = () => null, busy = null, ocean: oceanConfig = () => null, logo: logoConfig = () => null }) {
   if (!root) throw new Error('World epilogue: no #fiWorld in the page');
+  /* WORLD_MOBILE_PERFORMANCE: one gate for this renderer and its ocean/lake allocations. */
+  const shortScreen = Math.min(screen.width, screen.height);
+  const mobilePerformance = document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])') &&
+    (innerWidth <= 760 || shortScreen < 700 || (!!window.matchMedia?.('(pointer: coarse)')?.matches && shortScreen <= 900));
   const viewport = root.querySelector('.fiw-viewport'), content = root.querySelector('.fiw-content');
   const canvas = root.querySelector('.fiw-canvas'), pinLayer = root.querySelector('.fiw-pins');
   const navButtons = [...root.querySelectorAll('.fiw-chapters [data-world-go]')];
@@ -264,13 +269,13 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
      responsibility chapters become a horizontal section over it. Null when the markup is not there (then all below
      runs as the shared module). */
   const ocean = createWorldOcean({
-    root, reducedMotion, config: oceanConfig, small: Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4),
+    root, reducedMotion, config: oceanConfig, mobilePerformance, small: Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4),
     go: value => { yt = clamp(value, 0, maxY); run(); }, remeasure: () => { measure(); refreshTriggers(); run(); }
   });
   /* index1-5 logo seal (world-logo.js): after the horizontal strategies a water wave carries the sea away and the LOGO 1 glass mark
      turns once over a dusk lake; null when the markup is not there or ?logoseal=0 (then all below runs as before). */
   const logo = ocean ? createWorldLogo({
-    root, reducedMotion, config: logoConfig, small: Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4),
+    root, reducedMotion, config: logoConfig, mobilePerformance, small: Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4),
     go: value => { yt = clamp(value, 0, maxY); run(); }, remeasure: () => { measure(); refreshTriggers(); run(); }
   }) : null;
   const principles = createWorldPrinciples({ root, reducedMotion,
@@ -310,7 +315,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   // ---------- renderer ----------
   const small = Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4);
-  const maxDpr = Math.min(window.devicePixelRatio || 1, small ? 1.75 : 2);
+  const maxDpr = Math.min(window.devicePixelRatio || 1, mobilePerformance ? 1.25 : small ? 1.75 : 2);
   let dpr = maxDpr;
   const color = hex => new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace);   // shaders work in sRGB values as written
   const camera = new THREE.PerspectiveCamera(30, W / H, .05, 20);
@@ -325,7 +330,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   function build() { buildRenderer(); buildBackground(); buildEarth(); buildHalo(); buildDeck(); buildOcean(); }
   function buildRenderer() {
     if (renderer || disposed) return;
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobilePerformance, alpha: true, powerPreference: 'high-performance' });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);
@@ -353,7 +358,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   function buildEarth() {
     if (globe || disposed || !renderer || !blank) return;
     const sun = new THREE.Vector3(-.55, .62, .56).normalize();
-    globe = new THREE.Mesh(new THREE.SphereGeometry(1, small ? 128 : 192, small ? 96 : 144), new THREE.ShaderMaterial({
+    globe = new THREE.Mesh(new THREE.SphereGeometry(1, mobilePerformance ? 96 : small ? 128 : 192, mobilePerformance ? 64 : small ? 96 : 144), new THREE.ShaderMaterial({
       vertexShader: EARTH_VERTEX, fragmentShader: EARTH_FRAGMENT,
       uniforms: {
         uTone: { value: blank }, uClouds: { value: blank }, uRoi: { value: blank }, uSun: { value: sun },
@@ -370,7 +375,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   }
   function buildHalo() {
     if (halo || disposed || !globe) return;
-    halo = new THREE.Mesh(new THREE.SphereGeometry(1.075, 96, 64), new THREE.ShaderMaterial({
+    halo = new THREE.Mesh(new THREE.SphereGeometry(1.075, mobilePerformance ? 48 : 96, mobilePerformance ? 32 : 64), new THREE.ShaderMaterial({
       vertexShader: EARTH_VERTEX, fragmentShader: HALO_FRAGMENT, side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       uniforms: { uHalo: { value: color(LOOK.halo) }, uEdge: { value: .36 }, uStrength: { value: 1 }, uGrade }
     }));
@@ -724,12 +729,19 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- input ----------
   const toPixels = (delta, source) => source === 'touch' ? delta * Math.max(580, H * .8) / 1.9 : delta * Math.max(720, H * .85);
   let samples = [];
+  const oceanSnap = createOceanPanelSnap({
+    enabled: () => open && mobilePerformance,
+    getPosition: () => yt,
+    getStops: () => ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [],
+    moveTo: value => { yt = clamp(value, 0, maxY); run(); }
+  });
   function scrollPx(px, source) {
     if (!open) return false;
     if (px < 0 && yt <= 0 && y < 24) { close(); return false; }
     // Reversing input owns the camera immediately; cancel the old-direction momentum.
     if (px * (yt - y) < 0) { yt = y; vy = 0; }
     yt = clamp(yt + px, 0, maxY);
+    oceanSnap.input(px, source);
     if (source === 'touch') { const t = performance.now(); samples.push([t, px]); while (samples.length && t - samples[0][0] > 110) samples.shift(); }
     run(); return true;
   }
@@ -743,22 +755,26 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   }
   const disposeWorldTouch = mountMobileTouchNavigation({
     surface: viewport, blocked: (_, phase) => phase === 'start' && !open, observeEnd: true,
-    onStart: () => { samples = []; },
+    onStart: () => { samples = []; oceanSnap.cancel(); },
     onDelta: ({ dx, dy, axis, target }) => {
       const pixels = axis === 'x' ? (ocean?.active ? dx * ocean.swipe : 0) : consumeMobileScroll(target, dy);
-      if (!pixels) { samples = []; return; }
+      if (!pixels) { samples = []; oceanSnap.cancel(); return; }
       // Carry the remainder across the world/cards boundary in the same swipe.
       if (!scrollPx(pixels, 'touch')) {
         const delta = pixels * 1.9 / Math.max(580, H * .8);
         if (carry) carry(delta); else epilogue()?.take(delta);
       }
     },
-    onEnd: ({ cancelled }) => { if (cancelled) samples = []; else if (samples.length) fling(); }
+    onEnd: ({ cancelled }) => {
+      if (cancelled) { samples = []; oceanSnap.cancel(); }
+      else { if (samples.length) fling(); oceanSnap.finish(); }
+    }
   });
 
   // ---------- navigation ----------
   const target = name => name === 'global' ? at.global + H * .2 : name === 'responsibility' ? (ocean ? ocean.stopY(0) : at.resp + H * .3) : name === 'principles' ? (principles ? principles.stopY() : maxY) : name === 'logo' ? (logo ? logo.stopY() : maxY) : name === 'contact' ? maxY : 0;
   root.addEventListener('click', event => {
+    oceanSnap.cancel();
     const go = event.target.closest('[data-world-go]');
     if (go) { event.preventDefault(); yt = clamp(target(go.dataset.worldGo), 0, maxY); run(); return; }
     const chapter = event.target.closest('[data-chapter-link]');
@@ -823,6 +839,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   // ---------- lifecycle ----------
   const onResize = () => {
+    oceanSnap.cancel();
     W = innerWidth; H = innerHeight;
     renderer?.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
     background?.material.uniforms.uRes.value.set(W, H); deck?.material.uniforms.uRes.value.set(W, H);
@@ -847,7 +864,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   }
   function close() {
     if (!open) return;
-    open = false; cancelAnimationFrame(raf); raf = 0; samples = [];
+    open = false; oceanSnap.cancel(); cancelAnimationFrame(raf); raf = 0; samples = [];
     y = yt = vy = 0; viewport.scrollTop = 0; written = 0;
     root.classList.remove('is-open', 'is-live', 'is-chapters', 'is-light');
     root.inert = true; root.setAttribute('aria-hidden', 'true');
@@ -873,13 +890,14 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     take(delta, source, target) {
       if (!open || !Number.isFinite(delta)) return false;
       const pixels = consumeMobileScroll(target, toPixels(delta, source));
-      return pixels ? scrollPx(pixels, source) : true;
+      if (!pixels) { oceanSnap.cancel(); return true; }
+      return scrollPx(pixels, source);
     },
-    scrollTo(value) { if (!open) return; yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
-    next() { if (!open) return false; const stops = [at.global + H * .2, ...(ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [at.resp + H * .3]), ...(principles ? [principles.stopY()] : []), ...(logo ? [logo.stopY()] : []), maxY].sort((a, b) => a - b); const t = stops.find(v => v > Math.max(y, yt) + 40); if (t === undefined) return false; yt = clamp(t, 0, maxY); run(); return true; },
+    scrollTo(value) { if (!open) return; oceanSnap.cancel(); yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
+    next() { if (!open) return false; oceanSnap.cancel(); const stops = [at.global + H * .2, ...(ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [at.resp + H * .3]), ...(principles ? [principles.stopY()] : []), ...(logo ? [logo.stopY()] : []), maxY].sort((a, b) => a - b); const t = stops.find(v => v > Math.max(y, yt) + 40); if (t === undefined) return false; yt = clamp(t, 0, maxY); run(); return true; },
     /* diagnostics (window.__MONTIS_STUDY__.world) */
     get state() { return { y, yt, maxY, at: { ...at }, dpr, ocean: ocean?.state, principles: principles?.state, logo: logo?.state, sample: sample(y), video: video ? { file: video.currentSrc.split('/').pop(), ready: video.readyState, paused: video.paused, mix: +videoMix.toFixed(2) } : null }; },
-    jump(value) { if (!open) enter(); y = yt = clamp(value, 0, maxY); vy = 0; run(); },
+    jump(value) { oceanSnap.cancel(); if (!open) enter(); y = yt = clamp(value, 0, maxY); vy = 0; run(); },
     dispose() {
       close(); disposed = true;
       removeEventListener('resize', onResize); disposeWorldTouch();

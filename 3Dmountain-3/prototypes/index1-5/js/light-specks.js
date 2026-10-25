@@ -91,9 +91,12 @@ void main(){
 `;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 export function createLightSpecks({points=null,scene=null,getConfig=()=>null,mode='opening',small=false,reducedMotion=false,surface=null}={}){
- const N=small?1000:2200,seeds=new Float32Array(N*8),pos=new Float32Array(N*6),layers=new Float32Array(N*2);
+ const phoneBudget=small&&!!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])');
+ // Main-page phones keep the rising glint; their broad paired contact rings
+ // do not resolve. Other pages retain their existing small-screen detail.
+ const N=phoneBudget?320:small?1000:2200,layersPerSpeck=phoneBudget?1:2,seeds=new Float32Array(N*layersPerSpeck*4),pos=new Float32Array(N*layersPerSpeck*3),layers=new Float32Array(N*layersPerSpeck);
  let seed=81673;const random=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
- for(let i=0;i<N;i++){const s=[random()*2-1,random(),random(),random()];for(let k=0;k<2;k++){seeds.set(s,(i*2+k)*4);layers[i*2+k]=k;}}
+ for(let i=0;i<N;i++){const s=[random()*2-1,random(),random(),random()];for(let k=0;k<layersPerSpeck;k++){seeds.set(s,(i*layersPerSpeck+k)*4);layers[i*layersPerSpeck+k]=k;}}
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));geometry.setAttribute('aSpeck',new THREE.BufferAttribute(seeds,4));geometry.setAttribute('aLayer',new THREE.BufferAttribute(layers,1));geometry.setDrawRange(0,0);
  const waterRise={value:new THREE.Vector4()},waterColor={value:new THREE.Color()};
  const uniforms={...(surface?.uniforms||{}),uTime:{value:0},uOpacity:{value:1},uSize:{value:1},uSpeed:{value:1},uColor:{value:new THREE.Color()},uTransition:{value:0},
@@ -123,9 +126,10 @@ export function createLightSpecks({points=null,scene=null,getConfig=()=>null,mod
   if(reducedMotion||!Number.isFinite(lastTime)||elapsed>.2)flowEnergy=0;
   lastTime=time;lastProgress=progress;
   uniforms.uSpeckFlow.value.set(flowEnergy*clamp(C.scrollGlow,0,1.5),progress,Math.sign(delta)||1);
-  const count=Math.round(clamp(C.count,0,2200)*(small ? .48 : 1)*(mode==='lake' ? .8 : 1));
-  if(count!==lastCount){geometry.setDrawRange(0,Math.min(N,count)*2);lastCount=count;}
-  points.visible=C.enabled>.5&&C.opacity>0&&count>0&&opacity>.001;
+  const visible=C.enabled>.5&&C.opacity>0&&opacity>.001;
+  const count=phoneBudget&&!visible?0:Math.min(N,Math.round(clamp(C.count,0,2200)*(phoneBudget ? .22 : small ? .48 : 1)*(mode==='lake' ? .8 : 1)));
+  if(count!==lastCount){geometry.setDrawRange(0,count*layersPerSpeck);lastCount=count;}
+  points.visible=visible&&count>0;
   uniforms.uSpeckTime.value=reducedMotion?0:time;
   uniforms.uSpeckSize.value=C.size*(mode==='lake'?1.35:1);uniforms.uSpeckSpeed.value=C.speed;uniforms.uAir.value=C.air;uniforms.uHeight.value=C.height;
   uniforms.uRise.value=clamp(C.rise,0,1.8);uniforms.uRiseSpeed.value=clamp(C.riseSpeed,.2,2);uniforms.uWaterGlow.value=clamp(C.waterGlow,0,1.5);
@@ -135,5 +139,5 @@ export function createLightSpecks({points=null,scene=null,getConfig=()=>null,mod
   uniforms.uSpeckView.value.set(Math.tan((camera?.fov||40)*Math.PI/360),width/Math.max(1,height),camera?.position.y||.35,2*screenDown/Math.max(1,height));
  }
  function dispose(){points.removeFromParent();geometry.dispose();material.dispose();waterRise.value.x=0;}
- return {points,update,dispose,get state(){return {count:Math.max(0,Math.min(N,lastCount)),sprites:geometry.drawRange.count,visible:points.visible,flowEnergy,surfaceBound:!!surface?.glsl,rise:uniforms.uRise.value,waterGlow:waterRise.value.x};}};
+ return {points,update,dispose,get state(){return {count:Math.max(0,Math.min(N,lastCount)),phoneBudget,capacity:N,layers:layersPerSpeck,sprites:geometry.drawRange.count,visible:points.visible,flowEnergy,surfaceBound:!!surface?.glsl,rise:uniforms.uRise.value,waterGlow:waterRise.value.x};}};
 }

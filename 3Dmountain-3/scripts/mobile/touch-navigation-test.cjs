@@ -54,7 +54,6 @@ function extract(source, name) {
 async function main() {
   const source = read('prototypes/index1-5/mobile-touch-navigation.js');
   const touch = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
-  const snap = await import('data:text/javascript;base64,' + Buffer.from(read('prototypes/index1-5/ocean-panel-snap.js')).toString('base64'));
   const mainSource = read('prototypes/index1-5/js/main.js');
   const worldSource = read('prototypes/index1-5/js/finnovation-world.js');
   const portfolioSource = read('prototypes/index1-5/js/portfolio-epilogue-polish.js');
@@ -118,16 +117,15 @@ async function main() {
     const finish = worldSource.indexOf('  // ---------- navigation ----------', begin);
     const input = worldSource.slice(begin, finish);
     const take = extract(worldSource, 'take(delta, source, target)');
-    return new Function('mountMobileTouchNavigation', 'consumeMobileScroll', 'createOceanPanelSnap', 'viewport', 'performance', 'carry', 'clamp', `
+    return new Function('mountMobileTouchNavigation', 'consumeMobileScroll', 'viewport', 'performance', 'carry', 'clamp', `
       let open = true, y = 0, yt = 0, vy = 0, runs = 0, closes = 0;
-      const mobilePerformance = false;
       const H = 844, maxY = 500, reducedMotion = false, ocean = { active: false, swipe: 1.3 };
       const run = () => { runs++; }, close = () => { open = false; y = yt = vy = 0; samples = []; closes++; }, epilogue = () => null;
       ${input}
       return { ${take}, viewport, enter(delta = 0) { open = true; y = yt = 0; if(delta) scrollPx(toPixels(delta), 'wheel'); },
         get open() { return open; }, get state() { return { y, yt, samples: samples.length, runs, closes }; },
         settle() { y = yt; }, setY(value) { y = yt = value; }, setOcean(active) { ocean.active = active; }, dispose: disposeWorldTouch };
-    `)(touch.mountMobileTouchNavigation, touch.consumeMobileScroll, snap.createOceanPanelSnap, viewport, { now: () => eventRoot.now }, carry, clamp);
+    `)(touch.mountMobileTouchNavigation, touch.consumeMobileScroll, viewport, { now: () => eventRoot.now }, carry, clamp);
   }
   const worldHub = new Hub(); let carried = [];
   const world = worldHarness(worldHub, delta => carried.push(delta));

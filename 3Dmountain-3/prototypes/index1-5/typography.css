@@ -173,43 +173,9 @@ body {
     --type-body-leading: 1.8;
     --type-body-tracking: .02em;
     --type-copy-lead: 16px;
-    --type-copy-support: 14px;
-    --type-prose-support: 14px;
     --type-card-title: 16px;
   }
   .alp-scene-clock strong { font-size: 14px; }
-  /* Keep focused editor fields readable without triggering phone input zoom. */
-  html[data-look="index1-5"] :is(.tuner,.letters-panel,.lgp) :is(input[type="number"],input[type="text"],textarea,select) {
-    font-size: 16px;
-  }
-}
-
-@media (max-width: 680px), (pointer: coarse) and (max-height: 500px) and (max-width: 1100px) {
-  .fiw-statement {
-    font-size: clamp(24px,7.2vw,28px); line-height: 1.12; letter-spacing: .01em;
-  }
-}
-
-@media (pointer: coarse) and (max-height: 500px) and (max-width: 1100px) {
-  html[data-look="index1-5"] {
-    --type-hero-size: 30px;
-    --type-hero-tracking: .025em;
-    --type-display-leading: 1.12;
-    --type-lead: 18px;
-    --type-body: 14px;
-    --type-support: 13px;
-    --type-label: 11px;
-    --type-body-leading: 1.8;
-    --type-copy-lead: 16px;
-    --type-copy-support: 14px;
-    --type-prose-support: 14px;
-    --type-card-title: 16px;
-  }
-  .alp-stat dt { font-size: 9px; line-height: 1.2; letter-spacing: .025em; }
-  .alp-stat dd { font-size: 16px; line-height: 1.1; }
-  html[data-look="index1-5"] :is(.tuner,.letters-panel,.lgp) :is(input[type="number"],input[type="text"],textarea,select) {
-    font-size: 16px;
-  }
 }
 
 

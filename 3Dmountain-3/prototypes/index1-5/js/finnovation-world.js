@@ -27,14 +27,13 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { createOceanPanelSnap } from './ocean-panel-snap.js?v=mobile-perf-mvnvuyle'; /* MOBILE_OCEAN_SNAP */
 import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=mobile-3a47e5c1f47b'; /* MOBILE_TOUCH_WORLD */
 import { loadWorldImage } from './world-image-source.js?v=mobile-9d010315e826';   /* MOBILE_WORLD_IMAGE_FALLBACK */
 import { globeScrollDegrees } from './world-globe-motion.js?v=i15-globe-wheel-mvnr95kv';   /* WORLD_GLOBE_SCROLL */
 import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvnjah6m';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=i15-mvnjah6m';
-import { createWorldOcean } from './world-ocean.js?v=mobile-perf-mvnvuyle';
+import { createWorldOcean } from './world-ocean.js?v=mobile-fix-mvnwy3zc';
 import { createWorldLogo } from './world-logo.js?v=mobile-perf-mvnvuyle';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=i15-mvnjah6m';
@@ -729,19 +728,12 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- input ----------
   const toPixels = (delta, source) => source === 'touch' ? delta * Math.max(580, H * .8) / 1.9 : delta * Math.max(720, H * .85);
   let samples = [];
-  const oceanSnap = createOceanPanelSnap({
-    enabled: () => open && mobilePerformance,
-    getPosition: () => yt,
-    getStops: () => ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [],
-    moveTo: value => { yt = clamp(value, 0, maxY); run(); }
-  });
   function scrollPx(px, source) {
     if (!open) return false;
     if (px < 0 && yt <= 0 && y < 24) { close(); return false; }
     // Reversing input owns the camera immediately; cancel the old-direction momentum.
     if (px * (yt - y) < 0) { yt = y; vy = 0; }
     yt = clamp(yt + px, 0, maxY);
-    oceanSnap.input(px, source);
     if (source === 'touch') { const t = performance.now(); samples.push([t, px]); while (samples.length && t - samples[0][0] > 110) samples.shift(); }
     run(); return true;
   }
@@ -755,26 +747,22 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   }
   const disposeWorldTouch = mountMobileTouchNavigation({
     surface: viewport, blocked: (_, phase) => phase === 'start' && !open, observeEnd: true,
-    onStart: () => { samples = []; oceanSnap.cancel(); },
+    onStart: () => { samples = []; },
     onDelta: ({ dx, dy, axis, target }) => {
       const pixels = axis === 'x' ? (ocean?.active ? dx * ocean.swipe : 0) : consumeMobileScroll(target, dy);
-      if (!pixels) { samples = []; oceanSnap.cancel(); return; }
+      if (!pixels) { samples = []; return; }
       // Carry the remainder across the world/cards boundary in the same swipe.
       if (!scrollPx(pixels, 'touch')) {
         const delta = pixels * 1.9 / Math.max(580, H * .8);
         if (carry) carry(delta); else epilogue()?.take(delta);
       }
     },
-    onEnd: ({ cancelled }) => {
-      if (cancelled) { samples = []; oceanSnap.cancel(); }
-      else { if (samples.length) fling(); oceanSnap.finish(); }
-    }
+    onEnd: ({ cancelled }) => { if (cancelled) samples = []; else if (samples.length) fling(); }
   });
 
   // ---------- navigation ----------
   const target = name => name === 'global' ? at.global + H * .2 : name === 'responsibility' ? (ocean ? ocean.stopY(0) : at.resp + H * .3) : name === 'principles' ? (principles ? principles.stopY() : maxY) : name === 'logo' ? (logo ? logo.stopY() : maxY) : name === 'contact' ? maxY : 0;
   root.addEventListener('click', event => {
-    oceanSnap.cancel();
     const go = event.target.closest('[data-world-go]');
     if (go) { event.preventDefault(); yt = clamp(target(go.dataset.worldGo), 0, maxY); run(); return; }
     const chapter = event.target.closest('[data-chapter-link]');
@@ -839,7 +827,6 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   // ---------- lifecycle ----------
   const onResize = () => {
-    oceanSnap.cancel();
     W = innerWidth; H = innerHeight;
     renderer?.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
     background?.material.uniforms.uRes.value.set(W, H); deck?.material.uniforms.uRes.value.set(W, H);
@@ -864,7 +851,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   }
   function close() {
     if (!open) return;
-    open = false; oceanSnap.cancel(); cancelAnimationFrame(raf); raf = 0; samples = [];
+    open = false; cancelAnimationFrame(raf); raf = 0; samples = [];
     y = yt = vy = 0; viewport.scrollTop = 0; written = 0;
     root.classList.remove('is-open', 'is-live', 'is-chapters', 'is-light');
     root.inert = true; root.setAttribute('aria-hidden', 'true');
@@ -890,14 +877,13 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     take(delta, source, target) {
       if (!open || !Number.isFinite(delta)) return false;
       const pixels = consumeMobileScroll(target, toPixels(delta, source));
-      if (!pixels) { oceanSnap.cancel(); return true; }
-      return scrollPx(pixels, source);
+      return pixels ? scrollPx(pixels, source) : true;
     },
-    scrollTo(value) { if (!open) return; oceanSnap.cancel(); yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
-    next() { if (!open) return false; oceanSnap.cancel(); const stops = [at.global + H * .2, ...(ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [at.resp + H * .3]), ...(principles ? [principles.stopY()] : []), ...(logo ? [logo.stopY()] : []), maxY].sort((a, b) => a - b); const t = stops.find(v => v > Math.max(y, yt) + 40); if (t === undefined) return false; yt = clamp(t, 0, maxY); run(); return true; },
+    scrollTo(value) { if (!open) return; yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
+    next() { if (!open) return false; const stops = [at.global + H * .2, ...(ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [at.resp + H * .3]), ...(principles ? [principles.stopY()] : []), ...(logo ? [logo.stopY()] : []), maxY].sort((a, b) => a - b); const t = stops.find(v => v > Math.max(y, yt) + 40); if (t === undefined) return false; yt = clamp(t, 0, maxY); run(); return true; },
     /* diagnostics (window.__MONTIS_STUDY__.world) */
     get state() { return { y, yt, maxY, at: { ...at }, dpr, ocean: ocean?.state, principles: principles?.state, logo: logo?.state, sample: sample(y), video: video ? { file: video.currentSrc.split('/').pop(), ready: video.readyState, paused: video.paused, mix: +videoMix.toFixed(2) } : null }; },
-    jump(value) { oceanSnap.cancel(); if (!open) enter(); y = yt = clamp(value, 0, maxY); vy = 0; run(); },
+    jump(value) { if (!open) enter(); y = yt = clamp(value, 0, maxY); vy = 0; run(); },
     dispose() {
       close(); disposed = true;
       removeEventListener('resize', onResize); disposeWorldTouch();

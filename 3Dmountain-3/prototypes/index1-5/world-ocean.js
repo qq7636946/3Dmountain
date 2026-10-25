@@ -399,7 +399,7 @@ function prepareDom(root) {
   const articles=[...resp.querySelectorAll(':scope > [data-strategy]')];
   if(articles.length!==4)throw Error('Expected four ocean strategy chapters.');
   resp.querySelector(':scope > .fiwo-source-intro')?.remove();
-  articles.forEach((article,k)=>{article.classList.add('fiwo-panel');article.dataset.stop=String(k);article.dataset.mobileScroll='';track.append(article);});
+  articles.forEach((article,k)=>{article.classList.add('fiwo-panel');article.dataset.stop=String(k);track.append(article);});
   const N=articles.length,progress=make('nav','fiwo-progress');progress.setAttribute('aria-label','四大投資策略');
   const label=make('span','fiwo-progress-label','INVESTMENT STRATEGIES');label.setAttribute('aria-hidden','true');
   const list=make('ol'),line=make('span','fiwo-progress-line');line.append(make('i'));line.setAttribute('aria-hidden','true');

@@ -6,7 +6,7 @@ import { createFollowLightLines } from './follow-light-lines.js?v=i15-mvnjah6m';
 import { createAlpineCloudBanks } from './alpine-cloud-banks.js?v=i15-mvnjah6m';
 import { createAlpineAtmosphere } from './alpine-atmosphere.js?v=i15-mvnjah6m';
 import { createCanyonWatershedBuilder } from './water-canyon-watershed-463.js?v=i15-mvnjah6m';
-import { createCanyonTufts } from './alpine-canyon-tufts.js?v=i15-mvnjah6m';   // ALPINE-TERRAIN
+import { createCanyonTufts } from './alpine-canyon-tufts.js?v=i15-texture-grass-mvnpyhr2';   // ALPINE-TERRAIN
 
 import { createCanyonRacing } from './canyon-racing.js?v=i15-mvnjah6m';   // CANYON_RACING
 // Opt in per page; existing journey pages retain their original night palette.

@@ -37,6 +37,9 @@ function tuftGeometry(THREE) {
 /** banks: the shore bank meshes (userData.rim = {rows, columns}); rows run along the river (t), columns out
     from the water (lateral distance (j/lateral)^1.62 x 250). curve/widthAt: the river the camera follows. */
 export function createCanyonTufts(THREE, { banks, curve, widthAt, lite = false }) {
+  // index1-5 uses the bank material's grass colour/normal maps only.
+  // Skip the crossed grass cards before allocating geometry or materials.
+  if (typeof document !== 'undefined' && document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])')) return null;
   const maps = alpineMaps();
   if (!banks?.length || !maps?.alpineTuft || !maps?.alpineErosion) return null;
   const started = performance.now();

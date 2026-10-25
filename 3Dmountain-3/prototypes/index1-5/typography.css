@@ -1,33 +1,41 @@
-/* INDEX1-5 TYPOGRAPHY — the only active owner of family, size, weight,
-   line-height and tracking. Scene CSS is compiled to layout-only CSS.
-   Change the tokens here; component rules below use ordinary class selectors. */
+/* INDEX1-5 TYPOGRAPHY — the single source for the entire visitor interface.
+   Desktop display: 45px / 5px. Edit the tokens, not individual scene sheets.
+   Roles: display, lead, body, support, label. SVG brand art remains artwork. */
 html[data-look="index1-5"] {
   --site-font: 'DM Sans', 'Noto Sans TC', sans-serif;
   --type-hero-size: 45px;
   --type-hero-tracking: 5px;
-  --type-strategy-size: clamp(40px, 4.15vw, 66px);
-  --type-principles-size: clamp(36px, 3.8vw, 66px);
-  --type-seal-size: calc(clamp(30px, 3.5vw, 56px) * var(--fisl-k, 1));
+  --type-display-leading: 1.06;
+  --type-strategy-size: var(--type-hero-size);
+  --type-principles-size: var(--type-hero-size);
+  --type-seal-size: calc(var(--type-hero-size) * var(--fisl-k, 1));
   --type-lead: 20px;
   --type-body: 16px;
   --type-support: 14px;
   --type-label: 12px;
+  --type-lead-leading: 1.65;
+  --type-body-leading: 1.85;
+  --type-support-leading: 1.7;
+  --type-label-leading: 1.5;
+  --type-body-tracking: .025em;
+  --type-support-tracking: .015em;
+  --type-label-tracking: .1em;
+  --type-regular: 400;
+  --type-medium: 500;
+  --type-semibold: 600;
   --type-prose-support: var(--type-support);
   --type-copy-lead: var(--type-lead);
   --type-copy-support: var(--type-support);
   --type-card-title: var(--type-body);
-  --type-regular: 400;
-  --type-medium: 500;
-  --type-semibold: 600;
 }
 
-/* One inherited family; no universal force rule and no priority overrides. */
 body {
   font-family: var(--site-font);
-  font-size: 16px;
-  font-weight: 300;
+  font-size: var(--type-body);
+  font-weight: var(--type-regular);
   font-style: normal;
-  line-height: normal;
+  line-height: var(--type-body-leading);
+  letter-spacing: 0;
   font-synthesis: none;
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
@@ -37,144 +45,139 @@ body {
 :where(button,input,select,textarea,h1,h2,h3,h4,h5,h6) { font: inherit; }
 :where(.fi-copy,.fiwp,.fiwo-strategy,.fisl-text) { font-kerning: normal; }
 
-/* Shared main headings: opening chapters and Global Reach. */
+/* DISPLAY — every main scene title shares one optical treatment. */
 .fi-copy :is(h1,h2),
-.fiw-statement {
+.fiw-statement,
+.fiwo-strategy-title,
+.fiwp-title,
+.fisl-title,
+.fi-menu h2,
+.fi-portfolio-copy h2 {
   font-size: var(--type-hero-size);
   font-weight: var(--type-regular);
-  line-height: 1.06;
+  line-height: var(--type-display-leading);
   letter-spacing: var(--type-hero-tracking);
-  text-transform: none;
   word-spacing: 0;
+  text-transform: none;
 }
-.fi-copy-kicker {
-  font-size: var(--type-label); font-weight: var(--type-medium);
-  line-height: 1.5; letter-spacing: .16em;
-}
-.fi-copy-zh {
-  font-size: var(--type-body); font-weight: var(--type-regular);
-  line-height: 1.8; letter-spacing: .045em;
-}
-.fi-zh-head { font-size: var(--type-copy-lead); line-height: 1.6; letter-spacing: .04em; }
-.fi-zh-mid { font-size: var(--type-support); line-height: 1.7; letter-spacing: .13em; }
-.fi-zh-body { font-size: var(--type-copy-support); line-height: 1.7; letter-spacing: .035em; }
-.fi-copy-action > span {
-  font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1;
-  letter-spacing: .1em;
-}
-:where(#chapter-knowledge) .fi-copy-action > span { font-weight: var(--type-semibold); }
+.fiwo-strategy-title { font-size: var(--type-strategy-size); }
+.fiwp-title { font-size: var(--type-principles-size); }
+.fisl-title { font-size: var(--type-seal-size); }
 
-/* Navigation and menus. */
-:is(.fi-topnav button,.fi-rail button,.fi-rail-number,.fi-footer button,.fi-footer-center,.fi-explore) {
-  font-size: var(--type-label); font-weight: var(--type-medium); letter-spacing: .1em;
+/* LEAD — Chinese scene introductions, strategy summaries and editorial leads. */
+:where(.fi-zh-head,.fiwo-strategy-tagline,.fiwp-lead,.fiw-office h3) {
+  font-size: var(--type-lead);
+  font-weight: var(--type-medium);
+  line-height: var(--type-lead-leading);
+  letter-spacing: var(--type-body-tracking);
 }
-.fi-topnav button { letter-spacing: .09em; }
-.fi-footer button { letter-spacing: .12em; }
-.fi-explore { letter-spacing: .14em; }
+.fi-zh-head { font-size: var(--type-copy-lead); }
+
+/* BODY — long Chinese reading uses the same size, rhythm and weight. */
+:is(.fi-copy-zh,.fiw-statement-zh,.fiwo-strategy-body,.fiwp-card p,
+    .fiw-intro,.fiw-desc,.fiw-second,.fiw-tabpanel p,.fiw-office p,.fiw-contact span) {
+  font-size: var(--type-body);
+  font-weight: var(--type-regular);
+  line-height: var(--type-body-leading);
+  letter-spacing: var(--type-body-tracking);
+}
+.fiwp-card h4 {
+  font-size: var(--type-card-title); font-weight: var(--type-medium);
+  line-height: var(--type-lead-leading); letter-spacing: var(--type-body-tracking);
+}
+.fiwo-sub {
+  font-size: var(--type-body); font-weight: var(--type-medium);
+  line-height: var(--type-lead-leading); letter-spacing: var(--type-body-tracking);
+}
+
+/* SUPPORT — translations, secondary sentences and contextual captions. */
+:where(.fi-zh-mid,.fi-zh-body,.fiwo-strategy-en,.fiwp-title-zh,.fiwp-lead-en,
+    .fisl-line,.fi-menu-intro > p:last-child,.fi-portfolio-copy p,.fiw-office h3 small) {
+  font-size: var(--type-support);
+  font-weight: var(--type-regular);
+  line-height: var(--type-support-leading);
+  letter-spacing: var(--type-support-tracking);
+}
+.fi-zh-body { font-size: var(--type-copy-support); }
+:is(.fiwo-strategy-en,.fiwp-lead-en,.fisl-line) { font-size: var(--type-prose-support); }
+.fi-zh-mid { font-weight: var(--type-medium); }
+
+/* LABEL / UI — one treatment for navigation, kickers, buttons and metadata. */
+:is(.fi-copy-kicker,.fi-topnav button,.fi-rail button,.fi-rail-number,
+    .fi-footer button,.fi-footer-center,.fi-explore,.fi-brand-context,
+    .fi-menu-close,.fi-menu-eyebrow,.fi-menu-link-number,.fi-menu-language,
+    .fiwo-kicker,.fiwo-photo--strategy figcaption,.fiwo-strategy-keywords,
+    .fiwo-pill,.fiwp-next,.fiw-kicker,.fiw-pin,.fiw-chapters button,.fiwo-progress,
+    .fiwp-eyebrow,.fiwp-card h3,.fiwp-chapter-end,.fiwp-bottom > span,
+    .fiwp-progress,.fisl-kicker,.fiw-menu button,.fiw-menu a,.fiw-top,.loader-note) {
+  font-size: var(--type-label);
+  font-weight: var(--type-medium);
+  line-height: var(--type-label-leading);
+  letter-spacing: var(--type-label-tracking);
+}
+.fi-copy-action > span {
+  font-size: var(--type-label); font-weight: var(--type-medium);
+  line-height: var(--type-label-leading); letter-spacing: var(--type-label-tracking);
+}
 .fi-rail button[aria-current="step"] { font-weight: var(--type-semibold); }
-.fi-brand-context {
-  font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1.75; letter-spacing: .055em;
+.fi-menu-toggle { font-size: 0; }
+.fi-menu-top > span { font-size: var(--type-support); font-weight: var(--type-medium); letter-spacing: var(--type-label-tracking); }
+.fi-menu-link-en {
+  font-size: clamp(23px,2.1vw,34px); font-weight: var(--type-regular);
+  line-height: 1.3; letter-spacing: 0;
+}
+.fi-menu-link-zh {
+  font-size: var(--type-label); font-weight: var(--type-regular);
+  line-height: var(--type-support-leading); letter-spacing: var(--type-body-tracking);
+}
+.fiwo-strategy-number {
+  font-size: 52px; font-weight: var(--type-regular); line-height: 1;
+  letter-spacing: -.04em; font-variant-numeric: tabular-nums;
 }
 .fi-brand-name { font-size: 18px; font-weight: var(--type-medium); letter-spacing: .2em; }
 .fi-brand-zh { font-size: 9px; letter-spacing: .5em; }
-.fi-menu-toggle { font-size: 0; }
-.fi-menu-top > span { font-size: 15px; font-weight: var(--type-regular); letter-spacing: .3em; }
-:is(.fi-menu-close,.fi-menu-eyebrow,.fi-menu-link-number) { font-size: var(--type-label); letter-spacing: .15em; }
-.fi-menu h2 { font-size: clamp(34px,4vw,57px); font-weight: var(--type-regular); line-height: 1.02; letter-spacing: 0; }
-.fi-menu-intro > p:last-child { font-size: var(--type-support); line-height: 2.2; letter-spacing: .12em; }
-.fi-menu-link-en { font-size: clamp(23px,2.1vw,34px); font-weight: var(--type-regular); line-height: 1.3; letter-spacing: -.015em; }
-.fi-menu-link-zh { font-size: var(--type-label); line-height: 1.7; letter-spacing: .1em; }
-.fi-menu-language { font-size: var(--type-label); letter-spacing: .12em; }
+.fisl-zh {
+  font-size: var(--type-support); font-weight: var(--type-medium);
+  line-height: var(--type-support-leading); letter-spacing: .16em;
+}
+.fiw-sign strong { font-size: 15px; font-weight: var(--type-medium); line-height: 1.5; letter-spacing: .1em; }
+.fiw-sign span { font-size: var(--type-support); font-weight: var(--type-regular); line-height: 1.7; letter-spacing: .16em; }
+.fiw-legalline {
+  font-size: var(--type-label); font-weight: var(--type-regular);
+  line-height: var(--type-support-leading); letter-spacing: var(--type-support-tracking);
+}
+.fiw-copyright { letter-spacing: var(--type-support-tracking); }
 
-/* Global supporting copy and horizontal investment strategies. */
-.fiw-statement-zh { font-size: var(--type-body); font-weight: var(--type-regular); line-height: 1.85; letter-spacing: .035em; }
-.fiwo-kicker { font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1.5; letter-spacing: .13em; }
-.fiwo-sub { font-size: var(--type-body); font-weight: var(--type-regular); line-height: 1.6; letter-spacing: .08em; }
-.fiwo-strategy-title { font-size: var(--type-strategy-size); font-weight: var(--type-regular); line-height: 1.03; letter-spacing: -.035em; }
-.fiwo-strategy-tagline { font-size: var(--type-lead); font-weight: var(--type-regular); line-height: 1.65; letter-spacing: .02em; }
-.fiwo-strategy-body { font-size: var(--type-body); font-weight: var(--type-regular); line-height: 1.95; letter-spacing: .025em; }
-.fiwo-strategy-en { font-size: var(--type-prose-support); line-height: 1.7; letter-spacing: .01em; }
-.fiwo-photo--strategy figcaption { font-size: var(--type-label); line-height: 1.6; letter-spacing: .07em; }
-.fiwo-strategy-number { font-size: 52px; font-weight: var(--type-regular); line-height: 1; letter-spacing: -.05em; }
-.fiwo-strategy-keywords { font-size: var(--type-label); line-height: 1.8; letter-spacing: .07em; }
-:is(.fiwo-pill,.fiwp-next) { font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1.5; letter-spacing: .09em; }
-:is(.fiw-kicker,.fiw-pin,.fiw-chapters button,.fiwo-progress) { font-size: var(--type-label); font-weight: var(--type-medium); letter-spacing: .1em; }
-
-/* Principles and closing brand. */
-.fiwp-eyebrow { font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1.5; letter-spacing: .16em; }
-.fiwp-title { font-size: var(--type-principles-size); font-weight: var(--type-regular); line-height: 1.09; letter-spacing: -.02em; }
-.fiwp-title-zh { font-size: var(--type-support); font-weight: var(--type-regular); line-height: 1.8; letter-spacing: .065em; }
-.fiwp-lead { font-size: var(--type-lead); font-weight: var(--type-regular); line-height: 1.75; letter-spacing: .01em; }
-.fiwp-lead-en { font-size: var(--type-prose-support); line-height: 1.8; letter-spacing: .01em; }
-.fiwp-card h3 { font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1.5; letter-spacing: .08em; }
-.fiwp-card h4 { font-size: var(--type-card-title); font-weight: var(--type-regular); line-height: 1.5; letter-spacing: .035em; }
-.fiwp-card p { font-size: var(--type-body); font-weight: var(--type-regular); line-height: 1.95; letter-spacing: .025em; }
-:is(.fiwp-chapter-end,.fiwp-bottom > span,.fiwp-progress) { font-size: var(--type-label); line-height: 1.6; letter-spacing: .1em; }
-.fisl-kicker { font-size: var(--type-label); font-weight: var(--type-medium); line-height: 1.2; letter-spacing: .14em; }
-.fisl-title { font-size: var(--type-seal-size); font-weight: var(--type-regular); line-height: 1.1; letter-spacing: -.025em; }
-.fisl-zh { font-size: var(--type-support); font-weight: var(--type-regular); line-height: 1.4; letter-spacing: .2em; }
-.fisl-line { font-size: var(--type-prose-support); font-weight: var(--type-regular); line-height: 1.8; letter-spacing: .045em; }
-
-/* Footer and general world text. */
-:is(.fiw-intro,.fiw-desc,.fiw-second,.fiw-tabpanel p) { font-size: var(--type-body); line-height: 1.95; letter-spacing: .025em; }
-:is(.fiw-menu button,.fiw-menu a,.fiw-top) { font-size: var(--type-label); letter-spacing: .025em; }
-.fiw-office h3 { font-size: var(--type-lead); font-weight: var(--type-regular); line-height: 1.5; letter-spacing: -.02em; }
-.fiw-office h3 small { font-size: var(--type-support); font-weight: var(--type-regular); line-height: 1.6; letter-spacing: .14em; }
-.fiw-office p { font-size: var(--type-body); font-weight: var(--type-regular); line-height: 1.75; letter-spacing: .025em; }
-.fiw-contact span { font-size: var(--type-body); letter-spacing: .06em; }
-.fiw-sign strong { font-size: 15px; font-weight: var(--type-semibold); letter-spacing: .14em; }
-.fiw-sign span { font-size: var(--type-support); font-weight: var(--type-regular); letter-spacing: .3em; }
-.fiw-legalline { font-size: var(--type-support); line-height: 1.7; letter-spacing: .025em; }
-.fiw-copyright { letter-spacing: .025em; }
-
-/* Loading, scene labels and optional editing controls use the same family. */
-.loader-logo { font-size: clamp(18px,2.8vw,36px); font-weight: var(--type-regular); letter-spacing: .32em; }
-.loader-note { font-size: var(--type-label); letter-spacing: .32em; }
-:is(.alp-stat dt,.alp-stat dd small,.alp-pin-name,.alp-tag,.alp-tag-zh,.alp-scene-caption,.alp-scene-period) { font-size: var(--type-label); line-height: 1.4; letter-spacing: .1em; }
-.alp-stat dd { font-size: 27px; font-weight: 300; line-height: 1.05; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-.alp-pin-num { font-size: var(--type-label); line-height: 1.3; letter-spacing: .14em; }
-.alp-scene-clock strong { font-size: 17px; font-weight: var(--type-regular); line-height: 1.2; font-variant-numeric: tabular-nums; }
-:is(.tuner,.lgp,.letters-panel) { font-size: 12px; line-height: 1.4; }
+/* Scene annotations and editing controls belong to the same family. */
+.loader-logo { font-size: clamp(18px,2.8vw,36px); font-weight: var(--type-regular); letter-spacing: .2em; }
+:is(.alp-stat dt,.alp-stat dd small,.alp-pin-name,.alp-tag,.alp-tag-zh,.alp-scene-caption,.alp-scene-period,.alp-pin-num) {
+  font-size: var(--type-label); font-weight: var(--type-medium);
+  line-height: var(--type-label-leading); letter-spacing: var(--type-label-tracking);
+}
+.alp-stat dd { font-size: 27px; font-weight: var(--type-regular); line-height: 1.1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.alp-scene-clock strong { font-size: 17px; font-weight: var(--type-medium); line-height: 1.3; font-variant-numeric: tabular-nums; }
+:is(.tuner,.lgp,.letters-panel) { font-size: 12px; font-weight: var(--type-regular); line-height: 1.5; }
 :is(.tuner,.lgp,.letters-panel) :is(h2,h3,button,input,select) { font: inherit; }
-.fi-portfolio-copy h2 { font-size: clamp(28px,3.1vw,48px); font-weight: var(--type-semibold); line-height: 1.03; }
-.fi-portfolio-copy p { font-size: var(--type-support); line-height: 1.95; }
+.lgp :is(.lgp-num,.lgp-hex) { font-variant-numeric: tabular-nums; }
 
-/* Responsive changes are tokens, so the component declarations above stay single. */
-@media (min-width:681px) and (max-width:1100px) {
-  html[data-look="index1-5"] { --type-strategy-size: clamp(35px,4.5vw,49px); }
-}
+/* Only the tokens change by viewport; components keep their shared rules. */
 @media (max-width:760px) {
-  html[data-look="index1-5"] { --type-principles-size: clamp(29px,7.5vw,44px); }
-  .fiwp-title { line-height: 1.12; letter-spacing: -.025em; }
-  .fiwp-title-zh { letter-spacing: .045em; }
-  .fiwp-card p { line-height: 1.9; }
-}
-@media (max-width:680px) {
   html[data-look="index1-5"] {
-    --type-lead: 16px; --type-body: 14px; --type-support: 12px; --type-label: 10px;
-    --type-copy-lead: 14px; --type-copy-support: 13px; --type-prose-support: 13px;
+    --type-hero-size: clamp(30px,8.7vw,36px);
+    --type-hero-tracking: .025em;
+    --type-display-leading: 1.12;
+    --type-lead: 18px;
+    --type-body: 14px;
+    --type-support: 13px;
+    --type-label: 11px;
+    --type-body-leading: 1.8;
+    --type-body-tracking: .02em;
+    --type-copy-lead: 16px;
     --type-card-title: 16px;
-    --type-strategy-size: clamp(32px,8.8vw,42px);
-    --type-seal-size: calc(clamp(28px,7.8vw,40px) * var(--fisl-k,1));
   }
-  .fi-copy-zh { line-height: 1.75; letter-spacing: .025em; }
-  .fi-zh-head { letter-spacing: .025em; }
-  .fi-zh-body { letter-spacing: .015em; }
-  .fi-explore { letter-spacing: .1em; }
-  .fiwo-strategy-tagline { line-height: 1.6; }
-  .fiwo-strategy-body { line-height: 1.85; }
-  .fiwo-strategy-en { line-height: 1.5; }
-  .fiw-legalline { line-height: 1.65; letter-spacing: .015em; }
   .alp-scene-clock strong { font-size: 14px; }
 }
-@media (max-height:740px) and (min-width:681px) {
-  html[data-look="index1-5"] { --type-strategy-size: clamp(34px,3.8vw,50px); }
-  .fiwo-strategy-body { line-height: 1.85; }
-}
-@media (max-width:680px) and (max-height:740px) {
-  html[data-look="index1-5"] { --type-strategy-size: 31px; }
-  .fiwo-strategy-body { line-height: 1.75; }
-}
+
 
 /* Local variable font files. */
 @font-face {
@@ -205,5 +208,3 @@ body {
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Headlines preserve authored case; no uppercase conversion. */
-:is(.fiw-statement,.fiw-title,.fiwp-title,.fisl-title,.fiwo-strategy-title) { text-transform: none; }

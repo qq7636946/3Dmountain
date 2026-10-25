@@ -7,13 +7,35 @@ const ROWS = [
   [2.16, .28, .52, -.15, 0], [3.32, -.48, .60, .32, 1],
   [4.50, .30, .55, -.25, 1], [5.78, -.42, .50, .10, 0]
 ];
-export function createOceanIslands({ waterUniforms, gradeGlsl, viewGlsl, waterGlsl, small, reducedMotion, renderer }) {
+// Fixed-frame coast: surround the reading area instead of spreading islands
+// along a camera route. Pose x maps to .5+x/1.6 of the viewport width.
+const FIXED_WIDE = [
+  [-.744, .34, .32, -.32, 0], [.728, .31, .38, .38, 1],
+  [-.856, -.14, .28, .54, 1], [.864, -.18, .30, -.36, 0],
+  [-.416, -.45, .27, -.14, 1], [.448, -.49, .34, .20, 0]
+];
+const FIXED_NARROW = [
+  [-.80, .34, .24, -.32, 0], [.784, .23, .26, .38, 1],
+  [-.80, -.25, .28, .42, 1], [.752, -.43, .22, -.24, 0]
+];
+export function createOceanIslands({ waterUniforms, gradeGlsl, viewGlsl, waterGlsl, small, reducedMotion, fixedBackground = false, renderer }) {
   const geometry = new THREE.InstancedBufferGeometry(), plane = new THREE.PlaneGeometry(1, 1);
   geometry.index = plane.index;
   geometry.setAttribute('position', plane.attributes.position); geometry.setAttribute('uv', plane.attributes.uv);
   geometry.setAttribute('aPose', new THREE.InstancedBufferAttribute(new Float32Array(ROWS.flatMap(r => r.slice(0, 4))), 4));
   geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(new Float32Array(ROWS.map(r => r[4])), 1));
   geometry.instanceCount = ROWS.length;
+  let layoutMode = '';
+  function placeIslands(aspect) {
+    const mode = fixedBackground ? (aspect < 1 ? 'narrow' : 'wide') : 'travel';
+    if (mode === layoutMode) return;
+    layoutMode = mode;
+    const rows = mode === 'narrow' ? FIXED_NARROW : mode === 'wide' ? FIXED_WIDE : ROWS;
+    const pose = geometry.getAttribute('aPose'), tile = geometry.getAttribute('aTile');
+    rows.forEach((row, i) => { pose.array.set(row.slice(0, 4), i * 4); tile.array[i] = row[4]; });
+    pose.needsUpdate = tile.needsUpdate = true;
+    geometry.instanceCount = rows.length;
+  }
   const blank = new THREE.DataTexture(new Uint8Array([128, 128, 0, 0]), 1, 1); blank.needsUpdate = true;
   const material = new THREE.ShaderMaterial({
     transparent: true, premultipliedAlpha: true, depthTest: false, depthWrite: false,
@@ -111,7 +133,7 @@ export function createOceanIslands({ waterUniforms, gradeGlsl, viewGlsl, waterGl
       }`
   });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = 'Six alpine valley islands · shared ocean shore'; mesh.frustumCulled = false; mesh.renderOrder = 4.5; mesh.visible = false;
+  mesh.name = 'Alpine valley islands · shared ocean shore'; mesh.frustumCulled = false; mesh.renderOrder = 4.5; mesh.visible = false;
   let disposed = false, textures = null, pending = null;
   function load() {
     if (pending) return pending;
@@ -133,11 +155,12 @@ export function createOceanIslands({ waterUniforms, gradeGlsl, viewGlsl, waterGl
   }
   return { mesh, load,
     update({ visible, alpha, aspect }) {
+      placeIslands(aspect);
       mesh.visible = visible && !!textures;
       material.uniforms.uIslandLayout.value.set(aspect / 1.6, Math.min(1, Math.max(.62, aspect / 1.5)));
       material.uniforms.uIslandOn.value = textures ? alpha : 0;
     },
-    get state() { return { ready: !!textures, instances: ROWS.length, triangles: ROWS.length * 2, drawCalls: 1, textures: 2 }; },
+    get state() { return { ready: !!textures, instances: geometry.instanceCount, triangles: geometry.instanceCount * 2, drawCalls: 1, textures: 2, layout: layoutMode }; },
     dispose() { disposed = true; textures?.forEach(t => t.dispose()); blank.dispose(); material.dispose(); geometry.dispose(); }
   };
 }

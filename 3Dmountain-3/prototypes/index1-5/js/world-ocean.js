@@ -24,7 +24,7 @@
    Dials: CONFIG.worldOcean (tuner 「海洋章節 Ocean」).
    ===================================================================== */
 import * as THREE from 'three';
-import { createOceanIslands } from './world-ocean-islands.js?v=i15-mvnjah6m';
+import { createOceanIslands } from './world-ocean-islands.js?v=i15-fixed-ocean-mvnq7x4o';
 import { createOceanPhotos } from './world-ocean-photos.js?v=i15-mvnjah6m';
 import { oceanProgress, oceanPanelState } from './world-ocean-scroll.js?v=i15-mvnjah6m';
 import { getSceneDaylight } from './scene-daylight.js?v=i15-mvnjah6m';
@@ -414,6 +414,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
   const dom = prepareDom(root);
   if (!dom) return null;
   const { resp, dive, track, panels, ticks, N } = dom;
+  const fixedBackground = document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])');
   const photoFx = createOceanPhotos({ root, panels, reducedMotion, small });
   root.classList.add('fiwo-on');
   if (reducedMotion) root.classList.add('fiwo-still');
@@ -444,7 +445,9 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
   /* Free travel: the strip of sea follows the scroll 1:1 (no stops, no holds); a chapter is just a place along it. */
   const stopY = k => at.resp + clamp(k, 0, N - 1) * at.stop + (k <= 0 ? 2 : 0);
   /* The scroll's spring (the world module's, critically damped): from the dive on, the 「慣性」 dial. */
-  const omega = y => mix(11.5, num('ease', 2, 14), smooth(at.dive - H, at.dive, y));
+  /* GLOBE_SCROLL_INERTIA: a longer glide on the globe, blending back before the sea. */
+  const globeResponse = document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])') ? 8.5 : 11.5;
+  const omega = y => mix(globeResponse, num('ease', 2, 14), smooth(at.dive - H, at.dive, y));
 
   let cur = null;
   function sample(y) {
@@ -585,7 +588,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
       uniforms: { uReading: oceanMat.uniforms.uReading, uReadViewport: oceanMat.uniforms.uReadViewport, uRes: view.uRes, uWaveA: view.uWaveA, uWaveB: view.uWaveB, uShadowCol: { value: colour('#0a1626') }, uBirdLight: { value: new THREE.Color(1, 1, 1) } }
     });
     gullMesh = new THREE.Mesh(gullGeo, gullMat); gullMesh.frustumCulled = false; gullMesh.renderOrder = 5; gullMesh.visible = false;
-    islands = createOceanIslands({ waterUniforms: oceanMat.uniforms, gradeGlsl, viewGlsl: VIEW_GLSL, waterGlsl: WATER_SURFACE_GLSL, small, reducedMotion, renderer });
+    islands = createOceanIslands({ waterUniforms: oceanMat.uniforms, gradeGlsl, viewGlsl: VIEW_GLSL, waterGlsl: WATER_SURFACE_GLSL, small, reducedMotion, fixedBackground, renderer });
     scene.add(oceanMesh, islands.mesh, gullMesh, skyMesh);
     photoFx.build({ scene, renderer });
   }
@@ -782,8 +785,8 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     } else sunV.set(.42, .38, .82).normalize();
     renderer.getDrawingBufferSize(size);
     const dpr = size.y / Math.max(1, H);
-    // the camera: down through the lens, then along the chapters
-    cam.x = reducedMotion ? 0 : o.h * num('travel', 0, 3) * W / H; cam.y = 0;
+    // index1-5 keeps one sea/island view while the chapter panels travel over it.
+    cam.x = reducedMotion || fixedBackground ? 0 : o.h * num('travel', 0, 3) * W / H; cam.y = 0;
     if (!reducedMotion) { waveClock += dt * num('waveSpeed', 0, 4); cloudClock += dt * num('cloudSpeed', 0, 6); }
     if (visible) {
       setWaves(num('wind', -180, 180));
@@ -824,7 +827,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     u.uFoam.value.copy(pal.foam); u.uGlintCol.value.copy(pal.glint);
     u.uFarCol.value.copy(pal.far); u.uCrestCol.value.copy(pal.crest); u.uScrimCol.value.copy(pal.scrim);
     u.uFoamCol.value.copy(pal.foam).lerp(pal.crest, .18);
-    // the hero: at the first stop, in the water (it travels away with the sea)
+    // The watermark belongs to the sea, so it shares the fixed background view.
     // Keep the mark vertically centred; portrait only adjusts its diameter to stay within the screen.
     const narrow = clamp(W / H / 1.2, .45, 1);
     const heroD = num('heroSize', .1, 1.2) * mix(.82, 1, narrow);

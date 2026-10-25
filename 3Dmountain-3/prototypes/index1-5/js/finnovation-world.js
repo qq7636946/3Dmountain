@@ -27,10 +27,11 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-globe-wheel-mvnr95kv';   /* WORLD_GLOBE_SCROLL */
 import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvnjah6m';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=i15-mvnjah6m';
-import { createWorldOcean } from './world-ocean.js?v=i15-mvnjah6m';
+import { createWorldOcean } from './world-ocean.js?v=i15-globe-inertia-mvnrpxkv';
 import { createWorldLogo } from './world-logo.js?v=i15-spin-panel-mvnjpyjv';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=i15-mvnjah6m';
@@ -506,10 +507,13 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   // ---------- frame ----------
   const _offset = { x: 0, y: 0 };
+  const globeFollowsScroll = !reducedMotion && document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])');
+
   function frameEarth(s, time) {
     if (!globe) return;
     const live = s.reveal > .001 && s.recede < .999 && !s.o?.covered;
     earth.visible = live;
+
     if (!live) { ocean?.setGlobe(0, 0, 0); return; }
     const base = Math.sqrt(W * H), portrait = W < H;
     const r = ease(s.reveal), gl = smooth(0, 1, s.g), rec = ease(s.recede);
@@ -519,7 +523,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     // Leaving: the camera tilts up to the dark, the planet sinks away bottom-right, its lit limb last to go.
     cx = mix(cx, W * (portrait ? .6 : .66), rec * .6); cy = mix(cy, H * (portrait ? 2.05 : 2.4), rec);
     // From over Taiwan, sweeping west across Asia as the section scrolls.
-    let lonD = mix(148, 138, r) - 34 * gl, latD = mix(-12, 2, r) - 5 * gl;
+    let lonD = mix(148, 138, r) - (globeFollowsScroll ? globeScrollDegrees(y, at.global, at.globalH) : 34 * gl), latD = mix(-12, 2, r) - 5 * gl;
     // index1-5 ocean: the planet centres, seen straight down, and the camera dives into the lens
     const dive = ocean?.earth({ R, cx, cy, lon: lonD, lat: latD, W, H, portrait });
     if (dive) ({ R, cx, cy, lon: lonD, lat: latD } = dive);
@@ -850,6 +854,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     if (root.contains(document.activeElement)) document.activeElement.blur();
     document.body.classList.remove('is-world', 'is-world-dark'); painted = '';
     for (const pin of pins) { pin.el.style.opacity = '0'; pin.shown = 0; }
+
     if (video) { video.pause(); videoWanted = false; }
     epilogue()?.setExit(0);
     ocean?.close();

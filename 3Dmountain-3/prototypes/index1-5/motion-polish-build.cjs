@@ -24,7 +24,13 @@ function patchWorld(s){
  s=once(s,'    yt = clamp(yt + px, 0, maxY);','    // Reversing input owns the camera immediately; cancel the old-direction momentum.\n    if (px * (yt - y) < 0) { yt = y; vy = 0; }\n    yt = clamp(yt + px, 0, maxY);','world reverse');
  return s;
 }
-function patchOcean(s){return s.replace('const omega = y => mix(9.5,','const omega = y => mix(11.5,');}
+function patchOcean(s){
+ if(s.includes('GLOBE_SCROLL_INERTIA'))return s;
+ const anchor=s.includes('const omega = y => mix(9.5,')?'const omega = y => mix(9.5,':'const omega = y => mix(11.5,';
+ return once(s,anchor,`/* GLOBE_SCROLL_INERTIA: a longer glide on the globe, blending back before the sea. */
+  const globeResponse = document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])') ? 8.5 : 11.5;
+  const omega = y => mix(globeResponse,`,'globe scroll inertia');
+}
 function patchPortfolio(s){
  s=once(s,'bridge = false, onEnd = null, grade = null, mist = null, notch = null }) {','bridge = false, onEnd = null, grade = null, mist = null, notch = null, carry = null }) {','carry param');
  s=once(s,'      const next = bt + delta / span();','      if (delta * (bt - amount) < 0) { bt = amount; velocity = 0; }\n      const next = bt + delta / span();','bridge reverse');

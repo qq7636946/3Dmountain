@@ -4097,6 +4097,16 @@ html[data-look="index1-5"] body { --editorial-white: #f1f4f5; --editorial-muted:
 }
 html[data-look="index1-5"] :is(.fi-copy,.fiwp,.fiwo-strategy,.fisl-text) { overflow-wrap: normal;
 }
+html[data-look="index1-5"] #fiWorld .fisl-text :is(.fisl-kicker,.fisl-zh,.fisl-line) {
+  text-indent: 0;
+}
+html[data-look="index1-5"] #fiWorld .fisl-text {
+  top: min(calc(var(--fisl-y,.67) * 100%),calc(100% - 228px));
+}
+html[data-look="index1-5"] :is(.fi-copy-zh,.fiwo-strategy-body,.fiwp-lead,.fiwp-card p,.fiw-office p) {
+  line-break: strict;
+  text-wrap: pretty;
+}
 
 
 html[data-look="index1-5"][data-alpine-ui] body.is-ready .finnovation-ui .fi-copy {
@@ -4288,6 +4298,7 @@ html[data-look="index1-5"] #fiWorld .fiwp-chapter--horizon .fiwp-cards {
   }
   html[data-look="index1-5"] #fiWorld .fisl-text {
     width: calc(100% - 40px);
+    top: min(68%,calc(100% - 238px));
   }
   html[data-look="index1-5"] #fiWorld .fisl-line {
     max-width: 29em;

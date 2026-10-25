@@ -9,8 +9,8 @@
    One draw call (InstancedBufferGeometry: 3 crossed cards x 3 rows per tuft), alpha-tested with mip-aware
    alpha, lit by the scene (MeshStandardMaterial: sun, shadow map, hemisphere), fogged like the rock.
    Fades by camera distance (no popping: tufts grow out of the ground) and with the aerial reveal (hidden). */
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvnjah6m';
-import { ALPINE_TERRAIN_UNIFORMS as U, syncAlpineUniforms, alpineMaps, ALP_NOISE_GLSL, ALP_BANK_GLSL, ALP_CANYON_GLSL } from './alpine-terrain-material.js?v=i15-mvnjah6m';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js';
+import { ALPINE_TERRAIN_UNIFORMS as U, syncAlpineUniforms, alpineMaps, ALP_NOISE_GLSL, ALP_BANK_GLSL, ALP_CANYON_GLSL } from './alpine-terrain-material.js';
 
 const fract = x => x - Math.floor(x);
 const hash = (a, b) => fract(Math.sin(a * 127.1 + b * 311.7 + 74.7) * 43758.5453);
@@ -38,6 +38,9 @@ function tuftGeometry(THREE) {
 /** banks: the shore bank meshes (userData.rim = {rows, columns}); rows run along the river (t), columns out
     from the water (lateral distance (j/lateral)^1.62 x 250). curve/widthAt: the river the camera follows. */
 export function createCanyonTufts(THREE, { banks, curve, widthAt, lite = false }) {
+  // index1-5 uses the bank material's grass colour/normal maps only.
+  // Skip the crossed grass cards before allocating geometry or materials.
+  if (typeof document !== 'undefined' && document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])')) return null;
   const maps = alpineMaps();
   if (!banks?.length || !maps?.alpineTuft || !maps?.alpineErosion) return null;
   const started = performance.now();

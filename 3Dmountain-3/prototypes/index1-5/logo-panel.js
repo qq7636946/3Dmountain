@@ -30,7 +30,7 @@ const HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1'];
 const CSS = `
 .lgp{position:fixed;left:16px;top:92px;bottom:16px;width:min(332px,calc(100vw - 32px));z-index:61;display:flex;flex-direction:column;box-sizing:border-box;
   border:1px solid #cbdce833;border-radius:10px;background:linear-gradient(135deg,#253b50ee,#101e30f6);color:#e9edf0;
-  font:12px/1.4 system-ui,'Noto Sans TC','Microsoft JhengHei',sans-serif;-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
+  font:400 12px/1.5 var(--site-font,'DM Sans','Noto Sans TC',sans-serif);-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
   box-shadow:0 20px 60px #020a1866,inset 0 1px 0 #ffffff12}
 .lgp[hidden]{display:none}
 .lgp [hidden]{display:none!important}
@@ -56,7 +56,7 @@ const CSS = `
 .lgp-row.is-changed label{color:#f2d6a5}
 .lgp-row.is-changed label::before{content:'●';color:#e6c794;font-size:8px;margin-right:5px;vertical-align:1px}
 .lgp-row input[type=range]{grid-area:r;width:100%;margin:2px 0 0;accent-color:#e6c794}
-.lgp-num,.lgp-hex{grid-area:v;width:100%;font:11px ui-monospace,Consolas,monospace;color:#f0f0e9;background:#0a16244d;border:1px solid #d5e3ed2e;border-radius:4px;padding:2px 4px;text-align:right}
+.lgp-num,.lgp-hex{grid-area:v;width:100%;font:400 11px/1.5 var(--site-font,'DM Sans','Noto Sans TC',sans-serif);font-variant-numeric:tabular-nums;color:#f0f0e9;background:#0a16244d;border:1px solid #d5e3ed2e;border-radius:4px;padding:2px 4px;text-align:right}
 .lgp-row.is-color{grid-template-columns:1fr 38px 78px;grid-template-areas:'l c v'}
 .lgp-row.is-color input[type=color]{grid-area:c;width:38px;height:22px;padding:0;border:1px solid #d5e3ed38;border-radius:4px;background:none}
 .lgp-row.is-color .lgp-hex{width:78px;text-align:left}

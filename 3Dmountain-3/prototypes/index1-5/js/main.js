@@ -11,7 +11,7 @@
     import { mountLogoPanel } from './logo-panel.js?v=logo-panel-manual-aa1f47df7f';
     import { LIGHT_SPECK_DEFAULTS, LIGHT_SPECK_ROWS } from './light-specks.js?v=mobile-perf-mvnvuyle';
     import { DAYLIGHT_DEFAULTS, DAYLIGHT_ROWS, configureSceneDaylight, getSceneDaylight, setSceneTime, suppressSceneDaylight, journeySceneHour } from './scene-daylight.js?v=i15-mvnjah6m';
-    import { createOpeningWorld, OPENING_WORLD_DEFAULTS, OPENING_WORLD_ROWS, OPENING_RANGE_BLANK } from './opening-world.js?v=mobile-perf-mvnvuyle';
+    import { createOpeningWorld, OPENING_WORLD_DEFAULTS, OPENING_WORLD_ROWS, OPENING_RANGE_BLANK } from './opening-world.js?v=background-paused-mvnxhra2';
     import { createOpeningPortal, OPENING_PORTAL_DEFAULTS, OPENING_PORTAL_ROWS } from './opening-portal.js?v=i15-mvnjah6m';
     import { ALPINE_LIGHT, ALPINE_LIGHT_ROWS } from './alpine-light-params.js?v=i15-mvnjah6m';
     import { ALPINE_TERRAIN, ALPINE_TERRAIN_ROWS } from './alpine-terrain-params.js?v=i15-mvnjah6m';
@@ -6619,7 +6619,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }).catch(error => console.warn('Portfolio epilogue unavailable:', error));
       /* 卡牌之後（只有 index1-1）：地球、理念、頁尾。卡牌浮出時才下載；載不到就停在卡牌，跟原本一樣。 */
       let world = null, worldJob = null;
-      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=mobile-fix-mvnwy3zc').then(module => {
+      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=background-paused-mvnxhra2').then(module => {
         world = module.mountWorld({ root: document.querySelector('#fiWorld'), reducedMotion: reduceMotion, epilogue: () => portfolio, carry: delta => advanceJourney(delta, 'touch'), grade: () => CONFIG.grade, mist: () => CONFIG.mist, video: () => CONFIG.video, ocean: () => CONFIG.worldOcean, logo: () => CONFIG,
           /* its preparation keeps out of the way while the valley-to-cards bridge is moving (scrolled within the last moment), except the bridge's last tenth (F5): the planet's GL build then finishes before the cards hand over */
           busy: () => !!portfolio?.open && portfolio.transition > 0 && portfolio.transition < .9 && performance.now() - (journey.lastInput || 0) < 1400 });

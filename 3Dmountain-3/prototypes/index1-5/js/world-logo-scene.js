@@ -792,8 +792,10 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   }});
 
   /* ---- the distant range (the opening's band) ---- */
-  let rangeTex = null, rangeLoading = true, rangeReady = false;
-  {
+  // TEMP_RANGE_BACKGROUND_PAUSED: 收尾湖景也暫停同一張背景圖；保留載入程式與圖片，方便之後還原。
+  const rangeBackgroundPaused = !!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])');
+  let rangeTex = null, rangeLoading = !rangeBackgroundPaused, rangeReady = false;
+  if (!rangeBackgroundPaused) {
     const bases = [];
     if (assetBase) bases.push(String(assetBase).replace(/\/*$/, '/'));
     try { bases.push(new URL('../assets/', import.meta.url).href, new URL('./assets/', import.meta.url).href); } catch (e) { /* no import.meta.url */ }

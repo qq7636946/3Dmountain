@@ -34,7 +34,7 @@ import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvnjah6m';   /* WORL
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=i15-mvnjah6m';
 import { createWorldOcean } from './world-ocean.js?v=mobile-fix-mvnwy3zc';
-import { createWorldLogo } from './world-logo.js?v=mobile-perf-mvnvuyle';
+import { createWorldLogo } from './world-logo.js?v=background-paused-mvnxhra2';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=i15-mvnjah6m';
 import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvnjah6m';

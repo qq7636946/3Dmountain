@@ -467,7 +467,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     });
   }
   async function build(R0, renderer) {
-    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mvnjah6m'), import('./world-logo-scene.js?v=mobile-perf-mvnvuyle'), import('three/addons/loaders/SVGLoader.js')]);
+    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mvnjah6m'), import('./world-logo-scene.js?v=background-paused-mvnxhra2'), import('three/addons/loaders/SVGLoader.js')]);
     if (dead(R0)) return;
     R0.daylight = await import('./scene-daylight.js?v=i15-mvnjah6m').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
     renderer.getDrawingBufferSize(_size);

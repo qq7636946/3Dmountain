@@ -60,12 +60,14 @@ const RAD = Math.PI / 180;
 
 export function createOpeningWorld({ uniforms, config, renderer, palette = (hex, v) => { const c = new THREE.Color(hex); return v.set(c.r,c.g,c.b); }, keyLight, hemiLight, airMotes, waterGlints, rebake, rangeUrl, surface = null }) {
   const lightSpecks = createLightSpecks({points:airMotes,surface,getConfig:()=>config.lightSpecks,small:Math.min(innerWidth,innerHeight)<700,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});
+  // TEMP_RANGE_BACKGROUND_PAUSED: 暫停主頁的遠山背景圖；保留 opening-range.webp／0.webp 原檔，移除此暫停即可還原。
+  const rangeBackgroundPaused = !!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])');
   const W = () => config.openingWorld;
   const hero = new THREE.Vector3(), dir = new THREE.Vector3(), q = new THREE.Vector3(), cp = new THREE.Vector3(), sd = new THREE.Vector3(), f = new THREE.Vector3();
   let sunLight = null, band = null, lastProbeHour = -100, keyWasAutomatic = false;
   const originalKeyPosition = keyLight?.position.clone(), originalHemiIntensity = hemiLight?.intensity;
   const fields = [['zenith','uEnvZenith'],['upper','uEnvUpper'],['top','uEnvField'],['horizon','uEnvHorizon'],['lower','uEnvLower'],['floor','uEnvFloor'],['ink','uEnvInk']];
-  new THREE.TextureLoader().load(rangeUrl, tex => {
+  if (!rangeBackgroundPaused) new THREE.TextureLoader().load(rangeUrl, tex => {
     tex.colorSpace = THREE.NoColorSpace;   /* colour decoded in the shader; the lower half is alpha data */
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter;
@@ -159,5 +161,5 @@ export function createOpeningWorld({ uniforms, config, renderer, palette = (hex,
     if (w > 0) dir.lerp(q, w).normalize();
     uniforms.uEnvCoreDir.value.copy(dir);
   }
-  return { apply, update, lightSpecks, get ready() { return !!band; } };
+  return { apply, update, lightSpecks, get ready() { return rangeBackgroundPaused || !!band; } };
 }

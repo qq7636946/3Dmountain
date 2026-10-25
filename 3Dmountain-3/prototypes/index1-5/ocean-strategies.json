@@ -1,0 +1,54 @@
+{
+  "section": {
+    "labelEn": "Investment Strategies",
+    "labelZh": "四大投資策略",
+    "headingZh": "以科技洞察市場，以紀律創造長期價值",
+    "bodyZh": "恒灝聚焦量化研究、公開市場、成長型企業與金融工具，透過資料分析、產業理解與風險管理，建立穩健且多元的投資布局。"
+  },
+  "strategies": [
+    {
+      "id": "01",
+      "titleZh": "AI 量化交易",
+      "titleEn": "AI Quantitative Trading",
+      "titleLines": ["AI Quantitative", "Trading"],
+      "taglineZh": "讓數據成為更精準的決策依據",
+      "taglineEn": "Data as the foundation for more precise investment decisions.",
+      "bodyZh": "結合人工智慧、資料分析與量化模型，辨識市場訊號並持續驗證策略，提升決策效率與風險控制能力。",
+      "keywords": ["AI Models", "Market Signals", "Risk Control"]
+    },
+    {
+      "id": "02",
+      "titleZh": "上市櫃投資",
+      "titleEn": "Listed Equity Investment",
+      "titleLines": ["Listed Equity", "Investment"],
+      "taglineZh": "從市場波動中辨識企業真實價值",
+      "taglineEn": "Identifying a company’s true value amid market volatility.",
+      "bodyZh": "從企業基本面、產業趨勢與市場變化出發，尋找具競爭優勢與長期成長潛力的上市櫃企業。",
+      "keywords": ["Company Fundamentals", "Industry Trends", "Long-Term Growth"]
+    },
+    {
+      "id": "03",
+      "titleZh": "未上市及 Pre-IPO",
+      "titleEn": "Private Equity & Pre-IPO",
+      "titleLines": ["Private Equity", "& Pre-IPO"],
+      "taglineZh": "在價值被看見之前，提前參與成長",
+      "taglineEn": "Supporting growth before a company’s value is widely recognized.",
+      "bodyZh": "關注具技術實力、商業潛力與成長動能的企業，透過資本與產業資源，陪伴優秀團隊走向下一階段。",
+      "keywords": ["Technology", "Industry Resources", "Growth Capital"]
+    },
+    {
+      "id": "04",
+      "titleZh": "衍生性商品",
+      "titleEn": "Derivative Strategies",
+      "titleLines": ["Derivative", "Strategies"],
+      "taglineZh": "靈活運用工具，精準管理市場風險",
+      "taglineEn": "Flexible financial instruments for precise management of market risk.",
+      "bodyZh": "結合金融工程與風險管理思維，發展多元且具彈性的投資工具，提升資產配置與市場應變能力。",
+      "keywords": ["Financial Engineering", "Asset Allocation", "Risk Management"]
+    }
+  ],
+  "source": {
+    "file": "C:/Users/lee/Desktop/恒灝官網首頁文案架構.pptx",
+    "slides": [3, 4]
+  }
+}

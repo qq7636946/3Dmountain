@@ -1,0 +1,517 @@
+/* index1-5 only: same Jost / ivory typography and slate glass as index1-4-ascent.
+   Positions, chapter dimensions and the existing route remain owned by the shared UI. */
+html[data-look="index1-5"]:not([data-render-mode="text"]) {
+  --hl-ink: #f1f0e8;
+  --hl-ivory: #f1f0e8;
+  --hl-accent: #c3b595;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) .loader { background: #1d3446; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) .loader-logo { color: #f1f0e8; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) .loader-line i { background: #c3b595; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui {
+  --ui-ink: #f1f0e8; --ui-muted: #d0dcd9; --ui-line: #dce5df38;
+  --uig-tint: #3a5566;
+  --uig-fill-1: #31495a66; --uig-fill-2: #20384a59; --uig-fill-3: #12273773;
+  --uig-hover-1: #40596a80; --uig-hover-2: #2c445673; --uig-hover-3: #1a30408c;
+  --uig-hi-copy: #ffffff2e; --uig-hi-head: #ffffff24;
+  --uig-bd-foot: #f1f0e82e; --uig-foot-1: #2a425414; --uig-foot-2: #1b31421f;
+  --uig-blur: 9px;
+  color: var(--ui-ink);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-frame { opacity: .6; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-veil {
+  background: linear-gradient(180deg, #0f22301f, transparent 24%, transparent 56%, #10233226 78%, #0d1e2b59);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy {
+  --ui-ink: #f1f0e8; --ui-muted: #d0dcd9;
+  color: var(--ui-ink);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy::before { display: none; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy h1,
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy h2 {
+  font-weight: 500;
+  letter-spacing: .015em;
+  text-wrap: balance;
+  
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-kicker {
+  color: #dfd4bc;
+  font-weight: 500;
+  letter-spacing: .25em;
+  
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-zh {
+  font-weight: 400;
+  letter-spacing: .11em;
+  
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-header,
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-rail button,
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-footer {
+  --ui-ink: #f1f0e8; --ui-muted: #d0dcd9;
+  color: #f1f0e8;
+  
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-action {
+  background: #23414e94;
+  box-shadow: inset 0 1px #e7e5d859, inset 0 -1px #0e263b40;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-action > span {
+  background: transparent;
+  color: #f1f0e8;
+  
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-action:hover { background: #365764c4; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-footer {
+  background: #17354312;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-footer-progress i,
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-rail button[aria-current="step"]::before { background: #c3b595; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-veil,
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-veil {
+  background: linear-gradient(90deg, #10243020, transparent 20%, transparent 90%, #1024300a),
+    linear-gradient(180deg, transparent 42%, #122c3b08 51%, #122c3b4d 72%, #102735b3 100%);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui button:focus-visible { outline-color: currentColor; }
+@media (max-width: 680px) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-kicker { font-size: 8px; letter-spacing: .18em; }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .fi-copy-zh { letter-spacing: .055em; }
+}
+
+/* ==== ALPINE-UI START ====================================================================================
+   Everest-style interface (ref. everest.suraj.work), 2026-10-23. Everything below is keyed on html[data-alpine-ui]
+   and is off in the readable/text mode. Live parts (stat bar, scene labels, the gold kicker phrase)
+   are added by prototypes/index1-5-alpine/alpine-ui.js; markup changes are listed in
+   prototypes/index1-5-alpine/patches/ui.md. Fonts are local only (no new requests):
+   display = Didot / Bodoni 72 (Apple), Sitka Banner (every Windows 8.1+), Bodoni MT (Windows + Office), Noto Serif, Georgia;
+   numerals = Bahnschrift condensed (Windows) / Avenir Next Condensed (Apple).
+   Dials: ?uiserif=sitka|bodoni|didot  ·  ?alpui=0 turns the whole layer off (A/B). */
+html[data-alpine-ui] {
+  --alp-gold: #e2c28a;
+  --alp-gold-hi: #f3dfb6; /* small gold text over the scene: lighter for AA */
+  --alp-gold-ink: #17212c;
+  --alp-white: #f6f4ee;
+  --alp-mute: #dfe5eacc;
+  --alp-blue: #a9d3f2;
+  --alp-glass: #0c182866;
+  --alp-glass-bd: #ffffff24;
+  --alp-display: Didot, "Bodoni 72", "Sitka Banner", "Bodoni MT", "Noto Serif Display", "Noto Serif", Georgia, "Times New Roman", serif;
+  --alp-sans: "Jost", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+  --alp-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --alp-num: Bahnschrift, "Avenir Next Condensed", "Helvetica Neue", "Arial Narrow", "Jost", sans-serif;
+  --alp-shadow: 0 0 34px #050e1a73, 0 1px 12px #050e1a59;   /* stronger: chapters 1-2 got brighter */
+  /* a tight dark halo keeps small tracked caps legible over bright water and snow */
+  --alp-halo: 0 0 1px #050e1acc, 0 1px 3px #050e1abf, 0 0 18px #050e1ab3;
+}
+html[data-alpine-ui][data-alp-serif="sitka"] { --alp-display: "Sitka Banner", Didot, "Bodoni 72", "Bodoni MT", Georgia, serif; }
+html[data-alpine-ui][data-alp-serif="bodoni"] { --alp-display: "Bodoni MT", Didot, "Bodoni 72", "Sitka Banner", Georgia, serif; }
+html[data-alpine-ui][data-alp-serif="didot"] { --alp-display: Didot, "Bodoni 72", "Bodoni Moda", "Playfair Display", "Bodoni MT", Georgia, serif; }
+
+/* loader: navy, Didone wordmark, gold line */
+html[data-alpine-ui]:not([data-render-mode="text"]) .loader { background: radial-gradient(120% 90% at 50% 40%, #13243a, #0a1422 70%); }
+html[data-alpine-ui]:not([data-render-mode="text"]) .loader-logo { color: var(--alp-white); font-family: var(--alp-display); font-weight: 400; letter-spacing: .32em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) .loader-note { color: #c9d2db; font-family: var(--alp-mono); letter-spacing: .32em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) .loader-line { background: #ffffff1c; }
+html[data-alpine-ui]:not([data-render-mode="text"]) .loader-line i { background: var(--alp-gold); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .grain { opacity: .055; }
+
+/* the shell: no cut-corner frame, a deeper navy veil for contrast */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui {
+  --ui-ink: var(--alp-white); --ui-muted: var(--alp-mute); --ui-line: #ffffff26;
+  color: var(--alp-white);
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-frame { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-veil,
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-veil,
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready.is-watershed .finnovation-ui .fi-veil {
+  background:
+    linear-gradient(90deg, #08142473 0, #0814243d 12%, transparent 22%),   /* lighter: the sky and the sun read through (lighting review) */
+    linear-gradient(180deg, #08142466 0%, #08142424 9%, transparent 16%, transparent 56%, #0814242e 76%, #08142494 100%);
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(button, a):focus-visible {
+  outline: 2px solid var(--alp-gold); outline-offset: 4px;
+}
+
+/* header: tracked caps, gold pill, round glass icon button */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header { color: var(--alp-white);  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-brand-name { font-weight: 500; letter-spacing: .2em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-brand-zh { color: var(--alp-gold); letter-spacing: .5em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-right { gap: 30px; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav { gap: 28px; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav button { font-size: 9.5px; font-weight: 500; letter-spacing: .26em; color: #f6f4eee6; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav button::after { background: var(--alp-gold); bottom: 8px; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions {
+  clip-path: none; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  align-items: center; gap: 10px;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions button { min-height: 44px; border-radius: 999px;  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-explore {
+  padding: 0 22px 0 19px; gap: 11px; background: var(--alp-gold); color: var(--alp-gold-ink);
+  font-size: 9.5px; font-weight: 600; letter-spacing: .28em; box-shadow: 0 6px 22px #050e1a40;
+  transition: background .25s, transform .3s cubic-bezier(.2,.75,.25,1);
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-explore:hover { background: #ecd3a5; transform: translateY(-1px); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-explore .fi-icon { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-explore, .fi-copy-action > span)::before {
+  content: ''; flex: 0 0 auto; width: 0; height: 0;
+  border-left: 7px solid currentColor; border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-menu-toggle {
+  width: 44px; padding: 0; gap: 0; font-size: 0; letter-spacing: 0; color: var(--alp-white);
+  border: 1px solid var(--alp-glass-bd); background: var(--alp-glass);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2);
+  transition: background .25s, border-color .25s;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-menu-toggle:hover { background: #1b2c42a6; border-color: #e2c28a99; }
+
+/* chapter rail: hairline spine, gold mono numbers, gold bar on the current chapter */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail { left: 34px; gap: 0;  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail::before {
+  content: ''; position: absolute; left: -15px; top: 10px; bottom: 10px; width: 1px; background: #ffffff2e;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button {
+  min-height: 32px; gap: 13px; color: #fbfbf9; font-size: 9px; font-weight: 500; letter-spacing: .26em;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button:hover,
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button[aria-current="step"] { color: #fff; font-weight: 600; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button::before { left: -16px; width: 3px; height: 14px; background: var(--alp-gold); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail-number {
+  font-family: var(--alp-mono); font-size: 9px; letter-spacing: .04em; color: var(--alp-gold-hi); opacity: .8;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button[aria-current="step"] .fi-rail-number { opacity: 1; }
+
+/* chapter copy: kicker / Didone title / italic gold chapter name / Chinese line / pill */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy {
+  width: min(1480px, 84vw, 100vw - 400px); bottom: calc(var(--ui-footer) + clamp(26px, 5.6vh, 64px));
+  color: var(--alp-white); 
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 22px;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel > :is(.fi-copy-kicker, h1, h2, .alp-mark, .fi-copy-zh) { flex: 0 0 100%; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel::before {
+  content: ''; position: absolute; z-index: -1; left: 4%; right: 4%; top: -96px; bottom: -44px; pointer-events: none;
+  background: radial-gradient(closest-side, #0712227a, #07122257 50%, #07122224 78%, #07122200);
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-kicker {
+  margin: 0 0 20px; padding-left: .42em; color: #fff; font-size: 10px; font-weight: 500; letter-spacing: .42em; line-height: 1.6;
+  
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-kicker .alp-gold { color: var(--alp-gold-hi); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-kicker .alp-num { color: var(--alp-gold-hi); font-family: var(--alp-mono); letter-spacing: .1em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy :is(h1, h2) {
+  color: var(--alp-white); font-family: var(--alp-display); font-weight: 400; text-transform: uppercase;
+  font-size: clamp(38px, 5.1vw, 96px); line-height: .94; letter-spacing: .012em; text-wrap: balance;
+   -webkit-font-smoothing: antialiased; font-kerning: normal;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy h1 { font-size: clamp(46px, 7.3vw, 138px); line-height: .9; }
+/* wide screens: the opening title runs on one line, low, so the drop above stays clear */
+@media (min-width: 1100px) {
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy h1 { font-size: calc(clamp(60px, 5.7vw, 124px) * var(--alp-fit, 1)); white-space: nowrap; min-width: 0; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy h1 span { display: inline; }
+}
+@media (min-width: 1100px) and (min-height: 700px) {
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) { bottom: -26px; }
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy :is(h1, h2) span + span { margin-top: .02em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-mark {
+  margin: 16px 0 0; color: var(--alp-gold); font: italic 400 clamp(19px, 1.85vw, 32px)/1.2 var(--alp-display);
+  letter-spacing: .1em; 
+}
+/* Chapter emblems and Roman numeral overlays were removed; the original copy remains. */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-zh {
+  max-width: none; margin: 18px auto 0; padding-left: .3em; color: #f6f4eeeb;
+  font-size: 13px; font-weight: 300; letter-spacing: .3em; line-height: 1.9;
+  
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-zh {
+  margin-top: 22px; color: var(--alp-gold-hi); font-size: 15px; font-weight: 300; letter-spacing: .46em; padding-left: .46em;
+}
+
+/* the pill: gold outline in chapters, solid gold on the opening frame (+ "or scroll") */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action {
+  flex: 0 0 auto; margin-top: 28px; min-height: 0; padding: 0; border-radius: 999px; clip-path: none;
+  border: 1px solid #e2c28ab3; background: #0b16242e; box-shadow: none;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: background .3s, border-color .3s, transform .32s cubic-bezier(.2,.75,.25,1);
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action::before,
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action::after { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action > span,
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action:hover > span {
+  min-height: 46px; padding: 0 26px 0 22px; gap: 12px; clip-path: none; background: transparent;
+  color: var(--alp-gold);  font-size: 10px; font-weight: 500; letter-spacing: .28em;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action :is(.fi-grid-icon, .fi-icon) { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action:hover { background: #e2c28a24; border-color: var(--alp-gold); transform: translateY(-1px); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-action { margin-top: 34px; border-color: var(--alp-gold); background: var(--alp-gold); box-shadow: 0 10px 34px #050e1a4d; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-action > span { min-height: 50px; padding: 0 30px 0 26px; color: var(--alp-gold-ink); font-weight: 600; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-action:hover { background: #ecd3a5; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-or {
+  flex: 0 0 auto; margin-top: 34px; color: #f6f4eeb3; font-family: var(--alp-mono); font-size: 9.5px;
+  letter-spacing: .32em; text-transform: uppercase; 
+}
+
+/* footer: no bar; round glass sound + next on the left, progress as a gold hairline on the top edge */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer {
+  inset: auto auto 0 0; height: auto; display: flex; align-items: center; gap: 26px;
+  border: 0; background: none; clip-path: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer button {
+  gap: 12px; padding: 0; background: none; border: 0 !important; font-size: 9px; font-weight: 500; letter-spacing: .26em; color: #f6f4eee0;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer button:hover { background: none; color: var(--alp-white); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer .fi-icon {
+  box-sizing: border-box; width: 42px; height: 42px; padding: 12px; border-radius: 50%;
+  border: 1px solid var(--alp-glass-bd); background: var(--alp-glass);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2);
+  stroke-width: 1.3; transition: border-color .25s, background .25s;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer button:hover .fi-icon { border-color: #e2c28a99; background: #1b2c42a6; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-sound[aria-pressed="true"] .fi-icon { color: var(--alp-gold); border-color: #e2c28a99; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-next { order: 2; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-center { order: 3; gap: 14px; color: #f6f4eeb3; font-family: var(--alp-mono); font-size: 9px; letter-spacing: .2em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-current { min-width: 0; text-align: left; }
+html[data-alpine-ui-live]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-footer-current, .fi-footer-total) { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-progress {
+  display: block; position: fixed; z-index: 9; top: 0; left: 0; right: 0; width: auto; height: 2px; background: #ffffff14;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-progress i {
+  height: 2px; background: linear-gradient(90deg, #e2c28a59, var(--alp-gold) 82%, #f3dfb8); box-shadow: 0 0 10px #e2c28a73;
+}
+
+/* live stat bar (alpine-ui.js) */
+html[data-alpine-ui] .alp-stats { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-stats {
+  display: block; position: absolute; right: 0; bottom: 0; pointer-events: auto;
+  border: 1px solid var(--alp-glass-bd); border-radius: 12px; overflow: hidden;
+  background: linear-gradient(180deg, #13223666, #0a14228c);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25); backdrop-filter: blur(16px) saturate(1.25);
+  box-shadow: 0 14px 40px #050e1a40, inset 0 1px 0 #ffffff14;
+  transition: opacity .6s, visibility .6s;
+}
+html[data-alpine-ui] .alp-stats dl { display: flex; margin: 0; }
+html[data-alpine-ui] .alp-stat { min-width: 98px; margin: 0; padding: 11px 18px 10px; }
+html[data-alpine-ui] .alp-stat + .alp-stat { border-left: 1px solid #ffffff17; }
+html[data-alpine-ui] .alp-stat dt {
+  margin: 0 0 3px; color: #f6f4eea6; font: 500 8px/1.4 var(--alp-sans); letter-spacing: .24em; white-space: nowrap;
+}
+html[data-alpine-ui] .alp-stat dd {
+  margin: 0; color: var(--alp-white); font-family: var(--alp-num); font-size: 27px; font-weight: 300; font-stretch: 75%;
+  line-height: 1.05; letter-spacing: .01em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+html[data-alpine-ui] .alp-stat dd small { margin-left: 3px; font-size: 11px; letter-spacing: .12em; opacity: .7; }
+html[data-alpine-ui] .alp-stat.is-blue dd { color: var(--alp-blue); }
+html[data-alpine-ui] .alp-stat.is-gold dd { color: var(--alp-gold); }
+
+/* in-scene labels (alpine-ui.js): white tracked name, gold mono line, hairline leader; glass station tags */
+html[data-alpine-ui] .alp-labels { position: fixed; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+html[data-alpine-ui] body:not(.is-ready) .alp-labels,
+html[data-alpine-ui] body:is(.is-world, .is-portfolio, .is-section-two) .alp-labels,
+html[data-alpine-ui] body.is-world .finnovation-ui .alp-stats { opacity: 0 !important; visibility: hidden !important; }
+html[data-alpine-ui] .alp-pin {
+  position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center;
+  opacity: 0; will-change: transform, opacity; transition: opacity .5s ease;
+}
+html[data-alpine-ui] .alp-pin-text {
+  display: flex; flex-direction: column; align-items: center; padding: 6px 14px 5px;
+  background: radial-gradient(closest-side, #050e1acc, #050e1a8c 55%, #050e1a00);
+}
+html[data-alpine-ui] .alp-pin-name { color: var(--alp-white); font: 500 10px/1.3 var(--alp-sans); letter-spacing: .32em; padding-left: .32em; white-space: nowrap;  }
+html[data-alpine-ui] .alp-pin-num { margin-top: 3px; color: var(--alp-gold-hi); font: 400 10px/1.3 var(--alp-mono); letter-spacing: .14em; white-space: nowrap;  }
+html[data-alpine-ui] .alp-pin-line { position: relative; display: block; width: 1px; height: var(--lead, 64px); margin-top: 0; background: linear-gradient(180deg, #ffffffd9, #ffffff73); box-shadow: 0 0 0 1px #050e1a33, 0 0 6px #050e1a59; }
+html[data-alpine-ui] .alp-pin-line::after { content: ''; position: absolute; left: -2px; bottom: -2px; width: 5px; height: 5px; border-radius: 50%; background: var(--alp-white); box-shadow: 0 0 8px #ffffffb3; }
+html[data-alpine-ui] .alp-tag {
+  display: inline-flex; align-items: center; gap: 9px; padding: 7px 12px 7px 10px; border-radius: 4px;
+  border: 1px solid #ffffff21; background: #0b16249e; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: var(--alp-white); font: 500 9px/1.2 var(--alp-sans); letter-spacing: .24em; white-space: nowrap;
+  transition: border-color .4s, background .4s;
+}
+html[data-alpine-ui] .alp-tag::before { content: ''; width: 2px; align-self: stretch; min-height: 13px; background: var(--alp-gold); }
+html[data-alpine-ui] .alp-tag-text { display: flex; flex-direction: column; gap: 5px; }
+html[data-alpine-ui] .alp-tag-zh { color: var(--alp-white); font: 500 12px/1.2 var(--alp-sans); letter-spacing: .16em; }
+html[data-alpine-ui] .alp-tag-en { opacity: .82; }
+html[data-alpine-ui] .alp-pin.is-current .alp-tag { border-color: var(--alp-gold); background: #142338d9; box-shadow: 0 0 18px #e2c28a33; }
+html[data-alpine-ui] .alp-labels.has-current .alp-pin[data-kind="tag"]:not(.is-current) .alp-tag { opacity: .62; }
+html[data-alpine-ui] .alp-pin[data-kind="tag"] .alp-pin-line { background: linear-gradient(180deg, #e2c28acc, #e2c28a59); }
+html[data-alpine-ui] .alp-pin[data-side="right"] { flex-direction: row-reverse; align-items: center; }
+html[data-alpine-ui] .alp-pin[data-side="left"] { flex-direction: row; align-items: center; }
+html[data-alpine-ui] .alp-pin:is([data-side="right"], [data-side="left"]) .alp-pin-line { width: var(--lead, 18px); height: 1px; }
+html[data-alpine-ui] .alp-pin[data-side="right"] .alp-pin-line { background: linear-gradient(90deg, #e2c28a59, #e2c28acc); }
+html[data-alpine-ui] .alp-pin[data-side="left"] .alp-pin-line { background: linear-gradient(90deg, #e2c28acc, #e2c28a59); }
+html[data-alpine-ui] .alp-pin[data-side="right"] .alp-pin-line::after { left: -2px; top: -2px; bottom: auto; }
+html[data-alpine-ui] .alp-pin[data-side="left"] .alp-pin-line::after { left: auto; right: -2px; top: -2px; bottom: auto; }
+
+/* menu: dark navy glass, Didone headings */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu {
+  --ui-ink: var(--alp-white); --ui-muted: #c5cfd8; --ui-line: #ffffff1f;
+  color: var(--alp-white); border-color: #ffffff26; border-radius: 14px;
+  background: linear-gradient(135deg, #142438f5, #0a1422fa);
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-top { background: #132336; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-top > span { font-family: var(--alp-display); font-weight: 400; font-size: 15px; letter-spacing: .3em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-eyebrow { color: var(--alp-gold); letter-spacing: .32em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu h2 { font-family: var(--alp-display); font-weight: 400; letter-spacing: 0; line-height: 1.02; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-link-number { color: var(--alp-gold); font-family: var(--alp-mono); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-link-en { font-family: var(--alp-display); font-weight: 400; font-size: 23px; letter-spacing: .06em; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-links button[aria-current="step"] .fi-menu-link-number { color: var(--alp-gold); }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-links button:hover { background: #ffffff08; }
+
+/* tablets: drop the heading cell, narrow the copy */
+@media (max-width: 1100px) {
+  html[data-alpine-ui] .alp-stat[data-k="hdg"] { display: none; }
+  html[data-alpine-ui] .alp-stat { min-width: 86px; padding: 10px 14px 9px; }
+}
+@media (max-width: 960px) {
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy { width: 82vw; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail { left: 26px; }
+}
+
+/* phones: stacked hero, compact stat strip between the two round footer buttons, labels reduced */
+@media (max-width: 680px) {
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui { --ui-footer: 52px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header { padding: 18px 6px 0 8px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-brand-name { font-size: 15px; letter-spacing: .14em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-brand-zh { letter-spacing: .42em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions { gap: 8px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-explore { display: flex; min-height: 40px; padding: 0 15px 0 14px; gap: 9px; font-size: 8.5px; letter-spacing: .22em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-menu-toggle { width: 42px; min-height: 42px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail { left: 8px; right: 8px; top: 80px; gap: 20px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail::before { display: none; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button { min-height: 40px; gap: 6px; font-size: 8.5px; letter-spacing: .2em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button::before { left: 0; right: 0; bottom: 6px; width: auto; height: 1px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail-number { font-size: 8px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy { width: calc(100% - 20px); bottom: calc(var(--ui-footer) + 30px); }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel::before { left: -14%; right: -14%; top: -96px; bottom: -40px; background: radial-gradient(closest-side, #071222b3, #07122296 45%, #07122280 68%, #07122233 86%, #07122200); }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-veil { background: linear-gradient(180deg, #081424d1 0%, #081424a3 13%, #0814243d 20%, transparent 27%, transparent 50%, #0814243d 70%, #081424b3 100%) !important; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-kicker { margin-bottom: 15px; font-size: 8.5px; letter-spacing: .3em; padding-left: .3em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy :is(h1, h2) { font-size: clamp(30px, 10.4vw, 46px); line-height: .96; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy h1 { font-size: clamp(36px, 12.6vw, 56px); line-height: .92; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-mark { margin-top: 12px; font-size: 19px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-zh { margin-top: 13px; font-size: 11.5px; letter-spacing: .16em; padding-left: .16em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-zh { font-size: 13px; letter-spacing: .3em; padding-left: .3em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action { margin-top: 20px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action > span,
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-action:hover > span { min-height: 44px; padding: 0 20px 0 17px; font-size: 9px; letter-spacing: .22em; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-action { margin-top: 24px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :where(#chapter-knowledge) .fi-copy-action > span { min-height: 46px; padding: 0 22px 0 19px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-or { flex-basis: 100%; margin-top: 12px; font-size: 8.5px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer { inset: auto 0 0; justify-content: space-between; gap: 0; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer button > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer .fi-icon { width: 44px; height: 44px; padding: 13px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-next { order: 3; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-center { order: 2; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-stats { left: 54px; right: 54px; bottom: 0; border-radius: 22px; }
+  html[data-alpine-ui] .alp-stat { flex: 1 1 0; min-width: 0; padding: 7px 4px 6px; text-align: center; }
+  html[data-alpine-ui] .alp-stat:is([data-k="hdg"], [data-k="time"]) { display: none; }
+  html[data-alpine-ui] .alp-stat dt { font-size: 7px; letter-spacing: .16em; margin-bottom: 1px; }
+  html[data-alpine-ui] .alp-stat dd { font-size: 19px; }
+  html[data-alpine-ui] .alp-pin:not([data-phone]) { display: none; }
+}
+@media (max-height: 600px) and (min-width: 681px) {
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy :is(h1, h2) { font-size: 34px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy h1 { font-size: 46px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.alp-mark, .fi-copy-zh) { margin-top: 8px; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-copy-action, .alp-or) { margin-top: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-alpine-ui] .alp-pin,
+  html[data-alpine-ui] .alp-tag,
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-copy-action, .fi-explore) { transition: none; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-copy-action, .fi-explore):hover { transform: none; }
+}
+/* the readable/text mode never shows the decorative parts; its header keeps the dark ink even if the 3D page had
+   reached the canyon (the shared canyon rule would otherwise leave a white logo on the light page) */
+html[data-alpine-ui][data-render-mode="text"] .finnovation-ui .fi-header { --ui-ink: #17364f; --ui-muted: #526c7c; color: #17364f;  }
+html[data-alpine-ui][data-render-mode="text"] :is(.alp-mark, .alp-or, .alp-stats, .alp-labels) { display: none !important; }
+/* Cards (body.is-portfolio): the strip sits on the pale alpine haze — its words and the header turn navy. */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy { --ui-ink: #13233a; --ui-muted: #3b4d66; color: #13233a;  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy :is(h1, h2) { color: #13233a;  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy .fi-copy-kicker { color: #8a6a30;  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy .fi-copy-zh { color: #3b4d66;  }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy::before { display: none; }
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready.is-portfolio .finnovation-ui .fi-header {
+  /* white over the dark mountains, navy once the haze is up: --alp-bridge-ink (0 → 1) follows the cards bridge (alpine-ui.js frame()) */
+  --alp-bi: calc(var(--alp-bridge-ink, 1) * 100%);
+  --ui-ink: color-mix(in srgb, #13233a var(--alp-bi), var(--alp-white, #f6f4ee)); --ui-muted: color-mix(in srgb, #3b4d66 var(--alp-bi), #c5cfd8);
+  color: color-mix(in srgb, #13233a var(--alp-bi), var(--alp-white, #f6f4ee)); 
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready.is-portfolio .finnovation-ui .fi-header :is(.fi-topnav button, .fi-topnav a, nav button, nav a) { color: color-mix(in srgb, #13233a var(--alp-bi, 100%), var(--alp-white, #f6f4ee));  }
+/* Chapters 1–2 (opening world, 2026-10-23 visual director): the copy sits on the valley's bright eye-level haze over the
+   lake, so the scrim behind the two opening panels is deeper and wider — a band of shade, not a blob (title ≥ 4.5:1).
+   Not in the canyon (chapter 2's copy stays up into it): there the river already carries the title. */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui:not([data-scene="canyon"]) :is(:where(#chapter-knowledge), :where(#chapter-innovation)).fi-copy-panel::before {
+  left: -8%; right: -8%; top: -120px; bottom: -64px;
+  background: radial-gradient(closest-side, #0a1a2fb0, #0a1a2f8c 46%, #0a1a2f4d 72%, #0a1a2f14 90%, #0a1a2f00);
+}
+/* ==== VISUAL BOARD 2026-10-24 — 交稿前視覺處理（減法優先）；網址加 ?visual=classic 退回原樣 ====
+   gold only where it means something (EXPLORE, the current chapter tick, numbers); tighter type; one grain and
+   one vignette over canvas and page alike so the 2D layer sits in the same air as the 3D. */
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .alp-mark { color: rgba(246, 244, 238, .72); }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-zh { letter-spacing: .18em; padding-left: .18em; opacity: .86; }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-kicker { font-size: 10px; letter-spacing: .28em; }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy h2 { line-height: .92; letter-spacing: -.01em; }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-rail button:not([aria-current="step"]) { opacity: .5; }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-rail-number { color: rgba(246, 244, 238, .7); }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-rail button[aria-current="step"] .fi-rail-number { color: var(--alp-gold-hi); }
+/* chapter buttons (not the opening's solid gold one): a quiet mono link with a 1px rule instead of a gold pill */
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-panel:not(:where(#chapter-knowledge)) .fi-copy-action { margin-top: 24px; border: 0; border-radius: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-panel:not(:where(#chapter-knowledge)) .fi-copy-action > span,
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-panel:not(:where(#chapter-knowledge)) .fi-copy-action:hover > span {
+  min-height: 0; padding: 0 0 7px; color: rgba(246, 244, 238, .86); font: 500 11px/1 var(--alp-mono); letter-spacing: .22em;
+  border-bottom: 1px solid rgba(246, 244, 238, .35); 
+}
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-panel:not(:where(#chapter-knowledge)) .fi-copy-action:hover { background: none; transform: none; }
+html:where([data-alpine-ui]:not([data-visual="classic"]):not([data-render-mode="text"])) body.is-ready .finnovation-ui .fi-copy-panel:not(:where(#chapter-knowledge)) .fi-copy-action:hover > span { color: #f6f4ee; border-bottom-color: var(--alp-gold); }
+/* one vignette under the interface, one film grain over everything (alpine-ui.js makes the two layers) */
+html[data-alpine-ui]:not([data-visual="classic"]) .alp-vignette {
+  position: fixed; inset: 0; z-index: 6; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(5, 14, 26, .26));
+}
+html[data-alpine-ui]:not([data-visual="classic"]) .alp-grain {
+  position: fixed; inset: -50%; z-index: 9; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
+  background-image: var(--alp-grain-url, none); background-size: 160px 160px; animation: alp-grain 1s steps(6) infinite;
+}
+@keyframes alp-grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-3%, 2%); } 40% { transform: translate(2%, -3%); } 60% { transform: translate(-2%, 3%); } 80% { transform: translate(3%, 1%); } 100% { transform: translate(0, 0); } }
+@media (prefers-reduced-motion: reduce) { html[data-alpine-ui] .alp-grain { animation: none; } }
+/* copy deck 2026-10-24: Chinese big titles (hero slogan, 2-1 投資策略): wider tracking, upright mid-title, a readable measure for the long body */
+html[data-alpine-ui] .fi-copy .fi-copy-zh :is(.fi-zh-head, .fi-zh-mid, .fi-zh-body) { display: block; }
+html[data-alpine-ui] .fi-copy .fi-copy-zh .fi-zh-head { color: #f6f4ee; font-size: clamp(15px, 1.3vw, 21px); font-weight: 500; letter-spacing: .2em; line-height: 1.6; }
+html[data-alpine-ui] .fi-copy .fi-copy-zh .fi-zh-mid { margin-top: 10px; color: rgba(246, 244, 238, .74); font-size: 12px; font-weight: 400; letter-spacing: .4em; }
+html[data-alpine-ui] .fi-copy .fi-copy-zh .fi-zh-body { margin: 12px auto 0; max-width: 38em; color: rgba(246, 244, 238, .86); font-size: 13px; font-weight: 300; letter-spacing: .16em; line-height: 1.9; }
+html[data-alpine-ui] .fi-copy .fi-copy-zh .fi-zh-head + .fi-zh-body { margin-top: 10px; }
+/* ==== ONE TYPE SYSTEM 2026-10-24 (整站字體統一) ====
+   display = Newsreader (web font, identical on every platform; was Didot / Sitka Banner / Bodoni MT / Georgia depending on the visitor's OS)
+   ui      = Jost + Noto Sans TC (unchanged)
+   labels and numbers that used three different monospace stacks now use the same Jost, with tabular figures.
+   ?fonts=classic (data-fonts="classic") puts the platform stacks back. */
+html[data-alpine-ui]:not([data-fonts="classic"]), html[data-alpine-ui][data-alp-serif]:not([data-fonts="classic"]) {
+  --alp-display: "Montserrat", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+  --alp-sans: "Montserrat", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+  --alp-mono: "Montserrat", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+  --alp-num: "Montserrat", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* client 2026-10-24: every font on the page is Montserrat (Noto Sans TC only behind it, for Chinese). The stylesheets we share with other pages hard-code
+   "Jost" / serif stacks, so this normal-priority fallback supplies their family (the developer panels keep their own look). */
+html[data-alpine-ui]:not([data-fonts="classic"]) body :not(svg):not(svg *):not(.tuner):not(.tuner *):not(.lgp):not(.lgp *):not(.letters-panel):not(.letters-panel *) {
+  font-family: var(--alp-sans);
+}
+/* Legacy label defaults. Chapter headlines are owned by editorial-polish.css. */
+html[data-alpine-ui]:not([data-fonts="classic"]) body.is-ready .finnovation-ui .fi-copy-kicker { letter-spacing: .16em; }
+html[data-alpine-ui]:not([data-fonts="classic"]) body.is-ready .finnovation-ui .fi-copy-action > span { letter-spacing: .12em; }
+html[data-alpine-ui]:not([data-fonts="classic"]) body.is-ready .finnovation-ui .fi-copy .fi-copy-zh { letter-spacing: .08em; padding-left: 0; }
+html[data-alpine-ui]:not([data-fonts="classic"]) .fi-copy .fi-copy-zh .fi-zh-head { letter-spacing: .08em; }
+html[data-alpine-ui]:not([data-fonts="classic"]) .fi-copy .fi-copy-zh .fi-zh-mid { letter-spacing: .2em; }
+html[data-alpine-ui]:not([data-fonts="classic"]) .fi-copy .fi-copy-zh .fi-zh-body { letter-spacing: .06em; }
+html[data-alpine-ui]:not([data-fonts="classic"]) body.is-ready .finnovation-ui :is(.fi-rail button, .fi-topnav button, .fi-explore, .fi-menu-toggle) { letter-spacing: .1em; }
+/* Upright legacy text default; the editorial skin can override this normally. */
+html[data-alpine-ui]:not([data-fonts="classic"]) body *:not(svg):not(svg *) { font-style: normal;  }
+/* block 2: a one-line English title on wide screens */
+@media (min-width: 700px) { html[data-alpine-ui] .fi-copy :where(#chapter-innovation) h2 { white-space: nowrap; } }
+/* ==== VISUAL BOARD END ==== */
+
+/* ==== ALPINE-UI END ==== */

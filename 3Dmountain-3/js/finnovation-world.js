@@ -1,0 +1,769 @@
+/* =====================================================================
+   World epilogue — index1-1 only (<html data-epilogue="world">).
+   After the last portfolio card the page goes on: down through the cloud
+   deck to the planet seen from orbit (the markets Finnovation follows are
+   pinned on it), out into the dark, into the responsibility chapters over
+   moving water (media/ocean-loop-*.mp4: a seamless loop cut from
+   media/logo.mp4; the still images/world/ocean-*.jpg stands in until it
+   plays), and on to a white footer.
+
+   How it is built
+   · One fixed WebGL canvas (three.js, the page's own import map) draws all
+     that is not text: the sky, the planet and its air, the cloud deck we
+     fall through, the graded water of the last part. Its state is a pure function of
+     the scroll position, like the journey's — scroll back, it plays back.
+   · The text is plain HTML in a scroll container nobody scrolls but us
+     (overflow hidden). Wheel, keys and the cards' touch arrive from
+     main.js as deltas (world.take), touches that start on this layer are
+     read here; a critically damped spring turns them into scrollTop.
+     Because the container really scrolls, GSAP ScrollTrigger runs on it
+     unmodified (scroller: viewport): line reveals, the titles' letters
+     lighting up as they are read, the rules drawing themselves.
+   · Above its top it declines the wheel (take() → false), so the strip
+     gets it back; main.js closes it whenever the cards close.
+   ===================================================================== */
+import * as THREE from 'three';
+import { GRADE_GLSL, gradeVector } from './finnovation-grade.js?v=eb26a41a84';
+
+const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
+const SCROLL_TRIGGER_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/ScrollTrigger/+esm';
+const SPLIT_TEXT_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/SplitText/+esm';
+const asset = name => new URL('../images/world/' + name, import.meta.url).href;
+const film = name => new URL('../media/' + name, import.meta.url).href;
+const STYLE_URL = new URL('../css/world.css?v=9f8137b289', import.meta.url).href;
+
+/* The markets on the planet: label, latitude, longitude, tag. TAIPEI is home. */
+const MARKETS = [
+  ['TAIPEI', 25.03, 121.56, 'HQ'], ['HONG KONG', 22.32, 114.17], ['SHANGHAI', 31.23, 121.47], ['TOKYO', 35.68, 139.65],
+  ['SEOUL', 37.57, 126.98], ['SINGAPORE', 1.35, 103.82], ['SYDNEY', -33.87, 151.21], ['MUMBAI', 19.08, 72.88],
+  ['DUBAI', 25.2, 55.27], ['LONDON', 51.51, -.13], ['FRANKFURT', 50.11, 8.68], ['NEW YORK', 40.71, -74.01], ['SAN FRANCISCO', 37.77, -122.42]
+];
+
+/* The part of the planet the camera looks at, shipped at the source's full resolution
+   (images/world/earth-asia.jpg); the rest comes from the 2K whole-planet map. Must match
+   ROI in scripts/world/build-world-assets.cjs. */
+const EARTH_ROI = { lon0: 40, lon1: 180, lat0: -50, lat1: 62 };
+
+/* Colours, sRGB. SKY is the slate behind the planet, DEEP the dark it recedes into. */
+const LOOK = {
+  skyTop: '#5f6f80', skyBottom: '#425163', deepTop: '#0f1f2a', deepBottom: '#07131b',
+  ocean: '#1b2e42', oceanHi: '#2d4862', land: '#5a7590', landHi: '#a4bacd', ice: '#e3ebf2',
+  cloud: '#e8eef4', rim: '#bcd2e6', halo: '#c9dcec', deck: '#eef2f6', deckShade: '#b7c2cd',
+  photoLow: '#03111a', photoHigh: '#6e98a3'
+};
+
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+/* Run FN when the browser has a free moment (it is mounted while the cards are on screen: nothing it
+   prepares may cost the strip a frame). */
+/* BUSY (from the page): while it says so — the valley-to-cards bridge is moving — a step waits for the next free
+   moment after it, however long, instead of being forced in by the time-out. */
+const idle = (fn, busy) => new Promise(resolve => {
+  const go = () => (window.requestIdleCallback || (f => setTimeout(f, 40)))(() => { if (busy?.()) { setTimeout(go, 120); return; } resolve(fn()); }, { timeout: 1500 });
+  go();
+});
+/* Preparation steps run one per free moment, in order, so they never pile into one long frame even while the
+   visitor keeps scrolling the cards. Each is measured ("world …" in DevTools › Performance › Timings). */
+function createQueue(isDead, isBusy) {
+  let tail = Promise.resolve();
+  return (name, fn) => (tail = tail.then(() => idle(() => {
+    if (isDead()) return undefined;
+    const mark = 'world:' + name;
+    performance.mark(mark);
+    try { return fn(); } finally { try { performance.measure('world ' + name, mark); } catch { /* old browsers */ } }
+  }, isBusy)).catch(error => { console.warn('World epilogue: step "' + name + '" failed', error); }));
+}
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const mix = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+const FULLSCREEN_VERTEX = /* glsl */ `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+
+/* The sky behind the planet, the dark after it, and the ocean photograph
+   graded into that dark (with a slow refraction shimmer). */
+const BACKGROUND_FRAGMENT = /* glsl */ `
+uniform vec3 uSkyTop, uSkyBottom, uDeepTop, uDeepBottom, uPhotoLow, uPhotoHigh;
+uniform float uAlpha, uDeep, uPhotoMix, uPhotoShift, uTime, uVideoMix, uBright, uOwnColour;
+uniform sampler2D uPhoto, uDeck, uVideo;
+uniform vec2 uRes, uPhotoSize, uVideoSize;
+vec2 coverUv(vec2 uv, vec2 size) {
+  float ra = uRes.x / uRes.y, pa = size.x / size.y;
+  vec2 s = ra > pa ? vec2(1.0, pa / ra) : vec2(ra / pa, 1.0);
+  return (uv - 0.5) * s * 0.88 + 0.5;
+}
+varying vec2 vUv;
+${GRADE_GLSL}
+void main() {
+  vec3 sky = mix(uSkyBottom, uSkyTop, smoothstep(0.0, 1.0, vUv.y));
+  vec3 deep = mix(uDeepBottom, uDeepTop, smoothstep(0.0, 1.0, vUv.y));
+  vec3 col = mix(sky, deep, uDeep);
+  if (uPhotoMix > 0.001) {
+    float ra = uRes.x / uRes.y;
+    vec2 shift = vec2(0.0, uPhotoShift);
+    vec3 ph = texture2D(uPhoto, coverUv(vUv, uPhotoSize) + shift).rgb;
+    // the moving water: no extra shimmer on it, it moves by itself
+    if (uVideoMix > 0.001) ph = mix(ph, texture2D(uVideo, coverUv(vUv, uVideoSize) + shift).rgb, uVideoMix);
+    else {
+      vec2 uv = coverUv(vUv, uPhotoSize) + shift;
+      vec2 w = texture2D(uDeck, uv * vec2(0.6, 1.2) + vec2(uTime * 0.004, 0.0)).rg - 0.5;
+      ph = texture2D(uPhoto, uv + w * 0.006 + 0.0012 * vec2(sin(uv.y * 38.0 + uTime * 0.7), cos(uv.x * 31.0 - uTime * 0.55))).rgb;
+    }
+    float l = dot(ph, vec3(0.3, 0.59, 0.11));
+    vec3 graded = mix(uPhotoLow, uPhotoHigh, smoothstep(0.05, 0.85, l));
+    // OWN COLOUR 1 is the film exactly as it is: no dimming, no vignette, no page grade over it.
+    graded = mix(graded, ph * mix(0.62, 1.0, uOwnColour), uOwnColour) * uBright;
+    float v = smoothstep(1.25, 0.35, length((vUv - 0.5) * vec2(ra, 1.0) * 0.9));
+    graded *= mix(mix(0.55, 1.0, v), 1.0, uOwnColour);
+    graded *= mix(mix(0.8, 1.0, smoothstep(0.0, 0.55, vUv.y)), 1.0, uOwnColour);
+    col = mix(col, graded, uPhotoMix);
+  }
+  col = mix(fiGrade(col), col, uPhotoMix * uOwnColour);
+  // written premultiplied: this quad is drawn without blending, first of the opaque list
+  gl_FragColor = vec4(col * uAlpha, uAlpha);
+}
+`;
+
+const EARTH_VERTEX = /* glsl */ `
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+void main() {
+  vUv = uv;
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vPosW = wp.xyz;
+  vNormalW = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+
+/* The planet: one grey tone map read through the palette (oceans dark slate,
+   land steel blue, ice near white), drifting cloud with its shadow, a soft
+   terminator that never goes black, and the air brightening the limb. */
+const EARTH_FRAGMENT = /* glsl */ `
+uniform sampler2D uTone, uClouds, uRoi;
+uniform vec4 uRoiRect;
+uniform vec3 uOcean, uOceanHi, uLand, uLandHi, uIce, uCloud, uRim, uSun;
+uniform float uTime, uDim, uReady, uRoiReady, uCloudAmount, uScrim;
+uniform vec2 uRes;
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+${GRADE_GLSL}
+void main() {
+  float t = texture2D(uTone, vUv).r;
+  // inside the region, the full-resolution map, feathered into the whole-planet one at its border
+  vec2 ruv = (vUv - uRoiRect.xy) / (uRoiRect.zw - uRoiRect.xy);
+  float edge = min(min(ruv.x, 1.0 - ruv.x), min(ruv.y, 1.0 - ruv.y));
+  float inRoi = smoothstep(0.0, 0.025, edge) * uRoiReady;
+  if (inRoi > 0.0) t = mix(t, texture2D(uRoi, clamp(ruv, 0.0, 1.0)).r, inRoi);
+  t = mix(0.12, t, uReady);
+  float water = 1.0 - smoothstep(0.2, 0.33, t);
+  vec3 sea = mix(uOcean, uOceanHi, smoothstep(0.07, 0.22, t));
+  vec3 land = mix(uLand, uLandHi, smoothstep(0.42, 0.82, t));
+  land = mix(land, uIce, smoothstep(0.86, 0.96, t));
+  vec3 col = mix(land, sea, water);
+  vec2 cuv = vUv + vec2(uTime * 0.0011, 0.0);
+  float cloud = texture2D(uClouds, cuv).r * uReady * uCloudAmount;
+  float shade = texture2D(uClouds, cuv + vec2(0.0022, -0.0016)).r * uReady * uCloudAmount;
+  col *= 1.0 - shade * 0.28;
+  col = mix(col, uCloud, cloud * 0.86);
+  vec3 N = normalize(vNormalW), V = normalize(cameraPosition - vPosW);
+  float lit = smoothstep(-0.45, 0.75, dot(N, uSun)) * 0.72 + 0.34;
+  col *= lit;
+  float facing = max(dot(N, V), 0.0);
+  col = mix(col, uRim, pow(1.0 - facing, 2.6) * 0.72);
+  col = fiGrade(col);
+  // a quiet scrim under the lower half of the frame, where the statement scrolls over the planet
+  col *= 1.0 - uScrim * (1.0 - smoothstep(0.0, 0.62, gl_FragCoord.y / uRes.y));
+  col *= 1.0 - uDim;
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+/* The air outside the limb: brightest where the line of sight grazes the planet, gone at the shell. */
+const HALO_FRAGMENT = /* glsl */ `
+uniform vec3 uHalo;
+uniform float uEdge, uStrength;
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+${GRADE_GLSL}
+void main() {
+  float d = dot(normalize(vNormalW), normalize(cameraPosition - vPosW));
+  float g = pow(clamp(-d / uEdge, 0.0, 1.0), 2.2);
+  gl_FragColor = vec4(fiGrade(uHalo) * g * uStrength, g * uStrength);
+}
+`;
+
+/* The cloud deck between the cards and the planet: three sheets of the same
+   cloud map at different scales, approaching (zoom) and tearing open from the
+   middle (part) as we fall through. */
+const DECK_FRAGMENT = /* glsl */ `
+uniform sampler2D uDeck;
+uniform vec3 uLight, uShade;
+uniform float uCover, uPart, uZoom, uTime, uFill, uSoft;
+uniform vec2 uRes;
+varying vec2 vUv;
+${GRADE_GLSL}
+float sheet(vec2 uv, float scale, vec2 drift, float blur) {
+  vec2 p = (uv - 0.5) * vec2(uRes.x / uRes.y, 1.0) / scale + 0.5 + drift;
+  return texture2D(uDeck, p * vec2(0.5, 1.0), blur).r;
+}
+void main() {
+  float z = uZoom;
+  // three sheets of the same map approaching at different rates; read from soft mip levels, so no hard blotches
+  float b = uSoft * 2.0;   // softness: read from blurrier mip levels and fade over a wider band
+  float s1 = sheet(vUv, mix(2.3, 0.5, z), vec2(uTime * 0.004, 0.11), 1.2 + b);
+  float s2 = sheet(vUv + 0.17, mix(3.3, 0.78, z), vec2(-uTime * 0.003, 0.37), 0.6 + b * 0.8);
+  float s3 = sheet(vUv + 0.29, mix(4.8, 1.15, z), vec2(uTime * 0.002, 0.63), b * 0.6);
+  float thr = uPart * 0.6, wid = 0.36 + uSoft * 0.5;
+  float d1 = smoothstep(thr - 0.08, thr + wid, s1), d2 = smoothstep(thr, thr + wid, s2), d3 = smoothstep(thr + 0.06, thr + wid + 0.04, s3);
+  float dens = 1.0 - (1.0 - d1) * (1.0 - d2 * 0.85) * (1.0 - d3 * 0.65);
+  dens = mix(dens, 1.0, uFill);
+  // the opening grows from the middle, its edge torn by the cloud itself
+  float r = length((vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0)) + (s1 - 0.5) * 0.4;
+  float hole = smoothstep(uPart * 1.3 - 0.35, uPart * 1.3 + 0.18, r);
+  float alpha = clamp(dens * uCover * mix(1.0, hole, smoothstep(0.0, 0.2, uPart)), 0.0, 1.0);
+  // lit from above: thick parts a touch cooler, the top of the frame lighter
+  float lightness = 0.58 + 0.42 * clamp(s1 * 0.55 + s3 * 0.45, 0.0, 1.0);
+  vec3 col = mix(uShade, uLight, lightness);
+  col = mix(col, uLight, 0.3 * vUv.y);
+  gl_FragColor = vec4(fiGrade(col), alpha);
+}
+`;
+
+export function mountWorld({ root, reducedMotion = false, epilogue = () => null, grade = () => null, mist = () => null, video: look = () => null, busy = null }) {
+  if (!root) throw new Error('World epilogue: no #fiWorld in the page');
+  const viewport = root.querySelector('.fiw-viewport'), content = root.querySelector('.fiw-content');
+  const canvas = root.querySelector('.fiw-canvas'), pinLayer = root.querySelector('.fiw-pins');
+  const navButtons = [...root.querySelectorAll('.fiw-chapters [data-world-go]')];
+  const part = name => root.querySelector(`[data-world-part="${name}"]`);
+  const ui = document.querySelector('.finnovation-ui');
+
+  // ---------- style, then show the (still invisible) layer so it can be measured ----------
+  const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = STYLE_URL;
+  const styled = new Promise(resolve => { style.onload = resolve; style.onerror = resolve; });
+  document.head.append(style);
+  const later = createQueue(() => disposed, busy);
+  /* The first layout of this much CJK text is expensive (every Noto Sans TC subset gets shaped once):
+     reveal it one block per free moment, forcing each block's layout there and then. */
+  const chunks = [part('global'), root.querySelector('.fiw-resp > .fiw-grid'), ...root.querySelectorAll('.fiw-resp [data-block]'), part('contact')].filter(Boolean);
+  /* A block with several parts is laid out a part at a time (only the parts that are shown to begin with: a closed
+     tab stays closed). */
+  const pieces = chunks.flatMap(el => { const kids = [...el.children].filter(kid => !kid.hidden); return kids.length > 2 ? kids : [el]; });
+  for (const el of pieces) el.hidden = true;
+  const revealAll = () => { root.hidden = false; for (const el of pieces) el.hidden = false; };
+  styled.then(() => {
+    later('layout shell', () => { root.hidden = false; });
+    pieces.forEach((el, i) => later('layout ' + (el.dataset.worldPart || el.classList[0] || 'piece ' + i), () => { el.hidden = false; void el.offsetHeight; }));
+    later('measure', measure);
+  });
+
+  // ---------- state ----------
+  let open = false, disposed = false, raf = 0, last = 0;
+  let y = 0, yt = 0, vy = 0, written = -1, maxY = 1;
+  let W = innerWidth, H = innerHeight;
+  const at = { clouds: 0, global: 0, globalH: 1, resp: 0, block: 0, footer: 0, footerH: 0 };
+  let clock = null;
+
+  // ---------- renderer ----------
+  const small = Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4);
+  const maxDpr = Math.min(window.devicePixelRatio || 1, small ? 1.75 : 2);
+  let dpr = maxDpr;
+  const color = hex => new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace);   // shaders work in sRGB values as written
+  const camera = new THREE.PerspectiveCamera(30, W / H, .05, 20);
+  const earth = new THREE.Group();
+  const uGrade = { value: new THREE.Vector4(0, 1, 0, 0) }, _g = [0, 1, 0, 0];
+  let renderer = null, scene = null, background = null, globe = null, halo = null, deck = null, blank = null;
+  /* The GL side, built in a free moment after mounting (or at once, if the visitor gets here first). */
+  let fullscreen = null;
+  /* In four parts, so each fits a free moment (the context; the sky; the planet; the cloud deck). BUILD does
+     them all at once, for a visitor who gets here before the free moments have. */
+  function build() { buildRenderer(); buildBackground(); buildEarth(); buildHalo(); buildDeck(); }
+  function buildRenderer() {
+    if (renderer || disposed) return;
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(W, H, false);
+    scene = new THREE.Scene();
+  }
+  function buildBackground() {
+    if (background || disposed || !renderer) return;
+    blank = new THREE.DataTexture(new Uint8Array([30, 30, 30, 255]), 1, 1); blank.needsUpdate = true;
+    fullscreen ??= new THREE.PlaneGeometry(2, 2);
+    background = new THREE.Mesh(fullscreen, new THREE.ShaderMaterial({
+      vertexShader: FULLSCREEN_VERTEX, fragmentShader: BACKGROUND_FRAGMENT, blending: THREE.NoBlending, depthTest: false, depthWrite: false,
+      uniforms: {
+        uSkyTop: { value: color(LOOK.skyTop) }, uSkyBottom: { value: color(LOOK.skyBottom) },
+        uDeepTop: { value: color(LOOK.deepTop) }, uDeepBottom: { value: color(LOOK.deepBottom) },
+        uPhotoLow: { value: color(LOOK.photoLow) }, uPhotoHigh: { value: color(LOOK.photoHigh) },
+        uAlpha: { value: 0 }, uDeep: { value: 0 }, uPhotoMix: { value: 0 }, uPhotoShift: { value: 0 }, uTime: { value: 0 },
+        uPhoto: { value: blank }, uDeck: { value: blank }, uRes: { value: new THREE.Vector2(W, H) }, uPhotoSize: { value: new THREE.Vector2(16, 9) }, uGrade,
+        uVideo: { value: blank }, uVideoSize: { value: new THREE.Vector2(16, 9) }, uVideoMix: { value: 0 }, uBright: { value: 1 }, uOwnColour: { value: .22 }
+      }
+    }));
+    background.frustumCulled = false; background.renderOrder = 0;
+
+    scene.add(background);
+  }
+  function buildEarth() {
+    if (globe || disposed || !renderer || !blank) return;
+    const sun = new THREE.Vector3(-.55, .62, .56).normalize();
+    globe = new THREE.Mesh(new THREE.SphereGeometry(1, small ? 128 : 192, small ? 96 : 144), new THREE.ShaderMaterial({
+      vertexShader: EARTH_VERTEX, fragmentShader: EARTH_FRAGMENT,
+      uniforms: {
+        uTone: { value: blank }, uClouds: { value: blank }, uRoi: { value: blank }, uSun: { value: sun },
+        uRoiRect: { value: new THREE.Vector4((EARTH_ROI.lon0 + 180) / 360, (EARTH_ROI.lat0 + 90) / 180, (EARTH_ROI.lon1 + 180) / 360, (EARTH_ROI.lat1 + 90) / 180) },
+        uRoiReady: { value: 0 }, uScrim: { value: .34 }, uRes: { value: new THREE.Vector2(W * dpr, H * dpr) },
+        uOcean: { value: color(LOOK.ocean) }, uOceanHi: { value: color(LOOK.oceanHi) }, uLand: { value: color(LOOK.land) },
+        uLandHi: { value: color(LOOK.landHi) }, uIce: { value: color(LOOK.ice) }, uCloud: { value: color(LOOK.cloud) }, uRim: { value: color(LOOK.rim) },
+        uTime: { value: 0 }, uDim: { value: 0 }, uReady: { value: 0 }, uCloudAmount: { value: .78 }, uGrade
+      }
+    }));
+    globe.renderOrder = 1;
+    earth.add(globe);
+    scene.add(earth);
+  }
+  function buildHalo() {
+    if (halo || disposed || !globe) return;
+    halo = new THREE.Mesh(new THREE.SphereGeometry(1.075, 96, 64), new THREE.ShaderMaterial({
+      vertexShader: EARTH_VERTEX, fragmentShader: HALO_FRAGMENT, side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uHalo: { value: color(LOOK.halo) }, uEdge: { value: .36 }, uStrength: { value: 1 }, uGrade }
+    }));
+    halo.renderOrder = 2;
+    earth.add(halo);
+
+    scene.add(earth);
+  }
+  function buildDeck() {
+    if (deck || disposed || !renderer || !blank) return;
+    fullscreen ??= new THREE.PlaneGeometry(2, 2);
+    deck = new THREE.Mesh(fullscreen, new THREE.ShaderMaterial({
+      vertexShader: FULLSCREEN_VERTEX, fragmentShader: DECK_FRAGMENT, transparent: true, depthTest: false, depthWrite: false,
+      uniforms: {
+        uDeck: { value: blank }, uLight: { value: color(LOOK.deck) }, uShade: { value: color(LOOK.deckShade) },
+        uCover: { value: 0 }, uPart: { value: 0 }, uZoom: { value: 0 }, uTime: { value: 0 }, uFill: { value: 1 }, uSoft: { value: .5 }, uRes: { value: new THREE.Vector2(W, H) }, uGrade
+      }
+    }));
+    deck.frustumCulled = false; deck.renderOrder = 3;
+    scene.add(deck);
+  }
+
+  // ---------- textures ----------
+  // Fetched and decoded off the main thread as soon as the world mounts, so during the bridge rather than after it. The textures
+  // are made once the deck has set the anisotropy. An ImageBitmap ignores texture.flipY, so the picture is flipped at decode.
+  const bitmap = url => fetch(url).then(r => r.ok ? r.blob() : Promise.reject(new Error(r.status + ' ' + url)))
+    .then(blob => createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }))
+    .catch(error => { console.warn('World epilogue: texture unavailable', error); return null; });
+  const pictures = [asset('earth-2k.jpg'), asset(small ? 'earth-asia-m.jpg' : 'earth-asia.jpg'), asset('clouds-2k.jpg'), asset(small ? 'ocean-1280.jpg' : 'ocean-2400.jpg')].map(bitmap);
+  const makeTexture = (image, setup) => {
+    if (!image) return null;
+    try { const t = new THREE.Texture(image); t.flipY = false; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; setup?.(t); t.needsUpdate = true; return t; }
+    catch (error) { console.warn('World epilogue: texture unavailable', error); return null; }
+  };
+  let anisotropy = 4;
+  const grey = texture => { texture.format = THREE.RedFormat; texture.internalFormat = 'R8'; texture.colorSpace = THREE.NoColorSpace; texture.anisotropy = anisotropy; };
+  const textures = [];
+  later('gl context', buildRenderer); later('gl sky', buildBackground); later('gl planet', buildEarth); later('gl halo', buildHalo);
+  const ready = later('gl deck', () => { buildDeck(); anisotropy = Math.min(8, renderer?.capabilities.getMaxAnisotropy() || 4); }).then(() => Promise.all(pictures)).then(([earth, asia, cloud, ocean]) => [
+    makeTexture(earth, t => { grey(t); t.wrapS = THREE.RepeatWrapping; }),
+    makeTexture(asia, grey),
+    makeTexture(cloud, t => { grey(t); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.MirroredRepeatWrapping; }),
+    makeTexture(ocean, t => { t.colorSpace = THREE.NoColorSpace; t.anisotropy = anisotropy; })
+  ]).then(async ([tone, roi, clouds, photo]) => {
+    if (disposed || !renderer) { for (const t of [tone, roi, clouds, photo]) t?.dispose(); return; }
+    textures.push(tone, roi, clouds, photo);
+    if (tone) globe.material.uniforms.uTone.value = tone;
+    if (roi) { globe.material.uniforms.uRoi.value = roi; globe.material.uniforms.uRoiReady.value = 1; }
+    if (clouds) { globe.material.uniforms.uClouds.value = clouds; deck.material.uniforms.uDeck.value = clouds; background.material.uniforms.uDeck.value = clouds; }
+    if (photo) { background.material.uniforms.uPhoto.value = photo; background.material.uniforms.uPhotoSize.value.set(photo.image.width, photo.image.height); }
+    globe.material.uniforms.uReady.value = tone && clouds ? 1 : 0;
+    // Upload (one texture per free moment) and compile now, while the cards are on screen, not on the first frame we are needed.
+    for (const [name, t] of [['tone', tone], ['region', roi], ['clouds', clouds], ['photo', photo]]) if (t) await later('upload ' + name, () => renderer.initTexture(t));
+    await later('compile', () => (renderer.compileAsync ? renderer.compileAsync(scene, camera) : Promise.resolve(renderer.compile(scene, camera))).catch(() => { /* compiled on first use */ }));
+  });
+
+  // ---------- the last part's video ----------
+  // Fetched when the visitor gets within two screens of it, playing only while it is on screen; with reduced
+  // motion the still stays. Small screens get the 480p loop.
+  let video = null, videoTexture = null, videoMix = 0, videoWanted = false;
+  function frameVideo(s, speed) {
+    const near = open && !reducedMotion && y > at.block - H * 2.2;
+    const showing = open && s.photo > .001 && s.footerTop > 1;
+    if (near && !video) {
+      video = document.createElement('video');
+      Object.assign(video, { muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
+      video.setAttribute('muted', ''); video.setAttribute('playsinline', '');
+      video.src = film(small ? 'ocean-loop-480.mp4' : 'ocean-loop-720.mp4');
+      video.addEventListener('loadeddata', () => {
+        if (disposed || !renderer) return;
+        videoTexture = new THREE.VideoTexture(video);
+        videoTexture.colorSpace = THREE.NoColorSpace; videoTexture.generateMipmaps = false; videoTexture.minFilter = THREE.LinearFilter;
+        background.material.uniforms.uVideo.value = videoTexture;
+        background.material.uniforms.uVideoSize.value.set(video.videoWidth, video.videoHeight);
+      }, { once: true });
+    }
+    if (video) {
+      video.playbackRate = clamp(speed, .25, 2);
+      if (showing && !videoWanted) { videoWanted = true; video.play().catch(() => { videoWanted = false; }); }
+      else if (!showing && videoWanted) { videoWanted = false; video.pause(); }
+    }
+    // the moving water fades in over the still once its frames arrive
+    const target = videoTexture && !video.paused && video.readyState >= 2 ? 1 : 0;
+    videoMix += (target - videoMix) * .08; if (Math.abs(target - videoMix) < .002) videoMix = target;
+    if (background) background.material.uniforms.uVideoMix.value = videoMix;
+  }
+
+  // ---------- the market labels ----------
+  const pins = MARKETS.map(([name, lat, lon, tag]) => {
+    const el = document.createElement('div'); el.className = 'fiw-pin' + (tag ? ' is-home' : '');
+    el.innerHTML = `<span>${name}${tag ? ` <small>${tag}</small>` : ''}</span>`;
+    pinLayer.append(el);
+    const la = THREE.MathUtils.degToRad(lat), lo = THREE.MathUtils.degToRad(lon);
+    return { el, dir: new THREE.Vector3(Math.cos(la) * Math.cos(lo), Math.sin(la), -Math.cos(la) * Math.sin(lo)), shown: -1, x: NaN, y: NaN };
+  });
+  const _p = new THREE.Vector3(), _v = new THREE.Vector3();
+
+  // ---------- measuring the page ----------
+  function measure() {
+    W = innerWidth; H = innerHeight;
+    const top = el => el ? el.getBoundingClientRect().top - content.getBoundingClientRect().top : 0;
+    const g = part('global'), r = part('responsibility'), f = part('contact');
+    at.clouds = part('clouds')?.offsetHeight || H * 1.7;
+    at.global = top(g); at.globalH = g?.offsetHeight || H;
+    at.resp = top(r); at.block = top(r?.querySelector('[data-block]'));
+    at.footer = top(f); at.footerH = f?.offsetHeight || 0;
+    maxY = Math.max(1, content.offsetHeight - H);
+    yt = clamp(yt, 0, maxY); y = clamp(y, 0, maxY);
+  }
+
+  // ---------- the clocks: everything on screen is a function of y ----------
+  function sample(yy) {
+    const c = clamp(yy / at.clouds);
+    const g = clamp((yy - at.global) / Math.max(1, at.globalH));
+    const recede = smooth(.62, 1.02, (yy - at.global) / Math.max(1, at.globalH));
+    return {
+      c, g, recede,
+      exit: smooth(0, .4, c),                                         // the cards hand over
+      cover: smooth(.02, .36, c),                                     // the deck rolls in…
+      part: smooth(.5, .97, c),                                       // …and tears open
+      zoom: smooth(.3, 1, c),
+      reveal: smooth(.5, 1, c),                                       // the planet comes up through it
+      photo: smooth(at.block - H * 1.15, at.block - H * .3, yy),       // the ocean under the chapters
+      footerTop: at.footer - yy                                       // the footer's top edge on screen
+    };
+  }
+
+  // ---------- frame ----------
+  const _offset = { x: 0, y: 0 };
+  function frameEarth(s, time) {
+    if (!globe) return;
+    const live = s.reveal > .001 && s.recede < .999;
+    earth.visible = live;
+    if (!live) return;
+    const base = Math.sqrt(W * H), portrait = W < H;
+    const r = ease(s.reveal), gl = smooth(0, 1, s.g), rec = ease(s.recede);
+    // Close and low as the deck opens, settling to the reference framing: the limb across the upper left.
+    let R = base * mix(portrait ? 1.6 : 1.5, portrait ? 1.25 : 1.15, r) * mix(1, .96, gl);
+    let cx = W * mix(portrait ? .66 : .74, portrait ? .7 : .79, r) + W * .02 * gl, cy = H * mix(portrait ? 1.42 : 1.56, portrait ? 1.22 : 1.37, r);
+    // Leaving: the camera tilts up to the dark, the planet sinks away bottom-right, its lit limb last to go.
+    cx = mix(cx, W * (portrait ? .6 : .66), rec * .6); cy = mix(cy, H * (portrait ? 2.05 : 2.4), rec);
+    // From over Taiwan, sweeping west across Asia as the section scrolls.
+    const lon = THREE.MathUtils.degToRad(mix(148, 138, r) - 34 * gl), lat = THREE.MathUtils.degToRad(mix(-12, 2, r) - 5 * gl);
+    earth.rotation.set(lat, -Math.PI / 2 - lon, 0, 'XYZ');
+    // Distance that makes the sphere's silhouette R pixels, then a lens shift puts its centre at (cx, cy).
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const alpha = Math.atan(2 * R / H * tanHalf), d = Math.max(1.06, 1 / Math.sin(alpha));
+    camera.position.set(0, 0, d); camera.lookAt(0, 0, 0);
+    _offset.x = W / 2 - cx; _offset.y = H / 2 - cy;
+    camera.setViewOffset(W, H, _offset.x, _offset.y, W, H);
+    camera.updateMatrixWorld();
+    const u = globe.material.uniforms;
+    u.uTime.value = time; u.uDim.value = .35 * rec + .1 * (1 - r); u.uRes.value.set(W * dpr, H * dpr); u.uScrim.value = .34 * (1 - rec);
+    halo.material.uniforms.uStrength.value = mix(.6, 1, r) * (1 - .6 * rec);
+  }
+
+  function framePins(s) {
+    const show = earth.visible ? smooth(.72, 1, s.reveal) * (1 - smooth(.25, .7, s.recede)) : 0;
+    const q = earth.quaternion;
+    for (const pin of pins) {
+      let o = 0, px = pin.x, py = pin.y;
+      if (show > 0) {
+        _p.copy(pin.dir).applyQuaternion(q);
+        const facing = _p.dot(_v.copy(camera.position).sub(_p).normalize());
+        if (facing > 0) {
+          _v.copy(_p).project(camera);
+          px = (_v.x * .5 + .5) * W; py = (-_v.y * .5 + .5) * H;
+          const inside = px > 24 && px < W - 140 && py > 90 && py < H - 70;
+          o = inside ? show * smooth(.04, .22, facing) : 0;
+        }
+      }
+      if (o < .01) o = 0;
+      if (Math.abs(o - pin.shown) > .004 || (o > 0 && (Math.abs(px - pin.x) > .2 || Math.abs(py - pin.y) > .2))) {
+        pin.el.style.opacity = o.toFixed(3);
+        if (o > 0) { pin.el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0)`; pin.x = px; pin.y = py; }
+        pin.shown = o;
+      }
+    }
+  }
+
+  let painted = '';
+  function paintPage(s) {
+    const pf = epilogue();
+    pf?.setExit(s.exit);
+    root.classList.toggle('is-live', s.c > .4);
+    root.classList.toggle('is-chapters', s.c > .9 && W > 960 && s.footerTop > H * .62);
+    const dark = s.c > .45 && s.footerTop > 70, light = s.footerTop < H * .5;
+    const key = `${s.c > .28}|${dark}|${light}`;
+    if (key !== painted) {
+      painted = key;
+      document.body.classList.toggle('is-world', s.c > .28);
+      document.body.classList.toggle('is-world-dark', dark);
+      root.classList.toggle('is-light', light);
+    }
+    // chapter list: which part is under the middle of the screen, and how far through it we are
+    const mid = y + H * .5, spans = [[at.global, at.resp], [at.resp, at.footer], [at.footer, at.footer + at.footerH]];
+    navButtons.forEach((b, i) => {
+      const [a, z] = spans[i], on = mid >= a && (mid < z || i === spans.length - 1);
+      if (on !== (b.getAttribute('aria-current') === 'step')) { if (on) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); }
+      b.style.setProperty('--p', clamp((mid - a) / Math.max(1, z - a)).toFixed(3));
+    });
+  }
+
+  let frames = 0, shown = true;
+  function render(s, time) {
+    if (!renderer || !deck) build();   // whatever the free moments have not done yet
+    if (!renderer) return;
+    const bu = background.material.uniforms, du = deck.material.uniforms;
+    gradeVector(grade() || undefined, _g); uGrade.value.set(_g[0], _g[1], _g[2], _g[3]);
+    bu.uAlpha.value = smooth(.3, .46, s.c);
+    bu.uDeep.value = smooth(.15, .9, s.recede);
+    bu.uPhotoMix.value = s.photo;
+    // the photograph drifts up slower than the text, across the whole chapter
+    bu.uPhotoShift.value = s.photo > 0 ? mix(.07, -.07, clamp((y - at.block + H) / Math.max(1, at.footer - at.block + H))) : 0;
+    bu.uTime.value = time;
+    const M = mist() || {}, V = look() || {}, num = (v, d) => Number.isFinite(+v) ? +v : d;
+    const deckAmount = clamp(num(M.deck, 1), 0, 1.5);
+    du.uSoft.value = clamp(num(M.soft, .5));
+    globe.material.uniforms.uCloudAmount.value = clamp(num(M.planet, .78));
+    bu.uBright.value = clamp(num(V.brightness, 1), .3, 2); bu.uOwnColour.value = clamp(num(V.colour, 1));
+    frameVideo(s, num(V.speed, 1));
+    du.uCover.value = Math.min(1, deckAmount * (reducedMotion ? smooth(.1, .3, s.c) * (1 - smooth(.5, .7, s.c)) : s.cover * (1 - smooth(.9, 1, s.c))));
+    du.uPart.value = reducedMotion ? 0 : s.part; du.uZoom.value = reducedMotion ? 0 : s.zoom; du.uTime.value = time;
+    // Textured while it rolls in, a solid white-out while we are inside it, then it tears open.
+    du.uFill.value = clamp(1 - .3 * smooth(.04, .22, s.c) * (1 - smooth(.24, .38, s.c)) - s.part);
+    deck.visible = du.uCover.value > .002;
+    frameEarth(s, time);
+    // Nothing of the canvas shows once the white footer fills the screen.
+    const visible = s.footerTop > 1 && (bu.uAlpha.value > .001 || deck.visible);
+    if (visible !== shown) { shown = visible; canvas.style.visibility = visible ? 'visible' : 'hidden'; }
+    if (!visible) return;
+    renderer.render(scene, camera);
+    // Adaptive resolution: if frames come slower than ~40/s, draw fewer pixels; climb back when there is room.
+    if (++frames % 45 === 0 && clock) {
+      if (clock.avgMs > 24 && dpr > 1) setDpr(dpr - .25);
+      else if (clock.avgMs < 14 && dpr < maxDpr) setDpr(dpr + .25);
+    }
+  }
+  function setDpr(value) { dpr = clamp(value, 1, maxDpr); renderer?.setPixelRatio(dpr); renderer?.setSize(W, H, false); }
+
+  function frame(now) {
+    raf = 0; if (!open || disposed || document.hidden) return;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+    clock = clock || { avgMs: 16, lastDt: dt };
+    clock.avgMs = mix(clock.avgMs, dt * 1000, .08); clock.lastDt = dt;
+    // The journey's spring (critically damped, ~10/s): wheel steps glide, a fling carries.
+    if (reducedMotion) { y = yt; vy = 0; }
+    else {
+      const omega = 9.5, x = y - yt, decay = Math.exp(-omega * dt), temp = (vy + omega * x) * dt;
+      y = yt + (x + temp) * decay; vy = (vy - omega * temp) * decay;
+      if (Math.abs(y - yt) < .05 && Math.abs(vy) < .5) { y = yt; vy = 0; }
+    }
+    if (Math.abs(viewport.scrollTop - y) > .35) { written = y; viewport.scrollTop = y; }
+    const s = sample(y);
+    paintPage(s);
+    render(s, now / 1000);
+    framePins(s);
+    raf = requestAnimationFrame(frame);
+  }
+  function run() { if (!raf && open && !disposed && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+
+  // A focus move (Tab into the footer) scrolls the container natively: adopt it.
+  viewport.addEventListener('scroll', () => {
+    if (!open || Math.abs(viewport.scrollTop - written) < 1.5) return;
+    y = yt = clamp(viewport.scrollTop, 0, maxY); vy = 0; written = y; run();
+  }, { passive: true });
+  root.addEventListener('focusin', event => {
+    if (!open || !viewport.contains(event.target)) return;
+    const r = event.target.getBoundingClientRect();
+    if (r.top < 80 || r.bottom > H - 60) { yt = clamp(y + r.top - H * .45, 0, maxY); run(); }
+  });
+
+  // ---------- input ----------
+  const toPixels = (delta, source) => source === 'touch' ? delta * Math.max(580, H * .8) / 1.9 : delta * Math.max(720, H * .85);
+  let touch = null, samples = [];
+  function scrollPx(px, source) {
+    if (!open) return false;
+    if (px < 0 && yt <= 0 && y < 2) { close(); return false; }
+    yt = clamp(yt + px, 0, maxY);
+    if (source === 'touch') { const t = performance.now(); samples.push([t, px]); while (samples.length && t - samples[0][0] > 110) samples.shift(); }
+    run(); return true;
+  }
+  function fling() {
+    const t = performance.now(); samples = samples.filter(([at]) => t - at < 110);
+    if (samples.length < 2 || reducedMotion) { samples = []; return; }
+    const span = Math.max(16, t - samples[0][0]), v = samples.reduce((a, [, px]) => a + px, 0) / span * 1000;
+    samples = [];
+    if (Math.abs(v) < 220) return;
+    yt = clamp(yt + clamp(v * .33, -H * 1.6, H * 1.6), 0, maxY); run();
+  }
+  // Touches that start on this layer (main.js leaves [data-world-ui] alone).
+  viewport.addEventListener('pointerdown', event => {
+    if (!open || event.pointerType !== 'touch') return;
+    touch = { id: event.pointerId, y: event.clientY }; samples = [];
+  }, { passive: true });
+  const onMove = event => {
+    if (!touch || event.pointerId !== touch.id) return;
+    const dy = touch.y - event.clientY; touch.y = event.clientY;
+    if (!dy) return;
+    // Pulled down past the top: give the rest of this touch back to the cards.
+    if (!scrollPx(dy, 'touch')) epilogue()?.take(dy * 1.9 / Math.max(580, H * .8));
+  };
+  const onUp = event => {
+    if (touch && event.pointerId === touch.id) { touch = null; fling(); return; }
+    // Touches that started on the cards reach us through take(); fling them on release too.
+    if (event.pointerType === 'touch' && samples.length) fling();
+  };
+  addEventListener('pointermove', onMove, { passive: true });
+  addEventListener('pointerup', onUp, { passive: true }); addEventListener('pointercancel', onUp, { passive: true });
+
+  // ---------- navigation ----------
+  const target = name => name === 'global' ? at.global + H * .2 : name === 'responsibility' ? at.resp + H * .3 : name === 'contact' ? maxY : 0;
+  root.addEventListener('click', event => {
+    const go = event.target.closest('[data-world-go]');
+    if (go) { event.preventDefault(); yt = clamp(target(go.dataset.worldGo), 0, maxY); run(); return; }
+    const chapter = event.target.closest('[data-chapter-link]');
+    if (chapter) { event.preventDefault(); ui?.querySelector(`.fi-menu-links [data-chapter="${chapter.dataset.chapterLink}"]`)?.click(); return; }
+    if (event.target.closest('[data-world-top]')) { event.preventDefault(); ui?.querySelector('.fi-menu-links [data-chapter="0"]')?.click(); return; }
+    const todo = event.target.closest('a[data-todo]');
+    if (todo) { event.preventDefault(); if (todo.dataset.todo === 'contact') { yt = maxY; run(); } }
+  });
+  // ESG tabs: click, or arrow keys along the list.
+  const tabs = [...root.querySelectorAll('[role="tab"]')];
+  const choose = tab => {
+    for (const t of tabs) { const on = t === tab; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; root.querySelector('#' + t.getAttribute('aria-controls')).hidden = !on; }
+  };
+  for (const t of tabs) {
+    t.addEventListener('click', () => choose(t));
+    t.addEventListener('keydown', event => {
+      const i = tabs.indexOf(t), next = event.key === 'ArrowRight' ? tabs[(i + 1) % tabs.length] : event.key === 'ArrowLeft' ? tabs[(i + tabs.length - 1) % tabs.length] : null;
+      if (next) { event.preventDefault(); choose(next); next.focus(); }
+    });
+  }
+
+  // ---------- GSAP: reveals on the real scroll container ----------
+  let gsapCtx = null, ScrollTriggerRef = null;
+  function refreshTriggers() { ScrollTriggerRef?.refresh(); }
+  const motion = reducedMotion ? Promise.resolve() : Promise.all([import(GSAP_URL), import(SCROLL_TRIGGER_URL), import(SPLIT_TEXT_URL), styled])
+    .then(async ([g, st, sp]) => {
+      if (disposed) return;
+      const gsap = g.gsap || g.default, ScrollTrigger = st.ScrollTrigger || st.default, SplitText = sp.SplitText || sp.default;
+      gsap.registerPlugin(ScrollTrigger, SplitText);
+      ScrollTriggerRef = ScrollTrigger;
+      await document.fonts?.ready;
+      if (disposed) return;
+      gsapCtx = gsap.context(() => { });
+      const on = (trigger, start = 'top 86%') => ({ trigger, scroller: viewport, start, toggleActions: 'play none none reverse' });
+      const step = (name, fn) => later('motion ' + name, () => { revealAll(); gsapCtx.add(fn); });
+      // The statement rises line by line out of its own masks.
+      await step('statement', () => {
+        root.querySelectorAll('[data-split]').forEach(el => {
+          SplitText.create(el, {
+            type: 'lines', mask: 'lines', autoSplit: true, linesClass: 'fiw-line-mask',
+            onSplit: self => gsap.from(self.lines, { yPercent: 108, duration: 1.25, ease: 'expo.out', stagger: .085, scrollTrigger: on(el, 'top 84%') })
+          });
+        });
+      });
+      await step('reveals', () => root.querySelectorAll('[data-reveal]').forEach(el => gsap.from(el, { autoAlpha: 0, y: 30, duration: 1.1, ease: 'power3.out', scrollTrigger: on(el, 'top 90%') })));
+      // Titles: dim letters light up in reading order as the title travels up the screen.
+      await step('titles', () => {
+        root.querySelectorAll('[data-fill]').forEach(el => {
+          SplitText.create(el, {
+            type: 'words,chars', autoSplit: true, charsClass: 'char',
+            onSplit: self => gsap.fromTo(self.chars, { opacity: .3 }, { opacity: 1, ease: 'none', stagger: .06, scrollTrigger: { trigger: el, scroller: viewport, start: 'top 82%', end: 'top 38%', scrub: .6 } })
+          });
+        });
+      });
+      await step('rules', () => {
+        root.querySelectorAll('.fiw-line').forEach(el => gsap.fromTo(el, { scaleX: 0 }, { scaleX: 1, ease: 'none', scrollTrigger: { trigger: el, scroller: viewport, start: 'top 94%', end: 'top 58%', scrub: .6 } }));
+        root.querySelectorAll('.fiw-index span').forEach(el => gsap.from(el, { scale: .4, rotate: 0, autoAlpha: 0, duration: 1.1, ease: 'expo.out', scrollTrigger: on(el, 'top 90%') }));
+        root.querySelectorAll('.fiw-footer .fiw-menu, .fiw-footer .fiw-office, .fiw-sign, .fiw-legalline').forEach((el, i) => gsap.from(el, { autoAlpha: 0, y: 24, duration: 1, delay: (i % 4) * .06, ease: 'power3.out', scrollTrigger: on(el, 'top 96%') }));
+      });
+      await later('motion refresh', () => { measure(); ScrollTrigger.refresh(); });
+    }).catch(error => console.warn('World epilogue: motion library unavailable, showing the text without it.', error));
+
+  // ---------- lifecycle ----------
+  const onResize = () => {
+    W = innerWidth; H = innerHeight;
+    renderer?.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+    background?.material.uniforms.uRes.value.set(W, H); deck?.material.uniforms.uRes.value.set(W, H);
+    measure(); refreshTriggers(); run();
+  };
+  addEventListener('resize', onResize, { passive: true });
+  const onVisibility = () => { cancelAnimationFrame(raf); raf = 0; if (!document.hidden) run(); };
+  document.addEventListener('visibilitychange', onVisibility);
+  document.fonts?.ready.then(() => { if (!disposed) { measure(); refreshTriggers(); } });
+
+  function enter(delta = 0) {
+    if (disposed) return;
+    if (!open) {
+      open = true; y = yt = vy = 0; written = -1; revealAll();
+      measure();
+      viewport.scrollTop = 0;
+      root.classList.add('is-open'); root.inert = false; root.setAttribute('aria-hidden', 'false');
+      refreshTriggers();
+    }
+    if (delta) scrollPx(toPixels(delta), 'wheel');
+    run();
+  }
+  function close() {
+    if (!open) return;
+    open = false; cancelAnimationFrame(raf); raf = 0; touch = null; samples = [];
+    y = yt = vy = 0; viewport.scrollTop = 0; written = 0;
+    root.classList.remove('is-open', 'is-live', 'is-chapters', 'is-light');
+    root.inert = true; root.setAttribute('aria-hidden', 'true');
+    if (root.contains(document.activeElement)) document.activeElement.blur();
+    document.body.classList.remove('is-world', 'is-world-dark'); painted = '';
+    for (const pin of pins) { pin.el.style.opacity = '0'; pin.shown = 0; }
+    if (video) { video.pause(); videoWanted = false; }
+    epilogue()?.setExit(0);
+  }
+
+  return {
+    get open() { return open; },
+    /* the deck has hidden the cards: the page underneath need not draw */
+    get covering() { return open && y >= at.clouds * .4; },
+    get ready() { return ready; }, get motion() { return motion; },
+    enter, close,
+    take(delta, source) { if (!open || !Number.isFinite(delta)) return false; return scrollPx(toPixels(delta, source), source); },
+    scrollTo(value) { if (!open) return; yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
+    /* diagnostics (window.__MONTIS_STUDY__.world) */
+    get state() { return { y, yt, maxY, at: { ...at }, dpr, sample: sample(y), video: video ? { file: video.currentSrc.split('/').pop(), ready: video.readyState, paused: video.paused, mix: +videoMix.toFixed(2) } : null }; },
+    jump(value) { if (!open) enter(); y = yt = clamp(value, 0, maxY); vy = 0; run(); },
+    dispose() {
+      close(); disposed = true;
+      removeEventListener('resize', onResize); removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onUp);
+      document.removeEventListener('visibilitychange', onVisibility);
+      gsapCtx?.revert();
+      for (const t of textures) { t?.image?.close?.(); t?.dispose(); }
+      videoTexture?.dispose(); if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+      scene?.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
+      renderer?.dispose(); renderer?.forceContextLoss();
+      for (const pin of pins) pin.el.remove();
+      style.remove(); root.hidden = true;
+    }
+  };
+}

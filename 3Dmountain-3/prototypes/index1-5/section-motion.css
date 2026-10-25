@@ -1,0 +1,27 @@
+/* Motion changes only optical state. Existing grid, typography and camera
+   framing remain authoritative. Loaded last to replace old opacity:1 locks. */
+html:not([data-render-mode="text"]) body .fi-motion-node,
+html:not([data-render-mode="text"]) body #fiWorld .fi-motion-node {
+ opacity:var(--motion-opacity,1)!important;
+ translate:0 var(--motion-y,0px);
+ transition:none!important;
+}
+html:not([data-render-mode="text"]) body .fi-copy-panel.fi-motion-copy {
+ opacity:1!important;transform:none!important;transition:none!important;
+}
+html:not([data-render-mode="text"]) body .fi-copy-panel.fi-motion-copy::before {
+ opacity:var(--motion-panel-alpha,0);transition:none!important;
+}
+html:not([data-render-mode="text"]) #fiWorld .fiwo-photo--strategy.fi-motion-node {
+ scale:var(--motion-scale,1);transform-origin:50% 50%;
+}
+html:not([data-render-mode="text"]) #fiWorld .fisl-text>.fi-motion-node {
+ transform:none!important;
+}
+#fiWorld.has-section-motion .fiw-chapters {
+ opacity:0!important;pointer-events:none!important;transition:none;
+}
+@media(prefers-reduced-motion:reduce){
+ html:not([data-render-mode="text"]) body .fi-motion-node,
+ html:not([data-render-mode="text"]) body #fiWorld .fi-motion-node {translate:none;scale:none}
+}

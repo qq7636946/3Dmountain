@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOGO 水玻璃 · 材質實驗頁</title>
+<!-- 材質專家的實驗頁：只 import world-logo-mark.js，獨立於 build.cjs。
+     網址參數：yaw=度數 · auto=1 自動轉一圈 · panel=0 隱藏面板 · shot=1 截圖模式（無介面、時間固定）· t=秒 · cy=標誌中心高度(NDC)
+     · preset=名稱 · bgLinear=1 背景改用線性色（測 bgDisplay=0）· small=1 手機降級 · look=JSON -->
+<style>
+  html, body { margin: 0; height: 100%; background: #0c1018; overflow: hidden; font: 13px/1.4 "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif; color: #dfe7f3; }
+  canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #bar { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; background: rgba(10,16,28,.72); backdrop-filter: blur(8px); }
+  #bar input[type=range] { width: 260px; }
+  #bar b { min-width: 52px; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: #dfe7f3; background: #243049; border: 1px solid #3b4a69; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+  button:hover { background: #31415f; }
+  #panel { position: fixed; top: 0; right: 0; bottom: 0; width: 320px; overflow: auto; padding: 10px 12px 40px; background: rgba(10,16,28,.82); backdrop-filter: blur(10px); }
+  #panel h3 { margin: 14px 0 4px; font-size: 12px; letter-spacing: .08em; color: #8fb4e8; border-bottom: 1px solid #2a3652; padding-bottom: 3px; }
+  .row { display: grid; grid-template-columns: 1fr 96px 46px; gap: 6px; align-items: center; margin: 2px 0; }
+  .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row input[type=range] { width: 96px; }
+  .row output { text-align: right; font-variant-numeric: tabular-nums; color: #9db3d6; }
+  .row input[type=color] { grid-column: 2 / 4; width: 100%; height: 20px; padding: 0; border: 0; background: none; }
+  #presets { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+  #info { font-size: 11px; color: #8da0c0; margin: 6px 0; }
+  .hide { display: none !important; }
+</style>
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="bar">
+  <span>旋轉</span><input id="yaw" type="range" min="0" max="360" step="0.5" value="0"><b id="yawv">0°</b>
+  <button id="play">播放一圈</button>
+</div>
+<div id="panel">
+  <div id="presets"></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button id="copy">複製 JSON</button><button id="reset">重設</button><button id="paste">貼上 JSON</button></div>
+  <div id="info"></div>
+  <div id="rows"></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { createLogoMark, MARK_DEFAULTS, MARK_ROWS, MARK_PRESETS } from '../world-logo-mark.js';
+
+const q = new URLSearchParams(location.search);
+const shot = q.get('shot') === '1';
+if (shot || q.get('panel') === '0') { document.getElementById('panel').classList.add('hide'); }
+if (shot) document.getElementById('bar').classList.add('hide');
+const fixedT = q.has('t') ? Number(q.get('t')) : null;
+const bgLinear = q.get('bgLinear') === '1';
+const small = q.get('small') === '1';
+
+/* ---------- renderer: same recipe as the world renderer (alpha canvas, clear alpha 0, no tone mapping, sRGB output) ---------- */
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setClearColor(0x000000, 0);
+renderer.setPixelRatio(Math.min(devicePixelRatio, q.has('pr') ? Number(q.get('pr')) : 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, .05, 20);
+const D = 4.6;
+camera.position.set(0, 0, D);
+const halfH = D * Math.tan(THREE.MathUtils.degToRad(15));
+
+/* ---------- placeholder dusk backdrop: opaque full-screen shader (display-referred colours, like the world's shaders) ---------- */
+const bgMat = new THREE.ShaderMaterial({
+  depthTest: false, depthWrite: false,
+  uniforms: { uTime: { value: 0 }, uAsp: { value: 2 }, uLinear: { value: bgLinear ? 1 : 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.999, 1.0); }',
+  fragmentShader: /* glsl */`
+    varying vec2 vUv; uniform float uTime, uAsp, uLinear;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);
+      return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
+    float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++) { v += a*noise(p); p = p*2.03 + 7.1; a *= .5; } return v; }
+    vec3 sky(float h){
+      vec3 low = vec3(.60,.61,.68), mid = vec3(.47,.54,.67), zen = vec3(.21,.32,.54);
+      vec3 c = mix(low, mid, smoothstep(0., .30, h));
+      return mix(c, zen, smoothstep(.28, 1., h));
+    }
+    void main(){
+      vec2 uv = vUv; float asp = uAsp; float hor = .335;
+      vec2 sunP = vec2(.157, .80);
+      vec2 sv = (uv - sunP) * vec2(asp, 1.);
+      float sd = length(sv);
+      vec3 col;
+      if (uv.y >= hor) {
+        float h = (uv.y - hor) / (1. - hor);
+        col = sky(h);
+        col += vec3(.30,.20,.12) * exp(-sd*2.2) * .32;
+        col += vec3(.80,.72,.70) * exp(-sd*7.) * .26;
+        col += vec3(.95,.80,.66) * exp(-sd*sd*260.) * .55;
+        /* hazy mountains */
+        float px = (uv.x - .755) * asp;
+        float ridge = hor + .012 + .275 * pow(max(0., 1. - abs(px) * 1.25), 1.7) + .06 * pow(max(0., 1. - abs((uv.x - .42) * asp) * .9), 1.3) + .03 * fbm(vec2(uv.x * 7., 3.)) + .014 * fbm(vec2(uv.x * 26., 9.)) * smoothstep(.0, .3, uv.x);
+        float m = smoothstep(ridge + .003, ridge - .003, uv.y);
+        float depth = clamp((uv.y - hor) / .32, 0., 1.);
+        vec3 mcol = mix(vec3(.37,.43,.57), col, .30 + .5 * depth);
+        col = mix(col, mcol, m * .92);
+        col += vec3(.30,.32,.38) * exp(-pow((uv.y - hor) * 16., 2.)) * .55;
+      } else {
+        float wy = (hor - uv.y) / hor;
+        float z = 1. / (wy * 1.25 + .10);
+        vec2 wp = vec2((uv.x - .5) * asp * z * 1.1, z * .9 - uTime * .06);
+        vec3 deep = vec3(.04,.075,.115), shallow = vec3(.27,.36,.44);
+        col = mix(shallow, deep, pow(smoothstep(0., 1., wy), .62));
+        vec3 refl = sky(clamp(wy * 1.2, 0., 1.)) * .62;
+        col = mix(col, refl, pow(1. - wy, 3.5) * .55);
+        float rip = fbm(wp * vec2(1.4, 5.) + vec2(0., uTime * .08));
+        float rip2 = fbm(wp * vec2(3.1, 9.) - vec2(uTime * .04, 0.));
+        col += vec3(.09,.13,.17) * smoothstep(.52, .88, rip) * (.35 + wy * .5);
+        col -= vec3(.05,.06,.07) * smoothstep(.45, .1, rip2) * wy;
+        float gl = exp(-pow((uv.x - sunP.x) * asp * 1.1, 2.) * 6.) * pow(1. - wy, 1.3);
+        col += vec3(.75,.62,.52) * gl * (.15 + .5 * smoothstep(.5, .8, rip)) * .8;
+        col += vec3(.18,.2,.26) * smoothstep(.6, 1., rip2) * (1. - wy) * .5;
+      }
+      col += (hash(gl_FragCoord.xy) - .5) / 255.;
+      if (uLinear > .5) col = pow(max(col, 0.), vec3(2.2));
+      gl_FragColor = vec4(col, 1.);
+      if (uLinear > .5) {
+      #include <colorspace_fragment>
+      }
+    }`
+});
+const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMat);
+bg.frustumCulled = false; bg.renderOrder = -10;
+scene.add(bg);
+
+/* ---------- the mark ---------- */
+const svgUrl = new URL('../../../images/logo.svg', import.meta.url).href;
+const PRESETS = {
+  '平板鑄造玻璃（預設）': {},
+  '圓潤水玻璃（客戶先前調的）': MARK_PRESETS.water,
+  '整片清透（無品牌藍）': { brandBlue: 0 },
+  '斜切大一點': { edgeRadius: 0.03, bevelSoft: 0.6, edgeCurve: 4, edgeSegments: 8 },
+  '更厚的板': { thickness: 0.2, volume: 1.8 },
+  '帶一點水感': { caustic: 0.2, shimmer: 0.15, glow: 0.2, sheen: 0.3, rimStrength: 0.6 }
+};
+let look = { ...MARK_DEFAULTS };
+if (q.get('preset') && PRESETS[q.get('preset')]) Object.assign(look, PRESETS[q.get('preset')]);
+if (q.get('look')) { try { Object.assign(look, JSON.parse(q.get('look'))); } catch (e) { console.warn('bad look param', e); } }
+if (small) look.small = true;
+
+const holder = new THREE.Group();   // places the mark in the frame
+scene.add(holder);
+let mark = null, yaw = (Number(q.get('yaw')) || 0) * Math.PI / 180;
+const t0 = performance.now();
+const info = document.getElementById('info');
+const timeNow = () => fixedT ?? (performance.now() - t0) / 1000;
+
+function layout() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  bgMat.uniforms.uAsp.value = w / h;
+  const portrait = w / h < 0.9;
+  const cy = q.has('cy') ? Number(q.get('cy')) : portrait ? 0.34 : 0.40;
+  const scale = portrait ? Math.min(1.25, (w / h) * 1.45) : 1;
+  holder.position.set(0, cy * halfH, 0);
+  holder.scale.setScalar(scale);
+  if (q.has('view')) {   // view=x,y,zoom : centre the model point (x,y) at the screen centre, magnified
+    const [vx, vy, vz] = q.get('view').split(',').map(Number);
+    holder.scale.setScalar(vz); holder.position.set(-vx * vz, -vy * vz, 0);
+  }
+}
+addEventListener('resize', layout);
+layout();
+
+const ready = (async () => {
+  const t = performance.now();
+  mark = await createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look });
+  holder.add(mark.group);
+  if (q.get('mat') === 'normal') mark.mesh.material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  if (q.get('mat') === 'white') mark.mesh.material = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  if (q.get('mat') === 'wire') mark.mesh.material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+  if (q.get('mat') === 'matcap') mark.mesh.material = new THREE.MeshStandardMaterial({ color: 0xbfd0e8, roughness: .25, metalness: 0, side: THREE.DoubleSide, envMap: null });
+  const tris = (mark.mesh.geometry.index.count / 3) | 0, verts = mark.mesh.geometry.attributes.position.count;
+  info.textContent = `建置 ${Math.round(performance.now() - t)} ms · ${verts.toLocaleString()} 頂點 · ${tris.toLocaleString()} 三角形`;
+  return mark;
+})();
+ready.catch(e => { info.textContent = '失敗：' + e.message; console.error(e); });
+
+/* ---------- panel ---------- */
+const GROUPS = [
+  ['形體', ['style', 'size', 'thickness', 'tubeAspect', 'edgeRadius', 'bevelSoft', 'edgeCurve', 'edgeSegments', 'crown']],
+  ['玻璃光學', ['transmission', 'volume', 'ior', 'dispersion', 'tint', 'attenuationColor', 'attenuationDistance', 'roughness', 'clearcoat', 'clearcoatRoughness', 'specular', 'doubleSide', 'thickFloor']],
+  ['環境與背景', ['envIntensity', 'envSpin', 'envFallback', 'bgDisplay', 'bgAlpha']],
+  ['表面', ['sheen', 'sheenColor', 'sheenRoughness', 'iridescence']],
+  ['邊緣光', ['rimStrength', 'rimPower', 'rimLine', 'rimColor', 'wallGlow', 'wallColor']],
+  ['水（內部）', ['glow', 'glowColor', 'caustic', 'causticScale', 'causticSpeed', 'shimmer', 'shimmerScale']],
+  ['品牌藍（上方葉片）', ['brandBlue', 'brandBlueColor', 'brandBlueDeep', 'brandBlueGlow', 'brandBlueAbsorb']]
+];
+const rowsEl = document.getElementById('rows');
+const inputs = new Map();
+const byKey = new Map(MARK_ROWS.map(r => [r[1], r]));
+const used = new Set();
+for (const [title, keys] of GROUPS) {
+  const h = document.createElement('h3'); h.textContent = title; rowsEl.append(h);
+  for (const k of keys) { if (byKey.has(k)) { addRow(byKey.get(k)); used.add(k); } }
+}
+const rest = MARK_ROWS.filter(r => !used.has(r[1]));
+if (rest.length) { const h = document.createElement('h3'); h.textContent = '其他'; rowsEl.append(h); rest.forEach(addRow); }
+function addRow(r) {
+  const [label, key, min, max, step] = r;
+  const row = document.createElement('div'); row.className = 'row';
+  const name = document.createElement('span'); name.textContent = label; name.title = key; row.append(name);
+  if (min === undefined) {
+    const c = document.createElement('input'); c.type = 'color'; c.value = look[key];
+    c.addEventListener('input', () => setLook({ [key]: c.value }));
+    row.append(c); inputs.set(key, { set: v => { c.value = v; } });
+  } else {
+    const s = document.createElement('input'); s.type = 'range'; s.min = min; s.max = max; s.step = step; s.value = look[key];
+    const o = document.createElement('output');
+    const fmt = v => Number(v).toFixed(step < 0.01 ? 3 : step < 1 ? 2 : 0);
+    o.textContent = fmt(look[key]);
+    s.addEventListener('input', () => { o.textContent = fmt(s.value); setLook({ [key]: Number(s.value) }); });
+    row.append(s, o); inputs.set(key, { set: v => { s.value = v; o.textContent = fmt(v); } });
+  }
+  rowsEl.append(row);
+}
+function setLook(patch) {
+  Object.assign(look, patch);
+  mark?.setLook(patch);
+}
+function syncUi() { for (const [k, i] of inputs) i.set(look[k]); }
+const presetsEl = document.getElementById('presets');
+for (const [name, p] of Object.entries(PRESETS)) {
+  const b = document.createElement('button'); b.textContent = name;
+  b.addEventListener('click', () => { look = { ...MARK_DEFAULTS, ...p, ...(small ? { small: true } : {}) }; syncUi(); mark?.setLook(look); });
+  presetsEl.append(b);
+}
+document.getElementById('reset').addEventListener('click', () => { look = { ...MARK_DEFAULTS, ...(small ? { small: true } : {}) }; syncUi(); mark?.setLook(look); });
+document.getElementById('copy').addEventListener('click', async () => {
+  const text = JSON.stringify(look, null, 2);
+  try { await navigator.clipboard.writeText(text); info.textContent = '已複製 JSON'; } catch { console.log(text); info.textContent = '無法複製，請看主控台'; }
+});
+document.getElementById('paste').addEventListener('click', () => {
+  const text = prompt('貼上參數 JSON'); if (!text) return;
+  try { look = { ...MARK_DEFAULTS, ...JSON.parse(text) }; syncUi(); mark?.setLook(look); } catch (e) { alert('JSON 格式錯誤'); }
+});
+
+/* ---------- yaw: slider, or one eased turn ---------- */
+const yawEl = document.getElementById('yaw'), yawV = document.getElementById('yawv');
+const setYaw = deg => { yaw = deg * Math.PI / 180; yawEl.value = deg % 360; yawV.textContent = Math.round(deg % 360) + '°'; };
+yawEl.addEventListener('input', () => { playing = 0; setYaw(Number(yawEl.value)); });
+setYaw((yaw * 180 / Math.PI) % 360);
+let playing = 0, playStart = 0;
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+document.getElementById('play').addEventListener('click', () => { playing = 1; playStart = performance.now(); });
+if (q.get('auto') === '1') { playing = 1; playStart = performance.now(); }
+
+/* ---------- loop ---------- */
+function frame() {
+  requestAnimationFrame(frame);
+  if (playing) {
+    const t = (performance.now() - playStart) / 6500;
+    if (t >= 1) { playing = 0; setYaw(0); } else setYaw(ease(t) * 360);
+  }
+  const time = timeNow();
+  bgMat.uniforms.uTime.value = time;
+  mark?.update({ yaw, time, q: 0 });
+  renderer.render(scene, camera);
+}
+frame();
+
+window.__lab = {
+  THREE, renderer, scene, camera, ready,
+  get mark() { return mark; },
+  get look() { return { ...look }; },
+  setYawDeg: d => setYaw(d),
+  setLook: p => { setLook(p); syncUi(); },
+  rebuildNow: () => mark?.rebuildNow(),
+  info: () => ({ ...renderer.info.render, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures })
+};
+</script>
+</body>
+</html>

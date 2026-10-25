@@ -1,0 +1,117 @@
+/* index1-5 · LOGO 收尾 Logo Seal (world-logo.js, built in by world-logo-build.cjs). The closing block after the horizontal
+   strategies: a pinned frame over the lake the canvas draws; this file is only the words that arrive when the mark has
+   turned once (kicker, FINNOVATION, 恒灝創新, one line) and the small rules that keep the page's chrome calm around it.
+   Keyed on #fiWorld.fisl-on (set by the module); with ?logoseal=0 the section is removed and none of this applies. */
+
+#fiWorld.fisl-on {
+  --fisl-y: .67;
+  --fisl-k: 1;
+  --fisl-gold: var(--alp-gold, #e2c28a);
+  --fisl-gold-hi: #d7bd8c;
+  --fisl-white: #f2f1e9;
+  --fisl-display: var(--alp-display, Didot, "Bodoni 72", "Sitka Banner", "Bodoni MT", "Noto Serif", Georgia, serif);
+  --fisl-mono: var(--alp-mono, ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace);
+  --fisl-shadow: 0 2px 24px #0a1530aa, 0 0 3px #0a153066;
+}
+
+/* ---------- the section: a pinned frame; the canvas draws the picture, the words arrive over it ---------- */
+#fiWorld .fisl { position: relative; margin: 0; padding: 0; }
+#fiWorld .fisl-pin { position: sticky; top: 0; height: var(--fisl-h, 100vh); overflow: hidden; pointer-events: none; }
+
+#fiWorld .fisl-text {
+  --p: 0;
+  position: absolute;
+  left: 50%;
+  top: calc(var(--fisl-y) * 100%);
+  width: min(60rem, 88vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate3d(-50%, 0, 0);
+  visibility: hidden;
+  color: var(--fisl-white);
+  text-align: center;
+  text-shadow: var(--fisl-shadow);
+}
+/* the parts arrive one after another as the spin ends (--p: 0 → 1, set per frame) */
+#fiWorld .fisl-text > * {
+  --d: 0;
+  --r: clamp(0, calc((var(--p) - var(--d)) * 3.2), 1);
+  margin: 0;
+  opacity: var(--r);
+  transform: translate3d(0, calc((1 - var(--r)) * 12px), 0);
+}
+#fiWorld .fisl-text > :nth-child(2) { --d: .1; }
+#fiWorld .fisl-text > :nth-child(3) { --d: .2; }
+#fiWorld .fisl-text > :nth-child(4) { --d: .3; }
+
+#fiWorld .fisl-kicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: calc(12px * var(--fisl-k));
+  color: rgba(222,231,237,.72);
+  font: 500 calc(9px * var(--fisl-k))/1.2 var(--fisl-mono);
+  letter-spacing: .22em;
+  text-indent: .22em;
+  text-transform: uppercase;
+}
+#fiWorld .fisl-kicker i { flex: none; width: 5px; height: 5px; background: var(--fisl-gold); }
+#fiWorld .fisl-title {
+  font: 400 calc(clamp(30px, 3.8vw, 58px) * var(--fisl-k))/1.12 var(--fisl-display);
+  letter-spacing: -.025em;
+  text-indent: 0;
+  text-transform: none;
+  text-wrap: balance;
+  color: var(--fisl-white);
+}
+#fiWorld .fisl-zh {
+  margin-top: calc(12px * var(--fisl-k));
+  color: var(--fisl-gold-hi);
+  font: 400 calc(15px * var(--fisl-k))/1.4 "Noto Sans TC", sans-serif;
+  letter-spacing: .32em;
+  text-indent: .32em;
+}
+#fiWorld .fisl-line {
+  max-width: 32em;
+  margin-top: calc(12px * var(--fisl-k));
+  color: rgba(222,231,237,.76);
+  font: 300 calc(13px * var(--fisl-k))/1.75 "Noto Sans TC", sans-serif;
+  letter-spacing: .08em;
+  text-indent: .08em;
+  text-wrap: balance;
+}
+
+/* while the block is on screen the journey-style chapter rail would sit on the lake: it steps aside (the footer brings it back) */
+#fiWorld.is-logoseal .fiw-chapters { opacity: 0 !important; pointer-events: none !important; }
+
+/* Keep the navigation transparent over the closing scene. */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready:has(#fiWorld.is-logoseal) .finnovation-ui .fi-header {
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding-bottom: 16px;
+}
+
+/* reduced motion: no travel, the words just fade */
+#fiWorld.fisl-still .fisl-text > * { transform: none; }
+
+/* ---------- narrower screens: portrait composition (the mark above, the words below) ---------- */
+@media (max-width: 680px) {
+  #fiWorld .fisl-text { top: 68%; width: min(26rem, 90vw); }
+  #fiWorld .fisl-kicker { gap: 9px; font-size: calc(9px * var(--fisl-k)); letter-spacing: .28em; text-indent: .28em; }
+  #fiWorld .fisl-title { font-size: calc(clamp(30px, 8vw, 42px) * var(--fisl-k)); letter-spacing: -.025em; text-indent: 0; max-width: 11em; }
+  #fiWorld .fisl-zh { margin-top: calc(14px * var(--fisl-k)); font-size: calc(15px * var(--fisl-k)); letter-spacing: .5em; text-indent: .5em; }
+  #fiWorld .fisl-line { margin-top: calc(14px * var(--fisl-k)); font-size: calc(13px * var(--fisl-k)); line-height: 1.85; letter-spacing: .1em; text-indent: .1em; }
+}
+@media (max-height: 560px) and (min-width: 681px) {
+  #fiWorld .fisl-text { top: 70%; }
+  #fiWorld .fisl-title { font-size: calc(26px * var(--fisl-k)); }
+  #fiWorld .fisl-kicker { margin-bottom: 6px; font-size: 8px; }
+  #fiWorld .fisl-zh { margin-top: 6px; font-size: 12px; }
+  #fiWorld .fisl-line { margin-top: 6px; font-size: 10.5px; line-height: 1.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fiWorld .fisl-text > * { transform: none; }
+}

@@ -1,0 +1,268 @@
+/* Portfolio handoff: prepare while the last chapters play, then use one
+   reversible, time-based envelope for the ground, cards and chapter copy.
+   BRIDGE (index1-1): the envelope is not a timed fade but the scroll itself,
+   one continuous move. Past the last chapter every wheel step moves one
+   reversible clock: the host flies the valley camera on into its haze, the
+   air thickens evenly into the cards' ground, and the cards fly in towards
+   the viewer out of that haze; whatever is left of a wheel step at the end
+   already rides the strip. Scrolling up runs the same clock backwards. Past
+   the last card the wheel is handed to onEnd (the next section). The mist
+   settings are read live from MIST() (CONFIG.mist in main.js). */
+const STYLE = `
+.fi-portfolio{position:fixed;inset:0;z-index:6;opacity:0;visibility:hidden;pointer-events:none;cursor:grab;touch-action:none}
+.fi-portfolio.is-on{pointer-events:auto}
+.fi-portfolio.is-drag{cursor:grabbing}
+.fi-portfolio canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.fi-portfolio-copy .fi-copy-zh{color:var(--ui-muted)}
+`;
+const GATE = .1, UNITS = 6900, BRIDGE = 1.3;
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055, reducedMotion = false, state, sliderUrl = './portfolio-slider.js',
+  kicker = 'FINNOVATION PORTFOLIO', title = 'PORTFOLIO IN MOTION', note = '拖曳或捲動，瀏覽更多', bridge = false, onEnd = null, grade = null, mist = null, notch = null }) {
+  const style = document.createElement('style'); style.dataset.portfolio = ''; style.textContent = STYLE; document.head.append(style);
+  const layer = document.createElement('div'); layer.className = 'fi-portfolio'; layer.setAttribute('aria-hidden', 'true');
+  layer.style.background = layer.dataset.ground = 'rgb(' + base.map(v => Math.round(v * 255)).join(',') + ')';
+  const canvas = document.createElement('canvas'); canvas.setAttribute('aria-label', '作品與佈局卡片，可左右拖曳'); layer.append(canvas);
+  const ui = document.querySelector('.finnovation-ui');
+  if (ui?.parentNode) ui.parentNode.insertBefore(layer, ui); else document.body.append(layer);
+  const copy = ui?.querySelector('.fi-copy'), rail = ui?.querySelector('.fi-rail');
+  let panel = null;
+  if (copy) {
+    panel = document.createElement('article'); panel.className = 'fi-copy-panel fi-portfolio-copy';
+    panel.inert = true; panel.tabIndex = -1; panel.setAttribute('aria-hidden', 'true'); panel.style.transition = 'none';
+    const line = (tag, cls, text) => { const el = document.createElement(tag); if (cls) el.className = cls; el.textContent = text; return el; };
+    const heading = document.createElement('h2'); heading.lang = 'en'; heading.append(line('span', '', title));
+    panel.append(line('p', 'fi-copy-kicker', kicker), heading, line('p', 'fi-copy-zh', note)); copy.append(panel);
+  }
+  let slider = null, loading = null, prepared = false, failed = false, disposed = false;
+  let open = false, pending = false, amount = 0, velocity = 0, over = 0, back = 0, raf = 0, last = 0, quiet = 0;
+  let drag = null, saved = [], focusBefore = null, painted = NaN;
+  let bt = 0, exit = 0, exitPainted = NaN, suspended = false, gradeKey = '';   // bridge: scrubbed target; how far the next section has taken over
+  /* The bridge's scroll length: STEPS wheel notches (NOTCH() is one notch in the journey's units, which shrink as the
+     window grows), so it is the same number of notches on every screen. Without a notch size, the old LENGTH. */
+  const span = () => {
+    const m = mist?.() || {}, steps = +m.steps, unit = notch?.();
+    if (Number.isFinite(steps) && steps >= 2 && unit > 0) return steps * unit;
+    const v = +m.length; return Number.isFinite(v) && v > .2 ? v : BRIDGE;
+  };
+  function load() {
+    return loading ??= import(sliderUrl).then(async module => {
+      if (disposed) return null;
+      const displacement = await module.prepareSlider();
+      if (disposed) return null;
+      slider = module.createSlider(canvas, { images, base, lift, dpr: 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
+      await slider.ready;
+      if (disposed) return null;
+      // Upload the first visible photographs and compile all passes off-screen.
+      // The scene stays fully visible until this succeeds.
+      slider.setEntrance(0); slider.reset(false); slider.frame(performance.now(), 0);
+      prepared = true;
+      // The rest of the pictures go up to the GPU one per free moment, as they arrive (never while it is on screen).
+      const idle = window.requestIdleCallback || (fn => setTimeout(fn, 60));
+      const warm = () => { if (disposed || !slider) return; if (open || amount > 0) { idle(warm, { timeout: 2000 }); return; } if (slider.warm()) idle(warm, { timeout: 2000 }); };
+      idle(warm, { timeout: 2000 });
+      return slider;
+    }).catch(error => { failed = true; pending = false; console.warn('Portfolio strip unavailable:', error); close(); return null; });
+  }
+  function captureCopy() {
+    if (saved.length) return;
+    focusBefore = document.activeElement;
+    const nodes = [...(copy?.querySelectorAll('.fi-copy-panel.is-active') ?? []), ...(rail ? [rail] : [])];
+    saved = nodes.map(el => ({ el, css: el.getAttribute('style') }));
+    for (const { el } of saved) { el.style.transition = 'none'; el.inert = true; el.setAttribute('aria-hidden', 'true'); }
+  }
+  function restoreCopy() {
+    for (const { el, css } of saved) {
+      if (css === null) el.removeAttribute('style'); else el.setAttribute('style', css);
+      const hidden = el !== rail && !el.classList.contains('is-active');
+      el.inert = hidden; if (el === rail) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', String(hidden));
+    }
+    saved = [];
+    if (document.activeElement === panel && focusBefore?.isConnected && !focusBefore.closest('[inert]')) focusBefore.focus({ preventScroll: true });
+    document.body.classList.remove('is-portfolio');
+  }
+  function paintBridge() {
+    if (painted === amount && exitPainted === exit) return; painted = amount; exitPainted = exit;
+    const e = reducedMotion ? 1 : smooth(0, 1, exit);
+    // See-through until the bank has filled the frame; then a solid ground, so the host may stop drawing the scene.
+    layer.style.background = amount >= 1 ? layer.dataset.ground : 'transparent';
+    layer.style.opacity = '1'; layer.style.visibility = (amount > 0 || open) && exit < 1 ? 'visible' : 'hidden';
+    layer.style.transform = e > 0 ? `translate3d(0, ${(-11 * e).toFixed(3)}vh, 0) scale(${(1 + .045 * e).toFixed(4)})` : '';
+    canvas.style.opacity = String(1 - smooth(.08, .62, exit));
+    // The chapter's words stay while the valley does, and the cards' words come in as the cards settle: a hand-over.
+    const outgoing = 1 - smooth(.1, .42, amount), incoming = smooth(.66, .92, amount) * (1 - smooth(0, .3, exit));
+    for (const { el, css } of saved) {
+      if (el !== rail && !el.classList.contains('is-active')) {
+        if (css === null) el.removeAttribute('style'); else el.setAttribute('style', css);
+        el.inert = true; el.setAttribute('aria-hidden', 'true'); continue;
+      }
+      el.style.opacity = String(outgoing); el.style.visibility = outgoing > .001 ? 'visible' : 'hidden';
+      if (el !== rail) el.style.transform = `translateY(${-12 * (1 - outgoing)}px)`;
+    }
+    if (panel) {
+      panel.style.opacity = String(incoming); panel.style.visibility = incoming > .001 ? 'visible' : 'hidden';
+      panel.style.transform = `translateY(${14 * (1 - incoming)}px)`;
+      panel.inert = !open || incoming < .05; panel.setAttribute('aria-hidden', String(panel.inert));
+      if (!panel.inert && focusBefore && saved.some(({ el }) => el.contains(document.activeElement))) panel.focus({ preventScroll: true });
+    }
+    slider?.setBridge(reducedMotion ? (amount > 0 ? 1 : 0) : amount, mist?.() || {});
+  }
+  function paint() {
+    if (bridge) { paintBridge(); return; }
+    if (painted === amount) return; painted = amount;
+    // The pale ground leads the pictures slightly, like valley mist clearing.
+    // Both are functions of the same reversible clock, never separate delays.
+    canvas.style.opacity = String(reducedMotion ? amount : smooth(.14, .88, amount));
+    layer.style.opacity = String(amount); layer.style.visibility = amount > 0 || open ? 'visible' : 'hidden';
+    const outgoing = 1 - smooth(0, .58, amount), incoming = smooth(.46, .94, amount);
+    for (const { el, css } of saved) {
+      // Navigation can activate another chapter while this layer retreats.
+      // Never reveal the outgoing chapter over the newly selected one.
+      if (el !== rail && !el.classList.contains('is-active')) {
+        if (css === null) el.removeAttribute('style'); else el.setAttribute('style', css);
+        el.inert = true; el.setAttribute('aria-hidden', 'true'); continue;
+      }
+      el.style.opacity = String(outgoing); el.style.visibility = outgoing > .001 ? 'visible' : 'hidden';
+      if (el !== rail) el.style.transform = `translateY(${-12 * (1 - outgoing)}px)`;
+    }
+    if (panel) {
+      panel.style.opacity = String(incoming); panel.style.visibility = incoming > .001 ? 'visible' : 'hidden';
+      panel.style.transform = `translateY(${14 * (1 - incoming)}px)`;
+      panel.inert = !open || incoming < .05; panel.setAttribute('aria-hidden', String(panel.inert));
+      if (!panel.inert && focusBefore && saved.some(({ el }) => el.contains(document.activeElement))) panel.focus({ preventScroll: true });
+    }
+    slider?.setEntrance(reducedMotion ? 1 : amount);
+  }
+  function tick(now) {
+    raf = 0; if (disposed || document.hidden) return;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+    if (open && state().target < state().max - .3) close();
+    const target = bridge ? bt : open ? 1 : 0;
+    if (reducedMotion && !bridge) { amount = target; velocity = 0; }
+    else if (reducedMotion) { amount = target > 0 ? 1 : 0; velocity = 0; }
+    else {
+      // The bridge follows the wheel with a softer spring than the chapters (FOLLOW per second): notches given in
+      // a row run into one glide instead of a step each, and it still comes to rest without overshoot.
+      const follow = +mist?.()?.follow, omega = bridge ? (Number.isFinite(follow) && follow > 1 ? follow : 5.5) : 8;
+      const offset = amount - target, j = (velocity + omega * offset) * dt, decay = Math.exp(-omega * dt);
+      amount = Math.max(0, Math.min(1, target + (offset + j) * decay)); velocity = (velocity - omega * j) * decay;
+      if (Math.abs(amount - target) < .001 && Math.abs(velocity) < .01) { amount = target; velocity = 0; }
+    }
+    if (slider?.setGrade) {
+      // The page's grade and the ground colour (edited in place by the colour panel) and the mist settings.
+      const g = grade?.() || null, m = mist?.() || null;
+      const key = (g ? [g.hue, g.sat, g.temp, g.tint].join('|') : '') + '/' + base.join('|') + '/' + (m ? Object.values(m).join('|') : '');
+      if (key !== gradeKey) { gradeKey = key; slider.setGrade(g || undefined); layer.dataset.ground = slider.groundCss(); painted = NaN; }
+    }
+    paint();
+    if (slider && (open || amount > 0) && !suspended) slider.frame(now, dt);
+    if (!open && amount === 0) { restoreCopy(); if (bridge) { layer.classList.remove('is-on'); layer.style.visibility = 'hidden'; } }
+    else run();
+  }
+  function beginBridge() {
+    if (open || failed || disposed || !slider) return;
+    slider.reset(false); open = true; bt = 0; exit = 0; suspended = false; over = back = 0;
+    last = performance.now(); painted = NaN; captureCopy();
+    document.body.classList.add('is-portfolio'); layer.classList.add('is-on'); layer.setAttribute('aria-hidden', 'false');
+    paint(); run();
+  }
+  function takeBridge(delta) {
+    if (failed) return false;
+    if (!open) {
+      if (performance.now() < quiet && delta < 0) return true;
+      // From the moment the journey's target sits at its end and its camera is nearly there: no dead stretch of wheel.
+      const s = state(), atEnd = s.progress > s.max - .45 && s.target > s.max - .001;
+      if (!atEnd || delta <= 0) return false;
+      // The strip preloads three chapters early; if it is still on its way, hold the page at the end until it is.
+      if (!prepared) { load(); return true; }
+      beginBridge();
+    }
+    if (bt < 1 || (delta < 0 && slider.progress <= 0)) {
+      const next = bt + delta / span();
+      if (next <= 0) { close(); return true; }
+      // Whatever is left of this wheel step past the end already rides the strip: one motion, no hand-over pause.
+      if (next > 1) { bt = 1; run(); slider.scrollBy(-(next - 1) * span() * UNITS); return true; }
+      bt = next; run(); return true;
+    }
+    if (drag?.axis === 'x') return true;
+    if (slider.scrollBy(-delta * UNITS)) return true;
+    // Hand over at 97% of the bridge: waiting for its spring to settle held the wheel at the last card for ~350 ms.
+    if (delta > 0 && slider.progress >= 1 && amount >= .97) onEnd?.(delta);
+    return true;
+  }
+  function run() { if (!raf && !disposed && !document.hidden) { if (!last) last = performance.now(); raf = requestAnimationFrame(tick); } }
+  function openNow() {
+    if (open || pending || failed || disposed) return;
+    pending = true;
+    load().then(strip => {
+      if (!pending || !strip || disposed) return;
+      pending = false; const s = state(); if (s.target < s.max - .001) return;
+      if (amount === 0) { strip.reset(false); velocity = 0; }
+      open = true; over = back = 0; last = performance.now(); painted = NaN; captureCopy();
+      document.body.classList.add('is-portfolio'); layer.classList.add('is-on'); layer.setAttribute('aria-hidden', 'false');
+      paint(); run();
+    });
+  }
+  function close() {
+    pending = false; if (!open) return;
+    open = false; over = back = 0; drag = null; bt = 0; exit = 0; suspended = false;
+    layer.classList.remove('is-on', 'is-drag'); layer.setAttribute('aria-hidden', 'true');
+    if (panel) { panel.inert = true; panel.setAttribute('aria-hidden', 'true'); }
+    last = performance.now(); run();
+  }
+  layer.addEventListener('pointerdown', event => {
+    if (!open || event.button > 0) return;
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, axis: event.pointerType === 'touch' ? null : 'x' };
+    layer.setPointerCapture(event.pointerId); layer.classList.add('is-drag');
+  });
+  const drop = event => { if (drag?.id === event.pointerId) { drag = null; layer.classList.remove('is-drag'); } };
+  const move = event => {
+    if (!drag || event.pointerId !== drag.id || !slider) return;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    if (!drag.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 8) drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (drag.axis === 'x') { slider.addScroll(dx * 6); drag.x = event.clientX; }
+  };
+  addEventListener('pointerup', drop, { passive: true }); addEventListener('pointercancel', drop, { passive: true }); addEventListener('pointermove', move, { passive: true });
+  layer.addEventListener('wheel', event => {
+    if (!open || !slider || event.ctrlKey || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    event.preventDefault(); slider.addScroll(-event.deltaX * 4);
+  }, { passive: false });
+  const onKey = event => { if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('dialog[open]')) close(); };
+  const onVisibility = () => { cancelAnimationFrame(raf); raf = 0; last = performance.now(); if (!document.hidden && (open || amount > 0)) run(); };
+  addEventListener('keydown', onKey); document.addEventListener('visibilitychange', onVisibility);
+  return {
+    preload: load, close,
+    get open() { return open; }, get ready() { return prepared; }, get pending() { return pending; },
+    get transition() { return amount; }, get covering() { return open && amount === 1; },
+    get bridge() { return bridge; }, get strip() { return slider?.progress ?? 0; },
+    /* the next section reports how far it has taken over (0–1); at 1 the strip stops drawing */
+    setExit(value) {
+      if (!bridge) return; const v = Math.max(0, Math.min(1, value || 0)); if (v === exit) return;
+      exit = v; suspended = v >= 1; painted = NaN; if (open) { paint(); run(); }
+    },
+    take(delta) {
+      if (disposed || !Number.isFinite(delta)) return false;
+      if (bridge) return takeBridge(delta);
+      if (pending) { if (delta < 0) { pending = false; over = 0; return false; } return true; }
+      if (!open) {
+        if (performance.now() < quiet && delta < 0) return true;
+        if (failed) return false;
+        const s = state(), atEnd = s.progress > s.max - .18 && s.target > s.max - .001;
+        if (!atEnd || delta <= 0) { over = 0; return false; }
+        over += delta; if (over < GATE) return false;
+        openNow(); return true;
+      }
+      if (!slider || drag?.axis === 'x') return true;
+      if (slider.scrollBy(-delta * UNITS)) { back = 0; return true; }
+      if (delta < 0 && slider.progress <= 0) { back -= delta; if (back >= GATE) { close(); quiet = performance.now() + 600; } }
+      return true;
+    },
+    dispose() {
+      close(); disposed = true; cancelAnimationFrame(raf); restoreCopy();
+      removeEventListener('keydown', onKey); removeEventListener('pointerup', drop); removeEventListener('pointercancel', drop); removeEventListener('pointermove', move);
+      document.removeEventListener('visibilitychange', onVisibility);
+      slider?.dispose(); layer.remove(); panel?.remove(); style.remove();
+    }
+  };
+}

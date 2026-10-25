@@ -1,0 +1,82 @@
+/* index1-5 · flow-feel runtime (prototypes/index1-5/flow-feel-build.cjs → extra['smooth-input.js']).
+   ONE small module that the patched pieces share: the "silk" input smoother and its dials.
+   Why: five springs with five different constants (journey ω10.5, bridge ω4.2, cards strip ω12, globe ω9.5, ocean ω6) made the
+   page change gear at every section boundary (docs/smooth-flow/hubtown-study.md §3). Hubtown runs ONE Lenis axis.
+   silk = a Lenis-style damped follow (τ1) feeding a critically damped spring (ω2); both are analytic in dt, so the response is
+   identical at 30/60/120 fps. Default weight B (τ1 .22 s, ω2 12): 63 % in ≈ 404 ms, 95 % in ≈ 862 ms, 99 % in ≈ 1.2 s.
+   ?smooth=classic (or 0/off) makes every patched spot run the code that was there before: FEEL.on === false. */
+const search = typeof location === 'undefined' ? '' : location.search;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+export const classic = /[?&]smooth=(classic|0|off|false|no)(&|$)/i.test(search);
+
+/* three weights: 0 light (A), 1 medium (B, default), 2 heavy (C, closest to Hubtown's home film: τ .417 exponential) */
+export const WEIGHTS = [{ name: 'A 輕', tau1: .15, omega2: 14 }, { name: 'B 中', tau1: .22, omega2: 12 }, { name: 'C 重', tau1: .30, omega2: 11 }];
+/* the dials (tuner group 「滑順手感 Smooth」, CONFIG.smooth). 0 in tau1 / omega2 = take the weight's value. */
+export const DEFAULTS = {
+  weight: 1, tau1: 0, omega2: 0,
+  stayNotches: 20,        // journey: wheel notches per chapter (median gap between the chapter stops); 0 = use journeyGain instead
+  journeyGain: .65,       // journey: distance per notch relative to the classic one (used when stayNotches = 0)
+  handoff: .9,            // bridge → world: how complete the bridge must be before the next notch goes on to the world (classic .97)
+  topTol: 90,             // world → cards (scrolling up): hand back when the page is within this many px of the top (classic 2)
+  /* phase 2 */
+  textMs: 1380, textDelay: 640, textStagger: 115, outMs: 300, dissolveMs: 875, dissolve: 1
+};
+
+let cfgFn = () => DEFAULTS, ctx = null;
+const cfg = () => { const c = cfgFn(); return c || DEFAULTS; };
+export const FEEL = {
+  classic, on: !classic, WEIGHTS, DEFAULTS,
+  /* patches the build could not place (their anchor moved in a file another session edits) */
+  skipped: /*FEEL_SKIPPED*/[]/*/FEEL_SKIPPED*/,
+  /* host: { cfg: () => CONFIG.smooth, stops: () => [journey stops], max: () => journey.max, notch: () => one wheel notch in journey units } */
+  bind(host) { cfgFn = host.cfg; ctx = host; if (typeof window !== 'undefined') window.__FEEL__ = FEEL; return FEEL; },
+  defaults: () => ({ ...DEFAULTS }),
+  cfg,
+  /* the time constants in force: weight, then the explicit dials override */
+  eff() {
+    const c = cfg(), w = WEIGHTS[clamp(Math.round(+c.weight || 0), 0, 2)];
+    return { tau1: +c.tau1 > 0 ? +c.tau1 : w.tau1, omega2: +c.omega2 > 0 ? +c.omega2 : w.omega2 };
+  },
+  /* journey: distance per wheel / touch notch relative to the classic one (1 = as before) */
+  gain() {
+    if (classic) return 1;
+    const c = cfg();
+    if (!(+c.stayNotches > 0) || !ctx) return clamp(+c.journeyGain || 1, .15, 1.5);
+    const max = ctx.max(), unit = ctx.notch(), pts = [0, ...ctx.stops().filter(s => s > .01 && s < max - .01), max], gaps = [];
+    for (let i = 1; i < pts.length; i++) gaps.push(pts[i] - pts[i - 1]);
+    gaps.sort((a, b) => a - b);
+    const median = gaps.length ? gaps[gaps.length >> 1] : 1;
+    return clamp(median / unit / +c.stayNotches, .15, 1);
+  },
+  handoff: () => classic ? .97 : clamp(+cfg().handoff || .9, .5, 1),
+  topTol: () => classic ? 2 : clamp(+cfg().topTol || 2, 2, 400),
+  sliderUrl: u => /^\.\/portfolio-slider\.js/.test(u) ? '../../../js/' + u.slice(2) : u,
+
+  newSilk: (x = 0) => ({ x, v: 0, lead: x }),
+  /* One step toward `target`. S.x / S.v are the visible position and velocity; if the caller has written its own x / v since the
+     last step (a jump, a scroll adopted from the browser, a reset) they are passed in `cur` and the filter resumes from there.
+     opt: { min, max, eps, veps }. Returns S. */
+  step(S, target, dt, cur, opt = {}) {
+    if (cur && (Math.abs(cur.x - S.x) > 1e-7 || Math.abs((cur.v || 0) - S.v) > 1e-7)) { S.x = cur.x; S.v = cur.v || 0; S.lead = cur.x; }
+    const { tau1, omega2 } = FEEL.eff();
+    let left = Math.max(0, Math.min(.2, dt));
+    while (left > 1e-6) {
+      const h = Math.min(left, 1 / 40); left -= h;
+      S.lead += (target - S.lead) * (tau1 > 0 ? 1 - Math.exp(-h / tau1) : 1);
+      const o = S.x - S.lead, j = (S.v + omega2 * o) * h, d = Math.exp(-omega2 * h);
+      S.x = S.lead + (o + j) * d; S.v = (S.v - omega2 * j) * d;
+    }
+    if (opt.min !== undefined && S.x < opt.min) { S.x = opt.min; S.v = 0; }
+    if (opt.max !== undefined && S.x > opt.max) { S.x = opt.max; S.v = 0; }
+    if (Math.abs(S.x - target) < (opt.eps ?? 1e-4) && Math.abs(S.v) < (opt.veps ?? 1e-3) && Math.abs(S.lead - target) < (opt.eps ?? 1e-4) * 2) { S.x = target; S.v = 0; S.lead = target; }
+    return S;
+  },
+  /* the journey: J = { progress, target, velocity, max }; classicStep is the original stepJourneyMotion */
+  journey(J, dt, reduced, classicStep) {
+    if (classic) return classicStep(J, dt, reduced);
+    if (reduced) { J.progress = J.target; J.velocity = 0; J._silk = null; return; }
+    const S = J._silk || (J._silk = FEEL.newSilk(J.progress));
+    FEEL.step(S, J.target, dt, { x: J.progress, v: J.velocity || 0 }, { min: 0, max: J.max, eps: 5e-5, veps: 5e-4 });
+    J.progress = S.x; J.velocity = S.v;
+  }
+};

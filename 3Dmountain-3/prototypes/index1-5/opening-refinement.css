@@ -1,0 +1,33 @@
+/* Loading identity for index1-5-1. Keep the supplied SVG and a readable light mark on navy. */
+html[data-opening-refinement] .loader-logo { text-indent: 0; line-height: 0; }
+html[data-opening-refinement] .loader-logo img {
+  display: block;
+  width: min(240px, 52vw);
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+/* Keep the second chapter's copy clear of the centered water wordmark. */
+@media (min-width: 760px) {
+  html[data-opening-refinement] #chapter-innovation { bottom: -75px; }
+  html[data-opening-refinement] #chapter-innovation h2 {
+    white-space: nowrap;
+    font-size: clamp(28px, 5.1vw, 96px);
+  }
+  html[data-opening-refinement] #chapter-innovation h2 span { display: inline; }
+}
+
+@media (max-width: 759px) {
+  html[data-opening-refinement] #chapter-innovation { bottom: -36px; }
+  html[data-opening-refinement] #chapter-innovation h2 {
+    white-space: nowrap;
+    font-size: clamp(18px, 6vw, 36px);
+  }
+  html[data-opening-refinement] #chapter-innovation h2 span { display: inline; }
+}
+
+/* English chapter headlines: client-requested 50px. */
+html[data-opening-refinement] body.is-ready .finnovation-ui .fi-copy :is(h1, h2) {
+  font-size: 50px !important;
+  white-space: normal !important;
+}

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lake scene lab · LOGO seal</title>
+<!-- 實驗頁（world-logo-scene.js 也會讀全站日照 scene-daylight.js：預設在這裡關掉，只看 LAKE_DEFAULTS；?daylight=1&hour=17.7 套用）：黃昏湖場景 prototypes/index1-5/world-logo-scene.js（介面 B）。獨立於 build.cjs；靜態伺服器 http://127.0.0.1:5621/ ，不會自動重新整理。
+     升起：rise=0..1（符號從水面升起）· kick=0.1（載入時先給一次升起速度，靜止截圖也看得到漣漪環）· preset=glacier（冰湖白晝外觀）· riseplay=1（自動來回升降）
+     網址參數：q=0..1 · t=秒（凍結時間）· panel=0 隱藏面板 · view=phone（390×844 @2x）· mark=svg|knot|real|none · rt=1（經 HalfFloat RT 再合成，模擬整合工程師的做法）· daylight=1&hour=17.7
+     · reduced=1 · small=1 · look={json}（覆寫參數）· stats=1 -->
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root { color-scheme: dark; --bg: #0b1119; --panel: rgba(12,18,27,.92); --line: rgba(255,255,255,.12); --text: #dfe7f1; --dim: #8fa0b5; --accent: #e8c9a6; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 12px/1.4 system-ui, "Noto Sans TC", "Microsoft JhengHei", sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0; display: grid; place-items: center; }
+  #stage.phone { background: #05080d; }
+  canvas { display: block; }
+  #panel { position: fixed; top: 8px; right: 8px; bottom: 8px; width: 330px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; backdrop-filter: blur(8px); z-index: 5; }
+  #panel.hidden { display: none; }
+  #head { padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+  #head h1 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row label { color: var(--dim); min-width: 74px; }
+  .row input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+  .row output { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  button, select { background: rgba(255,255,255,.07); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; font: inherit; cursor: pointer; }
+  button:hover { background: rgba(255,255,255,.14); }
+  button.on { background: var(--accent); color: #1a1208; border-color: var(--accent); }
+  #rows { overflow: auto; padding: 4px 6px 12px; flex: 1; }
+  details { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; padding: 7px 6px; color: var(--accent); font-weight: 600; }
+  .dial { display: grid; grid-template-columns: 1fr 112px 46px; align-items: center; gap: 6px; padding: 2px 6px; }
+  .dial span { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dial input[type=range] { width: 100%; accent-color: var(--accent); }
+  .dial input[type=color] { width: 112px; height: 20px; padding: 0; border: 1px solid var(--line); background: none; }
+  .dial output { text-align: right; font-variant-numeric: tabular-nums; }
+  #hud { position: fixed; left: 8px; bottom: 8px; background: rgba(0,0,0,.45); padding: 4px 8px; border-radius: 6px; font: 11px/1.4 ui-monospace, Consolas, monospace; color: #cfe0f2; z-index: 4; pointer-events: none; }
+  #hud.hidden { display: none; }
+  #msg { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(160,40,40,.9); padding: 6px 12px; border-radius: 6px; z-index: 9; display: none; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+<div id="panel">
+  <div id="head">
+    <h1>黃昏湖場景 Lake scene（world-logo-scene.js）</h1>
+    <div class="row"><label for="q">進度 q</label><input id="q" type="range" min="0" max="1" step="0.001" value="1"><output id="qv">1.000</output></div>
+    <div class="row"><label for="rise">升起 rise</label><input id="rise" type="range" min="0" max="1" step="0.001" value="1"><output id="rv">1.000</output></div>
+    <div class="btns">
+      <button id="bPlay" title="q 來回播放">播放 q</button>
+      <button id="bRise" title="rise 來回升降（0→1→0）">播放 rise</button>
+      <button id="bGlacier" title="外觀預設：黃昏 ⇄ 冰湖白晝">冰湖白晝</button>
+      <button id="bFreeze" title="凍結時間（漣漪、微塵不動）">凍結時間</button>
+      <button id="bView" title="手機直式 390×844">手機直式</button>
+      <button id="bReduced" title="減少動態（靜止畫面）">減少動態</button>
+      <button id="bRT" title="先畫進 HalfFloat RT 再合成">經 RT</button>
+      <select id="selMark" title="放在 markAnchor 的物件"><option value="svg">LOGO 剪影（玻璃）</option><option value="knot">環結（玻璃）</option><option value="real">正式符號（world-logo-mark.js）</option><option value="none">不放符號</option></select>
+    </div>
+    <div class="row"><label for="hour">日照 時間</label><input id="hour" type="range" min="5.5" max="20" step="0.05" value="17.7"><output id="hv">17.7</output></div>
+    <div class="btns"><button id="bDay" title="開＝套用全站日照（scene-daylight.js：天空、太陽、水色隨時間）；關＝只用 LAKE_DEFAULTS 的黃昏">全站日照</button><button id="bCopy">複製 JSON</button><button id="bReset">還原預設</button><button id="bHide" title="隱藏面板（H）">隱藏面板</button></div>
+  </div>
+  <div id="rows"></div>
+</div>
+<div id="hud"></div>
+<div id="msg"></div>
+<script type="module">
+import * as THREE from 'three';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { createLakeScene, LAKE_DEFAULTS, LAKE_ROWS } from '../world-logo-scene.js';
+import { getSceneDaylight, setSceneTime } from '../scene-daylight.js';
+
+const params = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+const msg = t => { const m = $('msg'); m.textContent = t; m.style.display = 'block'; console.error(t); };
+const state = {
+  q: params.has('q') ? +params.get('q') : 1, play: false, freeze: params.has('t'), t: params.has('t') ? +params.get('t') : 0,
+  phone: params.get('view') === 'phone', reduced: params.get('reduced') === '1', rt: params.get('rt') === '1',
+  mark: params.get('mark') || 'svg', small: params.get('small') === '1',
+  day: params.get('daylight') === '1', hour: params.has('hour') ? +params.get('hour') : 17.7,
+  rise: params.has('rise') ? +params.get('rise') : 1, riseplay: params.get('riseplay') === '1', preset: params.get('preset') === 'glacier' ? 'glacier' : 'dusk'
+};
+const daylight = getSceneDaylight();
+let overrides = {};
+try { if (params.get('look')) overrides = JSON.parse(params.get('look')); } catch (e) { msg('look= JSON 解析失敗'); }
+if (params.get('panel') === '0') $('panel').classList.add('hidden');
+if (params.get('stats') !== '1' && params.get('panel') === '0') $('hud').classList.add('hidden');
+
+const canvas = $('c'), stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+
+let lake = null, mark = null, markObj = null, small = false, look = { ...LAKE_DEFAULTS, ...overrides };
+let size = { w: 1, h: 1, dpr: 1 }, rtTarget = null, blit = null;
+const PAL = { deep: '#345067', lit: '#6c8fad', ink: '#20303e', foam: '#eef2f6', glint: '#ffead4', sun: '#ffd8b0' };
+
+function measure() {
+  const pw = state.phone ? 390 : (params.get('panel') === '0' ? innerWidth : innerWidth);
+  const ph = state.phone ? 844 : innerHeight;
+  const dpr = state.phone ? 2 : Math.min(devicePixelRatio || 1, 2);
+  return { w: pw, h: ph, dpr };
+}
+
+/* ---------- placeholder marks ---------- */
+function glassMaterial() {
+  return new THREE.MeshPhysicalMaterial({ color: '#f4f9ff', transmission: 1, thickness: .5, ior: 1.42, roughness: .06, attenuationColor: new THREE.Color('#8fb8e0'), attenuationDistance: 1.1, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.5, specularIntensity: 1 });
+}
+async function makeSvgMark() {
+  const text = await (await fetch('../../../images/logo.svg')).text();
+  const data = new SVGLoader().parse(text);
+  const shapes = []; for (const p of data.paths) shapes.push(...SVGLoader.createShapes(p));
+  const geo = new THREE.ExtrudeGeometry(shapes, { depth: 16, bevelEnabled: true, bevelThickness: 7, bevelSize: 5, bevelSegments: 8, curveSegments: 28 });
+  geo.computeBoundingBox(); const bb = geo.boundingBox, c = bb.getCenter(new THREE.Vector3()), hgt = bb.max.y - bb.min.y;
+  geo.translate(-c.x, -c.y, -c.z); geo.scale(1 / hgt, -1 / hgt, 1 / hgt); geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, glassMaterial()); const g = new THREE.Group(); g.add(mesh); g.userData.dispose = () => { geo.dispose(); mesh.material.dispose(); };
+  return g;
+}
+function makeKnot() {
+  const geo = new THREE.TorusKnotGeometry(.32, .12, 160, 24); const mesh = new THREE.Mesh(geo, glassMaterial());
+  const g = new THREE.Group(); g.add(mesh); g.scale.setScalar(1.05); g.userData.dispose = () => { geo.dispose(); mesh.material.dispose(); }; return g;
+}
+async function buildMark() {
+  if (markObj) { markObj.parent?.remove(markObj); markObj.userData.dispose?.(); markObj = null; }
+  if (mark) { mark.dispose?.(); mark = null; }
+  if (!lake || state.mark === 'none') return;
+  try {
+    if (state.mark === 'real') {
+      const mod = await import('../world-logo-mark.js');
+      mark = await mod.createLogoMark({ THREE, SVGLoader, svgUrl: new URL('../../../images/logo.svg', location.href).href, renderer, look: {} });
+      markObj = mark.group; mark.setEnvironment?.(lake.environment);
+    } else markObj = state.mark === 'knot' ? makeKnot() : await makeSvgMark();
+    lake.markAnchor.add(markObj);
+  } catch (e) { msg('符號建立失敗：' + e.message); }
+}
+
+/* ---------- scene lifecycle ---------- */
+async function build() {
+  if (lake) { lake.markAnchor.remove(...lake.markAnchor.children); lake.dispose(); lake = null; }
+  size = measure(); small = state.small || size.w < 700;
+  renderer.setPixelRatio(size.dpr); renderer.setSize(size.w, size.h, false);
+  canvas.style.width = size.w + 'px'; canvas.style.height = size.h + 'px';
+  stage.classList.toggle('phone', state.phone);
+  const bw = Math.round(size.w * size.dpr), bh = Math.round(size.h * size.dpr);
+  lake = createLakeScene({ THREE, renderer, width: bw, height: bh, palette: PAL, assetBase: new URL('../assets/', location.href).href, small, reducedMotion: state.reduced });
+  lake.setLook({ preset: state.preset });
+  lake.setLook({ ...overrides, ...(state.rt ? { outputDisplay: 0 } : {}) });
+  look = lake.getLook(); refreshPanel();
+  window.__lab = { lake, THREE, renderer, state, get look() { return lake.getLook(); } };
+  setupRT();
+  await buildMark();
+  if (mark) lake.onEnvironment = tex => mark.setEnvironment?.(tex);
+  mark?.setEnvironment?.(lake.environment);
+  await lake.whenReady();
+  window.__labReady = true;
+}
+function setupRT() {
+  rtTarget?.dispose(); rtTarget = null; blit = null;
+  if (!state.rt) return;
+  const bw = Math.round(size.w * size.dpr), bh = Math.round(size.h * size.dpr);
+  rtTarget = new THREE.WebGLRenderTarget(bw, bh, { type: THREE.HalfFloatType });
+  blit = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1) };
+  blit.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: { t: { value: rtTarget.texture } }, depthTest: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: 'uniform sampler2D t; varying vec2 vUv; void main(){ gl_FragColor = texture2D(t, vUv);\n#include <colorspace_fragment>\n}'
+  })));
+}
+
+/* ---------- panel ---------- */
+function buildPanel() {
+  const host = $('rows'); host.innerHTML = ''; const groups = new Map();
+  for (const row of LAKE_ROWS) {
+    const [label, key, min, max, step] = row, [g, name] = label.includes('｜') ? label.split('｜') : ['其他', label];
+    if (!groups.has(g)) { const d = document.createElement('details'); const s = document.createElement('summary'); s.textContent = g; d.append(s); d.open = ['天空', '湖面', '閃點'].includes(g) && false; host.append(d); groups.set(g, d); }
+    const el = document.createElement('div'); el.className = 'dial';
+    const sp = document.createElement('span'); sp.textContent = name; sp.title = label + ' · ' + key;
+    const out = document.createElement('output');
+    let input;
+    if (min === undefined) { input = document.createElement('input'); input.type = 'color'; input.value = look[key]; out.textContent = ''; input.addEventListener('input', () => set(key, input.value)); }
+    else { input = document.createElement('input'); input.type = 'range'; input.min = min; input.max = max; input.step = step; input.value = look[key]; out.textContent = (+look[key]).toFixed(step < .01 ? 3 : step < 1 ? 2 : 0); input.addEventListener('input', () => { set(key, +input.value); out.textContent = (+input.value).toFixed(step < .01 ? 3 : step < 1 ? 2 : 0); }); }
+    input.dataset.key = key; input._out = out; input._step = step; el.append(sp, input, out); groups.get(g).append(el);
+  }
+}
+function set(key, v) {
+  if (state.rt && key === 'outputDisplay') return;
+  lake.setLook({ [key]: v });
+  if (key === 'glacierMode') { state.preset = v > .5 ? 'glacier' : 'dusk'; $('bGlacier').classList.toggle('on', state.preset === 'glacier'); look = lake.getLook(); refreshPanel(); }
+  else look[key] = v;
+}
+function refreshPanel() { for (const i of document.querySelectorAll('#rows input')) { const v = look[i.dataset.key]; if (v === undefined) continue; i.value = v; if (i._out && i._step !== undefined) i._out.textContent = (+v).toFixed(i._step < .01 ? 3 : i._step < 1 ? 2 : 0); } }
+
+$('rise').addEventListener('input', e => { state.rise = +e.target.value; $('rv').textContent = state.rise.toFixed(3); });
+$('bRise').onclick = e => { state.riseplay = !state.riseplay; e.target.classList.toggle('on', state.riseplay); };
+$('bGlacier').onclick = e => { state.preset = state.preset === 'glacier' ? 'dusk' : 'glacier'; lake.setLook({ preset: state.preset }); look = lake.getLook(); refreshPanel(); e.target.classList.toggle('on', state.preset === 'glacier'); };
+$('rise').value = state.rise; $('rv').textContent = state.rise.toFixed(3); $('bRise').classList.toggle('on', state.riseplay); $('bGlacier').classList.toggle('on', state.preset === 'glacier');
+$('q').addEventListener('input', e => { state.q = +e.target.value; $('qv').textContent = state.q.toFixed(3); });
+$('bPlay').onclick = e => { state.play = !state.play; e.target.classList.toggle('on', state.play); };
+$('bFreeze').onclick = e => { state.freeze = !state.freeze; state.t = clock(); e.target.classList.toggle('on', state.freeze); };
+$('bView').onclick = async e => { state.phone = !state.phone; e.target.classList.toggle('on', state.phone); await build(); };
+$('bReduced').onclick = async e => { state.reduced = !state.reduced; e.target.classList.toggle('on', state.reduced); await build(); };
+$('bRT').onclick = async e => { state.rt = !state.rt; e.target.classList.toggle('on', state.rt); await build(); };
+$('selMark').value = state.mark; $('selMark').onchange = async e => { state.mark = e.target.value; await buildMark(); mark?.setEnvironment?.(lake.environment); if (mark) lake.onEnvironment = tex => mark.setEnvironment?.(tex); };
+$('bCopy').onclick = async () => {
+  const diff = {}; const cur = lake.getLook(); for (const k of Object.keys(LAKE_DEFAULTS)) if (cur[k] !== LAKE_DEFAULTS[k]) diff[k] = cur[k];
+  const text = JSON.stringify(cur, null, 2);
+  try { await navigator.clipboard.writeText(text); $('bCopy').textContent = '已複製'; } catch { prompt('複製這份 JSON', text); }
+  console.log('LAKE look (full):', text, '\nonly changed:', JSON.stringify(diff)); setTimeout(() => $('bCopy').textContent = '複製 JSON', 1400);
+};
+$('bReset').onclick = () => { lake.setLook({ preset: state.preset, reset: true }); look = lake.getLook(); refreshPanel(); };
+$('bHide').onclick = () => $('panel').classList.add('hidden');
+addEventListener('keydown', e => { if (e.key === 'h' || e.key === 'H') $('panel').classList.toggle('hidden'); });
+addEventListener('resize', () => { if (!state.phone && lake) { clearTimeout(window.__rz); window.__rz = setTimeout(build, 150); } });
+$('bDay').onclick = e => { state.day = !state.day; e.target.classList.toggle('on', state.day); };
+$('hour').addEventListener('input', e => { state.hour = +e.target.value; $('hv').textContent = state.hour.toFixed(2); });
+$('hour').value = state.hour; $('hv').textContent = state.hour.toFixed(2); $('bDay').classList.toggle('on', state.day);
+$('bView').classList.toggle('on', state.phone); $('bReduced').classList.toggle('on', state.reduced); $('bRT').classList.toggle('on', state.rt); $('bFreeze').classList.toggle('on', state.freeze);
+$('q').value = state.q; $('qv').textContent = state.q.toFixed(3);
+
+/* ---------- loop ---------- */
+const t0 = performance.now(); const clock = () => (performance.now() - t0) / 1000;
+let frames = 0, last = performance.now(), acc = 0, ms = 0, spin = 0;
+function frame() {
+  requestAnimationFrame(frame);
+  if (!lake) return;
+  const now = performance.now(), dt = (now - last) / 1000; last = now; acc += dt; frames++;
+  if (state.play) { state.q = (state.q + dt / 14) % 1.0001; $('q').value = state.q; $('qv').textContent = state.q.toFixed(3); }
+  const time = state.freeze ? state.t : clock();
+  const yaw = params.has('yaw') ? +params.get('yaw') * Math.PI / 180 : (state.play ? state.q * Math.PI * 2 : 0);
+  if (mark) mark.update?.({ yaw, time, q: state.q }); else if (markObj) markObj.rotation.y = yaw;
+  if (state.day) setSceneTime(state.hour); else daylight.enabled = false;   // the shared sun (scene-daylight.js) is off unless asked for
+  if (state.riseplay) { const T = (clock() % 11) / 11, tri = T < .45 ? T / .45 : T < .55 ? 1 : 1 - (T - .55) / .45; state.rise = Math.max(0, Math.min(1, tri)); $('rise').value = state.rise; $('rv').textContent = state.rise.toFixed(3); }
+  if (!window.__kicked && params.has('kick')) { window.__kicked = true; lake.update({ q: state.q, time, rise: Math.max(0, state.rise - +params.get('kick')) }); }
+  lake.update({ q: state.q, time, rise: state.rise });
+  const a = performance.now();
+  if (state.rt) { renderer.setRenderTarget(rtTarget); renderer.render(lake.scene, lake.camera); renderer.setRenderTarget(null); renderer.render(blit.scene, blit.cam); }
+  else renderer.render(lake.scene, lake.camera);
+  ms = ms * .9 + (performance.now() - a) * .1;
+  if (acc > .5) {
+    const i = renderer.info.render;
+    $('hud').textContent = `${(frames / acc).toFixed(0)} fps · cpu ${ms.toFixed(1)} ms · ${small ? 'small' : 'full'} · ${size.w}×${size.h}@${size.dpr} · calls ${i.calls} tris ${i.triangles}`;
+    frames = 0; acc = 0; window.__labFrames = (window.__labFrames || 0) + 1;
+  }
+}
+buildPanel();
+await build();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -27,11 +27,13 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=mobile-3a47e5c1f47b'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=mobile-9d010315e826';   /* MOBILE_WORLD_IMAGE_FALLBACK */
 import { globeScrollDegrees } from './world-globe-motion.js?v=i15-globe-wheel-mvnr95kv';   /* WORLD_GLOBE_SCROLL */
 import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvnjah6m';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=i15-mvnjah6m';
-import { createWorldOcean } from './world-ocean.js?v=i15-globe-inertia-mvnrpxkv';
+import { createWorldOcean } from './world-ocean.js?v=mobile-57f7a7e43d4c';
 import { createWorldLogo } from './world-logo.js?v=i15-spin-panel-mvnjpyjv';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=i15-mvnjah6m';
@@ -70,8 +72,12 @@ const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
    prepares may cost the strip a frame). */
 /* BUSY (from the page): while it says so — the valley-to-cards bridge is moving — a step waits for the next free
    moment after it, however long, instead of being forced in by the time-out. */
-const idle = (fn, busy) => new Promise(resolve => {
-  const go = () => (window.requestIdleCallback || (f => setTimeout(f, 40)))(() => { if (busy?.()) { setTimeout(go, 120); return; } resolve(fn()); }, { timeout: 1500 });
+/* MOBILE_WORLD_QUEUE_RECOVERY */
+const idle = (fn, busy) => new Promise((resolve, reject) => {
+  const go = () => (window.requestIdleCallback || (f => setTimeout(f, 40)))(() => {
+    if (busy?.()) { setTimeout(go, 120); return; }
+    try { resolve(fn()); } catch (error) { reject(error); }
+  }, { timeout: 1500 });
   go();
 });
 /* Preparation steps run one per free moment, in order, so they never pile into one long frame even while the
@@ -247,7 +253,7 @@ void main() {
 }
 `;
 
-export function mountWorld({ root, reducedMotion = false, epilogue = () => null, grade = () => null, mist = () => null, video: look = () => null, busy = null, ocean: oceanConfig = () => null, logo: logoConfig = () => null }) {
+export function mountWorld({ root, reducedMotion = false, epilogue = () => null, carry = null, grade = () => null, mist = () => null, video: look = () => null, busy = null, ocean: oceanConfig = () => null, logo: logoConfig = () => null }) {
   if (!root) throw new Error('World epilogue: no #fiWorld in the page');
   const viewport = root.querySelector('.fiw-viewport'), content = root.querySelector('.fiw-content');
   const canvas = root.querySelector('.fiw-canvas'), pinLayer = root.querySelector('.fiw-pins');
@@ -392,14 +398,16 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- textures ----------
   // Fetched and decoded off the main thread as soon as the world mounts, so during the bridge rather than after it. The textures
   // are made once the deck has set the anisotropy. An ImageBitmap ignores texture.flipY, so the picture is flipped at decode.
-  const bitmap = url => fetch(url).then(r => r.ok ? r.blob() : Promise.reject(new Error(r.status + ' ' + url)))
-    .then(blob => createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }))
+  const bitmap = url => loadWorldImage(url)
     .catch(error => { console.warn('World epilogue: texture unavailable', error); return null; });
   const pictures = [asset('earth-2k.jpg'), asset(small ? 'earth-asia-m.jpg' : 'earth-asia.jpg'), asset('clouds-2k.jpg'), asset(small ? 'ocean-1280.jpg' : 'ocean-2400.jpg')].map(bitmap);
-  const makeTexture = (image, setup) => {
-    if (!image) return null;
-    try { const t = new THREE.Texture(image); t.flipY = false; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; setup?.(t); t.needsUpdate = true; return t; }
-    catch (error) { console.warn('World epilogue: texture unavailable', error); return null; }
+  const makeTexture = (source, setup) => {
+    if (!source) return null;
+    const { image, flipY } = source;
+    if (disposed) { image.close?.(); return null; }
+    let t;
+    try { t = new THREE.Texture(image); t.flipY = flipY; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; setup?.(t); t.needsUpdate = true; return t; }
+    catch (error) { t?.dispose(); image.close?.(); console.warn('World epilogue: texture unavailable', error); return null; }
   };
   let anisotropy = 4;
   const grey = texture => { texture.format = THREE.RedFormat; texture.internalFormat = 'R8'; texture.colorSpace = THREE.NoColorSpace; texture.anisotropy = anisotropy; };
@@ -411,7 +419,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     makeTexture(cloud, t => { grey(t); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.MirroredRepeatWrapping; }),
     makeTexture(ocean, t => { t.colorSpace = THREE.NoColorSpace; t.anisotropy = anisotropy; })
   ]).then(async ([tone, roi, clouds, photo]) => {
-    if (disposed || !renderer) { for (const t of [tone, roi, clouds, photo]) t?.dispose(); return; }
+    if (disposed || !renderer) { for (const t of [tone, roi, clouds, photo]) { t?.image?.close?.(); t?.dispose(); } return; }
     textures.push(tone, roi, clouds, photo);
     if (tone) globe.material.uniforms.uTone.value = tone;
     if (roi) { globe.material.uniforms.uRoi.value = roi; globe.material.uniforms.uRoiReady.value = 1; }
@@ -715,7 +723,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   // ---------- input ----------
   const toPixels = (delta, source) => source === 'touch' ? delta * Math.max(580, H * .8) / 1.9 : delta * Math.max(720, H * .85);
-  let touch = null, samples = [];
+  let samples = [];
   function scrollPx(px, source) {
     if (!open) return false;
     if (px < 0 && yt <= 0 && y < 24) { close(); return false; }
@@ -733,27 +741,20 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     if (Math.abs(v) < 220) return;
     yt = clamp(yt + clamp(v * .33, -H * 1.6, H * 1.6), 0, maxY); run();
   }
-  // Touches that start on this layer (main.js leaves [data-world-ui] alone).
-  viewport.addEventListener('pointerdown', event => {
-    if (!open || event.pointerType !== 'touch') return;
-    touch = { id: event.pointerId, y: event.clientY, x: event.clientX }; samples = [];
-  }, { passive: true });
-  const onMove = event => {
-    if (!touch || event.pointerId !== touch.id) return;
-    let dy = touch.y - event.clientY; touch.y = event.clientY;
-    const dx = touch.x - event.clientX; touch.x = event.clientX;
-    if (ocean?.active && Math.abs(dx) > Math.abs(dy)) dy = dx * ocean.swipe;
-    if (!dy) return;
-    // Pulled down past the top: give the rest of this touch back to the cards.
-    if (!scrollPx(dy, 'touch')) epilogue()?.take(dy * 1.9 / Math.max(580, H * .8));
-  };
-  const onUp = event => {
-    if (touch && event.pointerId === touch.id) { touch = null; fling(); return; }
-    // Touches that started on the cards reach us through take(); fling them on release too.
-    if (event.pointerType === 'touch' && samples.length) fling();
-  };
-  addEventListener('pointermove', onMove, { passive: true });
-  addEventListener('pointerup', onUp, { passive: true }); addEventListener('pointercancel', onUp, { passive: true });
+  const disposeWorldTouch = mountMobileTouchNavigation({
+    surface: viewport, blocked: (_, phase) => phase === 'start' && !open, observeEnd: true,
+    onStart: () => { samples = []; },
+    onDelta: ({ dx, dy, axis, target }) => {
+      const pixels = axis === 'x' ? (ocean?.active ? dx * ocean.swipe : 0) : consumeMobileScroll(target, dy);
+      if (!pixels) { samples = []; return; }
+      // Carry the remainder across the world/cards boundary in the same swipe.
+      if (!scrollPx(pixels, 'touch')) {
+        const delta = pixels * 1.9 / Math.max(580, H * .8);
+        if (carry) carry(delta); else epilogue()?.take(delta);
+      }
+    },
+    onEnd: ({ cancelled }) => { if (cancelled) samples = []; else if (samples.length) fling(); }
+  });
 
   // ---------- navigation ----------
   const target = name => name === 'global' ? at.global + H * .2 : name === 'responsibility' ? (ocean ? ocean.stopY(0) : at.resp + H * .3) : name === 'principles' ? (principles ? principles.stopY() : maxY) : name === 'logo' ? (logo ? logo.stopY() : maxY) : name === 'contact' ? maxY : 0;
@@ -846,7 +847,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   }
   function close() {
     if (!open) return;
-    open = false; cancelAnimationFrame(raf); raf = 0; touch = null; samples = [];
+    open = false; cancelAnimationFrame(raf); raf = 0; samples = [];
     y = yt = vy = 0; viewport.scrollTop = 0; written = 0;
     root.classList.remove('is-open', 'is-live', 'is-chapters', 'is-light');
     root.inert = true; root.setAttribute('aria-hidden', 'true');
@@ -869,7 +870,11 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     get covering() { return open && y >= at.clouds * .4; },
     get ready() { return ready; }, get motion() { return motion; },
     enter, close,
-    take(delta, source) { if (!open || !Number.isFinite(delta)) return false; return scrollPx(toPixels(delta, source), source); },
+    take(delta, source, target) {
+      if (!open || !Number.isFinite(delta)) return false;
+      const pixels = consumeMobileScroll(target, toPixels(delta, source));
+      return pixels ? scrollPx(pixels, source) : true;
+    },
     scrollTo(value) { if (!open) return; yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
     next() { if (!open) return false; const stops = [at.global + H * .2, ...(ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [at.resp + H * .3]), ...(principles ? [principles.stopY()] : []), ...(logo ? [logo.stopY()] : []), maxY].sort((a, b) => a - b); const t = stops.find(v => v > Math.max(y, yt) + 40); if (t === undefined) return false; yt = clamp(t, 0, maxY); run(); return true; },
     /* diagnostics (window.__MONTIS_STUDY__.world) */
@@ -877,7 +882,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     jump(value) { if (!open) enter(); y = yt = clamp(value, 0, maxY); vy = 0; run(); },
     dispose() {
       close(); disposed = true;
-      removeEventListener('resize', onResize); removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onUp);
+      removeEventListener('resize', onResize); disposeWorldTouch();
       document.removeEventListener('visibilitychange', onVisibility);
       gsapCtx?.revert();
       for (const t of textures) { t?.image?.close?.(); t?.dispose(); }

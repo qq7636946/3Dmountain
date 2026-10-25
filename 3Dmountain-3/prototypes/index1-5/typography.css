@@ -176,6 +176,10 @@ body {
     --type-card-title: 16px;
   }
   .alp-scene-clock strong { font-size: 14px; }
+  /* Keep focused editor fields readable without triggering phone input zoom. */
+  html[data-look="index1-5"] :is(.tuner,.letters-panel,.lgp) :is(input[type="number"],input[type="text"],textarea,select) {
+    font-size: 16px;
+  }
 }
 
 

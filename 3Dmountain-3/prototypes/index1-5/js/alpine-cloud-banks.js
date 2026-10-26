@@ -11,7 +11,7 @@
    One tileable billow texture (CPU-baked once, mipmapped) feeds the puffs and the sky dome's cumulus and
    cloud sea. Every look value is read live from ALPINE_LIGHT (amount, height, softness, drift, colours).
    Reduced motion freezes the drift. */
-import { ALPINE_LIGHT } from './alpine-light-params.js?v=i15-mvnjah6m';
+import { ALPINE_LIGHT } from './alpine-light-params.js?v=i15-mvomqdwt';
 
 /* Tileable billow field: R = density (fbm + inverted Worley puffs), G/B = d/du, d/dv (scaled), A = fine fbm. */
 let sharedNoise = null, sharedUsers = 0;

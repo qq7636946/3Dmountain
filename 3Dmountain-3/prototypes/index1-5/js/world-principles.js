@@ -154,13 +154,14 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  }
  function paint(s){
   const p=s.principles;if(!p)return;
-  body.style.setProperty('--show',p.show.toFixed(3));body.style.setProperty('--travel','0px');
-  body.style.visibility=p.show>.001?'visible':'hidden';body.inert=p.show<.01;
-  section.style.setProperty('--progress',p.read.toFixed(3));
-  root.classList.toggle('is-principles',p.show>.01);
-  if(resp&&p.enter>.05&&p.y<top+height)resp.inert=true;
-  if(status)status.style.opacity=p.show.toFixed(3);
+  const showText=p.show.toFixed(3);if(body.style.getPropertyValue('--show')!==showText)body.style.setProperty('--show',showText);if(body.style.getPropertyValue('--travel')!=='0px')body.style.setProperty('--travel','0px');
+  const visibleText=p.show>.001?'visible':'hidden';if(body.style.visibility!==visibleText)body.style.visibility=visibleText;if(body.inert!==(p.show<.01))body.inert=p.show<.01;
+  {const readText=p.read.toFixed(3);if(section.style.getPropertyValue('--progress')!==readText)section.style.setProperty('--progress',readText);}
+  if(root.classList.contains('is-principles')!==(p.show>.01))root.classList.toggle('is-principles',p.show>.01);
+  if(resp&&p.enter>.05&&p.y<top+height&&!resp.inert)resp.inert=true;
+  if(status){const opacityText=p.show.toFixed(3);if(opacityText!==statusOpacityText){statusOpacityText=opacityText;status.style.opacity=opacityText;}}
  }
+ let statusOpacityText='';
  const stopY=()=>top+H*.12;
  function close(){root.classList.remove('is-principles');body.style.visibility='hidden';}
  function dispose(){disposed=true;close();removeEventListener('pointermove',onPointer);texture?.dispose();texture2?.dispose();old?.dispose();material?.dispose();quad?.geometry.dispose();if(pill&&was){pill.dataset.worldGo=was.go;if(label)label.textContent=was.text;}}

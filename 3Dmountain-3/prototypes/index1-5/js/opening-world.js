@@ -12,7 +12,7 @@
    The camera and framing are untouched (?opencam=valley offers the valley's camera only for review).
    This file is copied by build.cjs into prototypes/index1-5/js/ (edit the copy in prototypes/index1-5/, then rebuild). */
 import * as THREE from 'three';
-import { createLightSpecks } from './light-specks.js?v=mobile-perf-mvnvuyle';
+import { createLightSpecks } from './light-specks.js?v=i15-mvomqdwt';
 
 export const OPENING_WORLD_DEFAULTS = {
   sunAzimuth: -18, sunElevation: 11, sunColor: '#ffd6a8', sunStrength: 1.2, sunDisc: 2.4, sunSharp: 22000, goldHorizon: .2, goldHeight: 9,

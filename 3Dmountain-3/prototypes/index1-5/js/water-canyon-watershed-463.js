@@ -4,8 +4,8 @@
 import { createConfluenceEffects } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 export { WATERSHED_FLOW_DEFAULTS } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 // ALPINE-TERRAIN (index1-5-alpine 2026-10-23): load-time drainage erosion and the alpine dials.
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvnjah6m';
-import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mvnjah6m';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvomqdwt';
+import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mvomqdwt';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
@@ -1239,11 +1239,14 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   if(alpine)stats.alpine={erosionMs:alpine.ms,iterations:alpine.iterations,coreSpacing:CORE_DX,realDetail:alpine.realDetail};
   if(logo)stats.logoTerrain=logo.stats;
   Object.assign(stats,{terrainSettings,terrainRevision:0,terrainUpdatePending:false,liveTerrainControls:!!terrainConfig});
+  let lastTerrainNext=null,lastTerrainKey='';
+  const sameTerrainNumbers=(a,b)=>{if(!b)return false;for(const k in a)if(a[k]!==b[k])return false;return true;};
   let disposed=false,pendingTerrain=null,pendingSince=0;
   let appliedTerrainKey=JSON.stringify(terrainSettings),pendingTerrainKey=appliedTerrainKey;
   function syncTerrain(force=false){
     if(disposed||!terrainConfig)return false;
-    const next=readTerrainSettings(),key=JSON.stringify(next),now=performance.now();
+    const next=readTerrainSettings(),now=performance.now();
+    const key=sameTerrainNumbers(next,lastTerrainNext)?lastTerrainKey:(lastTerrainNext=next,lastTerrainKey=JSON.stringify(next));
     if(key===appliedTerrainKey){pendingTerrain=null;pendingTerrainKey=key;stats.terrainUpdatePending=false;return false;}
     if(key!==pendingTerrainKey){pendingTerrain=next;pendingTerrainKey=key;pendingSince=now;stats.terrainUpdatePending=true;}
     // Coalesce pointer drags. One settled edit updates normals and shadows once.
@@ -1261,7 +1264,7 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   }
   latticeHashValues=null;latticeHashReady=null;
   return {group,rivers,stats,bounds:terrainBounds,descriptors,downstream,sampleHeight,mainAt,effects,flowPaths,riverDistance,syncTerrain,terrainAt,...(logo?{logo}:{}),
-    update(time,reveal=0,confluence=0,reduced=false){if(disposed)return false;const changed=syncTerrain();if(logo)logo.update(reveal,confluence);effects.update(time,reveal,confluence,reduced);for(const r of [...rivers,...extensions])r.update(time);return changed;},
+    update(time,reveal=0,confluence=0,reduced=false){if(disposed)return false;const changed=syncTerrain();if(logo)logo.update(reveal,confluence);effects.update(time,reveal,confluence,reduced);for(const r of rivers)r.update(time);for(const r of extensions)r.update(time);return changed;},
     dispose(){if(disposed)return;disposed=true;effects.dispose();for(const r of [...rivers,...extensions])r.dispose?.();for(const g of ownedGeometries)g.dispose();for(const m of ownedMaterials)m.dispose();group.clear();}
   };
 }

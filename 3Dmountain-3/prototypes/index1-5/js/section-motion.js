@@ -16,10 +16,11 @@ function style(el,key,value,priority=''){
  if(previous[key]===value&&el.style.getPropertyValue(key)===value)return;
  previous[key]=value;el.style.setProperty(key,value,priority);
 }
+const paintedPose=new WeakMap();
 function apply(el,enter,exit,i,reduced){
  const p=motionPose(enter,exit,i,reduced),key=p.alpha.toFixed(3)+'|'+p.y.toFixed(2);
- if(el.dataset.motionPose===key)return p.alpha;
- el.dataset.motionPose=key;el.classList.add('fi-motion-node');
+ if(paintedPose.get(el)===key)return p.alpha;
+ paintedPose.set(el,key);if(!el.classList.contains('fi-motion-node'))el.classList.add('fi-motion-node');
  el.style.setProperty('--motion-opacity',p.alpha.toFixed(3));
  el.style.setProperty('--motion-y',p.y.toFixed(2)+'px');
  if(el.inert!==(p.alpha<.015))el.inert=p.alpha<.015;

@@ -19,7 +19,7 @@
    Dials: CONFIG.logoSeal (tuner 「LOGO 收尾 Logo Seal」, with the mark's and the lake's own rows). ?logoseal=0 removes it.
    ===================================================================== */
 import * as THREE from 'three';
-import { createLogoSpinFx } from './world-logo-spin.js?v=i15-spin-panel-mvnjpyjv';
+import { createLogoSpinFx } from './world-logo-spin.js?v=i15-mvomqdwt';
 
 /* The defaults. Strict JSON: world-logo-build.cjs copies it into main.js's CONFIG.logoSeal. */
 const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
@@ -467,9 +467,9 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     });
   }
   async function build(R0, renderer) {
-    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mvnjah6m'), import('./world-logo-scene.js?v=background-paused-mvnxhra2'), import('three/addons/loaders/SVGLoader.js')]);
+    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mvomqdwt'), import('./world-logo-scene.js?v=i15-mvomqdwt'), import('three/addons/loaders/SVGLoader.js')]);
     if (dead(R0)) return;
-    R0.daylight = await import('./scene-daylight.js?v=i15-mvnjah6m').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
+    R0.daylight = await import('./scene-daylight.js?v=i15-mvomqdwt').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
     renderer.getDrawingBufferSize(_size);
     R0.lake = await step(R0, 'lake', () => sceneMod.createLakeScene({ THREE, renderer, width: Math.round(_size.x), height: Math.round(_size.y), palette: paletteHex(), assetBase, small, mobilePerformance, reducedMotion }), true);
     if (dead(R0)) return;

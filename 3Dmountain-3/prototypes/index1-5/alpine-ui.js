@@ -288,7 +288,7 @@ function updateLabels(S, v, now) {
 
 /* ---------- loop ---------- */
 let dir = null, vec = null, fitted = false;
-let bridgeInk = -1;
+let bridgeInk = -1, inkHeader = null, inkSet = null;
 function frame(now) {
   raf = requestAnimationFrame(frame);
   if (now - lastStats > 200) updateSceneClock();
@@ -297,7 +297,8 @@ function frame(now) {
   if (!dir) { dir = S.canyon.camera.position.clone(); vec = dir.clone(); }
   // the header stays white while the bridge's haze is still thin, then turns navy with the haze (0 until the bridge is .45 across, 1 at .7)
   const ink = Math.max(0, Math.min(1, ((S.portfolio?.transition || 0) - .45) / .25));
-  if (Math.abs(ink - bridgeInk) > .01) { bridgeInk = ink; html.style.setProperty('--alp-bridge-ink', ink.toFixed(3)); }
+  if (!inkHeader?.isConnected) inkHeader = root.querySelector('.fi-header');
+  if (inkHeader && (Math.abs(ink - bridgeInk) > .01 || inkSet !== inkHeader)) { bridgeInk = ink; inkSet = inkHeader; inkHeader.style.setProperty('--alp-bridge-ink', ink.toFixed(3)); }
   // the opening title is sized by rules that apply once the page is ready, so fit it then
   if (!fitted && document.body.classList.contains('is-ready')) { fitted = true; fitHero(); }
   const id = root.dataset.chapter || '';

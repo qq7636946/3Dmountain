@@ -27,17 +27,17 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=mobile-3a47e5c1f47b'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=mobile-9d010315e826';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-globe-wheel-mvnr95kv';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvnjah6m';   /* WORLD_DIVE_FX */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mvomqdwt'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mvomqdwt';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mvomqdwt';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvomqdwt';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mvnjah6m';
-import { createWorldOcean } from './world-ocean.js?v=mobile-fix-mvnwy3zc';
-import { createWorldLogo } from './world-logo.js?v=background-paused-mvnxhra2';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mvomqdwt';
+import { createWorldOcean } from './world-ocean.js?v=i15-mvomqdwt';
+import { createWorldLogo } from './world-logo.js?v=i15-mvomqdwt';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mvnjah6m';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvnjah6m';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mvomqdwt';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvomqdwt';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
@@ -308,6 +308,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- state ----------
   let open = false, disposed = false, raf = 0, last = 0;
   let y = 0, yt = 0, vy = 0, written = -1, maxY = 1;
+  let ownScrollWrite = false;
   let W = innerWidth, H = innerHeight;
   const at = { clouds: 0, global: 0, globalH: 1, resp: 0, block: 0, footer: 0, footerH: 0 };
   let clock = null;
@@ -316,7 +317,8 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   const small = Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4);
   const maxDpr = Math.min(window.devicePixelRatio || 1, mobilePerformance ? 1.25 : small ? 1.75 : 2);
   let dpr = maxDpr;
-  const color = hex => new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace);   // shaders work in sRGB values as written
+  const colorParsed = new Map();
+  const color = hex => { let c = colorParsed.get(hex); if (!c) { c = new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace); colorParsed.set(hex, c); } return new THREE.Color().copy(c); };   // shaders work in sRGB values as written
   const camera = new THREE.PerspectiveCamera(30, W / H, .05, 20);
   const earth = new THREE.Group();
   const uGrade = { value: new THREE.Vector4(0, 1, 0, 0) }, _g = [0, 1, 0, 0];
@@ -520,12 +522,10 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- frame ----------
   const _offset = { x: 0, y: 0 };
   const globeFollowsScroll = !reducedMotion && document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])');
-
   function frameEarth(s, time) {
     if (!globe) return;
     const live = s.reveal > .001 && s.recede < .999 && !s.o?.covered;
     earth.visible = live;
-
     if (!live) { ocean?.setGlobe(0, 0, 0); return; }
     const base = Math.sqrt(W * H), portrait = W < H;
     const r = ease(s.reveal), gl = smooth(0, 1, s.g), rec = ease(s.recede);
@@ -583,8 +583,8 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   function paintPage(s) {
     const pf = epilogue();
     pf?.setExit(s.exit);
-    root.classList.toggle('is-live', s.c > .4);
-    root.classList.toggle('is-chapters', s.c > .9 && W > 960 && s.footerTop > H * .62);
+    if (root.classList.contains('is-live') !== (s.c > .4)) root.classList.toggle('is-live', s.c > .4);
+    { const on = s.c > .9 && W > 960 && s.footerTop > H * .62; if (root.classList.contains('is-chapters') !== on) root.classList.toggle('is-chapters', on); }
     const dark = s.c > .45 && s.footerTop > 70, light = s.footerTop < H * .5;
     const key = `${s.c > .28}|${dark}|${light}`;
     if (key !== painted) {
@@ -598,7 +598,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     navButtons.forEach((b, i) => {
       const [a, z] = spans[i], on = mid >= a && (mid < z || i === spans.length - 1);
       if (on !== (b.getAttribute('aria-current') === 'step')) { if (on) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); }
-      b.style.setProperty('--p', clamp((mid - a) / Math.max(1, z - a)).toFixed(3));
+      { const pv = clamp((mid - a) / Math.max(1, z - a)).toFixed(3); if (b.style.getPropertyValue('--p') !== pv) b.style.setProperty('--p', pv); }
     });
   }
 
@@ -690,6 +690,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   function frame(now) {
     raf = 0; if (!open || disposed || document.hidden) return;
+    ownScrollWrite = false;
     const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
     clock = clock || { avgMs: 16, lastDt: dt };
     clock.avgMs = mix(clock.avgMs, dt * 1000, .08); clock.lastDt = dt;
@@ -701,7 +702,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
       y = yt + (x + temp) * decay; vy = (vy - omega * temp) * decay;
       if (Math.abs(y - yt) < .05 && Math.abs(vy) < .5) { y = yt; vy = 0; }
     }
-    if (Math.abs(viewport.scrollTop - y) > .35) { written = y; viewport.scrollTop = y; }
+    if (Math.abs(viewport.scrollTop - y) > .35) { written = y; ownScrollWrite = true; viewport.scrollTop = y; }
     const s = sample(y);
     paintPage(s);
     ocean?.paint(s);
@@ -716,6 +717,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
 
   // A focus move (Tab into the footer) scrolls the container natively: adopt it.
   viewport.addEventListener('scroll', () => {
+    if (ownScrollWrite) { ownScrollWrite = false; if (written >= 0 && written <= maxY) return; }
     if (!open || Math.abs(viewport.scrollTop - written) < 1.5) return;
     y = yt = clamp(viewport.scrollTop, 0, maxY); vy = 0; written = y; run();
   }, { passive: true });
@@ -859,7 +861,6 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     if (root.contains(document.activeElement)) document.activeElement.blur();
     document.body.classList.remove('is-world', 'is-world-dark'); painted = '';
     for (const pin of pins) { pin.el.style.opacity = '0'; pin.shown = 0; }
-
     if (video) { video.pause(); videoWanted = false; }
     epilogue()?.setExit(0);
     ocean?.close();

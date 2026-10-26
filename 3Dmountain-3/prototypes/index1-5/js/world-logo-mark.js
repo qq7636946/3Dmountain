@@ -30,7 +30,7 @@
    · look.small (not a dial; default = automatic: screen under 700 px or under 4 GB) caps the mesh (about 27k triangles) and drops dispersion /
      double-sided refraction for phones. The caller can force it either way with look.small = true / false. */
 
-import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mvnjah6m';
+import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mvomqdwt';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 

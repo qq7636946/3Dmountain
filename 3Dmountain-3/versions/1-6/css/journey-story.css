@@ -1,0 +1,208 @@
+/* css/journey-story.css — extracted verbatim from index.html on 2026-10-10 (no code changes; only asset paths updated). */
+    /* The same scale and type family as the opening banner, with scroll-owned motion. */
+    /* Header ink, type and spacing follow the opening banner in every scene. */
+    .journey-story {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      color: #fff;
+      opacity: 0;
+    }
+
+    body.is-ready .journey-story {
+      opacity: 1;
+    }
+
+    .story-scrim {
+      position: absolute;
+      inset: 0;
+      opacity: var(--scrim, 0);
+      background: linear-gradient(90deg, #28445e 0%, #28445e66 40%, transparent 72%);
+    }
+
+    .journey-story[data-side="right"] .story-scrim {
+      transform: scaleX(-1);
+    }
+
+    .journey-story[data-side="center"] .story-scrim {
+      background: radial-gradient(ellipse at 50% 51%, #081a25 0%, #081a25aa 45%, transparent 85%);
+    }
+
+    .story-card {
+      position: absolute;
+      top: 51%;
+      left: 6vw;
+      right: 6vw;
+      transform: translateY(-50%);
+      visibility: hidden;
+      opacity: var(--opacity, 0);
+    }
+
+    .story-card.is-active {
+      visibility: visible;
+    }
+
+    .story-card.story-right {
+      text-align: right;
+    }
+
+    .story-card.story-center {
+      text-align: center;
+    }
+
+    .story-kicker {
+      margin: 0 0 22px;
+      font: 400 10px/1.4 "Jost", "Noto Sans TC", sans-serif;
+      letter-spacing: .24em;
+      text-shadow: 0 2px 12px #07192288;
+    }
+
+    .story-title {
+      font: 400 clamp(1.9rem, 5.2vw, 8.4rem)/1.04 "Jost", "Helvetica Neue", Arial, sans-serif;
+      letter-spacing: .012em;
+      text-shadow: 0 .04em .28em #07192244;
+    }
+
+    .story-line {
+      display: block;
+      overflow: hidden;
+      padding-bottom: .10em;
+      margin-bottom: -.10em;
+    }
+
+    .story-line>span {
+      display: inline-block;
+      transform: translate3d(0, calc((1 - var(--entry, 0)) * var(--movement, 24px) * (1 + var(--line-delay, 0)*.26) - var(--exit, 0)*16px), 0);
+    }
+
+    .story-zh {
+      max-width: 34em;
+      margin: 24px 0 0;
+      font: 300 clamp(.78rem, 1.12vw, 1.08rem)/1.95 "Noto Sans TC", sans-serif;
+      letter-spacing: .21em;
+      text-shadow: 0 1px 12px #071922b3;
+      opacity: var(--zh, 0);
+      transform: translate3d(0, calc((1 - var(--zh, 0))*10px), 0);
+    }
+
+    .story-right .story-zh {
+      margin-left: auto;
+    }
+
+    .story-center .story-zh {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .story-signature span {
+      display: inline-block;
+      white-space: nowrap;
+      margin: 0 .65em;
+    }
+
+    .story-signature {
+      margin-top: 32px;
+      font: 300 10px/2 "Noto Sans TC", sans-serif;
+      letter-spacing: .25em;
+      opacity: var(--zh, 0);
+      text-shadow: 0 1px 12px #071922;
+    }
+
+    html:not([data-tuning="true"]) .tuner {
+      display: none;
+    }
+
+    .journey-cue {
+      bottom: max(25px, env(safe-area-inset-bottom));
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      backdrop-filter: none;
+      color: #fff;
+      text-shadow: 0 1px 12px #102d4caa;
+      padding: 12px 24px;
+      letter-spacing: .17em;
+    }
+
+    .journey-cue small {
+      display: none;
+    }
+
+    .journey-track {
+      background: #ffffff3d;
+      width: 92px;
+      margin-top: 10px;
+    }
+
+    .journey-track i {
+      background: #fff;
+    }
+
+    .journey-cue:hover .journey-track {
+      background: #ffffff70;
+    }
+
+    .journey-cue:focus-visible {
+      outline: 1px solid white;
+      outline-offset: 0;
+    }
+
+    @media(max-width:680px) {
+      .story-card {
+        left: 7vw;
+        right: 7vw;
+        top: 50%;
+      }
+
+      .story-title {
+        font-size: clamp(2rem, 10.5vw, 3.4rem);
+        line-height: 1.05;
+        letter-spacing: .005em;
+      }
+
+      .story-kicker {
+        font-size: 8px;
+        letter-spacing: .20em;
+        margin-bottom: 17px;
+      }
+
+      .story-zh {
+        font-size: 12px;
+        letter-spacing: .13em;
+        line-height: 1.95;
+        margin-top: 21px;
+        max-width: 25em;
+      }
+
+      .story-card.story-left,
+      .story-card.story-right {
+        top: 57%;
+      }
+
+      .story-signature span {
+        display: block;
+        margin: 0;
+      }
+
+      .story-signature {
+        max-width: 24em;
+        margin: 25px auto 0;
+        font-size: 9px;
+        letter-spacing: .18em;
+      }
+
+      .journey-cue {
+        font-size: 10px;
+        bottom: max(17px, env(safe-area-inset-bottom));
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+
+      .story-line>span,
+      .story-zh {
+        transform: none;
+      }
+    }
+  

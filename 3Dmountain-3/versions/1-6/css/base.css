@@ -1,0 +1,1041 @@
+/* css/base.css — extracted verbatim from index.html on 2026-10-10 (no code changes; only asset paths updated). */
+    :root {
+      --ink: #2f5f8a;
+      --ink-dim: rgba(47, 95, 138, .48);
+      --ease: cubic-bezier(.16, 1, .3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden
+    }
+
+    body {
+      background:
+        linear-gradient(180deg, #c9dfe9 0%, #e9eef1 48%, #f6e9e6 61%, #b7dce9 100%);
+      color: var(--ink);
+      /* 西文走 Jost，中文走 Noto Sans TC。順序就是分工：瀏覽器拿不到的字
+     才往後找，所以拉丁字母一定是 Jost，漢字一定是 Noto Sans TC。 */
+      font-family: "Jost", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #gl {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100vw !important;
+      height: 100vh !important;
+      touch-action: none;
+      cursor: default;
+    }
+
+    body.is-drop-hovered #gl {
+      cursor: grab
+    }
+
+    body.is-drop-grabbed #gl {
+      cursor: grabbing
+    }
+
+    .wash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      background:
+        radial-gradient(68% 38% at 50% 54%, rgba(255, 233, 226, .10), transparent 58%),
+        radial-gradient(120% 90% at 50% 44%, transparent 58%, rgba(74, 111, 133, .16) 100%);
+      mix-blend-mode: soft-light;
+    }
+
+    .grain {
+      position: fixed;
+      inset: -60%;
+      pointer-events: none;
+      z-index: 3;
+      opacity: .04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+
+    }
+
+    body.is-ready .grain {
+      animation: grain .24s steps(2) infinite;
+    }
+
+    @keyframes grain {
+      0% {
+        transform: translate3d(-2%, -1%, 0)
+      }
+
+      25% {
+        transform: translate3d(1%, 2%, 0)
+      }
+
+      50% {
+        transform: translate3d(2%, -2%, 0)
+      }
+
+      75% {
+        transform: translate3d(-1%, 1%, 0)
+      }
+
+      100% {
+        transform: translate3d(0, 0, 0)
+      }
+    }
+
+    .chrome {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.8s var(--ease) .5s;
+    }
+
+    body.is-ready .chrome {
+      opacity: 1
+    }
+
+    .brand,
+    .study {
+      position: absolute;
+      top: clamp(20px, 2.4vw, 38px);
+      font-size: .62rem;
+      letter-spacing: .34em;
+      line-height: 1;
+      color: var(--ink-dim);
+      text-transform: uppercase;
+    }
+
+    .brand {
+      left: clamp(20px, 3.2vw, 54px);
+      font-weight: 400
+    }
+
+    .brand,
+    .study {
+      transition: color .8s ease;
+    }
+
+    body.is-watershed .brand,
+    body.is-watershed .study {
+      color: rgba(204, 229, 255, .70);
+    }
+
+    .study {
+      right: clamp(20px, 3.2vw, 54px);
+      letter-spacing: .24em
+    }
+
+    .hair {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(18px, 2.6vw, 34px);
+      width: 38px;
+      height: 1px;
+      transform: translateX(-50%);
+      background: rgba(47, 95, 138, .28);
+    }
+
+    /* ------------------------------------------------------------------
+   主標：水珠從字後面浮出來。
+   字級用 vw 而不是 rem，因為這一行的重點是「橫跨整個畫面」——它必須在
+   任何寬度下都幾乎碰到左右邊，字距才撐得開。水珠中心在畫面 43% 高，字
+   壓在 50%，於是球體剛好從字腰穿過去，這是參考圖的關係。
+   ------------------------------------------------------------------ */
+    .hero {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      text-align: center;
+      padding: 0 clamp(16px, 3vw, 48px);
+    }
+
+    .hero-title {
+      font-family: "Jost", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 400;
+      /* 這個係數是量出來的，不是挑出來的：這一行在 Jost、字距 .012em 下
+         的寬度剛好是字級的 13.7 倍，所以 6.4vw 讓整行佔滿視窗寬度的
+         88%——參考圖裡它幾乎碰到左右兩邊，那正是這個排版的氣勢來源。
+         字重或字距一改，這個係數就要重新量一次。 */
+      font-size: clamp(1.9rem, 5.2vw, 8.4rem);
+      line-height: .96;
+      letter-spacing: .012em;
+      color: #fff;
+      white-space: nowrap;
+      /* 白字壓在亮海面上會糊掉，所以給它一點自己的陰影當底，而不是加一層
+     暗板——參考圖裡字是直接站在光上的。 */
+      text-shadow: 0 .04em .28em rgba(35, 62, 96, .26);
+    }
+
+    .hero-sub {
+      margin-top: clamp(.5rem, 1.1vw, 1.1rem);
+      font-family: "Noto Sans TC", "Jost", sans-serif;
+      font-weight: 300;
+      font-size: clamp(.72rem, 1.12vw, 1.08rem);
+      letter-spacing: .42em;
+      text-indent: .42em;
+      /* 這一行正好壓在水珠最亮的地方，白字配淡陰影會直接消失。改成全白
+         加一層收得很緊的深藍暈——不是加暗板，字仍然站在光上，只是自己
+         帶了一圈邊，這樣它在球上、在天空上、在海面上都讀得到。 */
+      color: #fff;
+      text-shadow:
+        0 0 .10em rgba(30, 54, 86, .55),
+        0 .04em .30em rgba(30, 54, 86, .42);
+    }
+
+    /* 進場：標題比水珠晚一步，字要等場景站穩才浮上來。 */
+    .hero-title,
+    .hero-sub {
+      opacity: 0;
+      transform: translateY(.42em);
+      transition: opacity 1.6s var(--ease), transform 1.6s var(--ease);
+    }
+
+    body.is-ready .hero-title {
+      opacity: 1;
+      transform: none;
+      transition-delay: .9s
+    }
+
+    body.is-ready .hero-sub {
+      opacity: 1;
+      transform: none;
+      transition-delay: 1.25s
+    }
+
+    /* 標題必須在珠子到達之前就讓開，而且要快：進場用的 1.6 秒在這裡會
+       讓字和珠子擠在一起。0.42 秒離場，副標比主標早一步走。
+       往上推而不是往下：珠子是朝觀眾來的，字讓路的方向要和它相反。 */
+    body.is-transitioning .hero-title,
+    body.is-section-two .hero-title,
+    body.is-transitioning .hero-sub,
+    body.is-section-two .hero-sub {
+      opacity: 0;
+      transform: translateY(-.58em);
+      transition: opacity .42s var(--ease), transform .52s var(--ease);
+      transition-delay: 0s
+    }
+
+    body.is-transitioning .hero-sub,
+    body.is-section-two .hero-sub {
+      transition-delay: 0s;
+      transition-duration: .3s, .4s
+    }
+
+    @media (max-width:680px) {
+      .hero-title {
+        white-space: normal;
+        font-size: clamp(2rem, 10.5vw, 3.4rem);
+        letter-spacing: .005em
+      }
+
+      .hero-sub {
+        letter-spacing: .26em;
+        text-indent: .26em
+      }
+    }
+
+    .hair:before,
+    .hair:after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 3px;
+      height: 3px;
+      margin-top: -1px;
+      border-radius: 50%;
+      background: rgba(47, 95, 138, .36);
+    }
+
+    .hair:before {
+      left: -8px
+    }
+
+    .hair:after {
+      right: -8px
+    }
+
+    .loader {
+      position: fixed;
+      inset: 0;
+      z-index: 6;
+      display: grid;
+      place-items: center;
+      background: #e4edf1;
+      transition: opacity 1.15s var(--ease), visibility 1.15s;
+    }
+
+    .loader.is-done {
+      opacity: 0;
+      visibility: hidden
+    }
+
+    .loader-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .loader-logo {
+      font-size: .78rem;
+      letter-spacing: .48em;
+      text-indent: .48em;
+      color: var(--ink);
+    }
+
+    .loader-line {
+      width: min(210px, 46vw);
+      height: 1px;
+      overflow: hidden;
+      background: rgba(47, 95, 138, .16);
+    }
+
+    .loader-line i {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #4a86bb;
+      transform: scaleX(0);
+      transform-origin: left center;
+      animation: load 1.25s var(--ease) forwards;
+    }
+
+    .loader-note {
+      color: var(--ink-dim);
+      font-size: .52rem;
+      letter-spacing: .24em;
+    }
+
+    @keyframes load {
+      to {
+        transform: scaleX(1)
+      }
+    }
+
+    .fallback {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 30px;
+      color: var(--ink);
+      text-align: center;
+      background: #e4edf1;
+      font-size: .78rem;
+      letter-spacing: .14em;
+    }
+
+    .section-two {
+      /* Media reveal and settle are both keyed off the scroll progress from
+     JS, so the hand-off stays locked to the drop instead of racing it. */
+      --s2-media: 0;
+      --s2-scale: 1.075;
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      overflow: hidden;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      background:
+        radial-gradient(70% 52% at 50% 62%, rgba(255, 239, 234, .48), transparent 64%),
+        radial-gradient(92% 72% at 50% 0%, rgba(156, 204, 222, .34), transparent 72%),
+        linear-gradient(180deg, #c6dce6 0%, #e8eef1 49%, #eee9e7 64%, #b8d8e5 100%);
+      will-change: opacity;
+    }
+
+    .section-two.is-active {
+      visibility: visible
+    }
+
+    .section-two.is-live {
+      pointer-events: auto
+    }
+
+    /* Deep plate beneath the film: the swap never shows a black frame even
+   if the video is still buffering when the flare clears. */
+    .s2-plate {
+      position: absolute;
+      inset: 0;
+      opacity: var(--s2-media);
+      background:
+        radial-gradient(118% 88% at 50% 40%, #26414f 0%, #162834 62%, #0e1c26 100%);
+    }
+
+    .s2-media {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      opacity: var(--s2-media);
+      transform: scale(var(--s2-scale));
+      transform-origin: 50% 54%;
+      will-change: transform, opacity;
+    }
+
+    .s2-media video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 1.25s var(--ease);
+    }
+
+    .section-two.is-video-ready .s2-media video {
+      opacity: 1
+    }
+
+    .s2-clouds {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none
+    }
+
+    .s2-clouds i {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at 40% 45%,
+          rgba(245, 248, 252, .72) 0%,
+          rgba(232, 239, 246, .40) 30%,
+          rgba(212, 221, 229, .13) 58%,
+          transparent 76%);
+      filter: blur(var(--pcb, 18px));
+      will-change: transform;
+      animation: var(--pca) linear infinite;
+    }
+
+    @keyframes pcA {
+      from {
+        transform: translateX(-22vw)
+      }
+
+      to {
+        transform: translateX(122vw)
+      }
+    }
+
+    @keyframes pcB {
+      from {
+        transform: translateX(122vw)
+      }
+
+      to {
+        transform: translateX(-22vw)
+      }
+    }
+
+    /* Reading shade: keeps the type legible over any frame of the film. */
+    .s2-shade {
+      position: absolute;
+      inset: 0;
+      opacity: var(--s2-media);
+      background:
+        linear-gradient(100deg, rgba(9, 20, 28, .72) 0%, rgba(9, 20, 28, .38) 38%, transparent 68%),
+        linear-gradient(0deg, rgba(9, 20, 28, .46) 0%, transparent 42%),
+        radial-gradient(122% 88% at 50% 46%, transparent 40%, rgba(8, 18, 26, .46) 100%);
+    }
+
+    /* ---------- section two type (copy ported from the chapter build) ---- */
+    .s2-stage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      padding-left: clamp(64px, 15vw, 300px);
+      padding-right: clamp(24px, 6vw, 80px);
+      color: #fff;
+    }
+
+    .s2-block {
+      max-width: min(760px, 64vw)
+    }
+
+    .mask {
+      display: block;
+      overflow: hidden
+    }
+
+    .mask>i {
+      display: block;
+      font-style: normal;
+      transform: translateY(112%);
+      opacity: 0;
+      transition: transform 1.05s var(--ease), opacity .8s var(--ease);
+      transition-delay: var(--d, 0s);
+    }
+
+    .section-two.is-in .mask>i {
+      transform: none;
+      opacity: 1
+    }
+
+    /* Leaving is not the entrance played backwards: no stagger, and quick,
+   so scrolling back up never feels like it drags the type with it. */
+    .section-two:not(.is-in) .mask>i {
+      transition-duration: .5s, .34s;
+      transition-delay: 0s;
+    }
+
+    .s2-eyebrow {
+      font-size: clamp(.86rem, 1.1vw, 1.05rem);
+      letter-spacing: .02em;
+      opacity: .92;
+      margin-bottom: clamp(22px, 3vw, 44px);
+    }
+
+    .s2-title {
+      font-weight: 200;
+      font-size: clamp(2rem, 4.6vw, 4.5rem);
+      line-height: 1.12;
+      letter-spacing: .005em;
+      text-transform: uppercase;
+      margin-bottom: clamp(30px, 4vw, 58px);
+    }
+
+    .s2-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: clamp(18px, 2vw, 34px);
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .s2-cta .txt {
+      font-size: .72rem;
+      letter-spacing: .24em;
+      font-weight: 500;
+      text-transform: uppercase
+    }
+
+    .s2-cta .circle {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, .45);
+      display: grid;
+      place-items: center;
+      font-size: .8rem;
+      opacity: 0;
+      transform: scale(.76);
+      transition: background .5s var(--ease), color .5s var(--ease),
+        border-color .5s var(--ease),
+        transform .72s var(--ease) .30s, opacity .55s var(--ease) .30s;
+    }
+
+    .section-two.is-in .s2-cta .circle {
+      opacity: 1;
+      transform: none
+    }
+
+    .s2-cta:hover .circle {
+      background: #fff;
+      color: #12222c;
+      border-color: #fff;
+      transform: translateX(4px)
+    }
+
+    .s2-rule {
+      height: 1px;
+      width: min(300px, 34vw);
+      margin-top: clamp(22px, 2.4vw, 38px);
+      background: rgba(255, 255, 255, .38);
+      transform: scaleX(0);
+      transform-origin: 0 50%;
+      transition: transform 1.2s var(--ease) .42s;
+    }
+
+    .section-two.is-in .s2-rule {
+      transform: scaleX(1)
+    }
+
+    .section-two:not(.is-in) .s2-rule {
+      transform-origin: 100% 50%;
+      transition-duration: .42s;
+      transition-delay: 0s;
+    }
+
+    .section-two:not(.is-in) .s2-cta .circle {
+      transition-duration: .3s, .3s, .3s, .34s, .26s;
+      transition-delay: 0s;
+    }
+
+    .section-two:not(.is-in) .s2-back {
+      transition-delay: 0s;
+      transition-duration: .35s
+    }
+
+    .s2-back {
+      position: absolute;
+      right: clamp(20px, 3.2vw, 54px);
+      bottom: clamp(22px, 3vw, 46px);
+      font-size: .54rem;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .46);
+      opacity: 0;
+      transition: opacity .9s var(--ease) .5s;
+    }
+
+    .section-two.is-in .s2-back {
+      opacity: 1
+    }
+
+    .transition-flash {
+      --flare-x: 50%;
+      --flare-y: 62%;
+      position: fixed;
+      inset: -18%;
+      z-index: 6;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        /* 白 → 淡藍紫 → 紫 → 洋紅 → 青：這是薄膜色散的順序。夾在紫和青
+           之間那個非光譜色的洋紅，就是讓這條漸層讀成「干涉」而不是「彩
+           虹」的關鍵。原本的漸層只有青色，紫和洋紅完全沒有。虹彩放在
+           20–42%、alpha ≥ .32，再往外或再淡在這麼淡的場域上就看不見。 */
+        radial-gradient(ellipse at var(--flare-x) var(--flare-y),
+          rgba(255, 255, 255, 1) 0 1.2%,
+          rgba(246, 243, 255, .97) 4.5%,
+          rgba(214, 206, 255, .80) 11%,
+          rgba(188, 168, 248, .56) 20%,
+          rgba(222, 152, 232, .40) 30%,
+          rgba(132, 206, 246, .32) 42%,
+          rgba(108, 146, 208, .12) 54%,
+          transparent 72%);
+      mix-blend-mode: screen;
+      will-change: opacity, transform;
+      transform-origin: var(--flare-x) var(--flare-y);
+      transform: scale(.08, .035);
+    }
+
+    .transition-flash:before {
+      content: "";
+      position: absolute;
+      left: 5%;
+      right: 5%;
+      top: var(--flare-y);
+      height: 2px;
+      transform: translateY(-50%);
+      /* 一條對稱的白線橫過畫面正中央，是最公式化的鏡頭光暈符號。兩端
+         不對稱（一邊偏紫、一邊偏洋紅），整條降到三分之一。 */
+      background: linear-gradient(90deg,
+          transparent,
+          rgba(196, 176, 250, .26) 20%,
+          rgba(255, 255, 255, .92) 48%,
+          rgba(224, 156, 234, .26) 80%,
+          transparent);
+      opacity: .34;
+      filter: blur(.4px);
+      box-shadow:
+        0 0 10px rgba(226, 214, 255, .70),
+        0 0 34px rgba(150, 120, 230, .40);
+    }
+
+    .section-two-index {
+      position: absolute;
+      left: clamp(20px, 3.2vw, 54px);
+      bottom: clamp(22px, 3vw, 46px);
+      color: rgba(255, 255, 255, .54);
+      font-size: .58rem;
+      letter-spacing: .30em;
+      text-transform: uppercase;
+    }
+
+    body.is-ready.is-transitioning .chrome {
+      opacity: .24
+    }
+
+    body.is-ready.is-section-two .chrome {
+      opacity: 0
+    }
+
+    .tuner {
+      position: fixed;
+      top: 74px;
+      right: 18px;
+      z-index: 12;
+      width: min(330px, calc(100vw - 36px));
+      max-height: calc(100vh - 96px);
+      color: #dcebf3;
+      border: 1px solid rgba(196, 226, 240, .22);
+      background: rgba(23, 45, 58, .76);
+      box-shadow: 0 18px 55px rgba(26, 56, 73, .22);
+      backdrop-filter: blur(18px) saturate(118%);
+      -webkit-backdrop-filter: blur(18px) saturate(118%);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .8s var(--ease) .65s, transform .8s var(--ease) .65s;
+    }
+
+    body.is-ready .tuner {
+      opacity: 1;
+      transform: none
+    }
+
+    .tuner.is-folded .tuner-body {
+      display: none
+    }
+
+    .tuner-head {
+      height: 43px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 13px 0 15px;
+      border-bottom: 1px solid rgba(196, 226, 240, .14);
+    }
+
+    .tuner-title {
+      font-size: .58rem;
+      letter-spacing: .27em;
+      text-transform: uppercase;
+    }
+
+    .tuner-toggle {
+      width: 25px;
+      height: 25px;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
+      font: 300 .9rem/1 "Jost", sans-serif;
+    }
+
+    .tuner-body {
+      max-height: calc(100vh - 140px);
+      overflow: auto;
+      padding: 5px 14px 14px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(205, 230, 242, .28) transparent;
+    }
+
+    .tune-group {
+      padding: 12px 0 8px;
+      border-bottom: 1px solid rgba(196, 226, 240, .11)
+    }
+
+    .tune-group:last-of-type {
+      border-bottom: 0
+    }
+
+    .tune-group h3 {
+      margin-bottom: 9px;
+      color: rgba(222, 239, 247, .58);
+      font-size: .48rem;
+      font-weight: 400;
+      letter-spacing: .28em;
+    }
+
+    .tune-row {
+      min-height: 25px;
+      display: grid;
+      grid-template-columns: 64px 1fr 45px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tune-row.is-morph {
+      min-height: 45px;
+      padding-top: 2px;
+    }
+
+    .tune-row.is-morph:after {
+      content: "圓球  ◀────────▶  液態波";
+      grid-column: 2/4;
+      margin-top: -5px;
+      color: rgba(218, 239, 248, .48);
+      font: 400 .42rem/1 Consolas, monospace;
+      letter-spacing: .04em;
+      text-align: center;
+    }
+
+    .tune-row label {
+      color: rgba(226, 240, 247, .72);
+      font-size: .5rem;
+      letter-spacing: .08em;
+    }
+
+    .tune-row input[type="range"] {
+      width: 100%;
+      height: 1px;
+      accent-color: #a9d7ea;
+      cursor: ew-resize;
+    }
+
+    .tune-value {
+      color: #e8f5fb;
+      font: 400 .51rem/1 Consolas, monospace;
+      text-align: right;
+    }
+
+    .tune-row.is-logo {
+      grid-template-columns: 82px minmax(0, 1fr) 62px;
+      min-height: 30px;
+    }
+
+    .tune-row.is-logo label {
+      font-size: 10px;
+      letter-spacing: .02em;
+    }
+
+    .tune-row.is-logo .tune-value {
+      font-size: 11px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .tune-row input[type="number"] {
+      border: 1px solid #c4e2f025;
+      border-radius: 3px;
+      background: #ffffff09;
+      padding: 4px 3px;
+    }
+
+    .tune-row input[type="color"] {
+      width: 100%;
+      height: 23px;
+      padding: 1px;
+      border: 1px solid #c4e2f035;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .logo-actions {
+      padding-bottom: 9px;
+      border-bottom: 1px solid #c4e2f025;
+    }
+
+    .logo-compare {
+      position: sticky;
+      top: -5px;
+      z-index: 2;
+      padding: 14px 0 12px;
+      background: #344d60;
+    }
+
+    .logo-compare .tuner-actions {
+      padding-top: 0;
+    }
+
+    /* 一款 LOGO 一欄：三顆按鈕並排，不會有一顆孤零零掉到第二行。 */
+    .logo-compare .logo-switches {
+      grid-template-columns: repeat(var(--logo-count, 3), 1fr);
+      gap: 6px;
+    }
+
+    .logo-compare .logo-switches button {
+      height: 36px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .12em;
+    }
+
+    .logo-compare .logo-switches button[aria-pressed="true"] {
+      color: #17354b;
+      background: #c9e0eb;
+      border-color: #dbeef5;
+    }
+
+    .logo-compare button:disabled {
+      opacity: .4;
+      cursor: wait;
+    }
+
+    .logo-compare button:focus-visible {
+      outline: 2px solid #dbeef5;
+      outline-offset: 3px;
+    }
+
+    .logo-compare-status {
+      margin: 10px 0 12px;
+      color: #c3d6e1;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: .03em;
+    }
+
+    .logo-actions button {
+      font-size: 10px;
+      letter-spacing: .04em;
+    }
+
+    .tuner-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-top: 12px
+    }
+
+    .tuner-actions button {
+      height: 29px;
+      border: 1px solid rgba(196, 226, 240, .18);
+      color: #dcebf3;
+      background: rgba(217, 239, 248, .06);
+      cursor: pointer;
+      font: 300 .47rem/1 "Jost", sans-serif;
+      letter-spacing: .16em;
+      transition: background .25s ease;
+    }
+
+    .tuner-actions button:hover {
+      background: rgba(217, 239, 248, .14)
+    }
+
+    @media (max-width:860px) {
+      .s2-stage {
+        align-items: flex-end;
+        padding-left: clamp(22px, 7vw, 60px);
+        padding-bottom: 26vh;
+      }
+
+      .s2-block {
+        max-width: none
+      }
+
+      .s2-back {
+        display: none
+      }
+    }
+
+    @media (max-width:760px) {
+      .study {
+        display: none
+      }
+
+      .brand {
+        font-size: .55rem
+      }
+
+      .chrome {
+        opacity: .78
+      }
+
+      .tuner {
+        top: auto;
+        bottom: 15px;
+        right: 12px;
+        width: min(310px, calc(100vw - 24px));
+        max-height: 58vh
+      }
+
+      .tuner-body {
+        max-height: calc(58vh - 44px)
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      .grain {
+        animation: none
+      }
+
+      .s2-clouds i {
+        animation: none
+      }
+
+      .mask>i,
+      .s2-rule,
+      .s2-cta .circle,
+      .s2-back {
+        transition-duration: .2s;
+        transition-delay: 0s
+      }
+    }
+
+    body.is-journey-moving .hero-title,
+    body.is-journey-moving .hero-sub {
+      opacity: 0;
+      transform: translateY(-.5em);
+      transition: opacity .4s ease, transform .6s var(--ease);
+      transition-delay: 0s;
+    }
+
+    .journey-cue {
+      position: fixed;
+      z-index: 6;
+      left: 50%;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      border: 1px solid #ffffff55;
+      border-radius: 32px;
+      background: #edf6f9d4;
+      color: #254661;
+      backdrop-filter: blur(12px);
+      padding: 10px 24px;
+      font: 400 11px/1.65 "Jost", "Noto Sans TC", sans-serif;
+      letter-spacing: .13em;
+      white-space: nowrap;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .8s ease;
+    }
+
+    body.is-ready .journey-cue {
+      opacity: 1;
+    }
+
+    .journey-cue:focus-visible {
+      outline: 2px solid #9ac9e4;
+      outline-offset: 4px;
+    }
+
+    .journey-cue small {
+      display: block;
+      font-size: 8px;
+      letter-spacing: .28em;
+      opacity: .66;
+    }
+
+    .journey-track {
+      display: block;
+      margin: 7px auto 0;
+      width: 120px;
+      height: 1px;
+      background: #25466133;
+    }
+
+    .journey-track i {
+      display: block;
+      width: 100%;
+      height: 1px;
+      background: #437e9b;
+      transform-origin: left;
+      transform: scaleX(var(--journey-p, 0));
+    }
+
+    .hair {
+      display: none;
+    }
+
+    @media(max-width:760px) {
+      .tuner {
+        top: 60px;
+        bottom: auto;
+      }
+
+      .journey-cue {
+        bottom: 14px;
+        font-size: 10px;
+        padding: 9px 20px;
+      }
+    }
+  

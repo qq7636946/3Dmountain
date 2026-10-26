@@ -1,0 +1,102 @@
+/* Only the page header uses logo2.svg. The closing 3D mark keeps its symbol. */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header[data-header-logo2] {
+  min-height: 124px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.finnovation-ui .fi-header[data-header-logo2] .fi-brand-logo2 {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 148px;
+  min-height: 110px;
+}
+.finnovation-ui .fi-header[data-header-logo2] .fi-brand-art {
+  display: block;
+  width: 132px;
+  height: 102px;
+  flex: none;
+}
+.finnovation-ui .fi-header[data-header-logo2] .fi-header-right { margin-left: auto; }
+.finnovation-ui .fi-brand-context {
+  margin: 0;
+  max-width: 220px;
+  color: currentColor;
+  opacity: .72;
+  font: 500 9px/1.8 var(--alp-mono, ui-monospace, monospace);
+  letter-spacing: .14em;
+}
+.finnovation-ui .fi-brand-context span { opacity: .65; }
+@media (max-width: 1280px) {
+  .finnovation-ui .fi-header[data-header-logo2] .fi-topnav { display: none; }
+}
+@media (max-width: 680px) {
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header[data-header-logo2] {
+    min-height: 108px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .finnovation-ui .fi-header[data-header-logo2] .fi-brand-logo2 { width: 120px; min-height: 96px; }
+  .finnovation-ui .fi-header[data-header-logo2] .fi-brand-art { width: 112px; height: 86px; }
+  .finnovation-ui .fi-header[data-header-logo2] .fi-brand-context { display: none; }
+  .finnovation-ui .fi-header[data-header-logo2] .fi-header-right,
+  .finnovation-ui .fi-header[data-header-logo2] .fi-header-actions { position: static; }
+  html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header[data-header-logo2] .fi-explore {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+html[data-render-mode="text"] .finnovation-ui .fi-header[data-header-logo2] {
+  position: relative;
+  display: flex;
+  min-height: 124px;
+}
+
+/* Main index1-6: the horizontal logo3 artwork anchors the left edge. */
+html[data-look="index1-6"]:not([data-opening-refinement]) .finnovation-ui .fi-header[data-header-logo3] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 110px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  gap: 28px;
+}
+html[data-look="index1-6"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-logo3 {
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 184.5px;
+  min-height: 74px;
+}
+html[data-look="index1-6"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 645 / 190;
+  flex: none;
+}
+html[data-look="index1-6"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-header-right { margin-left: auto; }
+@media (max-width: 960px) {
+  html[data-look="index1-6"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-topnav { display: none; }
+}
+@media (max-width: 680px) {
+  html[data-look="index1-6"]:not([data-opening-refinement]) .finnovation-ui .fi-header[data-header-logo3] {
+    min-height: 84px;
+    padding: 16px 8px;
+    gap: 18px;
+  }
+  html[data-look="index1-6"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-logo3 {
+    width: clamp(126px, 36vw, 154.5px);
+    min-height: 52px;
+  }
+  html[data-look="index1-6"]:not([data-opening-refinement]) .fi-header[data-header-logo3] :is(.fi-header-right,.fi-header-actions) { position: static; }
+}

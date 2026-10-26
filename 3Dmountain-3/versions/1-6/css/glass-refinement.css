@@ -1,0 +1,302 @@
+/* css/glass-refinement.css — extracted verbatim from index.html on 2026-10-10 (no code changes; only asset paths updated). */
+    /* Shared silver glass: the scene remains visible through every control. */
+    /* 介面毛玻璃的參數（CONFIG.uiGlass → applyUiGlass() 寫到 :root）。預設值等於原本寫死的數值，
+   所以不動滑桿畫面一模一樣。每個元件原本的差異（頁尾飽和度少 5%、選單更不透明…）改成
+   「同一組參數 × 各自倍率」，拉一條滑桿就整套一起變。 */
+    :root {
+      --uig-blur: 18px;
+      --uig-sat: 1.2;
+      --uig-bright: 1.04;
+      --uig-tint: #e2edf4;
+      --uig-fill: 1;
+      --uig-hi: 1;
+      --uig-shade: 1;
+      --uig-sheen: 1;
+      --uig-border: 1;
+      --uig-shadow: 1;
+      --uig-menu-blur: 30px;
+      --uig-menu-fill: 1;
+      --uig-veil: 1;
+      --uig-veil-blur: 7px;
+      /* 衍生色：不支援相對色語法的瀏覽器就用原本的固定色（顏色/透明度滑桿無效，模糊等仍有效）。 */
+      --uig-fill-1: #f8fcff66;
+      --uig-fill-2: #e2edf42e;
+      --uig-fill-3: #bad1e033;
+      --uig-hover-1: #ffffff80;
+      --uig-hover-2: #e6f1f745;
+      --uig-hover-3: #d1e4f04d;
+      --uig-foot-1: #eaf3fa30;
+      --uig-foot-2: #e2edf449;
+      --uig-menu-1: #f2f7fbe6;
+      --uig-menu-2: #dbe8f0c4;
+      --uig-hi-copy: #ffffffad;
+      --uig-hi-head: #ffffff80;
+      --uig-hi-menu: #ffffffb3;
+      --uig-rim-1: #ffffffd9;
+      --uig-rim-2: #f6fcff99;
+      --uig-rim-3: #5d789457;
+      --uig-rim-4: #ffffffa6;
+      --uig-sh-copy: #25415938;
+      --uig-sh-head: #29476126;
+      --uig-sh-foot: #2b496326;
+      --uig-sh-menu: #38566e24;
+      --uig-bd-foot: #f4faff80;
+      --uig-bd-menu: #f4faff9e;
+      --uig-bd-div: #4c6b8424;
+      --uig-drop-foot: #26496008;
+      --uig-drop-menu: #0d273740;
+      --uig-veil-c: #17314938;
+    }
+
+    @supports (color: rgb(from red r g b)) {
+      :root {
+        /* 玻璃底色：三段漸層都以底色為中心，保留原本的亮→暗差距（中段 #e2edf4 = 底色）。 */
+        --uig-fill-1: rgb(from var(--uig-tint) calc(r + 22) calc(g + 15) calc(b + 11) / calc(102 / 255 * var(--uig-fill)));
+        --uig-fill-2: rgb(from var(--uig-tint) r g b / calc(46 / 255 * var(--uig-fill)));
+        --uig-fill-3: rgb(from var(--uig-tint) calc(r - 40) calc(g - 28) calc(b - 20) / calc(51 / 255 * var(--uig-fill)));
+        --uig-hover-1: rgb(from var(--uig-tint) calc(r + 29) calc(g + 18) calc(b + 11) / calc(128 / 255 * var(--uig-fill)));
+        --uig-hover-2: rgb(from var(--uig-tint) calc(r + 4) calc(g + 4) calc(b + 3) / calc(69 / 255 * var(--uig-fill)));
+        --uig-hover-3: rgb(from var(--uig-tint) calc(r - 17) calc(g - 9) calc(b - 4) / calc(77 / 255 * var(--uig-fill)));
+        --uig-foot-1: rgb(from var(--uig-tint) calc(r + 8) calc(g + 6) calc(b + 6) / calc(48 / 255 * var(--uig-fill)));
+        --uig-foot-2: rgb(from var(--uig-tint) r g b / calc(73 / 255 * var(--uig-fill)));
+        /* 選單是要讀字的面板，透明度獨立一條，免得「清玻璃」把選單也變得看不清。 */
+        --uig-menu-1: rgb(from var(--uig-tint) calc(r + 16) calc(g + 10) calc(b + 7) / calc(230 / 255 * var(--uig-menu-fill)));
+        --uig-menu-2: rgb(from var(--uig-tint) calc(r - 7) calc(g - 5) calc(b - 4) / calc(196 / 255 * var(--uig-menu-fill)));
+        --uig-hi-copy: rgb(255 255 255 / calc(173 / 255 * var(--uig-hi)));
+        --uig-hi-head: rgb(255 255 255 / calc(128 / 255 * var(--uig-hi)));
+        --uig-hi-menu: rgb(255 255 255 / calc(179 / 255 * var(--uig-hi)));
+        --uig-rim-1: rgb(255 255 255 / calc(217 / 255 * var(--uig-hi)));
+        --uig-rim-2: rgb(246 252 255 / calc(153 / 255 * var(--uig-hi)));
+        --uig-rim-3: rgb(93 120 148 / calc(87 / 255 * var(--uig-shade)));
+        --uig-rim-4: rgb(255 255 255 / calc(166 / 255 * var(--uig-hi)));
+        --uig-sh-copy: rgb(37 65 89 / calc(56 / 255 * var(--uig-shade)));
+        --uig-sh-head: rgb(41 71 97 / calc(38 / 255 * var(--uig-shade)));
+        --uig-sh-foot: rgb(43 73 99 / calc(38 / 255 * var(--uig-shade)));
+        --uig-sh-menu: rgb(56 86 110 / calc(36 / 255 * var(--uig-shade)));
+        --uig-bd-foot: rgb(244 250 255 / calc(128 / 255 * var(--uig-border)));
+        --uig-bd-menu: rgb(244 250 255 / calc(158 / 255 * var(--uig-border)));
+        --uig-bd-div: rgb(76 107 132 / calc(36 / 255 * var(--uig-border)));
+        --uig-drop-foot: rgb(38 73 96 / calc(8 / 255 * var(--uig-shadow)));
+        --uig-drop-menu: rgb(13 39 55 / calc(64 / 255 * var(--uig-shadow)));
+        --uig-veil-c: rgb(23 49 73 / calc(56 / 255 * var(--uig-veil)));
+      }
+    }
+
+    .finnovation-ui {
+      --glass-fill: linear-gradient(135deg, var(--uig-fill-1) 0%, var(--uig-fill-2) 48%, var(--uig-fill-3) 100%);
+      --glass-rim: #f5fbffa6;
+      --glass-shade: #19354b24;
+    }
+
+    .fi-copy-action {
+      min-height: 48px;
+      padding: 0;
+      isolation: isolate;
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(var(--uig-bright));
+      backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(var(--uig-bright));
+      box-shadow: inset 0 1px 0 var(--uig-hi-copy), inset 0 -1px 0 var(--uig-sh-copy);
+      transition: transform .32s cubic-bezier(.2, .75, .25, 1), background .3s, box-shadow .3s;
+    }
+
+    .fi-copy-action::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(125deg, var(--uig-rim-1), var(--uig-rim-2) 35%, var(--uig-rim-3) 72%, var(--uig-rim-4));
+      clip-path: polygon(evenodd, 0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px), 0 0, 1px 1px, 1px calc(100% - 13.4px), 13.4px calc(100% - 1px), calc(100% - 1px) calc(100% - 1px), calc(100% - 1px) 13.4px, calc(100% - 13.4px) 1px, 1px 1px);
+    }
+
+    .fi-copy-action::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(110deg, transparent 10%, #ffffff24 46%, transparent 78%);
+      opacity: calc(.35 * var(--uig-sheen));
+      transform: translateX(-36%);
+      transition: opacity .45s, transform .7s cubic-bezier(.2, .75, .25, 1);
+    }
+
+    .fi-copy-action>span,
+    .fi-copy-action:hover>span,
+    body.is-watershed .fi-copy-action>span,
+    body.is-watershed .fi-copy-action:hover>span {
+      position: relative;
+      z-index: 1;
+      min-height: 48px;
+      padding: 0 25px;
+      background: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      text-shadow: 0 1px 0 #ffffff4d;
+    }
+
+    .fi-copy-action:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, var(--uig-hover-1), var(--uig-hover-2) 52%, var(--uig-hover-3));
+    }
+
+    .fi-copy-action:hover::after {
+      transform: translateX(24%);
+      opacity: calc(.85 * var(--uig-sheen));
+    }
+
+    .fi-copy-action:active {
+      transform: translateY(0);
+    }
+
+    .fi-copy-action .fi-icon {
+      transition: transform .3s;
+    }
+
+    .fi-copy-action:hover .fi-icon:last-child {
+      transform: translateX(3px);
+    }
+
+    .fi-header-actions {
+      background: var(--glass-fill);
+      -webkit-backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+      backdrop-filter: blur(var(--uig-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+      box-shadow: inset 0 1px 0 var(--uig-hi-head), inset 0 -1px 0 var(--uig-sh-head);
+    }
+
+    .fi-header-actions button {
+      background: transparent;
+    }
+
+    .fi-header-actions .fi-menu-toggle {
+      background: #3153710c;
+      border-left: 1px solid var(--uig-bd-div);
+    }
+
+    .fi-header-actions button:hover {
+      background: #ffffff30;
+    }
+
+    .fi-footer {
+      --footer-cut: 22px;
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--footer-cut)), calc(100% - var(--footer-cut)) 100%, var(--footer-cut) 100%, 0 calc(100% - var(--footer-cut)));
+      background: linear-gradient(180deg, var(--uig-foot-1), var(--uig-foot-2));
+      border-top-color: var(--uig-bd-foot);
+      -webkit-backdrop-filter: blur(var(--uig-blur)) saturate(calc(var(--uig-sat) - .05)) brightness(calc(var(--uig-bright) - .04));
+      backdrop-filter: blur(var(--uig-blur)) saturate(calc(var(--uig-sat) - .05)) brightness(calc(var(--uig-bright) - .04));
+      box-shadow: 0 -8px 32px var(--uig-drop-foot), inset 0 -1px 0 var(--uig-sh-foot);
+    }
+
+    .fi-footer button {
+      transition: background .25s;
+    }
+
+    .fi-footer button:hover {
+      background: #ffffff33;
+    }
+
+    .fi-menu {
+      border-color: var(--uig-bd-menu);
+      border-radius: 10px;
+      background: linear-gradient(130deg, var(--uig-menu-1), var(--uig-menu-2));
+      -webkit-backdrop-filter: blur(var(--uig-menu-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+      backdrop-filter: blur(var(--uig-menu-blur)) saturate(var(--uig-sat)) brightness(calc(var(--uig-bright) - .04));
+      box-shadow: 0 32px 100px var(--uig-drop-menu), inset 0 1px 0 var(--uig-hi-menu), inset 0 -1px 0 var(--uig-sh-menu);
+    }
+
+    .fi-menu::backdrop {
+      background: var(--uig-veil-c, #17314938);
+      -webkit-backdrop-filter: blur(var(--uig-veil-blur, 7px));
+      backdrop-filter: blur(var(--uig-veil-blur, 7px));
+    }
+
+    body.has-finnovation-ui .tuner {
+      border: 1px solid #e8f6ff4d;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #33536aa3, #18364ec7);
+      -webkit-backdrop-filter: blur(26px) saturate(118%);
+      backdrop-filter: blur(26px) saturate(118%);
+      box-shadow: 0 18px 52px #15304530, inset 0 1px 0 #f4fbff57, inset 0 -1px 0 #0d29365c;
+    }
+
+    .tuner-head {
+      border-radius: 9px 9px 0 0;
+      background: linear-gradient(110deg, #ffffff14, transparent);
+      border-bottom-color: #eaf7ff29;
+    }
+
+    .tuner-body {
+      border-radius: 0 0 9px 9px;
+    }
+
+    .logo-compare {
+      background: linear-gradient(135deg, #436378f2, #29465bf2);
+      border-bottom-color: #d7efff26;
+    }
+
+    .tuner-actions button {
+      border-color: #d7efff35;
+      border-radius: 3px;
+      background: linear-gradient(135deg, #ffffff10, #ffffff04);
+      box-shadow: inset 0 1px 0 #ffffff0d;
+      transition: background .25s, border-color .25s;
+    }
+
+    .tuner-actions button:hover {
+      border-color: #e6f6ff80;
+      background: #ffffff16;
+    }
+
+    .tune-row input[type="number"] {
+      border-color: #d7efff33;
+      background: #08213624;
+      box-shadow: inset 0 1px 3px #09213114;
+    }
+
+    .logo-compare .logo-switches button[aria-pressed="true"] {
+      color: #18384b;
+      background: linear-gradient(135deg, #e4f1f8e8, #b8d5e4d9);
+      border-color: #e9f7ffb3;
+      box-shadow: inset 0 1px 0 #ffffffcc, 0 2px 10px #09263a12;
+    }
+
+    @supports not (backdrop-filter: blur(1px)) {
+
+      .fi-copy-action,
+      .fi-header-actions {
+        background: #dce9f0eb;
+      }
+
+      .fi-footer {
+        background: #dce9f0e6;
+      }
+
+      body.has-finnovation-ui .tuner {
+        background: #2a485ce8;
+      }
+    }
+
+    @media(max-width:680px) {
+      .fi-footer {
+        --footer-cut: 14px;
+      }
+
+      .fi-copy-action,
+      .fi-copy-action>span {
+        min-height: 44px;
+      }
+
+      .fi-copy-action>span {
+        padding: 0 20px;
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      .fi-copy-action:hover {
+        transform: none;
+      }
+
+      .fi-copy-action::after {
+        transition: none;
+        transform: none;
+      }
+    }
+  

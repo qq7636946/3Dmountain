@@ -1,0 +1,204 @@
+/* index1-6 only (2026-10-25). The planet → ocean swipe, after igloo.inc: the water wave that sweeps across the planet (world-ocean.js,
+   unchanged) is drowned in a cold fog front that travels with it, and the frame around that front breaks up the way igloo's does —
+   stair-stepped blocks of pixels stretched along their rows, a few shifted or coarsened, rainbow fringes split along the front, a pull
+   toward the centre, film grain, the colour gone cold. Drawn over the world's finished frame (copied off the canvas), only while the
+   wave is crossing; a function of the scroll (both ways), with a flicker of its own. Nothing with reduced motion. */
+import * as THREE from 'three';
+
+export const WORLD_DIVE_DEFAULTS = {
+  amount: 1,
+  fog: .58,
+  band: .22,
+  glitch: 0,
+  block: 1,
+  dispersion: .24,
+  radial: .34,
+  grain: 0,
+  cold: .18,
+  flicker: 10,
+  deck: 0,
+  mosaic: 1,
+  mosaicSize: .3,
+  mosaicShift: .28,
+  mosaicZoom: .14,
+  mosaicSeam: .38,
+  fogColor: '#d7dee6'
+};
+export const WORLD_DIVE_ROWS = [
+  ['igloo 轉場 強度（0＝原本的水波）', 'worldDive', 'amount', 0, 2, .01], ['igloo 霧（浪前緣的冷霧）', 'worldDive', 'fog', 0, 1.5, .01],
+  ['igloo 霧帶寬度（螢幕高）', 'worldDive', 'band', .04, .8, .01], ['igloo 像素拉絲／錯位', 'worldDive', 'glitch', 0, 2, .01],
+  ['igloo 拉絲方塊大小', 'worldDive', 'block', .3, 3, .05], ['igloo 彩虹色散', 'worldDive', 'dispersion', 0, 2, .01],
+  ['igloo 往中心的模糊', 'worldDive', 'radial', 0, 2, .01], ['igloo 底片顆粒', 'worldDive', 'grain', 0, 2, .01],
+  ['igloo 變冷（去色偏藍）', 'worldDive', 'cold', 0, 1, .01], ['igloo 閃爍（每秒換幾次）', 'worldDive', 'flicker', 0, 30, 1],
+  ['igloo 卡牌→地球 雲層轉場的拉絲＋色散＋顆粒（0 關）', 'worldDive', 'deck', 0, 2, .01],
+  ['馬賽克 強度（浪前緣的毛玻璃方塊）', 'worldDive', 'mosaic', 0, 2, .01], ['馬賽克 方塊大小（螢幕高）', 'worldDive', 'mosaicSize', .05, 1.5, .01],
+  ['馬賽克 方塊錯位', 'worldDive', 'mosaicShift', 0, 2, .01], ['馬賽克 方塊放大', 'worldDive', 'mosaicZoom', 0, .6, .01], ['馬賽克 接縫與玻璃邊光', 'worldDive', 'mosaicSeam', 0, 2, .01], ['igloo 霧的顏色', 'worldDive', 'fogColor']
+];
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const mix = (a, b, t) => a + (b - a) * t;
+
+const VERTEX = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+const FRAGMENT = /* glsl */ `
+uniform sampler2D tScene;
+uniform vec2 uRes;
+uniform vec4 uFront;   // wave direction x, y (screen, y up), front position (screen heights from the centre), fog band width
+uniform vec4 uA;       // envelope, fog, glitch, dispersion
+uniform vec4 uB;       // radial pull, grain, flicker seed, block scale
+uniform vec4 uC;       // cold, time, break-up everywhere, colour split everywhere (the cloud deck: no front)
+uniform vec4 uD;       // mosaic: amount, pane size (screen heights), slide (panes), magnify
+uniform vec4 uE;       // mosaic: seams, split chance, 0, 0
+uniform vec3 uFog;
+varying vec2 vUv;
+vec3 h3(vec2 c) { return fract(sin(vec3(dot(c, vec2(127.1, 311.7)), dot(c, vec2(269.5, 183.3)), dot(c, vec2(419.2, 371.9)))) * 43758.5453); }
+// the pane this point looks through: big squares, some cut in two (across x or y), some of those cut again
+void pane(vec2 p, out vec2 bc, out vec2 hs) {
+  float S = uD.y;
+  bc = floor(p / S + 0.5) * S; hs = vec2(0.5 * S);
+  vec3 r = h3(bc * 3.17 + 0.5);
+  if (r.x < uE.y) {
+    if (r.y < 0.5) { hs.x *= 0.5; bc.x += (p.x < bc.x ? -1.0 : 1.0) * hs.x; } else { hs.y *= 0.5; bc.y += (p.y < bc.y ? -1.0 : 1.0) * hs.y; }
+    vec3 r2 = h3(bc * 5.31 + 1.7);
+    if (r2.x < uE.y * 0.55) {
+      if (r2.y < 0.5) { hs.x *= 0.5; bc.x += (p.x < bc.x ? -1.0 : 1.0) * hs.x; } else { hs.y *= 0.5; bc.y += (p.y < bc.y ? -1.0 : 1.0) * hs.y; }
+    }
+  }
+}
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + 1.0), f.x), f.y); }
+float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; } return s; }
+vec2 toUv(vec2 frag) { vec2 uv = frag / uRes; uv = 1.0 - abs(1.0 - abs(uv)); return clamp(uv, vec2(0.001), vec2(0.999)); }   // mirrored at the edges (no stretched edge pixels)
+void main() {
+  vec2 frag = gl_FragCoord.xy, p = (frag - 0.5 * uRes) / uRes.y, dir = uFront.xy;
+  float e = uA.x, t = uC.y, seed = uB.z;
+  float sd = uFront.z - dot(p, dir);                                  // > 0: the wave has passed (the sea); < 0: still the planet
+  float bw = max(uFront.w, 0.01), band = exp(-pow((sd + bw * 0.25) / bw, 2.0));
+  float fb = fbm(p * 2.2 + dir * (uFront.z * 1.6) + vec2(0.0, -t * 0.06));
+
+  // the glitch: rows of segments near the front; a few of them stretch their first pixel along the row, shift sideways, or coarsen
+  float g = uA.z * e * (exp(-pow(sd / (bw * 1.5), 2.0)) * (0.55 + 0.6 * fb) + 0.04) + uC.z * e * (0.4 + 0.8 * fb);
+  float k = uB.w * uRes.y / 900.0;
+  float rowH = floor(mix(6.0, 30.0, pow(hash(vec2(floor(frag.y / (24.0 * k)), seed)), 1.5)) * k) + 1.0;
+  float row = floor(frag.y / rowH);
+  float hr = hash(vec2(row, seed * 1.7));
+  float segW = mix(18.0, 160.0, hr * hr) * k;
+  float sx = floor((frag.x + hr * 997.0) / segW);
+  float hc = hash(vec2(sx, row) + seed * 3.1);
+  vec2 src = frag;
+  bool hit = hc < g * 0.6;
+  if (hit) {
+    float mode = hash(vec2(sx * 1.3, row * 0.7) + seed);
+    float x0 = sx * segW - hr * 997.0;
+    if (mode < 0.4) src.x = x0 + 1.0;                                                  // stretched: the segment's first pixel smeared along it
+    else if (mode < 0.6) src.x += (hash(vec2(sx, row + 9.0) + seed) - 0.5) * 120.0 * k; // shifted
+    else { float q = 8.0 * k + 22.0 * k * hash(vec2(row, sx) + 4.0); src = (floor(src / q) + 0.5) * q; }   // coarsened (the stair steps)
+  }
+  // and a few columns smeared upward from a pixel below them (igloo's rising streaks)
+  float colW = floor(mix(5.0, 26.0, hash(vec2(floor(frag.x / (40.0 * k)), seed + 5.0))) * k) + 1.0, col0 = floor(frag.x / colW);
+  float segH = mix(30.0, 180.0, hash(vec2(col0, seed + 2.0))) * k, cy = floor((frag.y + hash(vec2(col0, 3.0)) * 600.0) / segH);
+  if (!hit && hash(vec2(col0, cy) + seed * 1.9) < g * 0.22) src.y = cy * segH - hash(vec2(col0, 3.0)) * 600.0 + 1.0;
+
+  // the frosted-glass mosaic, thickest along the front (as on the site's other cuts): each pane slides off its place and magnifies
+  float mw = uD.x * e * (0.2 + 0.8 * exp(-pow(sd / (bw * 2.4), 2.0)));
+  vec2 pp = (src - 0.5 * uRes) / uRes.y, mbc, mhs; pane(pp, mbc, mhs);
+  vec3 mr = h3(mbc * 7.31 + 3.1);
+  float mwp = mw * (0.6 + 0.4 * mr.x);
+  vec2 mlp = pp - mbc, me = mhs - abs(mlp);
+  vec2 mn = me.x < me.y ? vec2(mlp.x < 0.0 ? -1.0 : 1.0, 0.0) : vec2(0.0, mlp.y < 0.0 ? -1.0 : 1.0);
+  float medge = exp(-min(me.x, me.y) * uRes.y / (2.0 + 6.0 * mwp));
+  vec2 mrd = mbc / max(length(mbc), 1e-3);
+  vec2 mshift = (mrd * (0.5 + 0.5 * mr.y) + (mr.zy - 0.5) * 0.9) * uD.z * uD.y * mwp;
+  src = (mbc + mlp * (1.0 - uD.w * mwp * (0.4 + mr.z)) + mshift + mn * medge * mwp * 0.012) * uRes.y + 0.5 * uRes;
+  // pulled toward the centre, the colours parting along the front (red ahead, blue behind) and with the pull
+  float L = uB.x * e * (0.35 + 0.65 * band) * 0.09;
+  float cs = (uA.w * e * (0.1 + band + 0.6 * (hit ? 1.0 : 0.0)) + uC.w * e) * 0.011 * uRes.y;
+  vec2 cdir = dir * cs;
+  // Stable tap locations keep the blur smooth during slow scroll; no
+  // ten-times-per-second sampling jitter when glitch/grain are disabled.
+  float dz = .5;
+  vec3 col = vec3(0.0);
+  vec2 c = 0.5 * uRes;
+  for (int j = 0; j < 5; j++) {
+    float f = (float(j) + dz) / 5.0, s = 1.0 - L * f;
+    vec2 b = c + (src - c) * s;
+    col.r += texture2D(tScene, toUv(b + cdir * (1.0 + f))).r;
+    col.g += texture2D(tScene, toUv(b)).g;
+    col.b += texture2D(tScene, toUv(b - cdir * (1.0 + f))).b;
+  }
+  col /= 5.0;
+  // each pane its own frost, a dark seam and a lit bevel
+  col *= 1.0 + (mr.z - 0.5) * 0.6 * mwp;
+  col *= 1.0 - 0.3 * uE.x * mwp * medge;
+  col += uFog * 0.22 * uE.x * mwp * medge * (mn.y > 0.0 || mn.x < 0.0 ? 1.0 : 0.35);
+  // a thin-film rainbow riding the front
+  vec3 film = 0.5 + 0.5 * cos(6.2831853 * (sd * 3.2 + fb * 0.8 + vec3(0.0, 0.33, 0.67)));
+  col += (film - 0.45) * band * uA.w * e * 0.22;
+  // cold: less colour, a little blue
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(col, vec3(lum) * vec3(0.94, 0.98, 1.05), uC.x * e);
+  // the fog front: thick along the front, rolling (lighter and darker), a haze over everything while it crosses
+  float fogD = uA.y * e * (band * (0.6 + 0.7 * fb) + 0.18 * e * fb);
+  col = mix(col, uFog * (0.9 + 0.22 * fb), clamp(fogD, 0.0, 0.97));
+  // grain
+  col += (hash(frag + fract(t * 7.3) * 113.0) - 0.5) * uB.y * e * 0.09;
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`;
+
+export function createWorldDiveFx({ reducedMotion = false } = {}) {
+  let mat = null, scene = null, camera = null, mesh = null, tex = null;
+  const size = new THREE.Vector2(), fog = new THREE.Color();
+  const cfg = () => window.__MONTIS_STUDY__?.CONFIG?.worldDive || WORLD_DIVE_DEFAULTS;
+  const ocean = () => window.__MONTIS_STUDY__?.CONFIG?.worldOcean || {};
+  const num = (o, key, d, lo, hi) => { const v = +o[key]; return clamp(Number.isFinite(v) ? v : d, lo, hi); };
+  const state = { e: 0, drawn: 0, warmed: false };
+  function build() {
+    mat = new THREE.ShaderMaterial({
+      vertexShader: VERTEX, fragmentShader: FRAGMENT, depthTest: false, depthWrite: false, blending: THREE.NoBlending, toneMapped: false,
+      uniforms: { uD: { value: new THREE.Vector4() }, uE: { value: new THREE.Vector4() }, tScene: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uFront: { value: new THREE.Vector4(0, 1, 0, .2) },
+        uA: { value: new THREE.Vector4() }, uB: { value: new THREE.Vector4() }, uC: { value: new THREE.Vector4() }, uFog: { value: new THREE.Color() } }
+    });
+    mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); mesh.frustumCulled = false;
+    scene = new THREE.Scene(); scene.add(mesh); camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  }
+  /* after the world has drawn its frame on the canvas */
+  function render(s, time, renderer) {
+    const o = s && s.o, C = cfg(), D = WORLD_DIVE_DEFAULTS;
+    if (!s || !renderer || reducedMotion) { state.e = 0; return; }
+    // compiled in the background the first time the world draws (long before the swipe), not at its first frame
+    if (!state.warmed) { state.warmed = true; if (!mat) build(); renderer.compileAsync?.(scene, camera).catch(() => { }); }
+    // the wave's front crosses the frame over o.w (0 → 1); the effect lives while it does
+    const w = o?.w || 0, amount = num(C, 'amount', D.amount, 0, 2);
+    let e = amount * smooth(0, .16, w) * (1 - smooth(.84, 1, w)), deck = 0;
+    // the cards → planet cloud deck (s.c: rolls in, white-out, tears open): a light break-up, no fog front
+    if (e < .002 && s.c > 0 && s.c < 1) { deck = num(C, 'deck', D.deck, 0, 2) * smooth(.02, .2, s.c) * (1 - smooth(.6, .95, s.c)); e = deck; }
+    state.e = e;
+    if (e < .002) return;
+    if (!mat) build();
+    renderer.getDrawingBufferSize(size);
+    const W = Math.max(2, Math.round(size.x)), H = Math.max(2, Math.round(size.y));
+    if (!tex || tex.image.width !== W || tex.image.height !== H) { tex?.dispose(); tex = new THREE.FramebufferTexture(W, H); tex.minFilter = tex.magFilter = THREE.LinearFilter; }
+    renderer.setRenderTarget(null);
+    renderer.copyFramebufferToTexture(tex);
+    // the same front as the ocean's wave (world-ocean.js): its direction, and where it is
+    const O = ocean(), ang = num(O, 'waveAngle', 12, -90, 90) * Math.PI / 180, dx = Math.sin(ang), dy = Math.cos(ang);
+    const Lw = num(O, 'waveLength', .17, .03, .6), soft = num(O, 'waveSoft', .04, .002, .3), wob = num(O, 'wobble', .06, 0, .3);
+    const extent = .5 * (Math.abs(dx) * W / H + Math.abs(dy));
+    const F = mix(-extent - Lw * 1.5 - wob - soft, extent + Lw * 3.5 + wob + soft, w);
+    const u = mat.uniforms;
+    u.tScene.value = tex; u.uRes.value.set(W, H);
+    u.uFront.value.set(dx, dy, deck ? 99 : F, num(C, 'band', D.band, .04, .8));   // the deck has no front: far off the frame
+    u.uA.value.set(Math.min(e, 1), deck ? 0 : num(C, 'fog', D.fog, 0, 1.5), deck ? 0 : num(C, 'glitch', D.glitch, 0, 2) * Math.min(1, e), deck ? 0 : num(C, 'dispersion', D.dispersion, 0, 2));
+    const fl = num(C, 'flicker', D.flicker, 0, 30);
+    u.uB.value.set(num(C, 'radial', D.radial, 0, 2), num(C, 'grain', D.grain, 0, 2), fl > 0 ? Math.floor(time * fl) % 997 + Math.floor(w * 37) : Math.floor(w * 37), num(C, 'block', D.block, .3, 3));
+    u.uD.value.set(deck ? 0 : num(C, 'mosaic', D.mosaic, 0, 2) * Math.min(1, e), num(C, 'mosaicSize', D.mosaicSize, .05, 1.5), num(C, 'mosaicShift', D.mosaicShift, 0, 2), num(C, 'mosaicZoom', D.mosaicZoom, 0, .6));
+    u.uE.value.set(num(C, 'mosaicSeam', D.mosaicSeam, 0, 2), .6, 0, 0);
+    u.uC.value.set(deck ? 0 : num(C, 'cold', D.cold, 0, 1), time % 1000, deck ? .55 : 0, deck ? .7 : 0);
+    u.uFog.value.setStyle(typeof C.fogColor === 'string' && /^#[0-9a-f]{6}$/i.test(C.fogColor) ? C.fogColor : D.fogColor, THREE.LinearSRGBColorSpace);
+    renderer.render(scene, camera);
+    state.drawn++;
+  }
+  function dispose() { tex?.dispose(); mat?.dispose(); mesh?.geometry.dispose(); tex = mat = mesh = null; }
+  return { render, dispose, state };
+}

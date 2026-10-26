@@ -1,0 +1,40 @@
+{
+  "created": "2026-10-24",
+  "photos": [
+    {
+      "file": "responsibility-team",
+      "source": "https://images.pexels.com/photos/3183145/pexels-photo-3183145.jpeg",
+      "note": "Existing site portfolio photo, local 800x500 and 480x300 WebP variants."
+    },
+    {
+      "file": "governance-architecture",
+      "source": "https://images.pexels.com/photos/2869852/pexels-photo-2869852.jpeg",
+      "note": "Existing site portfolio photo, local 800x500 and 480x300 WebP variants."
+    },
+    {
+      "file": "strategy-growth",
+      "source": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg",
+      "note": "Team collaboration; local 800 and 480 WebP variants."
+    },
+    {
+      "file": "strategy-derivatives",
+      "source": "https://images.pexels.com/photos/159888/pexels-photo-159888.jpeg",
+      "note": "Existing portfolio market chart photo; local 800 and 480 WebP variants."
+    }
+  ],
+  "terrain": {
+    "files": [
+      "valley-islands-albedo-v3.webp",
+      "valley-islands-form-v3.webp",
+      "valley-islands-albedo-v3-small.webp",
+      "valley-islands-form-v3-small.webp"
+    ],
+    "source": "Existing index1-6 alpine watershed mesh and native rock/erosion material. Same island crops and layout; 1.25 crest relief, reduced exposed meadow coverage.",
+    "generator": "scripts/index1-6/bake-ocean-islands.cjs",
+    "format": "Two 1024x1024 tiles (mobile 512x512). Diffuse RGB with edge extrusion; alpha signed coast distance +/-48px (mobile +/-24px). Form RGB = detailed material normal XY + linear height /1600. Runtime shared sun, height-field gully shadows, clouds, wet rock and ocean wave surface.",
+    "previousFiles": [
+      "valley-islands-albedo-v2.webp",
+      "valley-islands-form-v2.webp"
+    ]
+  }
+}

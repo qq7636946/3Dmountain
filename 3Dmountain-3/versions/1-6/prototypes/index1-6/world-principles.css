@@ -1,0 +1,65 @@
+#fiWorld .fiwp{position:relative;margin:0;padding:calc(var(--fiwp-h,100vh)*.16) 0;color:#f0f3f0}
+#fiWorld .fiwp-pin{position:relative;top:auto;height:auto;overflow:visible;pointer-events:auto;mask-image:none;-webkit-mask-image:none}
+#fiWorld .fiwp-layout{--show:0;--travel:0px;box-sizing:border-box;position:relative;margin:0 auto;width:min(1180px,78vw);padding:0;visibility:hidden;opacity:var(--show);transform:none;text-shadow:0 2px 18px rgba(2,13,21,.24)}
+#fiWorld .fiwp-chapter{box-sizing:border-box;min-height:var(--fiwp-h,100vh);padding:clamp(160px,18vh,210px) 0 clamp(100px,13vh,150px)}
+#fiWorld .fiwp-chapter+.fiwp-chapter{margin-top:clamp(100px,14vh,180px)}
+#fiWorld .fiwp-chapter--horizon .fiwp-title{max-width:1000px}
+#fiWorld .fiwp-chapter--horizon .fiwp-columns{grid-template-columns:1.15fr 1fr;gap:clamp(80px,9vw,160px);margin-top:clamp(64px,9vh,110px)}
+#fiWorld .fiwp-chapter--horizon .fiwp-cards{grid-template-columns:1fr;gap:34px}
+#fiWorld .fiwp-chapter--horizon .fiwp-card{max-width:28rem}
+#fiWorld .fiwp-chapter--horizon .fiwp-lead{max-width:18em}
+#fiWorld .fiwp-chapter--horizon .fiwp-bottom{margin-top:clamp(72px,10vh,120px)}
+#fiWorld .fiwp-eyebrow{margin:0 0 22px;color:#dcc79b;font:500 9px/1.5 var(--alp-mono,monospace);letter-spacing:.22em}
+#fiWorld .fiwp-title{margin:0;max-width:1000px;font:400 clamp(36px,3.65vw,66px)/1.10 var(--alp-sans,sans-serif);letter-spacing:.025em;text-transform:uppercase}
+#fiWorld .fiwp-title span{display:block}
+#fiWorld .fiwp-title-zh{margin:19px 0 0;color:rgba(235,241,242,.72);font:300 13px/1.7 'Noto Sans TC',sans-serif;letter-spacing:.18em}
+#fiWorld .fiwp-columns{display:grid;grid-template-columns:1.1fr 1.7fr;gap:clamp(50px,6vw,112px);margin-top:64px;align-items:start}
+#fiWorld .fiwp-lead{margin:0;max-width:17em;font:400 clamp(21px,1.9vw,29px)/1.65 'Noto Sans TC',sans-serif;letter-spacing:.015em;text-wrap:pretty}
+#fiWorld .fiwp-lead-en{max-width:28em;margin:24px 0 0;color:rgba(219,231,235,.62);font:400 11px/1.9 var(--alp-sans,sans-serif);letter-spacing:.035em}
+#fiWorld .fiwp-cards{display:grid;grid-template-columns:1fr 1fr;gap:35px 50px}
+#fiWorld .fiwp-card{margin:0;padding:0;min-width:0}
+#fiWorld .fiwp-card h3{display:flex;gap:12px;margin:0 0 13px;color:rgba(240,245,245,.93);font:500 10px/1.5 var(--alp-mono,monospace);letter-spacing:.09em}
+#fiWorld .fiwp-card h3 span{color:#d7bd8c;font-weight:400}
+#fiWorld .fiwp-card h4{margin:0 0 7px;font:400 14px/1.5 'Noto Sans TC',sans-serif;letter-spacing:.07em}
+#fiWorld .fiwp-card p{margin:0;color:rgba(229,239,242,.78);font:300 13.5px/1.95 'Noto Sans TC',sans-serif;letter-spacing:.035em;text-wrap:pretty}
+#fiWorld .fiwp-chapter-end{display:flex;align-items:center;gap:18px;margin-top:64px;padding-top:22px;border-top:1px solid rgba(206,223,231,.12);color:rgba(225,236,240,.46);font:400 8px/1.6 var(--alp-mono,monospace);letter-spacing:.16em}
+#fiWorld .fiwp-chapter-end i{font-style:normal;color:#d7bd8c;font-size:16px}
+#fiWorld .fiwp-bottom{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:54px;padding-top:21px;border-top:1px solid rgba(206,223,231,.16)}
+#fiWorld .fiwp-bottom>span{color:rgba(225,236,240,.52);font:400 9px/1.7 var(--alp-mono,monospace);letter-spacing:.13em}
+#fiWorld .fiwp-next{display:inline-flex;align-items:center;gap:32px;min-height:46px;padding:0 21px;border:1px solid rgba(218,232,238,.28);border-radius:30px;background:rgba(29,60,75,.12);color:#f2f2ed;font:500 9px/1.5 var(--alp-sans,sans-serif);letter-spacing:.16em;cursor:pointer;pointer-events:auto;transition:background .45s cubic-bezier(.22,1,.36,1),border-color .45s}
+#fiWorld .fiwp-next:hover{background:rgba(220,199,155,.12);border-color:#dcc79b}
+#fiWorld .fiwp-next:focus-visible{outline:2px solid #dcc79b;outline-offset:5px}
+#fiWorld .fiwp-next i{font-style:normal;font-size:17px;font-weight:300;color:#dcc79b}
+#fiWorld .fiwp-progress{position:absolute;left:clamp(28px,4vw,78px);bottom:74px;display:flex;align-items:flex-end;gap:18px;opacity:0;color:rgba(230,239,241,.66);font:400 8px/1.7 var(--alp-mono,monospace);letter-spacing:.14em}
+#fiWorld .fiwp-progress::before{content:'';display:block;width:1px;height:66px;background:linear-gradient(to top,#d7bd8c calc(var(--progress,0)*100%),rgba(219,233,239,.24) 0)}
+#fiWorld.is-principles .fiw-chapters{opacity:0!important;pointer-events:none!important}
+@media(min-width:1800px){#fiWorld .fiwp-layout{width:min(1360px,76vw)}#fiWorld .fiwp-card p{font-size:14px}#fiWorld .fiwp-cards{gap:43px 64px}}
+@media(max-width:1100px){#fiWorld .fiwp-layout{width:84vw}#fiWorld .fiwp-columns{grid-template-columns:.9fr 1.4fr;gap:38px}#fiWorld .fiwp-cards{gap:30px 27px}#fiWorld .fiwp-progress{left:20px}}
+@media(max-width:760px){
+ #fiWorld .fiwp{padding:70px 0}
+ #fiWorld .fiwp-layout{width:86vw;padding:0}
+ #fiWorld .fiwp-chapter{min-height:0;padding:88px 0 60px}
+ #fiWorld .fiwp-chapter+.fiwp-chapter{margin-top:90px}
+ #fiWorld .fiwp-eyebrow{font-size:8px;margin-bottom:19px}
+ #fiWorld .fiwp-title{font-size:clamp(29px,7.2vw,44px);line-height:1.16;letter-spacing:.015em}
+ #fiWorld .fiwp-title-zh{font-size:11px;margin-top:16px;letter-spacing:.12em}
+ #fiWorld .fiwp-columns{grid-template-columns:1fr;gap:36px;margin-top:38px}
+ #fiWorld .fiwp-lead{max-width:22em;font-size:21px;line-height:1.7}
+ #fiWorld .fiwp-lead-en{font-size:10.5px;line-height:1.85;margin-top:20px}
+ #fiWorld .fiwp-cards{grid-template-columns:1fr;gap:29px}
+ #fiWorld .fiwp-card p{font-size:13px;line-height:1.9}
+ #fiWorld .fiwp-card h3{margin-bottom:8px}
+ #fiWorld .fiwp-card h4{font-size:14px}
+ #fiWorld .fiwp-bottom{align-items:flex-start;flex-direction:column;gap:18px;margin-top:35px}
+ #fiWorld .fiwp-progress{display:none}
+ #fiWorld .fiwp-chapter--horizon .fiwp-columns{grid-template-columns:1fr;gap:42px;margin-top:42px}
+ #fiWorld .fiwp-chapter--horizon .fiwp-cards{gap:32px}
+ #fiWorld .fiwp-chapter--horizon .fiwp-bottom{margin-top:54px}
+}
+@media(prefers-reduced-motion:reduce){#fiWorld .fiwp-layout{transform:none}#fiWorld .fiwp-next{transition:none}}
+html[data-render-mode="text"] #fiWorld .fiwp{height:auto!important;margin-bottom:0!important;padding:0;background:#edf2f3;color:#17364f}
+html[data-render-mode="text"] #fiWorld .fiwp-pin{position:relative;height:auto;overflow:visible;mask-image:none;-webkit-mask-image:none}
+html[data-render-mode="text"] #fiWorld .fiwp-layout{visibility:visible!important;opacity:1;transform:none;padding:0;text-shadow:none}
+html[data-render-mode="text"] #fiWorld .fiwp-chapter{min-height:0;padding:70px 0}
+html[data-render-mode="text"] #fiWorld .fiwp-card p,html[data-render-mode="text"] #fiWorld .fiwp-lead-en,html[data-render-mode="text"] #fiWorld .fiwp-title-zh{color:#526c7c}
+html[data-render-mode="text"] #fiWorld .fiwp-card h3,html[data-render-mode="text"] #fiWorld .fiwp-next{color:#17364f}

@@ -1,0 +1,178 @@
+/* index1-6 only. The frosted-glass mosaic of the LOGO's forward flight (block 2's 3D word → the valley river), joined with the shared
+   motion blur (js/water-forward-transition.js, unchanged): this pass runs just before it, so the blur smears the panes' edges.
+   The frame breaks into panes of frosted glass — big squares, some cut in two, some again — each sliding off its place, magnifying what
+   is behind it, its own frost and a soft lit bevel; red and blue part along the slide. The panes ride the flight (they grow as the camera
+   goes through) and come and go one by one. Same clock as the blur: the flight's envelope × how fast the visitor is scrolling (HOLD keeps
+   some of it while the scroll rests); nothing at all with reduced motion. */
+import * as THREE from 'three';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+export const FORWARD_MOSAIC_DEFAULTS = {
+  amount: .72,
+  hold: 0,
+  size: .34,
+  split: .6,
+  shift: .28,
+  magnify: .09,
+  frost: 0,
+  seam: .38,
+  ride: .72,
+  chroma: .18,
+  darken: .06,
+  blur: 0,
+  glitch: 0,
+  grain: 0,
+  tint: '#3f7fe0'
+};
+/* the same panes on the FOUR PATHS → cards bridge (which had only its fog fade): their own radial blur there, and some of it stays
+   while the bridge's spring rests */
+export const BRIDGE_MOSAIC_DEFAULTS = { ...FORWARD_MOSAIC_DEFAULTS, hold: .35, blur: 0, ride: .6, chroma: .15 };   // mosaic only (client: no noise; its own long blur rippled)
+
+const mosaicRows = g => [
+  ['馬賽克 強度（0＝只有原本的動態模糊）', g, 'amount', 0, 2, .01], ['馬賽克 停住時保留（0＝跟動態模糊一樣停手就清掉）', g, 'hold', 0, 1, .01],
+  ['馬賽克 方塊大小（螢幕高）', g, 'size', .05, 1.5, .01], ['馬賽克 切成小塊的機率', g, 'split', 0, 1, .01],
+  ['馬賽克 方塊錯位', g, 'shift', 0, 2, .01], ['馬賽克 方塊放大', g, 'magnify', 0, .6, .01],
+  ['馬賽克 霧面顆粒', g, 'frost', 0, 3, .05], ['馬賽克 接縫與玻璃邊光', g, 'seam', 0, 2, .01],
+  ['馬賽克 隨飛行變大', g, 'ride', 0, 3, .05], ['馬賽克 色散', g, 'chroma', 0, 2, .01],
+  ['馬賽克 變暗', g, 'darken', 0, .6, .01], ['馬賽克 放射動態模糊（向前轉場已有共用的模糊，預設 0）', g, 'blur', 0, .8, .01],
+  ['馬賽克 igloo 像素拉絲／錯位', g, 'glitch', 0, 2, .01], ['馬賽克 igloo 底片顆粒', g, 'grain', 0, 2, .01], ['馬賽克 色調', g, 'tint']
+];
+export const FORWARD_MOSAIC_ROWS = mosaicRows('forwardMosaic');
+export const BRIDGE_MOSAIC_ROWS = mosaicRows('bridgeMosaic');
+
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const smooth = x => { const t = clamp(x); return t * t * (3 - 2 * t); };
+const num = (v, d, a, b) => clamp(Number.isFinite(+v) ? +v : d, a, b);
+
+export function createForwardMosaic({ config, renderer = null }) {
+  const pass = new ShaderPass({
+    uniforms: {
+      tDiffuse: { value: null },
+      uFocus: { value: new THREE.Vector2(.5, .5) },
+      uRes: { value: new THREE.Vector2(1, 1) },
+      uA: { value: new THREE.Vector4() },   // amount, pane size (screen heights), split chance, slide (panes)
+      uB: { value: new THREE.Vector4() },   // flight progress, magnify, frost, seams
+      uC: { value: new THREE.Vector4() },   // ride (growth over the flight), colour split, darken, radial blur
+      uTint: { value: new THREE.Color() },
+      uD: { value: new THREE.Vector4() }    // igloo break-up, grain, flicker seed, 0
+    },
+    vertexShader: `varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+    fragmentShader: /* glsl */ `precision highp float;
+      uniform sampler2D tDiffuse;
+      uniform vec2 uFocus, uRes;
+      uniform vec4 uA, uB, uC, uD;
+      uniform vec3 uTint;
+      varying vec2 vUv;
+      float h1(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      vec3 h3(vec2 c) { return fract(sin(vec3(dot(c, vec2(127.1, 311.7)), dot(c, vec2(269.5, 183.3)), dot(c, vec2(419.2, 371.9)))) * 43758.5453); }
+      // the pane this point looks through: big squares, some cut in two (across x or y), some of those cut again
+      void pane(vec2 p, out vec2 bc, out vec2 hs) {
+        float S = uA.y;
+        bc = floor(p / S + 0.5) * S; hs = vec2(0.5 * S);
+        vec3 r = h3(bc * 3.17 + 0.5);
+        if (r.x < uA.z) {
+          if (r.y < 0.5) { hs.x *= 0.5; bc.x += (p.x < bc.x ? -1.0 : 1.0) * hs.x; } else { hs.y *= 0.5; bc.y += (p.y < bc.y ? -1.0 : 1.0) * hs.y; }
+          vec3 r2 = h3(bc * 5.31 + 1.7);
+          if (r2.x < uA.z * 0.55) {
+            if (r2.y < 0.5) { hs.x *= 0.5; bc.x += (p.x < bc.x ? -1.0 : 1.0) * hs.x; } else { hs.y *= 0.5; bc.y += (p.y < bc.y ? -1.0 : 1.0) * hs.y; }
+          }
+        }
+      }
+// igloo.inc's break-up: rows of segments; a few of them stretch their first pixel along the row, shift sideways, or coarsen
+      vec2 iglooGlitch(vec2 frag, float g, float seed, float k) {
+        float rowH = floor(mix(6.0, 30.0, pow(h1(vec2(floor(frag.y / (24.0 * k)), seed)), 1.5)) * k) + 1.0;
+        float row = floor(frag.y / rowH), hr = h1(vec2(row, seed * 1.7));
+        float segW = mix(18.0, 160.0, hr * hr) * k, sx = floor((frag.x + hr * 997.0) / segW);
+        vec2 src = frag;
+        if (h1(vec2(sx, row) + seed * 3.1) < g * 0.6) {
+          float mode = h1(vec2(sx * 1.3, row * 0.7) + seed);
+          if (mode < 0.4) src.x = sx * segW - hr * 997.0 + 1.0;
+          else if (mode < 0.6) src.x += (h1(vec2(sx, row + 9.0) + seed) - 0.5) * 120.0 * k;
+          else { float q = 8.0 * k + 22.0 * k * h1(vec2(row, sx) + 4.0); src = (floor(src / q) + 0.5) * q; }
+        }
+        return src;
+      }
+      vec2 toUv(vec2 q) { vec2 uv = q * vec2(uRes.y / uRes.x, 1.0) + uFocus; uv = 1.0 - abs(1.0 - abs(uv)); return clamp(uv, vec2(0.001), vec2(0.999)); }   // mirrored at the edges
+      void main() {
+        float A = uA.x, zoom = 1.0 + uC.x * uB.x;
+        vec2 p = (vUv - uFocus) * vec2(uRes.x / uRes.y, 1.0);          // screen heights from the flight's focus
+        vec2 bc, hs; pane(p / zoom, bc, hs);
+        // igloo's break-up, thickest along the panes' edges: the pixel this one reads from
+        vec2 e0 = hs - abs(p / zoom - bc);
+        vec2 gsrc = gl_FragCoord.xy;
+        if(uD.x>.0001)gsrc=iglooGlitch(gsrc,A*uD.x*(0.3+0.7*exp(-min(e0.x,e0.y)*zoom*uRes.y/60.0)),uD.z,uRes.y/900.0);
+        p = (gsrc / uRes - uFocus) * vec2(uRes.x / uRes.y, 1.0);
+        vec2 pg = p / zoom;                                            // the panes ride the flight
+        pane(pg, bc, hs);
+        vec3 r = h3(bc * 7.31 + 3.1);
+        float lt = clamp((uB.x - (0.06 + 0.5 * r.x)) / 0.4, 0.0, 1.0);   // each pane its own moment in the flight
+        float w = A * max(sin(3.14159265 * lt), 0.3);
+        vec2 lp = pg - bc, e = hs - abs(lp);
+        vec2 n = e.x < e.y ? vec2(lp.x < 0.0 ? -1.0 : 1.0, 0.0) : vec2(0.0, lp.y < 0.0 ? -1.0 : 1.0);
+        float edge = exp(-min(e.x, e.y) * zoom * uRes.y / (2.0 + 6.0 * w));
+        vec2 rd = bc / max(length(bc), 1e-3);
+        vec2 shift = (rd * (0.5 + 0.5 * r.y) + (r.zy - 0.5) * 0.9) * uA.w * uA.y * w;
+        vec2 q = (bc + lp * (1.0 - uB.y * w * (0.4 + r.z)) + shift + n * edge * w * 0.012) * zoom;   // slid, magnified, bent at its bevel
+        vec2 ca = shift * zoom * uC.y * 0.35;
+        vec3 col = vec3(0.0);
+        float L = uC.w * A;       // its own streak toward the focus: evenly spaced taps (no per-pixel randomness: it read as noise)
+        // Default clear panes need only three chromatic samples: the old
+        // loop took the exact same sample twelve times when blur/frost=0.
+        if(L<.00001 && uB.z<.00001){
+          col=vec3(texture2D(tDiffuse,toUv(q+ca)).r,texture2D(tDiffuse,toUv(q)).g,texture2D(tDiffuse,toUv(q-ca)).b);
+        }else{
+        for (int j = 0; j < 12; j++) {
+          float f = (float(j) + 0.5) / 12.0;
+          vec2 jit = (vec2(h1(gl_FragCoord.xy + float(j) * 17.0), h1(gl_FragCoord.xy * 1.31 + float(j) * 31.0)) - 0.5) * uB.z * 0.012 * w;
+          vec2 qq = (q + jit) * (1.0 - L * f);
+          col.r += texture2D(tDiffuse, toUv(qq + ca)).r;
+          col.g += texture2D(tDiffuse, toUv(qq)).g;
+          col.b += texture2D(tDiffuse, toUv(qq - ca)).b;
+        }
+        col /= 12.0;
+        }
+        // each pane its own frost (a little lighter or darker), a sheen from above, a dark seam and a lit bevel
+        col *= 1.0 + (r.z - 0.5) * 0.6 * w;
+        col += uTint * 0.06 * w * (0.5 + 0.5 * lp.y / hs.y);
+        col *= 1.0 - 0.3 * uB.w * w * edge;
+        col += uTint * 0.22 * uB.w * w * edge * (n.y > 0.0 || n.x < 0.0 ? 1.0 : 0.35);
+        // A single soft moving glint follows the flight, not a flashing grid.
+        float glint=exp(-pow((lp.y/hs.y-(uB.x*2.8-1.4))/.23,2.0));
+        col+=mix(uTint,vec3(.82,.89,.95),.72)*glint*edge*w*.065;
+        col *= 1.0 - uC.z * A;
+        col += (h1(gl_FragCoord.xy + fract(uD.z * 0.137) * 113.0) - 0.5) * uD.y * A * 0.09;   // film grain
+        gl_FragColor = vec4(max(col, vec3(0.0)), 1.0);
+      }`
+  });
+  pass.enabled = false;
+  const state = { amount: 0, envelope: 0, movement: 0 };
+  const size = new THREE.Vector2(), tint = new THREE.Color();
+  let movement = 0, last = 0, warm = 2;   // the first frames draw it at zero strength (= the picture unchanged): compiled while the page loads, not mid-transition
+  /* SHAPE: the envelope over the progress (rises from shape[0] over shape[1], falls from shape[2] over shape[3]). VELOCITY null: the
+     progress' own rate, measured here, against SPEEDSCALE (progress per second for full strength) */
+  function update({ progress = 0, velocity = 0, focus = null, dt = 1 / 60, reducedMotion = false, enabled = true, shape = [.06, .44, .70, .29], speedScale = 1.15 }) {
+    const t = clamp(progress), C = config || FORWARD_MOSAIC_DEFAULTS, D = FORWARD_MOSAIC_DEFAULTS, d = clamp(dt, 0, .18);
+    const v = velocity == null ? (d > 0 ? (t - last) / d : 0) : velocity; last = t;
+    // the motion blur's own clock (water-forward-transition.js): its envelope over the progress × the scroll's speed, smoothed
+    const speed = smooth(Math.abs(v) / speedScale);
+    movement += (speed - movement) * (1 - Math.exp(-d * 12));
+    const envelope = smooth((t - shape[0]) / shape[1]) * (1 - smooth((t - shape[2]) / shape[3]));
+    const hold = num(C.hold, D.hold, 0, 1);
+    const amount = enabled && !reducedMotion ? envelope * (hold + (1 - hold) * movement) * num(C.amount, D.amount, 0, 2) : 0;
+    state.amount = amount; state.envelope = envelope; state.movement = movement;
+    pass.enabled = amount > .0005 || warm > 0;
+    if (warm > 0) warm--;
+    if (!pass.enabled) return;
+    const u = pass.uniforms;
+    if (focus) u.uFocus.value.copy(focus);
+    if (renderer) renderer.getDrawingBufferSize(size); else size.set(innerWidth, innerHeight);
+    u.uRes.value.set(Math.max(1, size.x), Math.max(1, size.y));
+    u.uA.value.set(amount, num(C.size, D.size, .05, 1.5), num(C.split, D.split, 0, 1), num(C.shift, D.shift, 0, 2));
+    u.uB.value.set(t, num(C.magnify, D.magnify, 0, .6), num(C.frost, D.frost, 0, 3), num(C.seam, D.seam, 0, 2));
+    u.uC.value.set(num(C.ride, D.ride, 0, 3), num(C.chroma, D.chroma, 0, 2), num(C.darken, D.darken, 0, .6), num(C.blur, D.blur, 0, .8));
+    u.uD.value.set(num(C.glitch, D.glitch, 0, 2), num(C.grain, D.grain, 0, 2), Math.floor(performance.now() / 100) % 997, 0);
+    u.uTint.value.copy(tint.setStyle(typeof C.tint === 'string' && /^#[0-9a-f]{6}$/i.test(C.tint) ? C.tint : D.tint));
+  }
+  return { pass, state, update, dispose: () => pass.dispose() };
+}

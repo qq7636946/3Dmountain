@@ -1,0 +1,94 @@
+/* index1-6 · canyon racing camera tables (2026-10-24, audit B-17 / B-18).
+   The first-person canyon flight puts the camera on the river centreline and looks `ahead` units down it. The river turns 60–95° in
+   S-bends that last only 0.9–1.2 journey units, so with a steady wheel (one notch / 180 ms, ≈ 0.74 units per second) the view yaws up
+   to 155°/s. A position-only racing line cannot fix that — the camera has to stay within ±0.45 river widths of the centreline, and a
+   smoothed path inside that corridor still turns at ≥ 85 % of the centreline's peak rate. So the cure is on the VIEW direction:
+     • YAW   a heading correction x(s) (degrees, added to the old chord heading) that caps the yaw rate at CAP °/journey unit, found by an
+             exact feasibility pass (interval propagation, forward + backward) so that
+               – the correction is 0 at the start of the first-person flight and at every chapter stop (± a small tolerance),
+               – |x| stays under `maxYaw` (relaxed in 5° steps if the stops make it impossible),
+               – the camera follows the old view exactly wherever the cap is not needed;
+             the result is then softened with a masked Gaussian so the pan eases in and out (rate never exceeds the cap).
+     • SIDE  the camera slides toward the inside of the bend in proportion to how far its view lags the river (−.27 units per degree),
+             soft-clamped to ±0.45 × the river half-width — it always stays over the water.
+     • ROLL  bank follows the camera's own yaw rate, 0.18 journey units ahead of it (the banking leads the turn), as a smooth −1…1 shape.
+     • ALT   a gentle altitude wave: higher where the river opens out, lower where it narrows (never below 2.0).
+   Everything is a pure function of the route position s (arc length on the centreline), so scrolling back retraces it exactly.
+   Anchors are given in the DOWNSTREAM clock (journeyClock), which is how the page's stops are defined (page p = clock + 2.894). */
+const CLOCK0 = 1.404, SPAN = 6.596, ROUTE_MAX = .865;
+/* [clock, tolerance °]: first-person start (page 4.894), the cue stops (page 5.014 / 5.854 / 7.694 / 9.794) and the chapter-link targets (7.594 / 9.744) */
+export const RACING_ANCHORS = Object.freeze([[2.0, 0], [2.12, 2.5], [2.96, 2.5], [4.7, 2.5], [4.8, 1.5], [6.85, 2.5], [6.9, 1.5]]);
+const D = 180 / Math.PI;
+/* yaw-rate cap (°/journey unit) as a function of the 彎道取直 dial: 0.7 → 60; below, a power law up to ∞ at 0; above, down to 48 at 1 */
+const capOf = r => r <= .7 ? 60 * Math.pow(.7 / r, 1.25) : 60 - 12 * smooth(.7, 1, r);
+const smooth = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+
+export function createCanyonRacing({ length, samples = 512, centre, halfWidth }) {
+  const M = samples, h = length / M, cx = new Float64Array(M + 1), cz = new Float64Array(M + 1), wd = new Float64Array(M + 1);
+  for (let i = 0; i <= M; i++) { const c = centre(i * h); cx[i] = c[0]; cz[i] = c[1]; wd[i] = halfWidth(i * h); }
+  const arcPerP = ROUTE_MAX * length / SPAN, dpStep = h / arcPerP;           // journey units per grid step
+  const iOfClock = c => Math.round((c - CLOCK0) / SPAN * ROUTE_MAX * length / h);
+  const anchors = RACING_ANCHORS.map(([c, tol]) => [iOfClock(c), tol]);
+  const i0 = anchors[0][0], i1 = anchors[anchors.length - 1][0];
+  const lerpArr = (a, s) => { const f = Math.max(0, Math.min(M - 1e-9, s / h)), i = Math.floor(f), t = f - i; return a[i] * (1 - t) + a[i + 1] * t; };
+  const out = { yaw: 0, side: 0, roll: 0, alt: 0, on: false };
+  let kR = -1, kA = -1, kM = -1, T = null;
+  const gauss = (arr, sigmaSteps) => { const K = Math.ceil(3 * sigmaSteps), w = []; for (let k = -K; k <= K; k++) w.push(Math.exp(-.5 * (k / sigmaSteps) ** 2)); const res = new Float64Array(arr.length); for (let i = 0; i < arr.length; i++) { let s = 0, sw = 0; for (let k = -K; k <= K; k++) { const j = i + k; if (j < 0 || j >= arr.length) continue; s += w[k + K] * arr[j]; sw += w[k + K]; } res[i] = s / sw; } return res; };
+
+  function build(racing, ahead, maxYaw) {
+    const N = M + 1, psi = new Float64Array(N), x = new Float64Array(N), xs = new Float64Array(N);
+    // old chord heading: from the centre point at s to the one `ahead` units further down the river
+    for (let i = 0; i < N; i++) { const s = i * h, ex = lerpArr(cx, Math.min(length, s + ahead)), ez = lerpArr(cz, Math.min(length, s + ahead)); let a = Math.atan2(ex - cx[i], -(ez - cz[i])) * D; if (i) { while (a - psi[i - 1] > 180) a -= 360; while (a - psi[i - 1] < -180) a += 360; } psi[i] = a; }
+    let ok = false;
+    if (racing > 0) {
+      // rate cap in degrees per journey unit: .7 → 60 (peak ≈ 64°/s at the wheel's 0.74 units/s), weaker below, a little stronger above
+      const cap = capOf(racing), rc = cap * dpStep;
+      // try the stops with their tolerance first; if the cap is too tight for that, widen the tolerances, last of all keep only the two ends
+      const trials = [[1, anchors], [1.5, anchors], [2.2, anchors], [1, [anchors[0], anchors[anchors.length - 1]]]];
+      for (let ti = 0; ti < trials.length && !ok; ti++) {
+        const [tolScale, set] = trials[ti];
+        for (let delta = Math.max(8, maxYaw); delta <= 90 && !ok; delta += 5) {
+          const lo = new Float64Array(N).fill(-delta), hi = new Float64Array(N).fill(delta);
+          for (let i = 0; i < N; i++) if (i <= i0 || i >= i1) lo[i] = hi[i] = 0;
+          for (const [i, tol] of set) { lo[i] = Math.max(lo[i], -tol * tolScale); hi[i] = Math.min(hi[i], tol * tolScale); }
+          const bl = new Float64Array(N), bh = new Float64Array(N); bl[N - 1] = lo[N - 1]; bh[N - 1] = hi[N - 1]; let bad = false;
+          for (let i = N - 2; i >= 0; i--) { const st = psi[i + 1] - psi[i], rr = i >= i0 && i + 1 <= i1 ? rc : 1e9; bl[i] = Math.max(lo[i], bl[i + 1] - rr + st); bh[i] = Math.min(hi[i], bh[i + 1] + rr + st); if (bl[i] > bh[i] + 1e-9) { bad = true; break; } }
+          if (bad) continue;
+          x[0] = 0;
+          for (let i = 0; i < N - 1; i++) { const st = psi[i + 1] - psi[i], rr = i >= i0 && i + 1 <= i1 ? rc : 1e9; let l = Math.max(bl[i + 1], x[i] - rr - st), u = Math.min(bh[i + 1], x[i] + rr - st); if (l > u) l = u = (l + u) / 2; x[i + 1] = Math.max(l, Math.min(u, 0)); }
+          ok = true;
+        }
+      }
+      if (ok) {   // ease the pan in and out: smooth the camera heading (psi + x), only near where it deviates, so untouched stretches stay exactly the old view
+        const sig = .06 / dpStep, sum = new Float64Array(N); for (let i = 0; i < N; i++) sum[i] = psi[i] + x[i];
+        const sm = gauss(sum, sig), dev = []; for (let i = 0; i < N; i++) if (Math.abs(x[i]) > .02) dev.push(i);
+        const reach = 4 * sig; let j = 0;
+        for (let i = 0; i < N; i++) { while (j + 1 < dev.length && dev[j + 1] <= i) j++; let d = 1e9; if (dev.length) { d = Math.min(Math.abs(i - dev[j]), Math.abs(i - dev[Math.min(dev.length - 1, j + 1)])); } const m = 1 - smooth(sig * 1.5, reach, d); xs[i] = m * (sm[i] - psi[i]); if (i <= i0 || i >= i1) xs[i] = 0; }
+      }
+    }
+    const camPsi = new Float64Array(N); for (let i = 0; i < N; i++) camPsi[i] = psi[i] + xs[i];
+    // heading rate of the camera in degrees per journey unit
+    const rate = new Float64Array(N); for (let i = 0; i < N; i++) { const a = Math.max(0, i - 1), b = Math.min(N - 1, i + 1); rate[i] = (camPsi[b] - camPsi[a]) / ((b - a) * dpStep); }
+    const lead = Math.round(.18 / dpStep), side = new Float64Array(N), roll = new Float64Array(N), alt = new Float64Array(N), yaw = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      yaw[i] = xs[i] / D;
+      const lim = .45 * wd[i]; side[i] = lim * Math.tanh(-.27 * xs[i] / lim);
+      roll[i] = Math.tanh(rate[Math.min(N - 1, i + lead)] / 45);
+      const w = wd[i]; alt[i] = 1.5 * smooth(16, 24, w) + 1 * smooth(24, 52, w) - .4;
+    }
+    // altitude fades to 0 at the start of the flight (over 0.4 units, so the climb into the open mouth is gradual) and at the last two stops (±0.25 units),
+    // so the stops keep today's height; after the last stop the rise takes over
+    const fade = new Float64Array(N), iA = iOfClock(2.0), iB = iOfClock(4.8), iC = iOfClock(6.9);
+    for (let i = 0; i < N; i++) fade[i] = smooth(0, .4, (i - iA) * dpStep) * smooth(0, .25, Math.abs(i - iB) * dpStep) * (i >= iC ? 0 : 1 - smooth(-.25, 0, (i - iC) * dpStep));
+    for (let i = 0; i < N; i++) alt[i] *= fade[i];
+    return { ok, yaw, side, roll, alt, rate, psi, camPsi, cap: racing > 0 ? capOf(racing) : 0 };
+  }
+  /* s: arc length on the centreline (route * .865 * pathLength). racing 0 → inactive (old camera). */
+  function sample(s, racing, ahead, maxYaw = 45) {
+    if (!(racing > 0)) { out.on = false; out.yaw = out.side = out.roll = out.alt = 0; return out; }
+    if (racing !== kR || ahead !== kA || maxYaw !== kM) { T = build(racing, ahead, maxYaw); kR = racing; kA = ahead; kM = maxYaw; }
+    out.on = true; out.yaw = lerpArr(T.yaw, s); out.side = lerpArr(T.side, s); out.roll = lerpArr(T.roll, s); out.alt = lerpArr(T.alt, s);
+    return out;
+  }
+  return { sample, build, table: () => T, M, h, dpStep, anchors, arcPerP };
+}

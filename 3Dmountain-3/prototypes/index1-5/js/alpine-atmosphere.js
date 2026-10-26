@@ -10,7 +10,7 @@
    Cost: the sky dome's fragment shader (already drawn), one Points draw, one extra light, no new render pass.
    The shadow map stays static: it is re-baked only when the sun moves or the camera leaves / returns to the
    canyon floor (a tight corridor fit, then the wide aerial fit). */
-import { ALPINE_LIGHT } from './alpine-light-params.js?v=i15-mvomqdwt';
+import { ALPINE_LIGHT } from './alpine-light-params.js?v=i15-mvop6r0i';
 
 // Fallbacks for a bad tuner value: the defaults as loaded, before any tuning.
 const DEFAULTS = { ...ALPINE_LIGHT };

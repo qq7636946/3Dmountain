@@ -4,8 +4,8 @@
 import { createConfluenceEffects } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 export { WATERSHED_FLOW_DEFAULTS } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 // ALPINE-TERRAIN (index1-5-alpine 2026-10-23): load-time drainage erosion and the alpine dials.
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvomqdwt';
-import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mvomqdwt';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvop6r0i';
+import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mvop6r0i';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 

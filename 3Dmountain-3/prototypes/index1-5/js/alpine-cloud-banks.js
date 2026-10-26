@@ -11,7 +11,7 @@
    One tileable billow texture (CPU-baked once, mipmapped) feeds the puffs and the sky dome's cumulus and
    cloud sea. Every look value is read live from ALPINE_LIGHT (amount, height, softness, drift, colours).
    Reduced motion freezes the drift. */
-import { ALPINE_LIGHT } from './alpine-light-params.js?v=i15-mvomqdwt';
+import { ALPINE_LIGHT } from './alpine-light-params.js?v=i15-mvop6r0i';
 
 /* Tileable billow field: R = density (fbm + inverted Worley puffs), G/B = d/du, d/dv (scaled), A = fine fbm. */
 let sharedNoise = null, sharedUsers = 0;
@@ -213,6 +213,23 @@ export function createAlpineCloudBanks(THREE, { lite = false, sampleHeight = nul
     // Re-rank uniformly inside the kind, best first, so a dial value is a share of that kind.
     list.forEach((q, i) => { q.rank = (i + .5) / list.length; q.seed += kind * 1000; puffs.push(q); });
   });
+  // A few very thin wisps on the four near/middle valley shoulders (client,
+  // 2026-10-26). Keep the clear river fan and the existing distant banks.
+  // Reuse the same noise, terrain intersection and instanced draw; phones
+  // get three wisps per pocket. The alternate page keeps its original clouds.
+  let foregroundWisps = 0;
+  if (typeof document !== 'undefined' && document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])')) {
+    const pockets = [[-1175, -2100], [1325, -2200], [-1450, -650], [1180, -750]];
+    for (const [cx, cz] of pockets) for (let i = 0; i < (lite ? 3 : 5); i++) {
+      const x = cx + (rnd() - .5) * 340, z = cz + (rnd() - .5) * 240;
+      const g = groundAt(x, z), rd = riverDistance ? riverDistance(x, z) : 1e9;
+      if (g < 45 || rd < 80) continue;
+      const r = 165 + rnd() * 110;
+      puffs.push({ x, y: g + 80 + r * .45, z, r, rank: 0,
+        flat: 2.8 + rnd(), tone: .72, seed: 4000 + rnd() * 100 });
+      foregroundWisps++;
+    }
+  }
   // Soft intersection: a half-float heightmap of the terrain (baked once) lets each cloud fragment fade out as it
   // nears the ground below it, so a sprite slicing a slope leaves a gradient, not a straight cut.
   const HS = lite ? 160 : 320, heights = new Uint16Array(HS * HS);
@@ -257,9 +274,9 @@ export function createAlpineCloudBanks(THREE, { lite = false, sampleHeight = nul
       uniform vec3 uRight,uUp;uniform vec4 uKinds;uniform vec2 uVert;uniform float uTime,uAmount,uLift,uSeaLift,uAlpha;
       varying vec2 vUv;varying float vSeed,vDepth,vA,vTone,vWisp,vRadius,vKindAlpha;varying vec3 vWorld;
       void main(){
-        float kind=floor(aInfo.x/1000.);vKindAlpha=kind>1.5&&kind<2.5?.78:1.;
+        float kind=floor(aInfo.x/1000.);vKindAlpha=kind>3.5?.32:kind>1.5&&kind<2.5?.78:1.;
         vUv=uv;vSeed=aInfo.x-kind*1000.;vTone=aInfo.w;vWisp=smoothstep(2.4,3.2,aInfo.z);vRadius=aPuff.w;
-        float share=kind<.5?uKinds.x:kind<1.5?uKinds.y:kind<2.5?uKinds.z:uKinds.w;
+        float share=kind>3.5?1.:kind<.5?uKinds.x:kind<1.5?uKinds.y:kind<2.5?uKinds.z:uKinds.w;
         vec3 c=aPuff.xyz;c.y+=uLift+(kind>1.5&&kind<2.5?uSeaLift:0.);
         c.x+=sin(uTime*.021+aInfo.x)*24.+uTime*1.6;c.z+=cos(uTime*.017+aInfo.x*1.3)*16.;
         float r=aPuff.w;
@@ -338,7 +355,7 @@ export function createAlpineCloudBanks(THREE, { lite = false, sampleHeight = nul
   let disposed = false, clock = 0, lastTime = null, linkedSun = false;
   return {
     group, uniforms, noise, sunDirection: sunDir,
-    stats: { puffs: COUNT, kinds: kinds.map(k => k.length), candidates, density: DENSITY, drawCalls: 1, externalAssets: 0 },
+    stats: { puffs: COUNT, kinds: kinds.map(k => k.length), foregroundWisps, candidates, density: DENSITY, drawCalls: 1, externalAssets: 0 },
     floorMap, floorBox,
     /* The atmosphere owns the (canyon -> aerial blended) sun; share its vector so clouds and terrain agree. */
     linkSun(v) { if (v?.isVector3) { uniforms.uSunDir.value = v; linkedSun = true; } },

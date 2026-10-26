@@ -664,7 +664,7 @@ float odHeroNoise(vec3 p){
       vec3 sunC=uEnvGlow*(1.+uEnvSunTint);
       c+=sunC*uOdLook.x*pow(1.-face,2.2)*smoothstep(-.15,.7,dot(N,S));
       c+=sunC*uOdLook.y*pow(max(dot(reflect(-Vc,N),S),0.),mix(900.,90.,uOdVar.w));
-      return max(c,vec3(0.));
+      return montisWaterTone(c);
     }
   `;
   const group = new THREE.Group();

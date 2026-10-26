@@ -165,7 +165,8 @@ module.exports = ({ main, drops, letters, glass, html, extra }) => {
   const markDefaults = extractExport(out['world-logo-mark.js'], 'MARK_DEFAULTS', mark.file) || {}, markRows = extractExport(out['world-logo-mark.js'], 'MARK_ROWS', mark.file) || [];
   const lakeDefaults = extractExport(out['world-logo-scene.js'], 'LAKE_DEFAULTS', lake.file) || {}, lakeRows = extractExport(out['world-logo-scene.js'], 'LAKE_ROWS', lake.file) || [];
   JSON.parse(JSON.stringify(markDefaults)); JSON.parse(JSON.stringify(lakeDefaults));
-  const rows = [...SEAL_ROWS, ...groupRows(markRows, 'logoMark', markDefaults, mark.file), ...groupRows(lakeRows, 'logoLake', lakeDefaults, lake.file)];
+  const orbitRows = groupRows(lakeRows.filter(([, key]) => key.startsWith('orbit')), 'logoLake', lakeDefaults, lake.file);
+  const rows = [...SEAL_ROWS, ...groupRows(markRows, 'logoMark', markDefaults, mark.file), ...groupRows(lakeRows.filter(([, key]) => !key.startsWith('orbit')), 'logoLake', lakeDefaults, lake.file)];
 
   /* ---- main.js ---- */
   main = once(main, 'ocean: () => CONFIG.worldOcean,', 'ocean: () => CONFIG.worldOcean, logo: () => CONFIG,', 'mount option');
@@ -175,8 +176,10 @@ module.exports = ({ main, drops, letters, glass, html, extra }) => {
       CONFIG.logoLake = ${JSON.stringify(lakeDefaults)};
       const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));`, 'defaults');
   main = once(main, "          ['卡牌轉場 Cards', [", `          /* LOGO 收尾 Logo Seal：海洋橫移之後（波浪轉場 → 黃昏湖 → 符號旋轉一圈 → 文字）；符號材質與湖景的列來自各自的模組 */
+          ['LOGO 環繞光點', ${JSON.stringify(orbitRows)}],
           ['LOGO 收尾 Logo Seal', ${JSON.stringify(rows)}],
           ['卡牌轉場 Cards', [`, 'tuner');
+  main = once(main, "const logoGroupOrder = [", "const logoGroupOrder = ['LOGO 環繞光點', ", 'orbit tuner order');
   // (inserted before 'worldOcean': the helpers after this one anchor on the list's tail)
   main = once(main, "'relief', 'logoTerrain', 'worldOcean'].includes(groupKey);", "'relief', 'logoTerrain', 'logoSeal', 'logoMark', 'logoLake', 'worldOcean'].includes(groupKey);", 'live dials');
 

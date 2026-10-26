@@ -27,7 +27,6 @@ function extractExport(src, name) {
 
 /* the sections: [title, open, [[group, key], …]]. Labels and ranges come from the modules' own rows. */
 const SECTIONS = [
-  ['LOGO 環繞光點', true, ["orbitRandomness","orbitDensity","orbitScatter","orbitInteraction","orbitSpeed","orbitRiseSpeed","orbitRadius","orbitSize","orbitBrightness"].map(k => ['logoLake', k])],
   ['旋轉模糊', false, [['logoSeal', 'spinBlur']]],
   ['位置、旋轉與升起', true, [['logoLake', 'markY'], ['logoLake', 'markSize'], ['logoSeal', 'markScale'], ['logoSeal', 'markY'], ['logoSeal', 'restYaw'],
     ['logoSeal', 'spinStart'], ['logoSeal', 'spin'], ['logoSeal', 'spinEnd'], ['logoSeal', 'spinEase'], ['logoSeal', 'riseStart'], ['logoSeal', 'riseEnd'], ['logoSeal', 'riseEase'],
@@ -76,14 +75,13 @@ function buildSections(from = __dirname) {
   for (const [title, open, keys] of SECTIONS) {
     const rows = [];
     for (const [g, k] of keys) { const row = known.get(g + '/' + k); if (row){rows.push(row);used.add(g+'/'+k);}else missing.push(g + '.' + k); }
-    if (rows.length) sections.push({ title, open:title === 'LOGO 環繞光點', rows });
+    if (rows.length) sections.push({ title, open:false, rows });
   }
   for(const[group,title]of [['logoMark','更多 LOGO 光學與表面'],['logoLake','完整場景、背景與水面'],['logoSeal','完整轉場與節奏']]){
     const rows=[...known].filter(([key,row])=>row[1]===group&&!used.has(key)).map(([key,row])=>{used.add(key);return row;});
     if(rows.length)sections.push({title,open:false,rows});
   }
   if (missing.length) console.log('logo panel: no row for ' + missing.join(', ') + ' (dropped)');
-  sections.sort((a, b) => Number(b.title === 'LOGO 環繞光點') - Number(a.title === 'LOGO 環繞光點'));
   return sections;
 }
 

@@ -17,7 +17,7 @@ const STYLE = `
 .fi-portfolio canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .fi-portfolio-copy .fi-copy-zh{color:var(--ui-muted)}
 `;
-import { FEEL } from './smooth-input.js?v=studio-polish-20261025-2';
+import { FEEL } from './smooth-input.js?v=restore-1-5-blue-8547de57661f';
 const GATE = .1, UNITS = 6900, BRIDGE = 1.3;
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 

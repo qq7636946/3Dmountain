@@ -9,8 +9,8 @@
    One draw call (InstancedBufferGeometry: 3 crossed cards x 3 rows per tuft), alpha-tested with mip-aware
    alpha, lit by the scene (MeshStandardMaterial: sun, shadow map, hemisphere), fogged like the rock.
    Fades by camera distance (no popping: tufts grow out of the ground) and with the aerial reveal (hidden). */
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvop6r0i';
-import { ALPINE_TERRAIN_UNIFORMS as U, syncAlpineUniforms, alpineMaps, ALP_NOISE_GLSL, ALP_BANK_GLSL, ALP_CANYON_GLSL } from './alpine-terrain-material.js?v=i15-mvop6r0i';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=restore-1-5-blue-8547de57661f';
+import { ALPINE_TERRAIN_UNIFORMS as U, syncAlpineUniforms, alpineMaps, ALP_NOISE_GLSL, ALP_BANK_GLSL, ALP_CANYON_GLSL } from './alpine-terrain-material.js?v=restore-1-5-blue-8547de57661f';
 
 const fract = x => x - Math.floor(x);
 const hash = (a, b) => fract(Math.sin(a * 127.1 + b * 311.7 + 74.7) * 43758.5453);

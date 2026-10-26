@@ -113,21 +113,6 @@ const ROWS = [
   ['文字區 水平位置', 'worldOcean', 'textX', 0, .6, .005], ['文字區 底邊位置', 'worldOcean', 'textY', .3, 1, .005]
 ];
 
-/* Client 2026-10-26: remove the carved-logo film and its matching still.
-   The existing procedural sea remains. Main page only; retain the media
-   and the alternate page's original behaviour for a reversible restore. */
-function patchOceanFilmWorld(src) {
-  if (src.includes('/* OCEAN_FILM_PAUSED_20261026 */')) return src;
-  const p = (a, b) => { src = once(src, a, b, 'film paused'); };
-  p("  const ui = document.querySelector('.finnovation-ui');",
-    "  const ui = document.querySelector('.finnovation-ui');\n  /* OCEAN_FILM_PAUSED_20261026 */\n  const oceanFilmPaused = document.documentElement.matches('[data-look=\"index1-5\"]:not([data-opening-refinement])');");
-  p("asset('clouds-2k.jpg'), asset(small ? 'ocean-1280.jpg' : 'ocean-2400.jpg')].map(bitmap);",
-    "asset('clouds-2k.jpg'), ...(oceanFilmPaused ? [] : [asset(small ? 'ocean-1280.jpg' : 'ocean-2400.jpg')])].map(bitmap);");
-  p('  function frameVideo(s, speed) {',
-    '  function frameVideo(s, speed) {\n    if (oceanFilmPaused) return; // No media element, request, decoder or VideoTexture.');
-  return src;
-}
-
 function patchWorld(src) {
   const p = (a, b, label) => { src = once(src, a, b, label); };
   src = '/* index1-5 LOCAL COPY of js/finnovation-world.js (prototypes/index1-5/world-ocean-build.cjs): asset URLs re-pointed,\n' +
@@ -218,7 +203,7 @@ function patchWorld(src) {
   p("    if (video) { video.pause(); videoWanted = false; }\n    epilogue()?.setExit(0);", "    if (video) { video.pause(); videoWanted = false; }\n    epilogue()?.setExit(0);\n    ocean?.close();", 'close');
   p("get state() { return { y, yt, maxY, at: { ...at }, dpr, sample: sample(y),", "get state() { return { y, yt, maxY, at: { ...at }, dpr, ocean: ocean?.state, sample: sample(y),", 'state');
   p("      scene?.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });", "      ocean?.dispose();\n      scene?.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });", 'dispose');
-  return patchOceanFilmWorld(patchDaylightWorld(src));
+  return patchDaylightWorld(src);
 }
 
 module.exports = ({ main, drops, letters, glass, html }) => {
@@ -232,9 +217,6 @@ module.exports = ({ main, drops, letters, glass, html }) => {
   main = once(main, 'mist: () => CONFIG.mist, video: () => CONFIG.video,', 'mist: () => CONFIG.mist, video: () => CONFIG.video, ocean: () => CONFIG.worldOcean,', 'mount option');
   main = once(main, '      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));', `      /* 海洋章節 Ocean（world-ocean-build.cjs）：地球之後的透鏡俯衝與橫向「責任」章節。 */
       CONFIG.worldOcean = ${JSON.stringify(defaults)};
-      // Main page: restore the ocean's original bright slate-blue palette.
-      // Its deep/lit/ink defaults predate the darker Maritime river colours.
-      if (document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])')) CONFIG.worldOcean.valley = 0;
       const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));`, 'defaults');
   main = once(main, "          ['卡牌轉場 Cards', [", `          /* 海洋章節 Ocean：地球 → 透鏡俯衝 → 橫向章節（雲、雲影、海鷗、海面反光；LOGO 水印＝原本俯視圖的影片） */
           ['海洋章節 Ocean', ${JSON.stringify(ROWS)}],
@@ -272,4 +254,3 @@ module.exports = ({ main, drops, letters, glass, html }) => {
 /* for test harnesses: the local copy of the world module on its own */
 module.exports.patchWorld = () => patchWorld(read(path.join(ROOT, 'js', 'finnovation-world.js')));
 module.exports.patchDaylightWorld = patchDaylightWorld;
-module.exports.patchOceanFilmWorld = patchOceanFilmWorld;

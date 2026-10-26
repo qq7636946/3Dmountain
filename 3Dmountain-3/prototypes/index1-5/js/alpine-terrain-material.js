@@ -20,7 +20,7 @@
    runs the original plate code unchanged.
    Uniforms are shared by every material this installs and refreshed from ALPINE_TERRAIN before
    each draw (material.onBeforeRender), so the panel's dials act live. */
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvop6r0i';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=restore-1-5-blue-8547de57661f';
 
 let THREE_ = null;
 const U = {

@@ -3,9 +3,6 @@
    One scroll clock drives a WebGL refraction reveal, the editorial reading
    surface and the handoff to the seal. The same renderer is reused. */
 import * as THREE from 'three';
-// Temporarily use colour fields for index1-5's two reading chapters.
-// Set false to restore canopy-v1.webp / c-bg-v1.webp; keep both assets intact.
-const COLOR_ONLY = document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])');
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const smooth=(a,b,v)=>{const t=clamp((v-a)/Math.max(.001,b-a));return t*t*(3-2*t);};
 const VERTEX='varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
@@ -16,20 +13,6 @@ uniform float uTime,uEnter,uRead,uAspect,uAspect2,uSceneMix,uMotion;
 varying vec2 vUv;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
-#ifdef PRINCIPLES_COLOR_ONLY
-vec3 colourField(vec2 uv,float chapter){
- // Stationary broad colour gradients: teal in the first chapter, slate blue
- // in the second. Scroll changes only the palette; copy keeps its own flow.
- float vertical=smoothstep(0.,1.,uv.y);
- vec3 lower=mix(vec3(.055,.125,.155),vec3(.09,.145,.205),chapter);
- vec3 upper=mix(vec3(.085,.205,.235),vec3(.18,.265,.335),chapter);
- vec3 col=mix(lower,upper,vertical);
- vec2 p=(uv-vec2(.70,.52))*vec2(1.1,1.);
- float glow=exp(-dot(p,p)*3.8);
- col+=mix(vec3(.035,.07,.075),vec3(.065,.075,.08),chapter)*glow;
- return col;
-}
-#else
 vec3 photo(sampler2D source,vec2 uv,float r,float aspect,float horizon){
  vec2 cover=vec2(min(1.,uRes.x/uRes.y/aspect),min(1.,aspect*uRes.y/uRes.x));
  vec2 p=.5+(uv-.5)*cover/1.065;
@@ -55,7 +38,6 @@ vec3 photo(sampler2D source,vec2 uv,float r,float aspect,float horizon){
  }
  return mix(c,vec3(.035,.09,.125),scrim);
 }
-#endif
 void main(){
  vec2 uv=vUv;float q=smoothstep(0.,1.,uEnter),s=sin(q*3.14159265);
  float n=noise(uv*vec2(3.2,4.7)+vec2(0.,uTime*.018));
@@ -68,15 +50,11 @@ void main(){
  float imageRadius=.006*s*s*uMotion;
  float change=smoothstep(0.,1.,uSceneMix);
  vec3 newer;
- #ifdef PRINCIPLES_COLOR_ONLY
- newer=colourField(uv,change);
- #else
  // Uniform branches keep the resting scenes at one photo fetch. Both
  // images are sampled only while the scroll is actually changing scenes.
  if(change<.001)newer=photo(uPhoto,uv+lens,imageRadius,uAspect,0.);
  else if(change>.999)newer=photo(uPhoto2,uv+lens,imageRadius*.72,uAspect2,1.);
  else newer=mix(photo(uPhoto,uv+lens,imageRadius,uAspect,0.),photo(uPhoto2,uv+lens,imageRadius*.72,uAspect2,1.),change);
- #endif
  vec3 c=newer;
  if(uEnter<.9999){
   vec3 older=texture2D(uOld,clamp(uv-lens*1.5,.001,.999)).rgb;
@@ -101,7 +79,7 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  let secondRequested=false,secondReady=false,secondFailed=false,secondReadyAt=0;
  const mouse=new THREE.Vector2(),targetMouse=new THREE.Vector2();
  const onPointer=e=>targetMouse.set((e.clientX/Math.max(1,W)-.5)*2,(.5-e.clientY/Math.max(1,H))*2);
- if(!reducedMotion&&!COLOR_ONLY)addEventListener('pointermove',onPointer,{passive:true});
+ if(!reducedMotion)addEventListener('pointermove',onPointer,{passive:true});
  const pill=resp?.querySelector('[data-world-go="logo"]'),label=pill?.querySelector('span');
  const was=pill&&{go:pill.dataset.worldGo,text:label?.textContent};
  if(pill){pill.dataset.worldGo='principles';if(label)label.textContent='OUR PRINCIPLES';}
@@ -139,10 +117,9 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  function begin(renderer){
   scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
   texture=new THREE.DataTexture(new Uint8Array([17,42,55,255]),1,1);texture.needsUpdate=true;
-  material=new THREE.ShaderMaterial({defines:COLOR_ONLY?{PRINCIPLES_COLOR_ONLY:1}:{},vertexShader:VERTEX,fragmentShader:FRAGMENT,depthTest:false,depthWrite:false,toneMapped:false,blending:THREE.NoBlending,
+  material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,depthTest:false,depthWrite:false,toneMapped:false,blending:THREE.NoBlending,
    uniforms:{uPhoto:{value:texture},uPhoto2:{value:texture},uOld:{value:texture},uRes:{value:new THREE.Vector2(W,H)},uMouse:{value:mouse},uTime:{value:0},uEnter:{value:1},uRead:{value:0},uAspect:{value:16/9},uAspect2:{value:16/9},uSceneMix:{value:0},uMotion:{value:reducedMotion?0:1}}});
   quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);quad.frustumCulled=false;scene.add(quad);
-  if(COLOR_ONLY){ready=true;secondReady=true;secondRequested=true;secondReadyAt=performance.now()-550;return;}
   new THREE.TextureLoader().load(new URL('../assets/principles/canopy-v1.webp',import.meta.url).href,t=>{
    if(disposed){t.dispose();return;}const previous=texture;texture=setupTexture(t);
    material.uniforms.uPhoto.value=t;material.uniforms.uAspect.value=t.image.width/t.image.height;ready=true;
@@ -152,7 +129,7 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
   },undefined,e=>{failed=true;ready=true;console.warn('Principles background unavailable',e);});
  }
  function loadSecond(){
-  if(COLOR_ONLY||secondRequested||!material)return;secondRequested=true;
+  if(secondRequested||!material)return;secondRequested=true;
   new THREE.TextureLoader().load(new URL('../assets/principles/c-bg-v1.webp',import.meta.url).href,t=>{
    if(disposed){t.dispose();return;}texture2=setupTexture(t);
    material.uniforms.uPhoto2.value=t;material.uniforms.uAspect2.value=t.image.width/t.image.height;

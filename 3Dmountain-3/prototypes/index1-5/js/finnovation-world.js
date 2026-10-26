@@ -27,25 +27,25 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mvop6r0i'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mvop6r0i';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mvop6r0i';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvop6r0i';   /* WORLD_DIVE_FX */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=restore-1-5-blue-8547de57661f'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=restore-1-5-blue-8547de57661f';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { globeScrollDegrees } from './world-globe-motion.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mvop6r0i';
-import { createWorldOcean } from './world-ocean.js?v=i15-mvop6r0i';
-import { createWorldLogo } from './world-logo.js?v=logo-orbit-interaction-08c7e44e3d94';
+import { createWorldSectionMotion } from './section-motion.js?v=restore-1-5-blue-8547de57661f';
+import { createWorldOcean } from './world-ocean.js?v=restore-1-5-blue-8547de57661f';
+import { createWorldLogo } from './world-logo.js?v=restore-1-5-blue-8547de57661f';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=principles-colors-7e49cdde198e';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvop6r0i';
-import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
+import { createWorldPrinciples } from './world-principles.js?v=restore-1-5-blue-8547de57661f';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=restore-1-5-blue-8547de57661f';
+import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=restore-1-5-blue-8547de57661f';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
 const SCROLL_TRIGGER_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/ScrollTrigger/+esm';
 const SPLIT_TEXT_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/SplitText/+esm';
 const asset = name => new URL('../../../images/world/' + name, import.meta.url).href;
 const film = name => new URL('../../../media/' + name, import.meta.url).href;
-const STYLE_URL = new URL('../../../css/world.css?v=9f8137b289', import.meta.url).href;
+const STYLE_URL = new URL('../../../css/world.css?v=restore-1-5-blue-8547de57661f', import.meta.url).href;
 
 /* The markets on the planet: label, latitude, longitude, tag. TAIPEI is home. */
 const MARKETS = [
@@ -264,8 +264,6 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   const navButtons = [...root.querySelectorAll('.fiw-chapters [data-world-go]')];
   const part = name => root.querySelector(`[data-world-part="${name}"]`);
   const ui = document.querySelector('.finnovation-ui');
-  /* OCEAN_FILM_PAUSED_20261026 */
-  const oceanFilmPaused = document.documentElement.matches('[data-look="index1-5"]:not([data-opening-refinement])');
   /* index1-5 ocean (world-ocean.js): the planet is followed by a dive through a HUD lens into the sea, and the
      responsibility chapters become a horizontal section over it. Null when the markup is not there (then all below
      runs as the shared module). */
@@ -408,7 +406,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // are made once the deck has set the anisotropy. An ImageBitmap ignores texture.flipY, so the picture is flipped at decode.
   const bitmap = url => loadWorldImage(url)
     .catch(error => { console.warn('World epilogue: texture unavailable', error); return null; });
-  const pictures = [asset('earth-2k.jpg'), asset(small ? 'earth-asia-m.jpg' : 'earth-asia.jpg'), asset('clouds-2k.jpg'), ...(oceanFilmPaused ? [] : [asset(small ? 'ocean-1280.jpg' : 'ocean-2400.jpg')])].map(bitmap);
+  const pictures = [asset('earth-2k.jpg'), asset(small ? 'earth-asia-m.jpg' : 'earth-asia.jpg'), asset('clouds-2k.jpg'), asset(small ? 'ocean-1280.jpg' : 'ocean-2400.jpg')].map(bitmap);
   const makeTexture = (source, setup) => {
     if (!source) return null;
     const { image, flipY } = source;
@@ -444,7 +442,6 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // motion the still stays. Small screens get the 480p loop.
   let video = null, videoTexture = null, videoMix = 0, videoWanted = false;
   function frameVideo(s, speed) {
-    if (oceanFilmPaused) return; // No media element, request, decoder or VideoTexture.
     const near = open && !reducedMotion && y > at.block - H * 2.2;
     const showing = open && s.photo > .001 && s.footerTop > 1;
     if (near && !video) {

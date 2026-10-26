@@ -4357,11 +4357,3 @@ html[data-look="index1-5"] #fiWorld .fiwp-chapter--horizon .fiwp-cards {
 html[data-look="index1-5"][data-alpine-ui] body.is-ready .finnovation-ui .fi-brand-context {
   max-width:260px;
 }
-
-/* Portfolio copy: client-requested white text, main page only. */
-html[data-look="index1-5"]:not([data-opening-refinement]):not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy,
-html[data-look="index1-5"]:not([data-opening-refinement]):not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-portfolio-copy :is(.fi-copy-kicker,h2,.fi-copy-zh) {
-  --ui-ink: #fff;
-  --ui-muted: #fff;
-  color: #fff;
-}

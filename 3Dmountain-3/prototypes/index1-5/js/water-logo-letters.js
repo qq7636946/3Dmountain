@@ -28,7 +28,7 @@
  * distances (Felzenszwalb's transform over the anti-aliased coverage) — so a
  * drop can march the extruded letter inside its own optics.
  */
-import { createLetterWaterFx, LETTER_FX_DEFAULTS } from './letters-water-fx.js?v=i15-mvop6r0i';
+import { createLetterWaterFx, LETTER_FX_DEFAULTS } from './letters-water-fx.js?v=restore-1-5-blue-8547de57661f';
 export const LOGO_LETTER_DEFAULTS = {
   ...LETTER_FX_DEFAULTS,
   /* The ice. TINT is the frosted face, INK what the clear walls deepen toward.

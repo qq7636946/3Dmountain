@@ -1,0 +1,35 @@
+{
+  "logo": {
+    "logo3Width": 2.07
+  },
+  "logoLetters": {
+    "fxMode": 2,
+    "fxBlob": 1.4
+  },
+  "logoGlass": {
+    "glOn": 1,
+    "tint": "#edf6fd",
+    "glCore": "#2c6aa6",
+    "glDepth": 0.47,
+    "glThick": 0.71,
+    "glLens": 2.5,
+    "sceneDepth": 12,
+    "iorA": 1.48,
+    "normalScale": 0.085,
+    "glInk": 0.55,
+    "glInkColor": "#13233c",
+    "glEdge": 0.7,
+    "glBandHigh": "#3b74b9",
+    "glBandLow": "#dbe6f0",
+    "glBand": 0.45,
+    "glBandY": 0.05,
+    "reflectionStrength": 1.18,
+    "envSky": 1,
+    "envStudio": 0.3,
+    "glRimColor": "#89bef0",
+    "glRim": 1.23,
+    "glInner": 0.5,
+    "glCaustic": 0.3,
+    "glGlint": 1.3
+  }
+}

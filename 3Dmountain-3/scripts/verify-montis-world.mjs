@@ -1,0 +1,50 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const require = createRequire('C:/Users/qq763/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/package.json');
+const sharp = require('sharp');
+const html = fs.readFileSync(new URL('../overworld-montis.html', import.meta.url), 'utf8');
+const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
+for (const [, attributes, code] of scripts) {
+  if (attributes.includes('importmap')) JSON.parse(code);
+  else new vm.Script(code.replace(/^\s*import .*?;$/gm, ''));
+}
+const source = scripts.find(s => s[1].includes('type="module"'))[2];
+const symbol = html.match(/<symbol id="montis-symbol" viewBox="([^"]+)">([\s\S]*?)<\/symbol>/);
+assert(symbol, 'Embedded vector is missing');
+const box = symbol[1].split(/\s+/).map(Number);
+const paths = [...symbol[2].matchAll(/<path([^>]+)\/>/g)].map(([, attrs]) => Object.fromEntries([...attrs.matchAll(/([\w-]+)="([^"]*)"/g)].map(m => [m[1], m[2]])));
+assert.equal(paths.length, 2, 'AI logo must contain two visible shapes');
+assert.equal(paths[1]['fill-rule'], 'evenodd', 'The logo counter must remain open');
+const n = 640, scale = n * .8 / Math.max(box[2], box[3]);
+const tx = (n - box[2] * scale) / 2 - box[0] * scale;
+const ty = (n - box[3] * scale) / 2 - box[1] * scale;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${n}" height="${n}"><g fill="white" transform="translate(${tx} ${ty}) scale(${scale})">${symbol[2]}</g></svg>`;
+const rgba = await sharp(Buffer.from(svg)).ensureAlpha().raw().toBuffer();
+const fakeContext = { translate() {}, scale() {}, fill() {}, getImageData: () => ({ data: rgba }) };
+const fakeDocument = { createElement: () => ({ getContext: () => fakeContext }) };
+const fakeSymbol = { getAttribute: () => symbol[1], querySelectorAll: () => paths.map(p => ({ getAttribute: key => p[key] })) };
+const context = vm.createContext({ document: fakeDocument, Path2D: class {}, $: () => fakeSymbol, Math, Uint8Array, Float32Array });
+const start = source.indexOf('function makeLogoField()'), end = source.indexOf('loading(.4)', start);
+vm.runInContext(source.slice(start, end), context);
+const heightAt = vm.runInContext('heightAt', context);
+const logoDistance = vm.runInContext('logoDistance', context);
+const before = performance.now();
+let min = Infinity, max = -Infinity, land = 0, water = 0, submergedLogo = 0;
+for (let y = 0; y <= 200; y++) for (let x = 0; x <= 200; x++) {
+  const px = (x / 200 - .5) * 35, pz = (y / 200 - .5) * 35;
+  const h = heightAt(px, pz), d = logoDistance(px, pz);
+  assert(Number.isFinite(h));
+  min = Math.min(min, h); max = Math.max(max, h);
+  if (h > 0) land++; else water++;
+  if (d > .12 && h < .2) submergedLogo++;
+}
+assert.equal(submergedLogo, 0, 'A portion of the logo is underwater');
+assert(min < 0 && max > 1, 'The landscape must contain water and mountains');
+assert(water > land * .5, 'Water channels have been overwhelmed by terrain');
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+assert.equal(new Set(ids).size, ids.length, 'Duplicate DOM IDs');
+for (const [, id] of source.matchAll(/\$\('#([\w-]+)'\)/g)) assert(ids.includes(id), 'Unresolved DOM target: ' + id);
+for (const name of ['work', 'studio', 'contact', 'detail']) assert(ids.includes('view-' + name));
+console.log(JSON.stringify({ scripts: 'valid', logo: 'two original AI contours; counter preserved', heightSamples: 40401, minHeight: min, maxHeight: max, landSamples: land, waterSamples: water, submergedLogoSamples: submergedLogo, generationMilliseconds: Math.round(performance.now() - before), routes: 'valid', duplicateIds: 0 }, null, 2));

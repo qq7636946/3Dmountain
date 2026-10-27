@@ -1,0 +1,27 @@
+<script data-1010-bk-paths>
+/* 1010_bk 路徑修正（2026-10-11）
+   這一頁現在放在專案根目錄下三層（_archive/backups/1010_bk/），頁面自己寫的連結都已經改成現在的正確位置。
+   但有幾個外部 JS 模組是用「相對於頁面」的舊路徑去抓圖檔（模組是共用的，不能改），
+   這一小段只負責把那幾種路徑轉到檔案現在的位置。要回到沒有這段的原始檔：
+   _archive/backups/1010_bk-before-relink-20261011/ */
+(() => {
+  const MOVED = [
+    ['./images/slides/', '../../../images/slides/'],
+    ['./slide-assets/', '../../../images/slides/'],
+    ['./logo.svg', '../../../images/logo.svg']
+  ];
+  const fix = url => {
+    if (typeof url === 'string') for (const [from, to] of MOVED) if (url.startsWith(from)) return to + url.slice(from.length);
+    return url;
+  };
+  const src = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+  Object.defineProperty(HTMLImageElement.prototype, 'src', {
+    configurable: true, enumerable: true,
+    get() { return src.get.call(this); },
+    set(value) { src.set.call(this, fix(value)); }
+  });
+  const NativeRequest = window.Request, nativeFetch = window.fetch;
+  window.Request = class extends NativeRequest { constructor(input, init) { super(fix(input), init); } };
+  window.fetch = function (input, init) { return nativeFetch.call(this, fix(input), init); };
+})();
+</script>

@@ -19,7 +19,6 @@
    Dials: CONFIG.logoSeal (tuner 「LOGO 收尾 Logo Seal」, with the mark's and the lake's own rows). ?logoseal=0 removes it.
    ===================================================================== */
 import * as THREE from 'three';
-import { createLogoSpinFx } from './world-logo-spin.js?v=i15-mvop6r0i';
 
 /* The defaults. Strict JSON: world-logo-build.cjs copies it into main.js's CONFIG.logoSeal. */
 const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
@@ -508,15 +507,14 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     await step(R0, 'targets', () => {
       R0.noise = noiseTexture();
       R0.comp = makeComposite(R0);
-      R0.spinFx = createLogoSpinFx({ small, enabled: !document.documentElement.hasAttribute('data-opening-refinement') });
       ensureTargets(R0, renderer);
       // Await parallel driver compilation instead of paying for this large
       // composite program on the first visible transition frame.
       if(renderer.compileAsync){
-        const pending=Promise.all([renderer.compileAsync(R0.comp.scene,R0.comp.camera),renderer.compileAsync(R0.spinFx.scene,R0.spinFx.camera)]).catch(()=>{}).finally(()=>{R0.compiling=null;});
+        const pending=renderer.compileAsync(R0.comp.scene,R0.comp.camera).catch(()=>{}).finally(()=>{R0.compiling=null;});
         R0.compiling=pending;return pending;
       }
-      try { renderer.compile(R0.comp.scene, R0.comp.camera); renderer.compile(R0.spinFx.scene, R0.spinFx.camera); } catch { /* compiled on first use */ }
+      try { renderer.compile(R0.comp.scene, R0.comp.camera); } catch { /* compiled on first use */ }
     });
     if (dead(R0)) return;
     R0.ready = true; R0.readyAt = performance.now() / 1000; state = 'ready';
@@ -616,7 +614,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     if (R0.compiling) { if (!R0.laterDispose) { R0.laterDispose = true; R0.compiling.then(() => { R0.laterDispose = false; disposeResources(R0); }); } return; }
     // each piece is let go once (a build that was still running makes its pieces after this has run: they are freed on its next look)
     for (const [name, fn] of [['mark', () => R0.mark?.dispose?.()], ['lake', () => R0.lake?.dispose?.()], ['texOld', () => R0.texOld?.dispose()], ['texNew', () => R0.texNew?.dispose()],
-      ['spinFx', () => R0.spinFx?.dispose()], ['noise', () => R0.noise?.dispose()], ['comp', () => { R0.comp?.mat.dispose(); R0.comp?.mesh.geometry.dispose(); }]]) {
+      ['noise', () => R0.noise?.dispose()], ['comp', () => { R0.comp?.mat.dispose(); R0.comp?.mesh.geometry.dispose(); }]]) {
       try { fn(); } catch (e) { console.warn('Logo seal: dispose ' + name + ' failed', e); }
       R0[name] = null;
     }
@@ -650,7 +648,6 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     if (!R || !R.ready) return false;
     l.pc = cutProgress(l);
     if (!l.engaged && !(l.pc > 0)) {
-      R.spinFx?.reset();
       // Not in the wave yet. Everything the wave will draw is drawn once, inside a frame the world is about to cover (nothing of it
       // is presented), a piece per frame — the sky, then the mark, then the whole wave — so that the graphics driver's first-use
       // work (it compiles each shader permutation at its first draw) is not left for the wave. In a pause of the scroll, or when it is close.
@@ -699,14 +696,9 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   function drawLake(R0, renderer) { renderer.setRenderTarget(null); renderer.render(R0.lake.scene, R0.lake.camera); }
   function draw(R0, l, time, ctx, renderer) {
     frame(R0, l, time, renderer);
-    const spin = R0.spinFx.update({ yaw: l.yaw, progress: l.qSpin, now: performance.now() / 1000, reducedMotion });
     if ((Math.round(num('transition', 0, 2)) > 0 ? l.pc ?? l.qWave : l.qWave) >= 1) {
       drawLake(R0, renderer);
-      if (spin.amount > .001) {
-        ensureTargets(R0, renderer);
-        renderer.copyFramebufferToTexture(R0.texNew);
-        R0.spinFx.render(renderer, R0.texNew, R0.holder, R0.lake.camera, num('spinBlur', 0, 100) / 100);
-      }
+      // Present the continuous lake frame throughout the closing logo turn.
       return true;
     }
     wave(R0, l, time, ctx, renderer);
@@ -779,7 +771,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
       return {
         gl: lastRenderer && { programs: lastRenderer.info.programs?.length, textures: lastRenderer.info.memory.textures, geometries: lastRenderer.info.memory.geometries },
         at: abs(), plan: plan && { ...plan }, sample: last && { ...last }, phase: state, ready: !!R?.ready, failed, lost, timings: R ? { ...R.timings, progs: R.progs } : null, newPrograms: R?.newPrograms || null, glassFound: R?.glassFound || null, log: R ? R.log.slice() : null,
-        model: R?.mark?.model || null, spinFx: R?.spinFx ? { ...R.spinFx.state } : null,
+        model: R?.mark?.model || null, spinFx: null,
         built: R ? { lake: !!R.lake, mark: !!R.mark, texOld: R.texOld ? [R.texOld.image.width, R.texOld.image.height] : null, texNew: R.texNew ? [R.texNew.image.width, R.texNew.image.height] : null } : null
       };
     },

@@ -22,7 +22,7 @@ for (let i = 2; i < process.argv.length; i++) {
 const BASE = argv.base || 'http://127.0.0.1:5199/';
 const LABEL = argv.label || 'run';
 const PROFILE = argv.profile || 'desktop';
-const PAGE = argv.page || 'index4-6-3.html';
+const PAGE = argv.page || 'index.html';
 const FRAMES = Number(argv.frames || 90);
 const SETTLE = Number(argv.settle || 150);
 const RAF_FRAMES = Number(argv.raf || 0);
@@ -244,15 +244,13 @@ async function newSession(browser, profile, patch = true) {
   // Test-only instrumentation, applied identically to every build under test: expose a setter for the
   // scene clock so a frame can be captured at a pinned time (grain/wave phase would otherwise differ
   // between runs because the page ran a different number of boot frames each time).
-  if (patch) await page.route(u => u.pathname.endsWith('/' + PAGE), async route => {
+  // The markers live in the page itself (old layout, inline module) or in js/main.js (restructured layout), so patch whichever response has them.
+  if (patch) await page.route(u => u.pathname.endsWith('/' + PAGE) || u.pathname.endsWith('/js/main.js'), async route => {
     const resp = await route.fetch();
     const body = await resp.text();
     let patched = body.replace('let sceneTime = 0;', 'let sceneTime = 0; window.__setSceneTime = v => { sceneTime = v; };');
-    if (patched === body) console.warn('!! sceneTime hook NOT applied (marker not found) — pixel comparisons will be noisy');
     // expose a few internals for the per-pass profiler (read-only use; not part of the shipped page)
-    const before = patched;
     patched = patched.replace('window.__MONTIS_STUDY__ = { canyonMotion,', 'window.__MONTIS_STUDY__ = { composer, renderTarget, grainPass, bloom, logoGlass, canyonTarget, journeyBlend, canyonMotion,');
-    if (patched === before) console.warn('!! internals exposure NOT applied — --passes will not work');
     await route.fulfill({ response: resp, body: patched });
   });
   const log = { errors: [], warnings: [], pageErrors: [], failed: [], requests: [] };
@@ -394,7 +392,9 @@ async function closeBrowser(browser, browserPid) {
       // Wait for background chapters before deterministic A/B stepping; older baselines return undefined.
       await page.evaluate(() => window.__MONTIS_STUDY__.ready);
       out.chapterReadyMs = Date.now() - t0;
+      await page.evaluate(() => (window.__MONTIS_STUDY__ && window.__MONTIS_STUDY__.ready) || null);   // chapters built (progressive boot) before the loop is frozen
       await page.evaluate(() => { window.__rafFrozen = true; });
+      if (!(await page.evaluate(() => typeof window.__setSceneTime === 'function'))) console.warn('!! sceneTime hook NOT applied (marker `let sceneTime = 0;` not found) — pixel comparisons will be noisy');
       await page.evaluate(PAGE_API);
       out.gpu = await page.evaluate(() => { const gl = window.__MONTIS_STUDY__.renderer.getContext(); const d = gl.getExtension('WEBGL_debug_renderer_info'); return d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'n/a'; });
       out.pixelRatio = await page.evaluate(() => window.__MONTIS_STUDY__.renderer.getPixelRatio());

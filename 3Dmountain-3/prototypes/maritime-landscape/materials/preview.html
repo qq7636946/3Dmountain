@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Maritime 材質預覽</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #14181b; overflow: hidden; }
+  canvas { display: block; }
+  #cap { position: fixed; left: 18px; bottom: 14px; color: #e4e8eb; font: 13px/1.45 "Segoe UI", "Noto Sans TC", sans-serif; text-shadow: 0 1px 8px #000c; pointer-events: none; }
+  #cap b { font-weight: 600; font-size: 15px; }
+  #menu { position: fixed; right: 14px; top: 12px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  #menu a { color: #dfe5ea; background: #0008; border: 1px solid #ffffff22; border-radius: 5px; padding: 4px 9px; font: 12px "Segoe UI", sans-serif; text-decoration: none; }
+  body.shot #menu { display: none; }
+</style>
+</head>
+<body>
+<div id="cap"></div>
+<nav id="menu"></nav>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ?mat=<id>              one material: a sphere and a 2x2 swatch (rock: a wall)
+   ?scene=coast&shot=close|wide   all four on a small coast, triplanar
+   ?root=<dir>            where the maps are (default images/maritime/materials)
+   ?shot=… or ?still=1    no menu, no orbit (for screenshots) */
+const Q = new URLSearchParams(location.search);
+const ROOT = (Q.get('root') || 'images/maritime/materials').replace(/\/$/, '');
+const projectRoot = new URL('../../../', location.href);
+const MAT = Q.get('mat') || 'coastal-schist';
+const SCENE = Q.get('scene') || 'material';
+const STILL = Q.has('still') || navigator.webdriver;
+if (STILL) document.body.classList.add('shot');
+const LABELS = { 'coastal-schist': '海岸片岩 Coastal schist', 'highland-heath': '高地草坡 Highland heath', 'shore-shingle': '岸邊礫石 Shore shingle', 'sea-surface': '海面 Sea surface' };
+const menu = document.getElementById('menu');
+for (const [k, v] of Object.entries(LABELS)) menu.insertAdjacentHTML('beforeend', `<a href="?mat=${k}&root=${encodeURIComponent(ROOT)}">${v.split(' ')[0]}</a>`);
+menu.insertAdjacentHTML('beforeend', `<a href="?scene=coast&shot=close&root=${encodeURIComponent(ROOT)}">海岸近景</a><a href="?scene=coast&shot=wide&root=${encodeURIComponent(ROOT)}">海岸遠景</a>`);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+const loader = new THREE.TextureLoader();
+const metaCache = {};
+async function loadSet(name) {
+  const dir = new URL(`${ROOT}/${name}/`, projectRoot);
+  const meta = metaCache[name] ??= await (await fetch(new URL(`${name}.json`, dir))).json();
+  const maps = {};
+  const names = name === 'sea-surface' ? ['normal', 'height', 'foam', 'lace'] : ['basecolor', 'normal', 'orm', 'height'];
+  await Promise.all(names.map(async m => {
+    const t = await loader.loadAsync(new URL(`${name}_${m}.png`, dir).href);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = maxAniso;
+    if (m === 'basecolor') t.colorSpace = THREE.SRGBColorSpace;
+    maps[m] = t;
+  }));
+  return { meta, maps };
+}
+const withRepeat = (t, x, y) => { const c = t.clone(); c.repeat.set(x, y); c.needsUpdate = true; return c; };
+
+/* A soft overcast sky: the backdrop, and through PMREM the light the materials reflect. */
+function skyMaterial({ zenith = '#8996a3', horizon = '#dfe0d9', below = '#9aa3a6', glow = '#fff1dc', sunDir = new THREE.Vector3(-.55, .42, -.72) } = {}) {
+  return new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { uZen: { value: new THREE.Color(zenith) }, uHor: { value: new THREE.Color(horizon) }, uBelow: { value: new THREE.Color(below) }, uGlow: { value: new THREE.Color(glow) }, uSun: { value: sunDir.clone().normalize() } },
+    vertexShader: 'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: `uniform vec3 uZen, uHor, uBelow, uGlow, uSun; varying vec3 vDir;
+      void main(){
+        vec3 d = normalize(vDir); float h = d.y;
+        vec3 c = mix(uHor, uZen, smoothstep(.0, .55, h));
+        c = mix(c, uHor * 1.04, exp(-abs(h) * 16.) * .5);
+        float s = max(dot(d, uSun), 0.);
+        c += uGlow * (pow(s, 6.) * .18 + pow(s, 80.) * .35);
+        if (h < 0.) c = mix(uHor, uBelow, smoothstep(0., -.25, h));
+        gl_FragColor = vec4(c, 1.);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`
+  });
+}
+function envFromSky(opts) {
+  const s = new THREE.Scene();
+  s.add(new THREE.Mesh(new THREE.SphereGeometry(100, 64, 32), skyMaterial(opts)));
+  const pm = new THREE.PMREMGenerator(renderer);
+  const t = pm.fromScene(s, .02).texture; pm.dispose();
+  return t;
+}
+
+const cap = document.getElementById('cap');
+let frameHook = () => { };
+const clock = new THREE.Clock();
+
+async function materialView() {
+  const { meta, maps } = await loadSet(MAT);
+  const T = meta.tileMeters, range = meta.heightMeters.range;
+  const isSea = MAT === 'sea-surface', isRock = MAT === 'coastal-schist';
+  const pm = new THREE.PMREMGenerator(renderer);
+  const room = pm.fromScene(new RoomEnvironment(), .04).texture;
+  const skyEnv = isSea ? envFromSky() : null;
+  /* Each viewport is its own scene with its own key light. */
+  const stage = () => {
+    const sc = new THREE.Scene();
+    if (isSea) { sc.add(new THREE.Mesh(new THREE.SphereGeometry(400, 64, 32), skyMaterial())); sc.environment = skyEnv; sc.environmentIntensity = 1; }
+    else { sc.background = new THREE.Color('#1a1f23'); sc.environment = room; sc.environmentIntensity = .35; }
+    sc.add(new THREE.HemisphereLight('#dfe5ea', '#4c4842', isSea ? .4 : .9));
+    const sun = new THREE.DirectionalLight('#fff2e0', isSea ? 1.4 : 3.2);
+    sun.castShadow = !isSea; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
+    sc.add(sun, sun.target);
+    return { sc, sun };
+  };
+  const A = stage(), B = stage();
+  const camA = new THREE.PerspectiveCamera(30, 1, .01, 1000), camB = new THREE.PerspectiveCamera(40, 1, .01, 1000);
+  cap.innerHTML = `<b>${LABELS[MAT]}</b><br>每張 ${T} m × ${T} m · 高度 ${(range * 100).toFixed(1)} cm · ${meta.size}² · ${isSea ? 'normal／height／whitecap／lace' : 'base color／normal／ORM／height'}　左：${isSea ? '岸邊浪花（lace）' : '球體'}　右：${isSea ? '海面與白浪' : (isRock ? '岩壁 2×2' : '地面 2×2')}`;
+  const shadowBox = (sun, r, far) => { Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: .1, far }); sun.shadow.camera.updateProjectionMatrix(); };
+
+  if (!isSea) {
+    const mk = (rx, ry, bias) => new THREE.MeshStandardMaterial({
+      map: withRepeat(maps.basecolor, rx, ry), normalMap: withRepeat(maps.normal, rx, ry),
+      roughnessMap: withRepeat(maps.orm, rx, ry), aoMap: withRepeat(maps.orm, rx, ry), aoMapIntensity: 1,
+      displacementMap: withRepeat(maps.height, rx, ry), displacementScale: range, displacementBias: bias,
+      roughness: 1, metalness: 0
+    });
+    const R = T * .32;
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(R, 512, 256), mk(2, 1, -range * .5));
+    ball.position.set(0, R, 0); ball.castShadow = ball.receiveShadow = true;
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(R * 8, 64), new THREE.MeshStandardMaterial({ color: '#2a2f33', roughness: .95 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -range * .5; floor.receiveShadow = true;
+    A.sc.add(ball, floor);
+    A.sun.position.set(-.6, .55, .6).normalize().multiplyScalar(R * 8).add(ball.position); A.sun.target.position.copy(ball.position);
+    shadowBox(A.sun, R * 3, R * 20);
+    camA.position.set(R * .4, R * 1.5, R * 4.6); camA.lookAt(0, R * .95, 0);
+
+    const swatch = new THREE.Mesh(new THREE.PlaneGeometry(T * 2, T * 2, 768, 768), mk(2, 2, 0));
+    swatch.castShadow = swatch.receiveShadow = true;
+    if (isRock) {
+      swatch.position.set(0, T, 0);
+      camB.position.set(T * .55, T * 1.05, T * 2.35); camB.lookAt(-T * .05, T * .95, 0);
+      B.sun.position.set(-.75, .35, .55).normalize().multiplyScalar(T * 6).add(swatch.position);
+    } else {
+      swatch.rotation.x = -Math.PI / 2;
+      camB.position.set(T * .2, T * .62, T * 1.55); camB.lookAt(0, 0, -T * .1);
+      B.sun.position.set(-.6, .55, -.55).normalize().multiplyScalar(T * 6);
+    }
+    B.sun.target.position.copy(swatch.position);
+    shadowBox(B.sun, T * 1.6, T * 14);
+    B.sc.add(swatch);
+  } else {
+    const water = (rep, extra = {}) => new THREE.MeshStandardMaterial({ color: '#0f2b3d', roughness: .05, metalness: 0, normalMap: withRepeat(maps.normal, rep, rep), normalScale: new THREE.Vector2(1, 1), ...extra });
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(240, 240, 1, 1), water(20));
+    sea.rotation.x = -Math.PI / 2;
+    const caps = new THREE.Mesh(new THREE.PlaneGeometry(240, 240, 1, 1), new THREE.MeshStandardMaterial({ color: '#f1f4f4', roughness: .9, alphaMap: withRepeat(maps.foam, 20, 20), transparent: true, depthWrite: false }));
+    caps.rotation.x = -Math.PI / 2; caps.position.y = .01;
+    B.sc.add(sea, caps); B.sun.position.set(-50, 40, -60);
+    camB.position.set(0, 2.4, 16); camB.lookAt(0, 0, -6);
+    const bed = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), water(2, { color: '#2a5560' }));
+    bed.rotation.x = -Math.PI / 2;
+    const lace = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), new THREE.MeshStandardMaterial({ color: '#f2f5f5', roughness: .85, alphaMap: withRepeat(maps.lace, 2, 2), transparent: true, depthWrite: false }));
+    lace.rotation.x = -Math.PI / 2; lace.position.y = .01;
+    A.sc.add(bed, lace); A.sun.position.set(-20, 30, 10);
+    camA.position.set(0, 9, 9); camA.lookAt(0, 0, -1);
+  }
+
+  const render = () => {
+    const w = innerWidth, h = innerHeight, split = Math.round(w * .4);
+    renderer.setScissorTest(true);
+    camA.aspect = split / h; camA.updateProjectionMatrix();
+    renderer.setViewport(0, 0, split, h); renderer.setScissor(0, 0, split, h); renderer.render(A.sc, camA);
+    camB.aspect = (w - split) / h; camB.updateProjectionMatrix();
+    renderer.setViewport(split, 0, w - split, h); renderer.setScissor(split, 0, w - split, h); renderer.render(B.sc, camB);
+    renderer.setScissorTest(false);
+  };
+  return render;
+}
+
+/* ------------------------------------------------------------------------------------------
+   COAST: a small island with a cliff, grass on top, a shingle beach and the sea, every surface
+   textured by the four sets. Terrain has no UVs (like the site's), so rock is triplanar with
+   the foliation dipping a little; grass and shingle are projected from above; the three are
+   blended by slope and height above the sea and sharpened by their own height maps.
+   ------------------------------------------------------------------------------------------ */
+function noise2(seed) {
+  let a = seed >>> 0; const rnd = () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const p = new Uint8Array(512), b = [...Array(256).keys()];
+  for (let i = 255; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
+  for (let i = 0; i < 512; i++) p[i] = b[i & 255];
+  const g = (h, x, y) => { const k = h & 7, u = k < 4 ? x : y, v = k < 4 ? y : x; return ((k & 1) ? -u : u) + ((k & 2) ? -2 * v : 2 * v); };
+  const L = (a, b, t) => a + (b - a) * t;
+  return (x, y) => {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y);
+    const u = x * x * x * (x * (x * 6 - 15) + 10), v = y * y * y * (y * (y * 6 - 15) + 10);
+    const A = p[X] + Y, B = p[X + 1] + Y;
+    return L(L(g(p[A], x, y), g(p[B], x - 1, y), u), L(g(p[A + 1], x, y - 1), g(p[B + 1], x - 1, y - 1), u), v) * .35;
+  };
+}
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+async function coastView() {
+  const [rock, grass, shingle, sea] = await Promise.all(['coastal-schist', 'highland-heath', 'shore-shingle', 'sea-surface'].map(loadSet));
+  const N1 = noise2(7), N2 = noise2(11), N3 = noise2(13), N4 = noise2(17);
+  const base = (x, z) => {
+    const wx = x + 38 * N1(x * .004, z * .004), wz = z + 38 * N1(x * .004 + 7.1, z * .004 + 3.3);
+    const d = Math.hypot(wx, wz * 1.25);
+    const inland = 168 + 22 * N2(x * .011, z * .011) - d;
+    let h = -11 + 10.5 * smooth(-45, 0, inland);
+    h += 1.6 * smooth(-1, 7, inland);
+    h += (34 + 12 * N2(x * .009 + 3, z * .009)) * smooth(6, 26, inland + 5 * N3(x * .03, z * .03));
+    const r = 1 - Math.abs(N1(x * .006 + 11, z * .006 + 5));
+    h += smooth(18, 150, inland) * (80 * r * r + 24 * N2(x * .014, z * .014));
+    h += 2.4 * N3(x * .05, z * .05) * smooth(2, 14, inland) + .9 * N4(x * .13, z * .13);
+    return h;
+  };
+  let shoreZ = 0; for (let z = 0; z < 400; z += .5) if (base(0, z) < 0) { shoreZ = z; break; }
+  const stacks = [[58, shoreZ + 26, 9, 17], [-46, shoreZ + 38, 5.5, 10], [-30, shoreZ + 18, 3.5, 5]];
+  const height = (x, z) => {
+    let h = base(x, z);
+    for (const [sx, sz, sr, sh] of stacks) {
+      const q = ((x - sx) ** 2 + (z - sz) ** 2) / (sr * sr);
+      h = Math.max(h, -6 + (sh + 6) * Math.exp(-q * q * .6) + 1.2 * N4(x * .2, z * .2));
+    }
+    return h;
+  };
+  const SIZE = 680, SEG = 460, X0 = -SIZE / 2, Z0 = -SIZE / 2 + 60;
+  const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i) + 60; pos.setXYZ(i, x, height(x, z), z); }
+  geo.computeVertexNormals();
+  /* Height field for the water: (h + 12) / 16, so the waterline band is well resolved. */
+  const HF = 512, hf = new Uint8Array(HF * HF);
+  for (let j = 0; j < HF; j++) for (let i = 0; i < HF; i++) {
+    const x = X0 + (i + .5) / HF * SIZE, z = Z0 + (j + .5) / HF * SIZE;
+    hf[j * HF + i] = Math.max(0, Math.min(255, Math.round((height(x, z) + 12) / 16 * 255)));
+  }
+  const hfTex = new THREE.DataTexture(hf, HF, HF, THREE.RedFormat, THREE.UnsignedByteType);
+  hfTex.magFilter = hfTex.minFilter = THREE.LinearFilter; hfTex.needsUpdate = true;
+
+  const scene = new THREE.Scene();
+  const sunDir = new THREE.Vector3(-.62, .40, .55).normalize();
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 64, 32), skyMaterial({ sunDir }));
+  scene.add(sky);
+  scene.environment = envFromSky({ sunDir });
+  scene.environmentIntensity = .9;
+  scene.fog = new THREE.FogExp2('#cdd0ca', .0016);
+  scene.add(new THREE.HemisphereLight('#d3d9dd', '#5a5850', .55));
+  const sun = new THREE.DirectionalLight('#fff1de', 2.6);
+  sun.position.copy(sunDir).multiplyScalar(600); sun.castShadow = true;
+  sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -.0003; sun.shadow.normalBias = 1.2;
+  Object.assign(sun.shadow.camera, { left: -360, right: 360, top: 360, bottom: -360, near: 10, far: 1500 });
+  scene.add(sun, sun.target);
+
+  const T = { rock: 9, grass: 4, shingle: 2.5 };
+  const terrainMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, metalness: 0 });
+  terrainMat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, {
+      tRA: { value: rock.maps.basecolor }, tRN: { value: rock.maps.normal }, tRO: { value: rock.maps.orm }, tRH: { value: rock.maps.height },
+      tGA: { value: grass.maps.basecolor }, tGN: { value: grass.maps.normal }, tGO: { value: grass.maps.orm }, tGH: { value: grass.maps.height },
+      tSA: { value: shingle.maps.basecolor }, tSN: { value: shingle.maps.normal }, tSO: { value: shingle.maps.orm }, tSH: { value: shingle.maps.height },
+      uTiles: { value: new THREE.Vector3(T.rock, T.grass, T.shingle) }
+    });
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNrm;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.)).xyz; vWNrm = normalize(mat3(modelMatrix) * objectNormal);');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying vec3 vWPos; varying vec3 vWNrm;
+        uniform sampler2D tRA, tRN, tRO, tRH, tGA, tGN, tGO, tGH, tSA, tSN, tSO, tSH;
+        uniform vec3 uTiles;
+        vec3 unpackN(vec3 c) { return c * 2. - 1.; }
+        /* Triplanar sample of one set; world-space normal by the whiteout blend. */
+        void tri(sampler2D A, sampler2D Nm, sampler2D O, sampler2D Hm, vec3 p, vec3 n, vec3 bw, float tile,
+                 out vec3 alb, out vec3 nw, out vec2 orm, out float hgt) {
+          float c = .978, s = .208;                       /* a 12 degree dip for the foliation */
+          vec2 ux = mat2(c, -s, s, c) * p.zy / tile, uy = p.xz / tile, uz = mat2(c, s, -s, c) * p.xy / tile;
+          alb = texture2D(A, ux).rgb * bw.x + texture2D(A, uy).rgb * bw.y + texture2D(A, uz).rgb * bw.z;
+          orm = texture2D(O, ux).rg * bw.x + texture2D(O, uy).rg * bw.y + texture2D(O, uz).rg * bw.z;
+          hgt = texture2D(Hm, ux).r * bw.x + texture2D(Hm, uy).r * bw.y + texture2D(Hm, uz).r * bw.z;
+          vec3 tx = unpackN(texture2D(Nm, ux).rgb), ty = unpackN(texture2D(Nm, uy).rgb), tz = unpackN(texture2D(Nm, uz).rgb);
+          tx.xy = mat2(c, s, -s, c) * tx.xy; tz.xy = mat2(c, -s, s, c) * tz.xy;
+          vec3 sg = sign(n);
+          tx.z *= sg.x; ty.z *= sg.y; tz.z *= sg.z;
+          tx = vec3(tx.xy + n.zy, abs(tx.z) * n.x);
+          ty = vec3(ty.xy + n.xz, abs(ty.z) * n.y);
+          tz = vec3(tz.xy + n.xy, abs(tz.z) * n.z);
+          nw = normalize(tx.zyx * bw.x + ty.xzy * bw.y + tz.xyz * bw.z);
+        }
+        /* From above only (gentle ground). */
+        void top(sampler2D A, sampler2D Nm, sampler2D O, sampler2D Hm, vec3 p, vec3 n, float tile,
+                 out vec3 alb, out vec3 nw, out vec2 orm, out float hgt) {
+          vec2 uv = p.xz / tile;
+          alb = texture2D(A, uv).rgb; orm = texture2D(O, uv).rg; hgt = texture2D(Hm, uv).r;
+          vec3 t = unpackN(texture2D(Nm, uv).rgb);
+          nw = normalize(vec3(t.x + n.x, abs(t.z) * n.y, t.y + n.z));
+        }
+        float triAO = 1.;`)
+      .replace('#include <map_fragment>', `
+        vec3 Nw = normalize(vWNrm);
+        vec3 bw = pow(abs(Nw), vec3(4.)); bw /= bw.x + bw.y + bw.z;
+        vec3 aR, nR, aG, nG, aS, nS; vec2 oR, oG, oS; float hR, hG, hS;
+        tri(tRA, tRN, tRO, tRH, vWPos, Nw, bw, uTiles.x, aR, nR, oR, hR);
+        top(tGA, tGN, tGO, tGH, vWPos, Nw, uTiles.y, aG, nG, oG, hG);
+        top(tSA, tSN, tSO, tSH, vWPos, Nw, uTiles.z, aS, nS, oS, hS);
+        /* Macro variation, so the repeats do not line up at a distance. */
+        float macro = dot(texture2D(tGA, vWPos.xz / 61.).rgb, vec3(.33)) / .16;
+        aG *= mix(.8, 1.2, clamp(macro - .5, 0., 1.));
+        aR *= mix(.85, 1.15, clamp(dot(texture2D(tRA, vWPos.xz / 47.).rgb, vec3(.33)) / .14 - .5, 0., 1.));
+        float slope = 1. - Nw.y, above = vWPos.y;
+        float wR = smoothstep(.26, .44, slope);
+        float wS = (1. - smoothstep(1.4, 3.6, above + (hG - .5) * 1.5)) * (1. - wR * .7);
+        float wG = max(0., 1. - wR - wS);
+        vec3 w = vec3(wR * (hR + .25), wG * (hG + .25), wS * (hS + .25));
+        float mx = max(w.x, max(w.y, w.z));
+        w = max(w - (mx - .16), 0.); w /= w.x + w.y + w.z + 1e-5;
+        vec3 alb = aR * w.x + aG * w.y + aS * w.z;
+        vec3 triN = normalize(nR * w.x + nG * w.y + nS * w.z);
+        vec2 orm = oR * w.x + oG * w.y + oS * w.z;
+        /* Wet rock and stones at the waterline. */
+        float wet = 1. - smoothstep(.15, 1.1, above);
+        alb *= mix(1., .55, wet);
+        float triRough = mix(orm.y, orm.y * .35, wet);
+        triAO = orm.x;
+        diffuseColor.rgb *= alb;`)
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = triRough;')
+      .replace('#include <normal_fragment_maps>', 'normal = normalize((viewMatrix * vec4(triN, 0.)).xyz);')
+      .replace('#include <aomap_fragment>', 'reflectedLight.indirectDiffuse *= triAO; reflectedLight.indirectSpecular *= triAO; reflectedLight.directDiffuse *= mix(1., triAO, .45);');
+  };
+  terrainMat.customProgramCacheKey = () => 'maritime-coast-triplanar';
+  const terrain = new THREE.Mesh(geo, terrainMat);
+  terrain.castShadow = terrain.receiveShadow = true;
+  scene.add(terrain);
+
+  /* The sea: two scales of the sea normal map, surf from the shore lace where the bed is shallow,
+     a little whitecap foam offshore, lighter water over the shallows. */
+  const waterUniforms = {
+    tSeaN: { value: sea.maps.normal }, tLace: { value: sea.maps.lace }, tFoam: { value: sea.maps.foam }, tHF: { value: hfTex },
+    uField: { value: new THREE.Vector3(X0, Z0, SIZE) }, uTime: { value: 0 }, uShallow: { value: new THREE.Color('#3f6b6c') }
+  };
+  const waterMat = new THREE.MeshStandardMaterial({ color: '#0e2a3b', roughness: .06, metalness: 0 });
+  waterMat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, waterUniforms);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying vec3 vWPos;
+        uniform sampler2D tSeaN, tLace, tFoam, tHF; uniform vec3 uField, uShallow; uniform float uTime;
+        float foamAmt = 0.;`)
+      .replace('#include <map_fragment>', `
+        vec2 fuv = (vWPos.xz - uField.xy) / uField.z;
+        float hT = texture2D(tHF, fuv).r * 16. - 12.;
+        float shore = smoothstep(-2.6, -.05, hT);
+        float lace = texture2D(tLace, vWPos.xz / 9. + vec2(uTime * .012, -uTime * .006)).r;
+        float lace2 = texture2D(tLace, mat2(.8, -.6, .6, .8) * vWPos.xz / 5.5 - vec2(uTime * .01, 0.)).r;
+        float pulse = .55 + .45 * sin(hT * 2.4 + uTime * 1.3);
+        float surf = clamp(shore * 1.35 - .15, 0., 1.);
+        float foam = smoothstep(.25, .75, max(lace, lace2 * .8) * surf * pulse + surf * surf * .45);
+        float caps = texture2D(tFoam, vWPos.xz / 12.).r * .5 * (1. - shore);
+        foamAmt = clamp(foam + caps, 0., 1.);
+        vec3 wc = mix(diffuseColor.rgb, uShallow, smoothstep(-7., -.6, hT) * .7);
+        diffuseColor.rgb = mix(wc, vec3(.9, .92, .92), foamAmt);`)
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(roughness, .8, foamAmt);')
+      .replace('#include <normal_fragment_maps>', `
+        vec3 n1 = texture2D(tSeaN, vWPos.xz / 12. + vec2(uTime * .010, uTime * .004)).xyz * 2. - 1.;
+        vec3 n2 = texture2D(tSeaN, mat2(.8, -.6, .6, .8) * vWPos.xz / 31. - vec2(uTime * .006, uTime * .002)).xyz * 2. - 1.;
+        float farW = 1. - smoothstep(30., 420., length(vWPos - cameraPosition));
+        vec2 sl = (n1.xy / max(n1.z, .2) + n2.xy / max(n2.z, .2) * .7) * mix(.3, 1., farW) * (1. - foamAmt * .7);
+        normal = normalize((viewMatrix * vec4(normalize(vec3(sl.x, 1., sl.y)), 0.)).xyz);`);
+  };
+  waterMat.customProgramCacheKey = () => 'maritime-coast-water';
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000, 1, 1), waterMat);
+  water.rotation.x = -Math.PI / 2; water.receiveShadow = true;
+  scene.add(water);
+
+  const shot = Q.get('shot') || 'close';
+  const cam = new THREE.PerspectiveCamera(shot === 'wide' ? 30 : 44, innerWidth / innerHeight, .5, 8000);
+  if (shot === 'wide') { cam.position.set(-150, 14, shoreZ + 470); cam.lookAt(0, 46, 0); }
+  else { cam.position.set(30, 5.5, shoreZ + 66); cam.lookAt(-4, 17, shoreZ - 6); }
+  cap.innerHTML = `<b>海岸測試場景 · ${shot === 'wide' ? '遠景' : '近景'}</b><br>岩壁＝海岸片岩（三向投影、傾角 12°）· 草坡＝高地草坡 · 灘＝岸邊礫石 · 海＝海面法線＋岸邊浪花｜沒有任何外部圖片`;
+  if (!STILL) { const oc = new OrbitControls(cam, renderer.domElement); oc.target.copy(shot === 'wide' ? new THREE.Vector3(0, 46, 0) : new THREE.Vector3(-4, 17, shoreZ - 6)); oc.update(); }
+  frameHook = t => { waterUniforms.uTime.value = t; };
+  return () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.render(scene, cam); };
+}
+
+const render = SCENE === 'coast' ? await coastView() : await materialView();
+addEventListener('resize', () => renderer.setSize(innerWidth, innerHeight));
+let frames = 0;
+renderer.setAnimationLoop(() => {
+  frameHook(STILL ? 4 : clock.getElapsedTime());
+  render();
+  if (++frames === 4) window.__previewReady = true;
+});
+</script>
+</body>
+</html>

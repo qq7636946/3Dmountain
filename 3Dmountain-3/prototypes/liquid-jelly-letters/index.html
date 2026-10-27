@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>果凍字與水滴螺旋原型</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:,">
+  <!-- Stand-alone material & motion prototype for the LOGO chapter of index1-1.html (client briefs of 2026-10-20:
+       jelly/liquid letters and water drops as two separate groups; letters spiral IN, not out; a "Liquid Glass"
+       material option alongside the original jelly, switchable live). Not linked from the site; changes nothing in it.
+       See docs/jelly-letters-proposal-20261020.md. -->
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    } }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Noto+Sans+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #1c2d42; --muted: #526274; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #dfe8f1; color: var(--ink); font-family: "Jost", "Noto Sans TC", sans-serif; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .copy { position: fixed; left: 50%; bottom: 13vh; transform: translateX(-50%); text-align: center; pointer-events: none; width: min(660px, 86vw); }
+    .copy p.k { margin: 0 0 12px; font-size: 9px; font-weight: 500; letter-spacing: .25em; color: var(--muted); }
+    .copy h2 { margin: 0; font: 600 clamp(28px, 3.1vw, 48px)/1.03 "Jost", sans-serif; letter-spacing: .025em; }
+    .copy h2 span { display: block; }
+    .copy p.zh { margin: 18px auto 0; font: 400 12px/1.9 "Noto Sans TC", sans-serif; letter-spacing: .09em; }
+    .copy .cta { display: inline-block; margin-top: 22px; padding: 14px 22px; font-size: 10px; font-weight: 600; letter-spacing: .12em; background: #dce6efb3; border: 1px solid #344d662c; }
+    .ui { position: fixed; right: 16px; top: 16px; z-index: 5; width: 300px; padding: 12px 14px; background: #0d1b26e0; color: #eef4f9; font: 500 11px/1.45 "Jost", "Noto Sans TC", sans-serif; letter-spacing: .04em; border: 1px solid #ffffff22; }
+    .ui h1 { margin: 0 0 8px; font-size: 11px; letter-spacing: .14em; }
+    .ui .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+    .ui button { font: inherit; color: inherit; background: #ffffff14; border: 1px solid #ffffff2a; padding: 5px 9px; cursor: pointer; }
+    .ui button[aria-pressed="true"] { background: #eef4f9; color: #0d1b26; }
+    .ui input[type=range] { flex: 1; accent-color: #9ec5e6; }
+    .ui output { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
+    .ui ol { margin: 6px 0 0 16px; padding: 0; color: #8ea4b8; font-size: 10px; }
+    .ui ol li.on { color: #fff; }
+    .ui .hint { margin-top: 8px; color: #8ea4b8; font-size: 10px; }
+    .ui .params { margin-top: 2px; max-height: 42vh; overflow-y: auto; padding-right: 2px; }
+    .ui .params[hidden] { display: none; }
+    .ui .param-row label { width: 92px; flex: none; color: #b9c9d8; }
+    .ui .param-row input[type=range] { min-width: 90px; }
+    .clean .ui { display: none; }
+  </style>
+  <script>if (/clean/.test(location.hash)) document.documentElement.classList.add('clean');</script>
+</head>
+<body>
+  <div class="copy" aria-hidden="true">
+    <p class="k">THE FINNOVATION SPIRIT</p>
+    <h2><span>IDEAS</span><span>TAKE SHAPE</span></h2>
+    <p class="zh">匯聚科技知識，連結金融價值。</p>
+    <span class="cta">FOLLOW THE FLOW →</span>
+  </div>
+  <aside class="ui">
+    <h1>字母材質 × 螺旋進場 · 原型</h1>
+    <div class="row"><button type="button" data-play>▶ 播放</button><button type="button" data-rewind>↺</button><label>速度</label><input type="range" data-speed min=".25" max="2" step=".05" value="1"><output data-speed-out>1.00</output></div>
+    <div class="row"><label>進度</label><input type="range" data-scrub min="0" max="1" step=".001" value="0"><output data-p>0.000</output></div>
+    <div class="row"><label>材質</label><button type="button" data-mat="liquid" aria-pressed="true">水體（新）</button><button type="button" data-mat="jelly" aria-pressed="false">果凍（原）</button></div>
+    <div class="row"><button type="button" data-jelly aria-pressed="true">柔體形變</button><button type="button" data-paths aria-pressed="false">顯示兩條螺旋</button></div>
+    <div class="row"><button type="button" data-params-toggle aria-pressed="false">進階參數（水體）▾</button></div>
+    <div class="params" data-mat-params hidden></div>
+    <ol data-stages>
+      <li>水滴先起動：各自旋轉、沿螺旋上升</li>
+      <li>字母開始沿各自的螺旋從霧裡飛入，邊轉邊靠近</li>
+      <li>多數字母飛入中，有先有後、有轉有晃</li>
+      <li>字母陸續落位（有回彈），字距還寬</li>
+      <li>字距收攏成單字；水滴穿場後離開焦點，字留著</li>
+    </ol>
+    <p class="hint">滾輪＝捲動（帶慣性），往回捲倒著播；空白鍵＝播放／暫停。</p>
+  </aside>
+  <script type="module" src="./proto.js"></script>
+</body>
+</html>

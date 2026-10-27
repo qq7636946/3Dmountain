@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Highland Key Visual — FINNOVATION</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:,">
+  <!-- One perfected still of the highland material study's close shot (2026-10-22). Independent:
+       reads the study's assets and vendor files, changes nothing in it or in the live site. -->
+  <script type="importmap">{"imports":{"three":"../highland-material-study-20261022/vendor/three.module.js"}}</script>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #c4cfcf; color: #f7f8f0; }
+    #scene, canvas, .vignette { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .vignette { pointer-events: none; background: linear-gradient(180deg, rgba(9,21,23,.20), transparent 26%, transparent 64%, rgba(12,29,31,.30)),
+      radial-gradient(120% 90% at 50% 45%, transparent 60%, rgba(10,22,24,.22)); }
+    .caption { position: fixed; top: 17%; left: 1.4%; pointer-events: none; text-shadow: 0 2px 22px #18241d40; font-family: Arial, "Noto Sans TC", sans-serif; }
+    .eyebrow { margin: 0; font-size: 9px; letter-spacing: .2em; line-height: 1.7; }
+    h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(52px, 6.3vw, 112px); line-height: .96; letter-spacing: -.045em; margin: 26px 0 22px; }
+    .sub { margin: 0; font-size: 12px; letter-spacing: .15em; line-height: 1.8; }
+    .no-text .caption { display: none; }
+  </style>
+</head>
+<body>
+  <main id="scene"></main>
+  <div class="vignette" aria-hidden="true"></div>
+  <section class="caption"><p class="eyebrow">SCOTTISH HIGHLANDS · SILVER SEA</p><h1>Between<br>land &amp; light.</h1><p class="sub">以岩壁的厚度，承接海面的光。</p></section>
+  <script type="module" src="./keyvisual.js"></script>
+</body>
+</html>

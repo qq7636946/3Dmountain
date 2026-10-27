@@ -1,11 +1,11 @@
 # Finnovation SEO 與靜態內容
 
 正式入口及 canonical：`https://qq7636946.github.io/3Dmountain/3Dmountain-3/index3.html`。
-`index4-6-3.html` 是編輯來源；發佈時同步到 `index3.html`，兩頁都指向同一個 canonical，sitemap 只列正式入口。
+`index.html` 是編輯來源；發佈時同步到 `index3.html`，兩頁都指向同一個 canonical，sitemap 只列正式入口。
 
 ## 修改文案後
 
-`finnovation-interface.js` 的 `renderJourneyInterface()` 是互動介面與初始 HTML 的共同來源；業務文案沿用 `water-journey-story.js`。正常啟動復用既有節點，其他舊頁面沒有靜態介面時才動態建立。
+`js/finnovation-interface.js` 的 `renderJourneyInterface()` 是互動介面與初始 HTML 的共同來源；業務文案沿用 `water-journey-story.js`。正常啟動復用既有節點，其他舊頁面沒有靜態介面時才動態建立。
 
 ```sh
 node scripts/seo/build-static-interface.mjs
@@ -14,7 +14,7 @@ node scripts/seo/check-seo.mjs
 
 檢查會驗證 metadata 一致性、JSON-LD 引用、圖片尺寸、canonical/sitemap、單一 h1/main 以及靜態內容是否同步。發佈副本可以加上 `index3.html` 參數再檢查一次。
 
-`finnovation-readable.css` 只在停用 JavaScript 或主模組/WebGL 啟動失敗時載入。它將同一份內容排列成文字頁，不提供不同的搜尋引擎專用內容。正常3D頁面不下載此 CSS 或兩張社群圖片。
+`css/readable.css` 只在停用 JavaScript 或主模組/WebGL 啟動失敗時載入。它將同一份內容排列成文字頁，不提供不同的搜尋引擎專用內容。正常3D頁面不下載此 CSS 或兩張社群圖片。
 
 ## Metadata 與資產
 

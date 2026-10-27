@@ -1,0 +1,31 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const html = fs.readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8');
+const source = html.match(/<script[^>]*module[^>]*>([\s\S]*?)<\/script>/)[1];
+new vm.Script(source.replace(/^import .*?;$/gm, ''));
+const water = fs.readFileSync(require('node:path').join(__dirname, '../water-hero.js'), 'utf8');
+require('node:child_process').execFileSync(process.execPath, ['--check', require('node:path').join(__dirname, '../water-hero.js')]);
+const first = water.indexOf('export function liquidPose(');
+const bodyEnd = water.indexOf('\n}', first) + 2;
+assert(first >= 0 && bodyEnd > first);
+const context = vm.createContext({ THREE: { MathUtils: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)), lerp: (a, b, t) => a + (b - a) * t } }, Math });
+vm.runInContext(water.slice(0, bodyEnd).replace(/^import .*?;$/gm, '').replace('export function', 'function'), context);
+const pose = vm.runInContext('liquidPose', context);
+let maxVolumeError = 0, maxPositionStep = 0, previous = null;
+for (let i = 0; i <= 10000; i++) {
+  const p = pose(i / 10000);
+  for (const [k, v] of Object.entries(p)) if (typeof v === 'number') assert(Number.isFinite(v), 'Non-finite ' + k);
+  assert(p.sx > 0 && p.sy > 0 && p.sz > 0);
+  assert(p.opacity >= 0 && p.opacity <= 1);
+  maxVolumeError = Math.max(maxVolumeError, Math.abs(p.sx * p.sy * p.sz - 1));
+  if (previous) maxPositionStep = Math.max(maxPositionStep, Math.abs(previous.y - p.y));
+  previous = p;
+}
+assert(maxVolumeError < 1e-12, 'Squash/stretch changes water volume');
+assert(maxPositionStep < .03, 'Discontinuous scroll pose');
+assert(Math.abs(pose(.48).y - 1.35) < 1e-9, 'Contact does not reach the water');
+for (const join of [.20, .48, .63, .82]) assert(Math.abs(pose(join - 1e-7).y - pose(join + 1e-7).y) < .001, 'Stage boundary jumps');
+assert(source.includes('if (LIQUID_MODE) return;'), 'Old hero logo still builds');
+assert(source.includes("waterHero?.state.grabbed) { SCROLL.touchY=e.touches[0].clientY; e.preventDefault(); return; }"), 'Touch drag conflicts with scrolling');
+console.log(JSON.stringify({ syntax: 'passed', scrollSamples: 10001, maxVolumeError, maxPositionStep, contact: 'water surface', stageJoins: 'continuous', source: 'index4-5 GLTF + fluid loop' }, null, 2));

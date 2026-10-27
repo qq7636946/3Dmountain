@@ -1,0 +1,68 @@
+{
+  "source": "Original independent outline; no font file or source-site geometry copied.",
+  "letter": "A only; N/F/W and full alphabet require user visual approval.",
+  "blender": "5.2.2 LTS",
+  "water_ior": 1.333,
+  "high": {
+    "vertices": 24000,
+    "triangles": 48000,
+    "non_manifold_edges": 0,
+    "boundary_edges": 0,
+    "loose_vertices": 0,
+    "degenerate_faces": 0,
+    "signed_volume_after_normals": 1.685799718738226,
+    "bounds": {
+      "x": [
+        -1.0616495609283447,
+        1.0616495609283447
+      ],
+      "y": [
+        0.0,
+        2.5999999046325684
+      ],
+      "z": [
+        -0.31993749737739563,
+        0.3211233913898468
+      ]
+    },
+    "finite_coordinates": true,
+    "euler_characteristic": 0,
+    "ray_hits": {
+      "upper_counter": false,
+      "between_legs": false,
+      "crossbar": true
+    },
+    "glb_bytes": 865604
+  },
+  "mobile": {
+    "vertices": 7750,
+    "triangles": 15500,
+    "non_manifold_edges": 0,
+    "boundary_edges": 0,
+    "loose_vertices": 0,
+    "degenerate_faces": 0,
+    "signed_volume_after_normals": 1.6850058325519406,
+    "bounds": {
+      "x": [
+        -1.0616564750671387,
+        1.0616564750671387
+      ],
+      "y": [
+        0.0,
+        2.5999999046325684
+      ],
+      "z": [
+        -0.32003000378608704,
+        0.32158762216567993
+      ]
+    },
+    "finite_coordinates": true,
+    "euler_characteristic": 0,
+    "ray_hits": {
+      "upper_counter": false,
+      "between_legs": false,
+      "crossbar": true
+    },
+    "glb_bytes": 280608
+  }
+}

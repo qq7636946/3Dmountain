@@ -1,0 +1,176 @@
+/* index1-4 · highland — page-only overrides (loaded after css/glass-refinement.css, only by index1-4.html).
+   The shared veil lays up to 55% white over the lower screen, tuned for the pale ice landscape; over the
+   highland's grey rock and silver water it reads as milk. Keep a light version, just enough under the copy. */
+html[data-look="highland"] .fi-veil {
+  background: linear-gradient(180deg, #e9f0f722, transparent 24%, transparent 56%, #e3ecf426 76%, #e6eff74d);
+}
+html[data-look="highland"] body.is-watershed .fi-veil {
+  background: linear-gradient(180deg, #e8eef41a, transparent 28%, transparent 58%, #e4edf524 80%, #eaf0f746);
+}
+
+/* The copy is the site's dark ink, written for a pale landscape. The highland's rock is dark, so a soft
+   light halo keeps every chapter's headline readable whether it lands on sky, water or cliff. */
+html[data-look="highland"] .fi-copy h1,
+html[data-look="highland"] .fi-copy h2 {
+  text-shadow: 0 0 22px rgba(236, 241, 242, .78), 0 0 8px rgba(236, 241, 242, .7), 0 0 2px rgba(236, 241, 242, .6);
+}
+html[data-look="highland"] .fi-copy-kicker,
+html[data-look="highland"] .fi-copy-zh {
+  text-shadow: 0 0 12px rgba(236, 241, 242, .9), 0 0 3px rgba(236, 241, 242, .8);
+}
+
+/* QA 2026-10-22: over the misty aerial range the small lines (kicker, Chinese subline, CTA) and the left
+   chapter list lost their contrast. A soft pool of the haze colour sits behind the copy block (no box, no
+   edge — it reads as lighter air), and the rail gets the same halo as the headline. */
+html[data-look="highland"] .fi-copy::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+  left: -16%; right: -16%; top: -26%; bottom: -20%;
+  background: radial-gradient(closest-side, rgba(234, 240, 241, .62), rgba(234, 240, 241, .34) 58%, rgba(234, 240, 241, 0));
+  filter: blur(8px);
+  transition: opacity .8s;
+}
+html[data-look="highland"] .fi-rail button {
+  text-shadow: 0 0 10px rgba(236, 241, 242, .95), 0 0 3px rgba(236, 241, 242, .9);
+}
+html[data-look="highland"] .fi-copy-action > span {
+  text-shadow: 0 0 8px rgba(236, 241, 242, .9);
+}
+
+/* Sunny look (客戶 2026-10-22：整體設計風格色調陽光明亮一點; art-direction pass). Only with data-hl-sunny, which the
+   page sets unless ?look=overcast, so the earlier look above stays intact for comparison.
+   Brighter frames need less milk: a thinner pool behind the copy and a thinner bottom veil. */
+html[data-look="highland"][data-hl-sunny] .fi-veil {
+  background: linear-gradient(180deg, #e9f0f71a, transparent 22%, transparent 60%, #e3ecf41a 80%, #e6eff738);
+}
+html[data-look="highland"][data-hl-sunny] .fi-copy::before {
+  background: radial-gradient(closest-side, rgba(240, 244, 247, .46), rgba(240, 244, 247, .22) 58%, rgba(240, 244, 247, 0));
+}
+/* the 9 px kicker and the Chinese subline were unreadable on every frame */
+html[data-look="highland"][data-hl-sunny] .fi-copy-kicker { color: var(--ui-ink); font-weight: 600; }
+html[data-look="highland"][data-hl-sunny] .fi-copy-zh { font-weight: 500; }
+html[data-look="highland"][data-hl-sunny] .finnovation-ui:not([data-scene="canyon"]) .fi-rail button {
+  color: var(--ui-ink);
+  text-shadow: 0 0 2px rgba(242, 246, 248, .95), 0 0 7px rgba(242, 246, 248, .9), 0 0 16px rgba(242, 246, 248, .6);
+}
+html[data-look="highland"][data-hl-sunny] .fi-footer { --ui-muted: #3d5168; }
+/* canyon walls behind the header and rail: their white ink gets a dark halo (it had a pale one: pale on pale) */
+html[data-look="highland"][data-hl-sunny] .finnovation-ui[data-scene="canyon"] .fi-rail button {
+  text-shadow: 0 0 2px rgba(9, 26, 41, .7), 0 1px 12px rgba(9, 26, 41, .62);
+}
+html[data-look="highland"][data-hl-sunny] .finnovation-ui[data-scene="canyon"] .fi-header {
+  text-shadow: 0 0 1px rgba(9, 26, 41, .85), 0 1px 3px rgba(9, 26, 41, .55), 0 0 18px rgba(9, 26, 41, .42);
+}
+/* …but the white header switches on while the glen still shows sky behind it: there it keeps dark ink until the
+   walls arrive (data-hl-walls is set by highland-scene.js for q 4.5–7.35) */
+html[data-look="highland"][data-hl-sunny]:not([data-hl-walls]) .finnovation-ui[data-scene="canyon"] .fi-header {
+  --ui-ink: #1c2d42; --ui-muted: #3d5168; color: var(--ui-ink);
+  text-shadow: 0 0 10px rgba(240, 244, 247, .9), 0 0 3px rgba(240, 244, 247, .8);
+}
+
+/* 2026-10-22 · Confluence. Between the bright Highland study and slate Maritime:
+   warm ivory light, blue-grey glass, original Jost brand typography. Only the
+   new look receives these rules; original sunny/overcast remain comparable. */
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) {
+  --hl-ink: #233b49;
+  --hl-ivory: #f1f0e8;
+  --hl-accent: #c3b595;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) .loader { background: #d1dde0; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) .loader-logo { color: #233b49; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) .loader-line i { background: #607d8b; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui {
+  --ui-ink: #233b49; --ui-muted: #46616c; --ui-line: #35546230;
+  --uig-tint: #c2d1d5;
+  --uig-fill-1: #e8ece675; --uig-fill-2: #c2d1d552; --uig-fill-3: #9aafb645;
+  --uig-hover-1: #f1f0e88c; --uig-hover-2: #d5dfdc70; --uig-hover-3: #b1c3c966;
+  --uig-blur: 9px; --uig-hi-copy: #fff9e85c; --uig-hi-head: #fff9e845;
+  --uig-bd-foot: #f1f0e833; --uig-foot-1: #cbd8d91a; --uig-foot-2: #a5bac226;
+  color: var(--ui-ink);
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-frame { opacity: .6; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-veil {
+  background: linear-gradient(180deg, #dce4df0d, transparent 24%, transparent 58%, #c4d4d81a 83%, #c4d4d840);
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy::before { display: none; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy h1,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy h2 {
+  font-weight: 500;
+  letter-spacing: .015em;
+  text-shadow: none;
+  text-wrap: balance;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy-kicker {
+  letter-spacing: .25em;
+  font-weight: 500;
+  color: var(--ui-muted);
+  text-shadow: none;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy-zh {
+  font-weight: 400;
+  letter-spacing: .11em;
+  text-shadow: none;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-rail button,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy-action > span {
+  text-shadow: none;
+}
+/* A slight lower shade gives typography a stable reading plane without bleaching
+   the landscape or blurring every glyph. The central horizon stays untouched. */
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-veil,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-veil {
+  background: linear-gradient(90deg, #10243020, transparent 20%, transparent 90%, #1024300a),
+    linear-gradient(180deg, transparent 42%, #122c3b08 51%, #122c3b4d 72%, #102735b3 100%);
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-copy,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-copy {
+  --ui-ink: #f1f0e8; --ui-muted: #d0dcd9;
+  color: var(--ui-ink);
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-copy h2,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-copy h2 {
+  text-shadow: 0 2px 20px #10243133;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-copy-kicker,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-copy-kicker { color: #dfd4bc; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-copy-action,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-copy-action {
+  background: #23414e94; box-shadow: inset 0 1px #e7e5d859, inset 0 -1px #0e263b40;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-copy-action > span,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-copy-action > span {
+  background: transparent; color: #f1f0e8;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-copy-action:hover,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-copy-action:hover { background: #365764c4; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-footer,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .fi-footer {
+  --ui-ink: #f1f0e8; --ui-muted: #d0dcd9; --ui-line: #dce5df38;
+  color: #f1f0e8;
+  background: #17354312;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-footer-progress i { background: #a9c9d8; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header { text-shadow: none; }
+html[data-look="highland"][data-hl-confluence][data-hl-walls]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header { text-shadow: 0 1px 12px #10273573; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui[data-scene="canyon"] .fi-rail button,
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready.is-watershed .finnovation-ui .fi-rail button {
+  color: #e7eae2;
+  text-shadow: 0 1px 10px #10273599;
+}
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button[aria-current="step"]::before { background: #b6cccf; }
+html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .finnovation-ui button:focus-visible { outline-color: currentColor; }
+@media (max-width: 680px) {
+  html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy-kicker { font-size: 8px; letter-spacing: .18em; }
+  html[data-look="highland"][data-hl-confluence]:not([data-render-mode="text"]) body.is-ready .fi-copy-zh { letter-spacing: .055em; }
+}
+/* The mobile chapter strip sits over the sky once the aerial camera clears the walls. */
+@media (max-width: 680px) {
+  html[data-look="highland"][data-hl-confluence]:not([data-hl-walls]):not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button {
+    color: #233b49;
+    text-shadow: none;
+  }
+  html[data-look="highland"][data-hl-confluence]:not([data-hl-walls]):not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button[aria-current="step"]::before { background: #486a78; }
+}
+
+html[data-look="highland"] .fi-terrain-credit { display:inline-block; margin-top:8px; font-size:9px; opacity:.7; color:inherit; text-decoration:underline; text-underline-offset:3px; }

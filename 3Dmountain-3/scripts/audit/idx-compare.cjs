@@ -1,0 +1,2 @@
+const [x, y] = process.argv.slice(2).map(f => JSON.parse(require('fs').readFileSync(f, 'utf8')));
+console.log(JSON.stringify(x.map((a, i) => { const b = y[i]; let max = 0, sum = 0, over = 0; for (let k = 0; k < a.length; k += 4) for (let c = 0; c < 3; c++) { const d = Math.abs(a[k + c] - b[k + c]); max = Math.max(max, d); sum += d; if (d > 12) over++; } return { mean: +(sum / (a.length * .75)).toFixed(3), max, over }; })));

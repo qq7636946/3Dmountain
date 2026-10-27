@@ -6773,7 +6773,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }).catch(error => console.warn('Portfolio epilogue unavailable:', error));
       /* 卡牌之後（只有 index1-1）：地球、理念、頁尾。卡牌浮出時才下載；載不到就停在卡牌，跟原本一樣。 */
       let world = null, worldJob = null;
-      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=logo-orbit-interaction-08c7e44e3d94').then(module => {
+      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=closing-logo-no-grid-20261027-r1').then(module => {
         world = module.mountWorld({ root: document.querySelector('#fiWorld'), reducedMotion: reduceMotion, epilogue: () => portfolio, carry: delta => advanceJourney(delta, 'touch'), grade: () => CONFIG.grade, mist: () => CONFIG.mist, video: () => CONFIG.video, ocean: () => CONFIG.worldOcean, logo: () => CONFIG,
           /* its preparation keeps out of the way while the valley-to-cards bridge is moving (scrolled within the last moment), except the bridge's last tenth (F5): the planet's GL build then finishes before the cards hand over */
           busy: () => !!portfolio?.open && portfolio.transition > 0 && portfolio.transition < .9 && performance.now() - (journey.lastInput || 0) < 1400 });

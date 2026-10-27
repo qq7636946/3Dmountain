@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="FINNOVATION 山海材質獨立測試：侵蝕山脊、岩壁 PBR 材質、苔綠高地與銀白海面。">
+  <title>Highland / A Material Study — FINNOVATION</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./study.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+  <main id="scene" aria-label="可切換近景與空拍的三維山海材質測試"></main>
+  <div class="vignette" aria-hidden="true"></div>
+  <header><a class="brand" href="./index.html">FINNOVATION<span>LANDSCAPE LAB</span></a><span class="edition">MATERIAL STUDY &nbsp; / &nbsp; 01</span><button id="info" aria-expanded="false" aria-controls="details">製作說明 <span>＋</span></button></header>
+  <section class="caption" aria-live="polite"><p class="eyebrow">SCOTTISH HIGHLANDS · SILVER SEA</p><h1>Between<br>land & light.</h1><p id="shot-description">以岩壁的厚度，承接海面的光。</p></section>
+  <aside id="details" hidden><button id="close-info" aria-label="關閉製作說明">×</button><p class="eyebrow">AN ISOLATED MATERIAL STUDY</p><h2>先看山體，再看光。</h2><p>保留侵蝕山脊，以岩石與草地的色彩、法線和粗糙度貼圖補足細節。銀白海面映出天空，只在波谷與反射中保留藍色。</p><dl><div><dt>地形</dt><dd id="mesh-stat">準備中</dd></div><div><dt>貼圖</dt><dd id="texture-stat">載入 PBR 貼圖</dd></div><div><dt>正式頁面</dt><dd>未修改 · 本頁獨立測試</dd></div></dl><p class="credits">Powered by <a href="https://polyhaven.com/" target="_blank" rel="noopener">Poly Haven</a> · CC0<br>Terrain derived from <a href="https://sketchfab.com/3d-models/snowy-mountain-v2-terrain-4c70cd82edd44951b7af6c144545df34" target="_blank" rel="noopener">artfromheath</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><br><a href="./README.md">完整製作與素材說明</a></p></aside>
+  <footer><div class="shots" role="group" aria-label="相機視角"><button data-view="close" aria-pressed="true"><span>01</span> 岩壁近景</button><button data-view="aerial" aria-pressed="false"><span>02</span> 高地空拍</button></div><div class="tools"><button id="light" aria-pressed="false">側光 / 陰天</button><button id="motion" aria-pressed="false">暫停動態</button><span class="hint">SCROLL TO EXPLORE</span></div></footer>
+  <div id="loading" role="status"><span class="loader"></span><p>Preparing land & light<span>載入山體與成套材質</span></p></div>
+  <p id="notice" role="status" hidden></p>
+  <noscript><div class="error">此頁需要 JavaScript 與 WebGL2。正式網站未受影響。</div></noscript>
+  <script type="module" src="./study.js"></script>
+</body>
+</html>

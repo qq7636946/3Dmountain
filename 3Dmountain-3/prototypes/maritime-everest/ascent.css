@@ -1,0 +1,32 @@
+/* ASCENT (2026-10-22, Claude copy): night blue and champagne gold. Loaded after everest.css and keyed on
+   html[data-grade="ascent"] (set by this copy's main.js), so ?look=everest shows the copied Everest UI. */
+html[data-grade="ascent"] body { background: linear-gradient(180deg, #070f22 0%, #13254e 60%, #081534 100%); }
+html[data-grade="ascent"]:not([data-render-mode="text"]) .loader { background: #070f22; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) .loader-logo { color: #f2eee4; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) .loader-line { background: #f2eee41f; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) .loader-line i { background: #d9bc85; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) .loader-note { color: #a7b0c4; }
+
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui {
+  --ui-accent: #d9bc85;
+  --ui-panel: #0f1d3a59;
+  --uig-fill-1: #22345c66;
+  --uig-fill-2: #15264a66;
+  --uig-fill-3: #0b183680;
+  --uig-hover-1: #30447073;
+  --uig-hover-2: #22365e73;
+  --uig-hover-3: #13234a8c;
+  --uig-menu-1: #0f1c3cf5;
+  --uig-menu-2: #08142efa;
+  --uig-veil-c: #050d2266;
+}
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-veil {
+  background: linear-gradient(180deg, #070f2266 0%, #0a142c08 22%, transparent 39%, #0a142a0d 51%, #08122a54 70%, #060e24bf 100%);
+}
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-kicker { color: #d9bc85; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy { text-shadow: 0 2px 22px #040b2070; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header,
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail,
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer { text-shadow: 0 1px 10px #050c2059; }
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .fi-rail button[aria-current="step"]::before,
+html[data-grade="ascent"]:not([data-render-mode="text"]) body.is-ready .fi-footer-progress i { background: #d9bc85; }

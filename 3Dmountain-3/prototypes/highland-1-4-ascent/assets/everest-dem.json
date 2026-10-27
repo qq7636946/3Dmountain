@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "description": "Independent Everest elevation crop from public Mapzen Terrain Tiles; contains numerical terrain data only.",
+  "bounds": {
+    "west": 86.81499481201172,
+    "east": 86.96451187133789,
+    "north": 28.035016087665557,
+    "south": 27.92025533795878
+  },
+  "mercator": {
+    "zoom": 13,
+    "worldPixels": 2097152,
+    "crop": {
+      "x": 1554310,
+      "y": 878324,
+      "width": 872,
+      "height": 758
+    },
+    "metresPerPixelAt27_85N": 16.8959013685641
+  },
+  "encoding": {
+    "compression": "gzip",
+    "sampleType": "uint16",
+    "byteOrder": "little-endian",
+    "order": "row-major, west-to-east columns and north-to-south rows",
+    "decoder": "metres = uint16le / 4",
+    "verticalUnits": "metres",
+    "verticalExaggeration": 1,
+    "quantizationMetres": 0.25,
+    "sourceDecoder": "metres = red * 256 + green + blue / 256 - 32768"
+  },
+  "full": {
+    "file": "everest-dem.bin.gz",
+    "width": 872,
+    "height": 758,
+    "rawBytes": 1321952,
+    "compressedBytes": 849892,
+    "minMetres": 4816,
+    "maxMetres": 8751,
+    "meanMetres": 6131.59293378277,
+    "finiteSamples": 660976
+  },
+  "lite": {
+    "file": "everest-dem-lite.bin.gz",
+    "width": 436,
+    "height": 379,
+    "rawBytes": 330488,
+    "compressedBytes": 239140,
+    "minMetres": 4818,
+    "maxMetres": 8746,
+    "meanMetres": 6130.314831400838,
+    "finiteSamples": 165244,
+    "resampling": "nearest source sample on an endpoint-preserving 436 x 379 grid; shares full bounds"
+  },
+  "source": {
+    "dataset": "https://registry.opendata.aws/terrain-tiles/",
+    "format": "https://github.com/tilezen/joerd/blob/master/docs/formats.md",
+    "attribution": "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+    "attributionText": "Mapzen Terrain Tiles. SRTM and GMTED2010 terrain data courtesy of the U.S. Geological Survey.",
+    "bucket": "s3://elevation-tiles-prod/terrarium/",
+    "tiles": [
+      {
+        "x": 6071,
+        "y": 3430,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6071/3430.png",
+        "file": "everest-tiles/13-6071-3430.png"
+      },
+      {
+        "x": 6072,
+        "y": 3430,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6072/3430.png",
+        "file": "everest-tiles/13-6072-3430.png"
+      },
+      {
+        "x": 6073,
+        "y": 3430,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6073/3430.png",
+        "file": "everest-tiles/13-6073-3430.png"
+      },
+      {
+        "x": 6074,
+        "y": 3430,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6074/3430.png",
+        "file": "everest-tiles/13-6074-3430.png"
+      },
+      {
+        "x": 6071,
+        "y": 3431,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6071/3431.png",
+        "file": "everest-tiles/13-6071-3431.png"
+      },
+      {
+        "x": 6072,
+        "y": 3431,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6072/3431.png",
+        "file": "everest-tiles/13-6072-3431.png"
+      },
+      {
+        "x": 6073,
+        "y": 3431,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6073/3431.png",
+        "file": "everest-tiles/13-6073-3431.png"
+      },
+      {
+        "x": 6074,
+        "y": 3431,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6074/3431.png",
+        "file": "everest-tiles/13-6074-3431.png"
+      },
+      {
+        "x": 6071,
+        "y": 3432,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6071/3432.png",
+        "file": "everest-tiles/13-6071-3432.png"
+      },
+      {
+        "x": 6072,
+        "y": 3432,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6072/3432.png",
+        "file": "everest-tiles/13-6072-3432.png"
+      },
+      {
+        "x": 6073,
+        "y": 3432,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6073/3432.png",
+        "file": "everest-tiles/13-6073-3432.png"
+      },
+      {
+        "x": 6074,
+        "y": 3432,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6074/3432.png",
+        "file": "everest-tiles/13-6074-3432.png"
+      },
+      {
+        "x": 6071,
+        "y": 3433,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6071/3433.png",
+        "file": "everest-tiles/13-6071-3433.png"
+      },
+      {
+        "x": 6072,
+        "y": 3433,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6072/3433.png",
+        "file": "everest-tiles/13-6072-3433.png"
+      },
+      {
+        "x": 6073,
+        "y": 3433,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6073/3433.png",
+        "file": "everest-tiles/13-6073-3433.png"
+      },
+      {
+        "x": 6074,
+        "y": 3433,
+        "url": "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/13/6074/3433.png",
+        "file": "everest-tiles/13-6074-3433.png"
+      }
+    ]
+  }
+}

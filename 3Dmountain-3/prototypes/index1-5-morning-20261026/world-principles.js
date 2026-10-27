@@ -1,0 +1,167 @@
+/* Between the horizontal investment chapters and the existing 3D seal.
+   One scroll clock drives a WebGL refraction reveal, the editorial reading
+   surface and the handoff to the seal. The same renderer is reused. */
+import * as THREE from 'three';
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const smooth=(a,b,v)=>{const t=clamp((v-a)/Math.max(.001,b-a));return t*t*(3-2*t);};
+const VERTEX='varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
+const FRAGMENT=/* glsl */`
+uniform sampler2D uPhoto,uPhoto2,uOld;
+uniform vec2 uRes,uMouse;
+uniform float uTime,uEnter,uRead,uAspect,uAspect2,uSceneMix,uMotion;
+varying vec2 vUv;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
+vec3 photo(sampler2D source,vec2 uv,float r,float aspect,float horizon){
+ vec2 cover=vec2(min(1.,uRes.x/uRes.y/aspect),min(1.,aspect*uRes.y/uRes.x));
+ vec2 p=.5+(uv-.5)*cover/1.065;
+ p+=vec2(sin(uTime*.027)*.008,-uRead*.021)+uMouse*.008;
+ p+=vec2(sin(p.y*8.+uTime*.16),cos(p.x*6.-uTime*.11))*.0018*uMotion;
+ vec2 d=vec2(r*cover.x,r*cover.y);
+ // Keep source detail at rest. Positive mip bias and a permanent blur kernel
+ // made full-screen photographs look low-resolution even after settling.
+ vec3 c=texture2D(source,clamp(p,.002,.998)).rgb;
+ if(r>.00001){
+  c*=.28;
+  c+=(texture2D(source,clamp(p+vec2(d.x,0),.002,.998)).rgb+texture2D(source,clamp(p-vec2(d.x,0),.002,.998)).rgb)*.16;
+  c+=(texture2D(source,clamp(p+vec2(0,d.y),.002,.998)).rgb+texture2D(source,clamp(p-vec2(0,d.y),.002,.998)).rgb)*.13;
+  c+=(texture2D(source,clamp(p+d,.002,.998)).rgb+texture2D(source,clamp(p-d,.002,.998)).rgb)*.07;
+ }
+ c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,.76)*vec3(.83,.97,1.04);
+ float scrim=.15+.19*(1.-smoothstep(.15,.90,uv.x))+.17*(1.-smoothstep(0.,.35,uv.y));
+ // The supplied business photograph joins the site's slate-blue world.
+ // Keep its human detail visible while protecting white editorial copy.
+ if(horizon>.5){
+  c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,.56)*vec3(.78,.92,1.03)*.88;
+  scrim+=.22+.10*(1.-smoothstep(.35,.80,uv.y));
+ }
+ return mix(c,vec3(.035,.09,.125),scrim);
+}
+void main(){
+ vec2 uv=vUv;float q=smoothstep(0.,1.,uEnter),s=sin(q*3.14159265);
+ float n=noise(uv*vec2(3.2,4.7)+vec2(0.,uTime*.018));
+ float front=q*1.5-.25-(uv.x*.24+uv.y*.76)+(n-.5)*.20*s;
+ float mask=smoothstep(-.13,.13,front);
+ if(uMotion<.5)mask=q;
+ if(uEnter<=.0001)mask=0.;if(uEnter>=.9999)mask=1.;
+ vec2 lens=vec2(sin(uv.y*9.+n*3.),cos(uv.x*7.-n*4.))*.027*s*uMotion;
+ // Only the water reveal carries softness; both reading chapters stay sharp.
+ float imageRadius=.006*s*s*uMotion;
+ float change=smoothstep(0.,1.,uSceneMix);
+ vec3 newer;
+ // Uniform branches keep the resting scenes at one photo fetch. Both
+ // images are sampled only while the scroll is actually changing scenes.
+ if(change<.001)newer=photo(uPhoto,uv+lens,imageRadius,uAspect,0.);
+ else if(change>.999)newer=photo(uPhoto2,uv+lens,imageRadius*.72,uAspect2,1.);
+ else newer=mix(photo(uPhoto,uv+lens,imageRadius,uAspect,0.),photo(uPhoto2,uv+lens,imageRadius*.72,uAspect2,1.),change);
+ vec3 c=newer;
+ if(uEnter<.9999){
+  vec3 older=texture2D(uOld,clamp(uv-lens*1.5,.001,.999)).rgb;
+  c=mix(older,newer,mask);
+ }
+ c+=vec3(.16,.24,.28)*exp(-pow(front/.10,2.))*.12*s*uMotion;
+ // Small world-space moisture flecks; quiet enough to leave the copy clear.
+ vec2 field=uv*vec2(44.,25.)+vec2(uTime*.012,uTime*.021)*uMotion;
+ vec2 id=floor(field),local=fract(field)-.5;
+ float seed=hash(id+13.),on=step(.965,seed);
+ float sparkle=exp(-dot(local,local)*160.)*on*(.06+.04*sin(uTime*.6+seed*70.));
+ c+=vec3(.65,.82,.89)*sparkle*mask;
+ c*=(1.-.16*smoothstep(.35,.85,length((uv-.5)*vec2(1.1,1.))));
+ c+=(hash(gl_FragCoord.xy)-.5)/255.;gl_FragColor=vec4(c,1.);
+}`;
+export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeasure=()=>{}}){
+ const section=root.querySelector('[data-world-part="principles"]');if(!section)return null;
+ const body=section.querySelector('.fiwp-layout'),resp=root.querySelector('[data-world-part="responsibility"]');
+ const status=section.querySelector('.fiwp-progress'),chapters=[...section.querySelectorAll('[data-principles-chapter]')];
+ let W=innerWidth,H=innerHeight,top=0,height=0,overflow=0,secondTop=0,contentEnd=0,last=null,disposed=false,ready=false,failed=false;
+ let scene=null,camera=null,material=null,quad=null,texture=null,texture2=null,old=null;
+ let secondRequested=false,secondReady=false,secondFailed=false,secondReadyAt=0;
+ const mouse=new THREE.Vector2(),targetMouse=new THREE.Vector2();
+ const onPointer=e=>targetMouse.set((e.clientX/Math.max(1,W)-.5)*2,(.5-e.clientY/Math.max(1,H))*2);
+ if(!reducedMotion)addEventListener('pointermove',onPointer,{passive:true});
+ const pill=resp?.querySelector('[data-world-go="logo"]'),label=pill?.querySelector('span');
+ const was=pill&&{go:pill.dataset.worldGo,text:label?.textContent};
+ if(pill){pill.dataset.worldGo='principles';if(label)label.textContent='OUR PRINCIPLES';}
+ function layout(w,h){
+  W=w;H=h;root.style.setProperty('--fiwp-h',H+'px');
+  // Both chapters live in the actual document. There is no sticky release,
+  // synthetic scroll hold, or second transform moving the copy.
+  section.style.removeProperty('height');
+  body.style.setProperty('--travel','0px');
+  height=section.offsetHeight;overflow=Math.max(0,height-H);
+  // The final line, rather than the bottom of a padded section, hands over
+  // to the next scene. Overlap only the invisible tail of the document:
+  // the next WebGL cut starts while the closing CTA is still on screen.
+  const end=section.querySelector('.fiwp-bottom')||chapters[chapters.length-1]||body;
+  const bottom=end.getBoundingClientRect().bottom-section.getBoundingClientRect().top-(parseFloat(end.style.getPropertyValue('--motion-y'))||0);
+  const overlap=Math.max(0,height-bottom+H*.90);
+  section.style.marginBottom=(-overlap).toFixed(1)+'px';
+ }
+ function measure(at,getTop){
+  top=getTop(section);height=section.offsetHeight;overflow=Math.max(0,height-H);
+  secondTop=chapters[1]?getTop(chapters[1]):top+height*.5;
+  const end=section.querySelector('.fiwp-bottom')||chapters[chapters.length-1]||body;
+  contentEnd=getTop(end)+end.offsetHeight-(parseFloat(end.style.getPropertyValue('--motion-y'))||0);
+  at.principles=top;at.principlesH=height;
+ }
+ function sample(y){
+  const enter=clamp((y-(top-H*1.05))/(H*.85));
+  const read=clamp((y-top)/Math.max(1,height-H));
+  const exit=smooth(contentEnd-H*.90,contentEnd-H*.65,y);
+  const sceneMix=smooth(secondTop-H*.90,secondTop-H*.10,y);
+  last={y,enter,read,exit,sceneMix,show:smooth(.25,.90,enter)*(1-exit),active:y>top-H*1.10&&y<top+height+H*1.8};
+  return last;
+ }
+ function setupTexture(t){t.colorSpace=THREE.NoColorSpace;t.generateMipmaps=true;t.minFilter=THREE.LinearMipmapLinearFilter;t.magFilter=THREE.LinearFilter;return t;}
+ function begin(renderer){
+  scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  texture=new THREE.DataTexture(new Uint8Array([17,42,55,255]),1,1);texture.needsUpdate=true;
+  material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,depthTest:false,depthWrite:false,toneMapped:false,blending:THREE.NoBlending,
+   uniforms:{uPhoto:{value:texture},uPhoto2:{value:texture},uOld:{value:texture},uRes:{value:new THREE.Vector2(W,H)},uMouse:{value:mouse},uTime:{value:0},uEnter:{value:1},uRead:{value:0},uAspect:{value:16/9},uAspect2:{value:16/9},uSceneMix:{value:0},uMotion:{value:reducedMotion?0:1}}});
+  quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);quad.frustumCulled=false;scene.add(quad);
+  new THREE.TextureLoader().load(new URL('../assets/principles/canopy-v1.webp',import.meta.url).href,t=>{
+   if(disposed){t.dispose();return;}const previous=texture;texture=setupTexture(t);
+   material.uniforms.uPhoto.value=t;material.uniforms.uAspect.value=t.image.width/t.image.height;ready=true;
+   if(!secondReady){material.uniforms.uPhoto2.value=t;material.uniforms.uAspect2.value=t.image.width/t.image.height;}
+   if(material.uniforms.uOld.value===previous)material.uniforms.uOld.value=t;
+   previous.dispose();
+  },undefined,e=>{failed=true;ready=true;console.warn('Principles background unavailable',e);});
+ }
+ function loadSecond(){
+  if(secondRequested||!material)return;secondRequested=true;
+  new THREE.TextureLoader().load(new URL('../assets/principles/c-bg-v1.webp',import.meta.url).href,t=>{
+   if(disposed){t.dispose();return;}texture2=setupTexture(t);
+   material.uniforms.uPhoto2.value=t;material.uniforms.uAspect2.value=t.image.width/t.image.height;
+   secondReady=true;secondReadyAt=performance.now();
+  },undefined,()=>{secondFailed=true;}); // A missing second image keeps the first scene; copy remains readable.
+ }
+ const size=new THREE.Vector2();
+ function render(s,time,ctx){
+  const p=s.principles;if(!p||disposed)return false;
+  if(!scene&&p.y>top-H*2.5)begin(ctx.renderer);
+  if(scene&&p.y>secondTop-H*2.5)loadSecond();
+  if(!scene||p.enter<=0)return false;
+  const r=ctx.renderer,u=material.uniforms;r.getDrawingBufferSize(size);
+  u.uRes.value.copy(size);u.uTime.value=reducedMotion?0:time;u.uEnter.value=reducedMotion?smooth(0,1,p.enter):p.enter;u.uRead.value=p.read;
+  u.uSceneMix.value=p.sceneMix*(secondReady?(reducedMotion?1:smooth(0,550,performance.now()-secondReadyAt)):0);
+  mouse.lerp(targetMouse,.035);
+  if(p.enter<1){
+   if(!old||old.image.width!==size.x||old.image.height!==size.y){old?.dispose();old=new THREE.FramebufferTexture(size.x,size.y);old.minFilter=old.magFilter=THREE.LinearFilter;}
+   ctx.draw();r.copyFramebufferToTexture(old);u.uOld.value=old;
+  }else u.uOld.value=texture;
+  r.setRenderTarget(null);r.render(scene,camera);return true;
+ }
+ function paint(s){
+  const p=s.principles;if(!p)return;
+  body.style.setProperty('--show',p.show.toFixed(3));body.style.setProperty('--travel','0px');
+  body.style.visibility=p.show>.001?'visible':'hidden';body.inert=p.show<.01;
+  section.style.setProperty('--progress',p.read.toFixed(3));
+  root.classList.toggle('is-principles',p.show>.01);
+  if(resp&&p.enter>.05&&p.y<top+height)resp.inert=true;
+  if(status)status.style.opacity=p.show.toFixed(3);
+ }
+ const stopY=()=>top+H*.12;
+ function close(){root.classList.remove('is-principles');body.style.visibility='hidden';}
+ function dispose(){disposed=true;close();removeEventListener('pointermove',onPointer);texture?.dispose();texture2?.dispose();old?.dispose();material?.dispose();quad?.geometry.dispose();if(pill&&was){pill.dataset.worldGo=was.go;if(label)label.textContent=was.text;}}
+ return{layout,measure,sample,render,paint,stopY,close,dispose,get state(){return{top,height,overflow,secondTop,contentEnd,ready,failed,secondReady,secondFailed,flow:'document',sample:last};}};
+}

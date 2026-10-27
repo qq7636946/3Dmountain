@@ -1,0 +1,20 @@
+{
+  "engine": "Cycles",
+  "device": "OPTIX",
+  "samples": 64,
+  "note": "Independent A-only studio. Ray-traced transmission, no painted white rim. Not a web performance benchmark.",
+  "frames": [
+    {
+      "name": "A-three-quarter",
+      "seconds": 5.186
+    },
+    {
+      "name": "A-front",
+      "seconds": 4.112
+    },
+    {
+      "name": "A-side",
+      "seconds": 4.074
+    }
+  ]
+}

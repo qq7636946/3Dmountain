@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sweet Potato — Three.js Reference Study</title>
+  <meta name="description" content="依單張照片重建的可旋轉地瓜 3D 原型，含生成表皮、葉片、枝莖與細根。">
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+  <header><div><span class="eyebrow">BOTANICAL OBJECT / 002</span><h1>Sweet potato.</h1></div><p>連續表皮 · 立體葉片 <span>THREE.JS · REAL-TIME 3D</span></p></header>
+  <main id="stage"><section id="viewport" aria-label="地瓜三維模型，可拖曳旋轉"><span class="pane-label">3D MODEL</span></section><figure id="reference" hidden><img src="./assets/reference.png" alt="使用者提供的紅皮地瓜與綠色枝葉參考照片"><figcaption>REFERENCE PHOTO</figcaption></figure></main>
+  <nav aria-label="模型檢視控制"><div class="view-tools"><button id="front">正面</button><button id="side">側面</button><button id="back">背面</button><button id="rotate" aria-pressed="false">自動旋轉</button><button id="compare" aria-pressed="false">對照照片</button></div><button id="export">下載 GLB <span>↗</span></button></nav>
+  <footer><span>拖曳旋轉 · 滾輪縮放 · 雙擊回正面</span><span id="stats">準備模型</span></footer>
+  <div id="loading" role="status"><span></span>建立地瓜與枝葉…</div>
+  <div id="message" role="status" hidden></div>
+  <noscript><p class="fatal">請開啟 JavaScript 與 WebGL2 以檢視模型。</p></noscript>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+Google Sans variable family, normal style, weights 400–700.
+Downloaded from the official Google Fonts service on 2026-10-25.
+CSS API: https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&display=swap
+Latin: https://fonts.gstatic.com/s/googlesans/v71/4UasrENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RPjIUvQ.woff2
+Latin Extended: https://fonts.gstatic.com/s/googlesans/v71/4UasrENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RPjwUvaYr.woff2
+License: SIL Open Font License 1.1, see OFL.txt.
+License source: https://raw.githubusercontent.com/google/fonts/main/ofl/googlesans/OFL.txt
+Project: https://github.com/googlefonts/googlesans
+The supplied font files are unmodified. Noto Sans TC supplies Chinese fallback glyphs.

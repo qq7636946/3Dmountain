@@ -1,0 +1,374 @@
+/* index1-5-alpine: clouds that sit IN the valleys and wrap the mid-slopes (everest.suraj.work look).
+   One instanced draw of soft, sun-lit cloud puffs (valley banks, wisps, far cloud sea, ridge veils), no depth
+   texture, no ray march. It also bakes the valley-floor map that the atmosphere's valley haze reads.
+   - Placed once on the CPU from the real terrain: clustered by a low-frequency cloudiness field, pooled in
+     the glens (below the local mean ground), climbing some way up the slopes, and kept off the five rivers
+     and the canyon the camera flies down. Far away they grow larger and sparser.
+   - Each puff is a camera-facing sphere impostor with a noise-eroded rim: a per-pixel sphere normal makes
+     the sun side warm and bright, the far side blue-grey, and thin edges toward the sun glow (silver lining).
+     Puffs are sorted back to front (only when the camera has moved) so overlaps blend correctly.
+   One tileable billow texture (CPU-baked once, mipmapped) feeds the puffs and the sky dome's cumulus and
+   cloud sea. Every look value is read live from ALPINE_LIGHT (amount, height, softness, drift, colours).
+   Reduced motion freezes the drift. */
+import { ALPINE_LIGHT } from './alpine-light-params.js';
+
+/* Tileable billow field: R = density (fbm + inverted Worley puffs), G/B = d/du, d/dv (scaled), A = fine fbm. */
+let sharedNoise = null, sharedUsers = 0;
+export function getAlpineCloudNoise(THREE) {
+  if (sharedNoise) { sharedUsers++; return sharedNoise; }
+  const N = 256, h = new Float32Array(N * N), fine = new Float32Array(N * N);
+  const hash = (x, y, s) => {
+    let k = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s | 0, 1442695041);
+    k = Math.imul(k ^ (k >>> 13), 1274126177); k ^= k >>> 16; return (k >>> 0) / 4294967296;
+  };
+  const wrap = (i, p) => ((i % p) + p) % p;
+  const fade = t => t * t * (3 - 2 * t);
+  const vnoise = (x, y, p, s) => {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = fade(x - ix), fy = fade(y - iy);
+    const x0 = wrap(ix, p), x1 = wrap(ix + 1, p), y0 = wrap(iy, p), y1 = wrap(iy + 1, p);
+    const a = hash(x0, y0, s), b = hash(x1, y0, s), c = hash(x0, y1, s), d = hash(x1, y1, s);
+    return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+  };
+  const worley = (x, y, p, s) => {
+    const ix = Math.floor(x), iy = Math.floor(y); let best = 9;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const cx = ix + i, cy = iy + j, wx = wrap(cx, p), wy = wrap(cy, p);
+      const dx = cx + hash(wx, wy, s) - x, dy = cy + hash(wx, wy, s + 7) - y;
+      best = Math.min(best, dx * dx + dy * dy);
+    }
+    return Math.sqrt(best);
+  };
+  let lo = Infinity, hi = -Infinity;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const u = x / N, v = y / N;
+    let f = 0, a = .5, tot = 0;
+    for (let o = 0, p = 4; o < 5; o++, p *= 2) { f += a * vnoise(u * p, v * p, p, 11 + o); tot += a; a *= .5; }
+    f /= tot;
+    const puff = 1 - Math.min(1, worley(u * 6, v * 6, 6, 3) * 1.15), puff2 = 1 - Math.min(1, worley(u * 14, v * 14, 14, 5) * 1.2);
+    const value = f * .52 + puff * .33 + puff2 * .15;
+    h[y * N + x] = value; lo = Math.min(lo, value); hi = Math.max(hi, value);
+    let g = 0; a = .5; tot = 0;
+    for (let o = 0, p = 32; o < 3; o++, p *= 2) { g += a * vnoise(u * p, v * p, p, 41 + o); tot += a; a *= .5; }
+    fine[y * N + x] = g / tot;
+  }
+  const data = new Uint8Array(N * N * 4), at = (x, y) => h[wrap(y, N) * N + wrap(x, N)];
+  const span = Math.max(1e-6, hi - lo);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = (y * N + x) * 4;
+    const gx = (at(x + 1, y) - at(x - 1, y)) * .5 * N / span, gy = (at(x, y + 1) - at(x, y - 1)) * .5 * N / span;
+    data[i] = Math.round((h[y * N + x] - lo) / span * 255);
+    data[i + 1] = Math.round(THREE.MathUtils.clamp(.5 + gx / 80, 0, 1) * 255);
+    data[i + 2] = Math.round(THREE.MathUtils.clamp(.5 + gy / 80, 0, 1) * 255);
+    data[i + 3] = Math.round(fine[y * N + x] * 255);
+  }
+  const texture = new THREE.DataTexture(data, N, N, THREE.RGBAFormat);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.magFilter = THREE.LinearFilter; texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true; texture.colorSpace = THREE.NoColorSpace; texture.needsUpdate = true;
+  texture.name = 'alpine-billow-noise';
+  sharedNoise = texture; sharedUsers = 1;
+  return texture;
+}
+function releaseAlpineCloudNoise() { if (sharedNoise && --sharedUsers <= 0) { sharedNoise.dispose(); sharedNoise = null; } }
+
+export function createAlpineCloudBanks(THREE, { lite = false, sampleHeight = null, terrainAt = null, riverDistance = null, bounds = null } = {}) {
+  const group = new THREE.Group(); group.name = 'index1-5-alpine-cloud-banks';
+  const noise = getAlpineCloudNoise(THREE);
+  const S = THREE.MathUtils.smoothstep, lerp = THREE.MathUtils.lerp, clamp = THREE.MathUtils.clamp;
+
+  /* ---------- placement (once) ---------- */
+  const minX = bounds?.min?.x ?? -9000, maxX = bounds?.max?.x ?? 8940, minZ = bounds?.min?.z ?? -12000, maxZ = bounds?.max?.z ?? 4800;
+  const probe = [0, 0, 0, 0];
+  const groundAt = (x, z) => {
+    let g = NaN;
+    if (terrainAt) { try { terrainAt(x, z, probe); g = probe[0]; } catch { g = NaN; } }
+    if (!Number.isFinite(g) && sampleHeight) g = sampleHeight(x, z);
+    return Number.isFinite(g) ? Math.max(0, g) : 120;
+  };
+  let seed = 160723;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const h2 = (x, y) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
+  const vn = (x, y) => { const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    return lerp(lerp(h2(ix, iy), h2(ix + 1, iy), ux), lerp(h2(ix, iy + 1), h2(ix + 1, iy + 1), ux), uy); };
+  const cloudiness = (x, z) => vn(x / 2600 + 3.1, z / 2600 + 7.7) * .62 + vn(x / 1100 + 1.3, z / 1100 + .4) * .38;
+  // Coarse blurred ground: a glen is ground below its neighbourhood mean.
+  const CG = 320, gx = Math.ceil((maxX - minX) / CG) + 1, gz = Math.ceil((maxZ - minZ) / CG) + 1;
+  let coarse = new Float32Array(gx * gz);
+  for (let j = 0; j < gz; j++) for (let i = 0; i < gx; i++) coarse[j * gx + i] = groundAt(minX + i * CG, minZ + j * CG);
+  // Valley floor map for the atmosphere's valley haze: the lowest ground within ~640 units, softened.
+  let floor = new Float32Array(gx * gz);
+  for (let j = 0; j < gz; j++) for (let i = 0; i < gx; i++) {
+    let m = Infinity;
+    for (let b = -2; b <= 2; b++) for (let a = -2; a <= 2; a++) { const ii = i + a, jj = j + b; if (ii >= 0 && jj >= 0 && ii < gx && jj < gz) m = Math.min(m, coarse[jj * gx + ii]); }
+    floor[j * gx + i] = m;
+  }
+  for (let pass = 0; pass < 2; pass++) {
+    const next = new Float32Array(gx * gz);
+    for (let j = 0; j < gz; j++) for (let i = 0; i < gx; i++) {
+      let s = 0, n = 0;
+      for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const ii = i + a, jj = j + b; if (ii >= 0 && jj >= 0 && ii < gx && jj < gz) { s += floor[jj * gx + ii]; n++; } }
+      next[j * gx + i] = s / n;
+    }
+    floor = next;
+  }
+  const floorMap = new THREE.DataTexture(Uint16Array.from(floor, v => THREE.DataUtils.toHalfFloat(v)), gx, gz, THREE.RedFormat, THREE.HalfFloatType);
+  floorMap.magFilter = floorMap.minFilter = THREE.LinearFilter; floorMap.wrapS = floorMap.wrapT = THREE.ClampToEdgeWrapping;
+  floorMap.colorSpace = THREE.NoColorSpace; floorMap.needsUpdate = true;
+  // Texel centres sit on the sample grid: uv = (xz - min) / span maps texel i to minX + i*CG.
+  const floorBox = new THREE.Vector4(minX - CG / 2, minZ - CG / 2, gx * CG, gz * CG);
+  for (let pass = 0; pass < 3; pass++) {
+    const next = new Float32Array(gx * gz);
+    for (let j = 0; j < gz; j++) for (let i = 0; i < gx; i++) {
+      let s = 0, n = 0;
+      for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const ii = i + a, jj = j + b; if (ii >= 0 && jj >= 0 && ii < gx && jj < gz) { s += coarse[jj * gx + ii]; n++; } }
+      next[j * gx + i] = s / n;
+    }
+    coarse = next;
+  }
+  const meanAt = (x, z) => {
+    const fx = clamp((x - minX) / CG, 0, gx - 1.001), fz = clamp((z - minZ) / CG, 0, gz - 1.001), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;
+    return lerp(lerp(coarse[j * gx + i], coarse[j * gx + i + 1], u), lerp(coarse[(j + 1) * gx + i], coarse[(j + 1) * gx + i + 1], u), v);
+  };
+  /* Four kinds, each with its own budget and its own live dial (ALPINE_LIGHT):
+     0 valley banks (山谷雲量)   pooled in the glens, a few climbing the slopes
+     1 wisps (雲絲量)            long thin translucent veils trailing up the mid-slopes
+     2 cloud sea (雲海量)        a level sea far off, the far peaks rising through it
+     3 ridge veils (稜線雲紗)    thin cloud draped over middle-distance ridges, partly hiding them
+     Puffs are placed once (density dial, applied at reload); within each kind a rank decides which are shown,
+     so the amount dials are live. The five rivers, the FOUR PATHS centre and the canyon flight stay clear. */
+  const DENSITY = clamp(Number(ALPINE_LIGHT.cloudDensity) || 1, .3, 2.5);
+  const STEP = (lite ? 270 : 175) / Math.sqrt(DENSITY);
+  const BUDGET = (lite ? [230, 90, 130, 50] : [760, 380, 420, 220]).map(n => Math.round(n * DENSITY));
+  const kinds = [[], [], [], []];
+  // The rise (A WIDER PERSPECTIVE) looks down the valley across z -1500..-6500: favour clouds there so they are
+  // kept within budget and shown first; further off the far haze would swallow them anyway.
+  const midBonus = z => .3 * S(-z, 1300, 2300) * (1 - S(-z, 5800, 7500));
+  // The FOUR PATHS frame centres on the fan of rivers below the confluence (~z -900): keep that clear.
+  const centreClear = (x, z) => S(Math.hypot(x / 1500, (z + 900) / 1700), .75, 1.25);
+  const corridorAt = (x, z) => Math.min(1, S(Math.abs(x - 40), 420, 1100) + S(-z, 2300, 3300));
+  const riverClear = (x, z, lo, hi) => { const rd = riverDistance ? riverDistance(x, z) : 1e9; return S(Number.isFinite(rd) ? rd : 1e9, lo, hi); };
+  // Valley banks and wisps.
+  for (let z = Math.min(maxZ, 2400); z > minZ + 1800; z -= STEP) for (let x = minX + 300; x < maxX - 300; x += STEP) {
+    const px = x + (rnd() - .5) * STEP, pz = z + (rnd() - .5) * STEP;
+    const far = S(-pz, 3000, 10500);
+    if (rnd() > lerp(1, .42, far)) continue;               // fewer, larger puffs far away
+    const C = cloudiness(px, pz);
+    if (C < .34) continue;
+    const corridor = corridorAt(px, pz);
+    if (corridor < .05) continue;
+    const g = groundAt(px, pz), mean = meanAt(px, pz), valley = clamp((mean - g) / 200, -1.5, 1);
+    const wisp = rnd() < .42;
+    // Wisps up on high ground may come closer to a river: from above they hang over the walls, not the water.
+    const high = wisp ? S(g, 220, 520) : 0;
+    const clear = riverClear(px, pz, lerp(240, 90, high), lerp(620, 280, high)) * corridor;
+    if (clear < .05) continue;
+    const centre = centreClear(px, pz);
+    if (wisp) {
+      // Mid-slopes: neither the glen floor nor the crest.
+      const slope = 1 - Math.min(1, Math.abs(valley + .15) / .9);
+      const p = clear * centre * S(slope + (C - .34) * 1.5, .25, .9);
+      if (rnd() > p) continue;
+      const radius = lerp(160, 520, far) * (.55 + rnd() * .55);
+      // Some float well above the slope (veils across the face, seen from the rise as well as from above).
+      kinds[1].push({ x: px, y: g + radius * (.3 + rnd() * rnd() * 1.6), z: pz, r: radius, rank: rnd() * .6 + (1 - p) * .4 - midBonus(pz), flat: 2.8 + rnd() * 1.8,
+        tone: clamp(.55 + rnd() * .3, 0, 1), seed: rnd() * 100 });
+    } else {
+      const score = (C - .34) * 2.6 + valley * .6 + .1;
+      const p = clear * lerp(.35, 1, centre) * S(score, .05, .55);
+      if (rnd() > p) continue;
+      const radius = lerp(175, 640, far) * (.6 + rnd() * .9);
+      const y = g + radius * (.06 + rnd() * .3) + Math.max(0, valley) * 40;
+      kinds[0].push({ x: px, y, z: pz, r: radius, rank: rnd() * .55 + (1 - p) * .45 - midBonus(pz), flat: 1.35 + far * .7 + rnd() * .5,
+        tone: clamp(.35 + (y - Math.min(g, mean)) / (radius * 2.6) + rnd() * .2, 0, 1), seed: rnd() * 100 });
+    }
+  }
+  // Cloud sea: far off, a level top that rises a little with distance; only where the ground lies below it.
+  const SEA_STEP = STEP * 2.3;
+  for (let z = -6400; z > minZ + 200; z -= SEA_STEP) for (let x = minX - 400; x < maxX + 400; x += SEA_STEP) {
+    const px = x + (rnd() - .5) * SEA_STEP, pz = z + (rnd() - .5) * SEA_STEP;
+    const top = lerp(430, 760, S(-pz, 6400, 11500)) + (cloudiness(px, pz) - .5) * 180;
+    const g = groundAt(clamp(px, minX, maxX), pz);
+    if (g > top - 160) continue;
+    if (riverClear(px, pz, 300, 800) < .3) continue;
+    const radius = lerp(520, 980, rnd()) * lerp(.85, 1.2, S(-pz, 6000, 11000));
+    kinds[2].push({ x: px, y: top - radius * (.18 + rnd() * .12), z: pz, r: radius, rank: rnd() * .7 + clamp((g - top + 500) / 500, 0, 1) * .3,
+      flat: 1.7 + rnd() * .8, tone: .55 + rnd() * .35, seed: rnd() * 100 });
+  }
+  // Ridge veils: middle distance, on crests and high shoulders, thin and wide.
+  const VEIL_STEP = STEP * 1.6;
+  for (let z = -2600; z > -8200; z -= VEIL_STEP) for (let x = minX + 600; x < maxX - 600; x += VEIL_STEP) {
+    const px = x + (rnd() - .5) * VEIL_STEP, pz = z + (rnd() - .5) * VEIL_STEP;
+    const g = groundAt(px, pz), mean = meanAt(px, pz), crest = clamp((g - mean) / 220, 0, 1);
+    const radius = 280 + rnd() * 320;
+    const p = crest * centreClear(px, pz) * riverClear(px, pz, 500 + radius, 1100 + radius) * S(cloudiness(px, pz), .3, .6);
+    if (rnd() > p) continue;
+    kinds[3].push({ x: px, y: g + radius * (.05 + rnd() * .35), z: pz, r: radius, rank: rnd() * .6 + (1 - p) * .4, flat: 2.6 + rnd() * 1.4,
+      tone: .7 + rnd() * .3, seed: rnd() * 100 });
+  }
+  const puffs = [], candidates = kinds.map(k => k.length);
+  kinds.forEach((list, kind) => {
+    list.sort((a, b) => a.rank - b.rank);
+    if (list.length > BUDGET[kind]) list.length = BUDGET[kind];
+    // Re-rank uniformly inside the kind, best first, so a dial value is a share of that kind.
+    list.forEach((q, i) => { q.rank = (i + .5) / list.length; q.seed += kind * 1000; puffs.push(q); });
+  });
+  // Soft intersection: a half-float heightmap of the terrain (baked once) lets each cloud fragment fade out as it
+  // nears the ground below it, so a sprite slicing a slope leaves a gradient, not a straight cut.
+  const HS = lite ? 160 : 320, heights = new Uint16Array(HS * HS);
+  for (let j = 0; j < HS; j++) for (let i = 0; i < HS; i++) {
+    heights[j * HS + i] = THREE.DataUtils.toHalfFloat(groundAt(minX + (i + .5) / HS * (maxX - minX), minZ + (j + .5) / HS * (maxZ - minZ)));
+  }
+  const heightMap = new THREE.DataTexture(heights, HS, HS, THREE.RedFormat, THREE.HalfFloatType);
+  heightMap.magFilter = heightMap.minFilter = THREE.LinearFilter; heightMap.wrapS = heightMap.wrapT = THREE.ClampToEdgeWrapping;
+  heightMap.colorSpace = THREE.NoColorSpace; heightMap.needsUpdate = true;
+  const COUNT = puffs.length;
+
+  /* ---------- draw ---------- */
+  const base = new THREE.PlaneGeometry(1, 1), geometry = new THREE.InstancedBufferGeometry();
+  geometry.index = base.index.clone();
+  for (const [name, attribute] of Object.entries(base.attributes)) geometry.setAttribute(name, attribute.clone());
+  base.dispose(); geometry.instanceCount = COUNT;
+  const aPuff = new THREE.InstancedBufferAttribute(new Float32Array(COUNT * 4), 4), aInfo = new THREE.InstancedBufferAttribute(new Float32Array(COUNT * 4), 4);
+  aPuff.setUsage(THREE.DynamicDrawUsage); aInfo.setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute('aPuff', aPuff); geometry.setAttribute('aInfo', aInfo);
+  const writeOrder = order => {
+    for (let k = 0; k < COUNT; k++) {
+      const q = puffs[order[k]], a = aPuff.array, b = aInfo.array, i = k * 4;
+      a[i] = q.x; a[i + 1] = q.y; a[i + 2] = q.z; a[i + 3] = q.r;
+      b[i] = q.seed; b[i + 1] = q.rank; b[i + 2] = q.flat; b[i + 3] = q.tone;
+    }
+    aPuff.needsUpdate = true; aInfo.needsUpdate = true;
+  };
+  const order = Array.from({ length: COUNT }, (_, i) => i), depth = new Float32Array(COUNT);
+  writeOrder(order);
+
+  const sunDir = new THREE.Vector3(-.5, .2, -.8).normalize();
+  const uniforms = {
+    uNoise: { value: noise }, uTime: { value: 0 }, uSunDir: { value: sunDir }, uSunCol: { value: new THREE.Color('#ffdcb8') },
+    uLit: { value: new THREE.Color(ALPINE_LIGHT.cloudLit) }, uShade: { value: new THREE.Color(ALPINE_LIGHT.cloudShade) },
+    uHaze: { value: new THREE.Color('#a7b6c3') }, uFog: { value: .0001 }, uBright: { value: 1 }, uSoft: { value: .55 }, uAmount: { value: 1 },
+    uHeight: { value: heightMap }, uHeightBox: { value: new THREE.Vector4(minX, minZ, maxX - minX, maxZ - minZ) },
+    uAlpha: { value: 0 }, uVert: { value: new THREE.Vector2(0, 0) }, uLift: { value: 0 }, uSeaLift: { value: 0 }, uOpacity: { value: 1 }, uKinds: { value: new THREE.Vector4(.7, .7, .8, .6) }, uRight: { value: new THREE.Vector3(1, 0, 0) }, uUp: { value: new THREE.Vector3(0, 1, 0) }, uBack: { value: new THREE.Vector3(0, 0, 1) }
+  };
+  const material = new THREE.ShaderMaterial({
+    name: 'Alpine valley cloud puffs', uniforms, transparent: true, depthWrite: false, depthTest: true,
+    vertexShader: `attribute vec4 aPuff,aInfo;
+      uniform vec3 uRight,uUp;uniform vec4 uKinds;uniform vec2 uVert;uniform float uTime,uAmount,uLift,uSeaLift,uAlpha;
+      varying vec2 vUv;varying float vSeed,vDepth,vA,vTone,vWisp,vRadius,vKindAlpha;varying vec3 vWorld;
+      void main(){
+        float kind=floor(aInfo.x/1000.);vKindAlpha=kind>1.5&&kind<2.5?.78:1.;
+        vUv=uv;vSeed=aInfo.x-kind*1000.;vTone=aInfo.w;vWisp=smoothstep(2.4,3.2,aInfo.z);vRadius=aPuff.w;
+        float share=kind<.5?uKinds.x:kind<1.5?uKinds.y:kind<2.5?uKinds.z:uKinds.w;
+        vec3 c=aPuff.xyz;c.y+=uLift+(kind>1.5&&kind<2.5?uSeaLift:0.);
+        c.x+=sin(uTime*.021+aInfo.x)*24.+uTime*1.6;c.z+=cos(uTime*.017+aInfo.x*1.3)*16.;
+        float r=aPuff.w;
+        vec3 w=c+uRight*(position.x*r*2.*aInfo.z)+uUp*(position.y*r*2.);
+        vWorld=w;
+        vec4 view=viewMatrix*vec4(w,1.);vDepth=-view.z;
+        gl_Position=projectionMatrix*view;
+        // where they sit on screen: fewer puffs toward the top edge (uVert.x), the rest of the placed puffs toward the bottom edge (uVert.y); 0/0 = as placed
+        float sy=clamp(gl_Position.y/max(gl_Position.w,.001)*.5+.5,0.,1.);
+        float sh=share+uVert.y*(1.-sy)-uVert.x*sy;
+        float on=1.-smoothstep(sh-.03,sh+.03,aInfo.y);
+        vA=on*uAlpha*smoothstep(r*.6,r*2.2,vDepth);
+        if(vA<.002)gl_Position=vec4(2.,2.,2.,1.);
+      }`,
+    fragmentShader: `uniform sampler2D uNoise,uHeight;uniform vec4 uHeightBox;uniform float uTime,uFog,uBright,uSoft,uOpacity;
+      uniform vec3 uHaze,uSunDir,uSunCol,uLit,uShade,uRight,uUp,uBack;
+      varying vec2 vUv;varying float vSeed,vDepth,vA,vTone,vWisp,vRadius,vKindAlpha;varying vec3 vWorld;
+      void main(){
+        vec2 p=vUv*2.-1.;
+        vec2 o=vec2(fract(vSeed*.137),fract(vSeed*.291))+vec2(uTime*.0012,0.);
+        vec4 n=texture2D(uNoise,vUv*vec2(.8,.62)+o);
+        vec4 m=texture2D(uNoise,vUv*2.1+o*1.7+.5);
+        float r2=dot(p,p);
+        float erode=(n.r-.5)*mix(1.,1.45,vWisp)+(m.r-.5)*mix(.45,.7,vWisp);
+        // Erosion scales with the remaining body, so density always reaches zero inside the quad (no cut edges).
+        float body=max(1.-r2,0.);
+        float d=body+erode*1.35*sqrt(body);
+        // A level, darker underside; billows on top.
+        d-=smoothstep(-.3,-.95,p.y+erode*.3)*.16*(1.-vWisp);
+        float soft=(.16+.5*uSoft)*(1.+vWisp*.8);
+        float a=smoothstep(0.,soft,d)*vA;
+        if(a<.004)discard;
+        float ground=texture2D(uHeight,clamp((vWorld.xz-uHeightBox.xy)/uHeightBox.zw,vec2(0.),vec2(1.))).r;
+        a*=smoothstep(0.,18.+vRadius*.38,vWorld.y-ground);
+        if(a<.004)discard;
+        // Sphere-impostor normal, roughened by the billow gradient.
+        vec2 bump=(n.gb-.5)*1.1+(m.gb-.5)*.6;
+        vec3 nv=normalize(vec3(p.x*.9+bump.x*.45,p.y*.9+bump.y*.45+.15,sqrt(max(1.-r2,0.))*.85+.25));
+        vec3 N=normalize(uRight*nv.x+uUp*nv.y+uBack*nv.z);
+        vec3 V=normalize(vWorld-cameraPosition);
+        float ndl=dot(N,uSunDir);
+        float l=clamp(ndl*.85+.4,0.,1.)*mix(.78,1.08,vTone)*mix(.86,1.,clamp(p.y*.5+.6,0.,1.));
+        vec3 col=mix(uShade,uLit*1.06,smoothstep(.02,.9,l));
+        float thin=1.-smoothstep(0.,soft*2.2,d);
+        // Thin parts let the sun through (transmission), strongest looking toward it (silver lining).
+        col+=uSunCol*thin*(.1+.12*vWisp);
+        col+=uSunCol*pow(max(dot(V,uSunDir),0.),5.)*thin*.7;
+        col+=uSunCol*.05*max(ndl,0.);
+        col*=.94+.12*m.a;
+        float fogAmt=1.-exp(-uFog*uFog*vDepth*vDepth);
+        // Clouds hold their own against the distance haze (bright, sunlit) instead of dissolving into it.
+        col=mix(col,uHaze,clamp(fogAmt*.6,0.,.62));
+        a*=1.-.35*fogAmt;
+        gl_FragColor=vec4(col*uBright,clamp(a*mix(.6,.34,vWisp)*vKindAlpha*uOpacity,0.,1.));
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = 'Valley cloud puffs'; mesh.frustumCulled = false; mesh.renderOrder = 23; group.add(mesh);
+  const camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastPos = new THREE.Vector3(1e9, 0, 0), lastDir = new THREE.Vector3();
+  mesh.onBeforeRender = (_, scene, camera) => {
+    uniforms.uRight.value.setFromMatrixColumn(camera.matrixWorld, 0); uniforms.uUp.value.setFromMatrixColumn(camera.matrixWorld, 1);
+    uniforms.uBack.value.setFromMatrixColumn(camera.matrixWorld, 2);
+    if (scene.fog) { uniforms.uHaze.value.copy(scene.fog.color); uniforms.uFog.value = scene.fog.density; }
+    // Back-to-front, re-sorted only after the camera has really moved.
+    camPos.setFromMatrixPosition(camera.matrixWorld); camDir.copy(uniforms.uBack.value).negate();
+    if (uniforms.uAlpha.value > .002 && (camPos.distanceToSquared(lastPos) > 400 || camDir.dot(lastDir) < .9995)) {
+      lastPos.copy(camPos); lastDir.copy(camDir);
+      for (let i = 0; i < COUNT; i++) { const q = puffs[i]; depth[i] = (q.x - camPos.x) * camDir.x + (q.y - camPos.y) * camDir.y + (q.z - camPos.z) * camDir.z; }
+      order.sort((a, b) => depth[b] - depth[a]);
+      writeOrder(order);
+    }
+  };
+
+  let disposed = false, clock = 0, lastTime = null, linkedSun = false;
+  return {
+    group, uniforms, noise, sunDirection: sunDir,
+    stats: { puffs: COUNT, kinds: kinds.map(k => k.length), candidates, density: DENSITY, drawCalls: 1, externalAssets: 0 },
+    floorMap, floorBox,
+    /* The atmosphere owns the (canyon -> aerial blended) sun; share its vector so clouds and terrain agree. */
+    linkSun(v) { if (v?.isVector3) { uniforms.uSunDir.value = v; linkedSun = true; } },
+    /* reveal: the aerial rise 0..1; time: seconds; camera: the canyon camera. */
+    update(reveal = 0, time = 0, reduced = false, camera = null) {
+      if (disposed) return;
+      const L = ALPINE_LIGHT, num = (v, d) => (Number.isFinite(+v) ? +v : d);
+      if (!linkedSun) {
+        const az = THREE.MathUtils.degToRad(num(L.sunAzimuth, -34)), el = THREE.MathUtils.degToRad(num(L.sunElevation, 11));
+        sunDir.set(Math.cos(el) * Math.sin(az), Math.sin(el), -Math.cos(el) * Math.cos(az));
+      }
+      try { uniforms.uSunCol.value.set(L.sunColor || '#ffdcb8'); uniforms.uLit.value.set(L.cloudLit || '#fff0e0'); uniforms.uShade.value.set(L.cloudShade || '#7487a6'); } catch { /* bad colour string from the tuner */ }
+      uniforms.uBright.value = num(L.brightness, 1);
+      uniforms.uSoft.value = clamp(num(L.cloudSoftness, .55), 0, 2);
+      const amount = clamp(num(L.cloudAmount, 1), 0, 3);
+      uniforms.uAmount.value = amount;
+      // Share of each kind shown: overall x kind x 0.7 (1 / 1 shows 70 % of the placed puffs; ~1.43 shows them all).
+      const share = key => clamp(amount * clamp(num(L[key], 1), 0, 3) * .7, 0, 1.05);
+      uniforms.uKinds.value.set(share('valleyClouds'), share('wispClouds'), share('cloudSea'), share('ridgeVeil'));
+      uniforms.uLift.value = num(L.cloudHeight, 230) - 230;
+      uniforms.uVert.value.set(clamp(num(L.cloudTopCut, 0), 0, 1), clamp(num(L.cloudLowAdd, 0), 0, 1));
+      uniforms.uSeaLift.value = num(L.cloudSeaHeight, 0);
+      uniforms.uOpacity.value = clamp(num(L.cloudOpacity, 1), 0, 2);
+      // Drift is its own clock, so the speed dial never jumps the clouds; reduced motion holds them still.
+      const dt = lastTime === null ? 0 : clamp(time - lastTime, 0, .1); lastTime = time;
+      if (!reduced) clock += dt * num(L.cloudDrift, 1);
+      uniforms.uTime.value = clock;
+      // In from the rise: the canyon floor keeps a clear sky line.
+      const camY = camera ? camera.position.y : 1000;
+      uniforms.uAlpha.value = S(reveal, .04, .28) * S(camY, 25, 140) * Math.min(1, amount * 4);
+    },
+    dispose() { if (disposed) return; disposed = true; group.removeFromParent(); geometry.dispose(); material.dispose(); heightMap.dispose(); floorMap.dispose(); releaseAlpineCloudNoise(); group.clear(); }
+  };
+}

@@ -1,0 +1,54 @@
+{
+  "generated": "2026-10-22T02:29:11.831Z",
+  "textures": [
+    {
+      "id": "cliff_side",
+      "type": "color",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/cliff_side/cliff_side_diff_2k.jpg",
+      "license": "CC0",
+      "md5": "6d129836144e271b30071281241e237d"
+    },
+    {
+      "id": "cliff_side",
+      "type": "normal",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/cliff_side/cliff_side_nor_gl_2k.jpg",
+      "license": "CC0",
+      "md5": "8209033c3ad15185977d91c92cf5866f"
+    },
+    {
+      "id": "cliff_side",
+      "type": "roughness",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/cliff_side/cliff_side_rough_2k.jpg",
+      "license": "CC0",
+      "md5": "44abb195b6c4c7b6da902e97e5bbbef2"
+    },
+    {
+      "id": "aerial_grass_rock",
+      "type": "color",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/aerial_grass_rock/aerial_grass_rock_diff_2k.jpg",
+      "license": "CC0",
+      "md5": "024018554c0002620127749d1f585f3d"
+    },
+    {
+      "id": "aerial_grass_rock",
+      "type": "normal",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/aerial_grass_rock/aerial_grass_rock_nor_gl_2k.jpg",
+      "license": "CC0",
+      "md5": "0c5423ce365169df7c242933b5137696"
+    },
+    {
+      "id": "aerial_grass_rock",
+      "type": "roughness",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/aerial_grass_rock/aerial_grass_rock_rough_2k.jpg",
+      "license": "CC0",
+      "md5": "8d181000237d420a73f99dfc260dab17"
+    }
+  ],
+  "terrain": {
+    "source": "https://sketchfab.com/3d-models/snowy-mountain-v2-terrain-4c70cd82edd44951b7af6c144545df34",
+    "author": "artfromheath",
+    "license": "CC-BY-4.0",
+    "samples": 263169,
+    "missing": 0
+  }
+}

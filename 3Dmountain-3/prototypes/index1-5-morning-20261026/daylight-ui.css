@@ -1,0 +1,99 @@
+/* index1-5 · one sun, one material language. Kept local to this prototype.
+   The scene clock is narrative time; the existing Taipei clock remains real time.
+   Daylight values come from scene-daylight.js. No full-page colour filter is used. */
+html[data-look="index1-5"] {
+  --daylight-white: #f0f0e9;
+  --daylight-muted: #bfced9;
+  --daylight-gold: #e6c794;
+  --daylight-glass: var(--scene-glass, #132a3dc2);
+}
+html[data-look="index1-5"] .alp-scene-clock { display: none; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .alp-scene-clock {
+  position: fixed; right: clamp(22px, 3.3vw, 50px); top: 110px; z-index: 10;
+  display: flex; align-items: center; gap: 11px; min-width: 144px;
+  padding: 10px 14px 10px 11px; box-sizing: border-box;
+  border: 1px solid #e3edf32b; border-radius: 8px;
+  background: linear-gradient(135deg, #29425666, var(--daylight-glass));
+  color: var(--daylight-white); pointer-events: none;
+  -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 8px 28px #05111d26, inset 0 1px 0 #ffffff12;
+  font-family: var(--alp-mono, ui-monospace, Consolas, monospace);
+}
+html[data-look="index1-5"] body.is-ready .alp-scene-clock[hidden] { display: none; }
+html[data-look="index1-5"] .alp-scene-clock svg { width: 44px; height: 28px; overflow: visible; }
+html[data-look="index1-5"] .alp-scene-clock path { fill: none; stroke: #e1e8ec44; stroke-width: .65; }
+html[data-look="index1-5"] .alp-scene-clock circle { fill: var(--daylight-gold); filter: drop-shadow(0 0 3px #e6c79488); }
+html[data-look="index1-5"] .alp-scene-clock-copy { display: grid; grid-template-columns: auto auto; gap: 3px 8px; align-items: baseline; }
+html[data-look="index1-5"] .alp-scene-caption { grid-column: 1 / -1; color: #d8e3e7b3; font-size: 7px; line-height: 1.2; letter-spacing: .18em; }
+html[data-look="index1-5"] .alp-scene-clock strong { font-size: 17px; line-height: 1.2; font-weight: 400; font-variant-numeric: tabular-nums; }
+html[data-look="index1-5"] .alp-scene-period { color: var(--daylight-gold); font-size: 7px; line-height: 1.2; letter-spacing: .08em; }
+html[data-look="index1-5"] .alp-scene-clock[data-period="night"] circle,
+html[data-look="index1-5"] .alp-scene-clock[data-period="blue-hour"] circle { fill: #bad1e6; filter: drop-shadow(0 0 3px #bad1e666); }
+html[data-look="index1-5"][data-tuning="true"] body:has(#tuner:not(.is-folded)) .alp-scene-clock { right: 360px; }
+html[data-look="index1-5"] body:has(.fi-menu.is-open) .alp-scene-clock { opacity: 0; }
+
+/* The same restrained glass surfaces over dawn, snow and blue-hour sea. */
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .alp-stats {
+  background: linear-gradient(135deg, #29425666, var(--daylight-glass));
+  border-color: #e3edf32b; box-shadow: 0 12px 36px #05111d30, inset 0 1px 0 #ffffff12;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu {
+  background: linear-gradient(135deg, #253b50e8, #101e30f2);
+  border-color: #cbdce833; box-shadow: 0 24px 90px #020a1859, inset 0 1px 0 #ffffff12;
+  -webkit-backdrop-filter: blur(22px) saturate(1.1); backdrop-filter: blur(22px) saturate(1.1);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-top { background: #13293b99; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld :is(.fiwo-pill, .fiwo-strategy .fiwo-pill) {
+  background: linear-gradient(135deg, #e3edf314, #1026386b);
+  border-color: #d5e3ed52; box-shadow: inset 0 1px 0 #ffffff12, 0 8px 24px #04111d1f;
+  -webkit-backdrop-filter: blur(12px) saturate(1.1); backdrop-filter: blur(12px) saturate(1.1);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiwo-pill:is(:hover, :focus-visible) {
+  color: #f7f4ec; background: #d9e8ed24; border-color: var(--daylight-gold);
+}
+/* Photograph colour stays recognisable; only excess saturation is brought into the surrounding rock/sea palette. */
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiwo-photo img {
+  filter: saturate(.88) contrast(.97);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiwo-photo {
+  border-color: #d2dfe92b; box-shadow: 0 18px 60px #03111e30, inset 0 0 0 1px #eff4f60d;
+}
+
+/* Carry the last sea's blue-hour air into the footer instead of cutting to white. */
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer {
+  --fiw-navy: #e9edf0; --fiw-soft: #bfced9;
+  isolation: isolate; color: #e9edf0;
+  background: linear-gradient(180deg, #173044 0%, #102638 40%, #0b1b2d 100%);
+  box-shadow: 0 -1px 0 #afc7d31a;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer::before {
+  content: ''; position: absolute; z-index: -1; left: 0; right: 0; height: 150px; top: -149px;
+  background: linear-gradient(180deg, #17304400, #173044); pointer-events: none;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer :is(.fiw-menu button, .fiw-menu a, .fiw-office h3, .fiw-contact span, .fiw-sign, .fiw-legalline, .fiw-top) { color: #e9edf0; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer :is(.fiw-office p, .fiw-office h3 small, .fiw-sign span, .fiw-legal button, .fiw-legal a, .fiw-legalline a) { color: #b3c6d4; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer .fiw-todo { color: #e6c794 !important; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer-line { background: #d2e2eb29; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-top i { border-color: #c7dce542; background: #d7e5ec0a; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-top:hover i { background: #d7e5ec1f; color: #f2d6a5; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer :is(a, button):hover { color: #f2d6a5; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer :is(a, button):focus-visible { outline: 1px solid var(--daylight-gold); outline-offset: 5px; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld.is-light .fiw-chapters { color: #dce7ee; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready.is-world .finnovation-ui .fi-header,
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready.is-world .finnovation-ui .fi-header :is(.fi-topnav button, .fi-topnav a, nav button, nav a) {
+  --ui-ink: #f0f0e9; --ui-muted: #bfced9; color: #f0f0e9; text-shadow: 0 1px 12px #020a1880;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-world #fiWorld.is-light ~ .finnovation-ui .fi-footer button.fi-sound { color: #f0f0e9 !important; text-shadow: 0 1px 12px #020a1880 !important; }
+
+@media (max-width: 680px) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .alp-scene-clock { top: 137px; right: 18px; min-width: 0; padding: 7px 10px; gap: 8px; }
+  html[data-look="index1-5"] .alp-scene-clock svg { width: 32px; height: 23px; }
+  html[data-look="index1-5"] .alp-scene-clock strong { font-size: 14px; }
+  html[data-look="index1-5"] .alp-scene-caption { font-size: 6px; letter-spacing: .12em; }
+  html[data-look="index1-5"] .alp-scene-period { font-size: 6px; }
+  html[data-look="index1-5"][data-tuning="true"] body:has(#tuner:not(.is-folded)) .alp-scene-clock { display: none; }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-world .alp-scene-clock { top: 86px; }
+}
+@media (max-height: 600px) and (min-width: 681px) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .alp-scene-clock { top: 84px; padding: 6px 10px; }
+}

@@ -1,0 +1,326 @@
+{
+ "generated": "2026-10-10T00:46:36.354Z",
+ "mode": "apply",
+ "src": "G:/我的雲端硬碟/2026_專案資料夾/2607_恒灝/site/3Dmountain-3",
+ "moves": [
+  {
+   "from": "finnovation-cursor.js",
+   "to": "js/finnovation-cursor.js"
+  },
+  {
+   "from": "finnovation-interface.js",
+   "to": "js/finnovation-interface.js"
+  },
+  {
+   "from": "water-canyon-watershed-463.js",
+   "to": "js/water-canyon-watershed-463.js"
+  },
+  {
+   "from": "water-confluence-fx-463.js",
+   "to": "js/water-confluence-fx-463.js"
+  },
+  {
+   "from": "water-forward-transition.js",
+   "to": "js/water-forward-transition.js"
+  },
+  {
+   "from": "water-journey-river.js",
+   "to": "js/water-journey-river.js"
+  },
+  {
+   "from": "water-journey-scene-463.js",
+   "to": "js/water-journey-scene-463.js"
+  },
+  {
+   "from": "water-journey-story.js",
+   "to": "js/water-journey-story.js"
+  },
+  {
+   "from": "water-logo-cards.js",
+   "to": "js/water-logo-cards.js",
+   "edited": true
+  },
+  {
+   "from": "water-logo-drops.js",
+   "to": "js/water-logo-drops.js",
+   "edited": true
+  },
+  {
+   "from": "water-logo-geometry.js",
+   "to": "js/water-logo-geometry.js"
+  },
+  {
+   "from": "water-logo-geometry-client.js",
+   "to": "js/water-logo-geometry-client.js"
+  },
+  {
+   "from": "water-logo-geometry-worker.js",
+   "to": "js/water-logo-geometry-worker.js"
+  },
+  {
+   "from": "water-logo-geometry-worker.bundle.js",
+   "to": "js/water-logo-geometry-worker.bundle.js"
+  },
+  {
+   "from": "water-logo-reference-glass.js",
+   "to": "js/water-logo-reference-glass.js"
+  },
+  {
+   "from": "finnovation-readable.css",
+   "to": "css/readable.css"
+  },
+  {
+   "from": "logo.svg",
+   "to": "images/logo.svg"
+  },
+  {
+   "from": "text_logo2.svg",
+   "to": "images/text_logo2.svg"
+  },
+  {
+   "from": "text_logo3.svg",
+   "to": "images/text_logo3.svg"
+  },
+  {
+   "from": "slide-assets",
+   "to": "images/slides"
+  },
+  {
+   "from": "logo.mp4",
+   "to": "media/logo.mp4"
+  },
+  {
+   "from": "drop_of_water",
+   "to": "models/drop_of_water"
+  },
+  {
+   "from": "index4-6-3-optimization-report.md",
+   "to": "docs/optimization-report-2026-10-01.md"
+  },
+  {
+   "from": "1010_bk",
+   "to": "_archive/backups/1010_bk"
+  },
+  {
+   "from": "backups",
+   "to": "_archive/backups/backups"
+  },
+  {
+   "from": "arcade-main",
+   "to": "_archive/demos/arcade-main"
+  },
+  {
+   "from": "arcade-main.zip",
+   "to": "_archive/demos/arcade-main.zip"
+  },
+  {
+   "from": "interactive-droplets-main",
+   "to": "_archive/demos/interactive-droplets-main"
+  },
+  {
+   "from": "interactive-droplets-main.zip",
+   "to": "_archive/demos/interactive-droplets-main.zip"
+  },
+  {
+   "from": "3_mountain",
+   "to": "_archive/models/3_mountain"
+  },
+  {
+   "from": "snowy_mountain_v2_-_terrain",
+   "to": "_archive/models/snowy_mountain_v2_-_terrain"
+  },
+  {
+   "from": "earth",
+   "to": "_archive/models/earth"
+  },
+  {
+   "from": "earth_B",
+   "to": "_archive/models/earth_B"
+  },
+  {
+   "from": "orb_morb",
+   "to": "_archive/models/orb_morb"
+  },
+  {
+   "from": "boeing_747-100",
+   "to": "_archive/models/boeing_747-100"
+  },
+  {
+   "from": "cargo_ship_runtime",
+   "to": "_archive/models/cargo_ship_runtime"
+  },
+  {
+   "from": "water_droplet",
+   "to": "_archive/models/water_droplet"
+  },
+  {
+   "from": "water_orb",
+   "to": "_archive/models/water_orb"
+  },
+  {
+   "from": "river_water_runtime",
+   "to": "_archive/models/river_water_runtime"
+  },
+  {
+   "from": "xx",
+   "to": "_archive/misc/xx"
+  },
+  {
+   "from": "dist-expanded-backup",
+   "to": "_archive/misc/dist-expanded-backup"
+  },
+  {
+   "from": "logo.gltf",
+   "to": "_archive/misc/logo.gltf"
+  },
+  {
+   "from": "text_logo.svg",
+   "to": "_archive/misc/text_logo.svg"
+  },
+  {
+   "from": "images/river.mp4",
+   "to": "_archive/misc/river.mp4"
+  },
+  {
+   "from": "images/river2.mp4",
+   "to": "_archive/misc/river2.mp4"
+  },
+  {
+   "from": "slider.js",
+   "to": "_archive/legacy-js/slider.js"
+  },
+  {
+   "from": "water-hero.js",
+   "to": "_archive/legacy-js/water-hero.js"
+  },
+  {
+   "from": "slide.js",
+   "to": "_archive/legacy-js/slide.js"
+  },
+  {
+   "from": "water-droplet.js",
+   "to": "_archive/legacy-js/water-droplet.js"
+  },
+  {
+   "from": "water-journey-scene.js",
+   "to": "_archive/legacy-js/water-journey-scene.js"
+  },
+  {
+   "from": "water-journey-aerial.js",
+   "to": "_archive/legacy-js/water-journey-aerial.js"
+  },
+  {
+   "from": "water-journey-score.js",
+   "to": "_archive/legacy-js/water-journey-score.js"
+  },
+  {
+   "from": "water-journey-flow.js",
+   "to": "_archive/legacy-js/water-journey-flow.js"
+  },
+  {
+   "from": "water-confluence-material.js",
+   "to": "_archive/legacy-js/water-confluence-material.js"
+  },
+  {
+   "from": "water-logo-formation.js",
+   "to": "_archive/legacy-js/water-logo-formation.js"
+  },
+  {
+   "from": "water-confluence-scene.js",
+   "to": "_archive/legacy-js/water-confluence-scene.js"
+  },
+  {
+   "from": "water-five-river-landscape.js",
+   "to": "_archive/legacy-js/water-five-river-landscape.js"
+  },
+  {
+   "from": "water-five-river-scene.js",
+   "to": "_archive/legacy-js/water-five-river-scene.js"
+  },
+  {
+   "from": "water-canyon-watershed.js",
+   "to": "_archive/legacy-js/water-canyon-watershed.js"
+  },
+  {
+   "from": "water-mountain-asset.js",
+   "to": "_archive/legacy-js/water-mountain-asset.js"
+  },
+  {
+   "from": "water-confluence-fx.js",
+   "to": "_archive/legacy-js/water-confluence-fx.js"
+  },
+  {
+   "from": "index6-logo.js",
+   "to": "_archive/legacy-js/index6-logo.js"
+  },
+  {
+   "from": "index6-scene.js",
+   "to": "_archive/legacy-js/index6-scene.js"
+  },
+  {
+   "from": "index6-motion.js",
+   "to": "_archive/legacy-js/index6-motion.js"
+  },
+  {
+   "from": "water-logo-particle-helix.js",
+   "to": "_archive/legacy-js/water-logo-particle-helix.js"
+  },
+  {
+   "from": "water-logo-rise.js",
+   "to": "_archive/legacy-js/water-logo-rise.js"
+  }
+ ],
+ "writes": [
+  "index.html",
+  "css/base.css",
+  "css/journey-story.css",
+  "css/interface.css",
+  "css/glass-refinement.css",
+  "js/main.js",
+  "index2.html",
+  "js/water-logo-cards.js",
+  "js/water-logo-drops.js",
+  "scripts/seo/build-static-interface.mjs",
+  "scripts/seo/check-seo.mjs",
+  "scripts/build-logo-worker.cjs",
+  "scripts/seo/README.md"
+ ],
+ "backups": [
+  {
+   "from": "index.html",
+   "to": "_archive/pre-restructure/index.html"
+  },
+  {
+   "from": "index2.html",
+   "to": "_archive/pre-restructure/index2.html"
+  },
+  {
+   "from": "water-logo-cards.js",
+   "to": "_archive/pre-restructure/water-logo-cards.js"
+  },
+  {
+   "from": "water-logo-drops.js",
+   "to": "_archive/pre-restructure/water-logo-drops.js"
+  },
+  {
+   "from": "scripts/seo/build-static-interface.mjs",
+   "to": "_archive/pre-restructure/scripts/seo/build-static-interface.mjs"
+  },
+  {
+   "from": "scripts/seo/check-seo.mjs",
+   "to": "_archive/pre-restructure/scripts/seo/check-seo.mjs"
+  },
+  {
+   "from": "scripts/build-logo-worker.cjs",
+   "to": "_archive/pre-restructure/scripts/build-logo-worker.cjs"
+  },
+  {
+   "from": "scripts/seo/README.md",
+   "to": "_archive/pre-restructure/scripts/seo/README.md"
+  }
+ ],
+ "notes": [
+  "index2.html: paths only (inline CSS/JS kept)"
+ ],
+ "indexHtmlSha256": "65f371976b80"
+}

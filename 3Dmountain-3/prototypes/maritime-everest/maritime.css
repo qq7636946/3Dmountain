@@ -1,0 +1,194 @@
+/* Maritime test look (prototypes/maritime-landscape, 2026-10-20).
+   Page-level colour only, keyed on html[data-look="maritime"], which the copied main.js sets
+   (?look=original removes it, and with it every rule below). Layout, motion and markup are
+   untouched. body.mar-land is set while the canyon or the aerial is on screen. */
+
+/* The scene's soft-light vignette: neutral at the edge instead of blue. */
+html[data-look="maritime"] .wash {
+  background:
+    radial-gradient(68% 38% at 50% 54%, rgba(255, 246, 232, .08), transparent 58%),
+    radial-gradient(120% 90% at 50% 44%, transparent 58%, rgba(52, 58, 64, .18) 100%);
+}
+
+/* The milky veil. Over the banner a light lift stays, since the copy sits on a pale overcast
+   horizon there. Over land and water it becomes a soft navy shade: the sea stays dark, as in
+   the reference, and white type stays legible. */
+html[data-look="maritime"] .fi-veil {
+  background: linear-gradient(180deg, #eef0ea26, transparent 24%, transparent 52%, #e9ebe633 74%, #e6e8e352);
+}
+
+html[data-look="maritime"] body.mar-land .fi-veil {
+  background: linear-gradient(180deg, #10192414, transparent 22%, transparent 50%, #0c182630 72%, #0a15216b);
+}
+
+/* Over land and water the type turns white, as Mont-Fort sets it, and the glass goes smoky. */
+html[data-look="maritime"] body.mar-land .finnovation-ui {
+  --ui-ink: #f3f5f6;
+  --ui-muted: #d9dfe4;
+  --ui-line: #ffffff30;
+  --ui-panel: #ffffff10;
+  --uig-fill-1: #5a646e4d;
+  --uig-fill-2: #2c353e47;
+  --uig-fill-3: #10171e57;
+  --uig-hover-1: #6a747e66;
+  --uig-hover-2: #39434c5c;
+  --uig-hover-3: #1a222a66;
+  --uig-foot-1: #3a444e40;
+  --uig-foot-2: #1f282f5c;
+  --uig-menu-1: #2b343de6;
+  --uig-menu-2: #1b232bd9;
+  --uig-hi-copy: #ffffff42;
+  --uig-hi-head: #ffffff33;
+  --uig-rim-1: #ffffff59;
+  --uig-rim-2: #ffffff26;
+  --uig-rim-3: #00000040;
+  --uig-rim-4: #ffffff40;
+  --uig-sh-copy: #0000002e;
+  --uig-sh-head: #00000024;
+  --uig-sh-foot: #00000024;
+  --uig-bd-foot: #ffffff2e;
+  --uig-bd-div: #ffffff1f;
+}
+
+html[data-look="maritime"] body.mar-land .fi-copy,
+html[data-look="maritime"] body.mar-land .fi-header,
+html[data-look="maritime"] body.mar-land .fi-rail,
+html[data-look="maritime"] body.mar-land .fi-footer {
+  text-shadow: 0 1px 14px #08121c66;
+}
+
+html[data-look="maritime"] body.mar-land .fi-copy-action>span,
+html[data-look="maritime"] body.mar-land .fi-copy-action:hover>span {
+  text-shadow: 0 1px 8px #08121c59;
+}
+
+html[data-look="maritime"] body.mar-land.is-watershed .fi-copy-action>span {
+  background: #1f282f40;
+}
+
+html[data-look="maritime"] body.mar-land.is-watershed .fi-copy-action:hover>span,
+html[data-look="maritime"] body.mar-land .fi-copy-action:hover>span {
+  background: #39434c66;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   COBALT (colour pass, 2026-10-20) — html[data-palette="cobalt"], the default; ?look=overcast
+   returns the grey maritime palette above, ?look=original the old page. Blue carries the frame;
+   one warm accent (sand-ochre, the colour of the sunlit rock) marks the kicker, the active
+   chapter and the progress line. White type everywhere, smoky navy glass.
+   --------------------------------------------------------------------------------------------- */
+html[data-look="maritime"][data-palette="cobalt"] body {
+  background: linear-gradient(180deg, #0c1d58 0%, #2c4a9e 58%, #0b2a6e 100%);
+}
+
+html[data-look="maritime"][data-palette="cobalt"] .loader { background: #0b1c52; }
+html[data-look="maritime"][data-palette="cobalt"] .loader-logo { color: #eef3ff; }
+html[data-look="maritime"][data-palette="cobalt"] .loader-line { background: #ffffff24; }
+html[data-look="maritime"][data-palette="cobalt"] .loader-line i { background: #e6b877; }
+html[data-look="maritime"][data-palette="cobalt"] .loader-note { color: #b9c8e6; }
+
+html[data-look="maritime"][data-palette="cobalt"] .wash {
+  background:
+    radial-gradient(60% 34% at 50% 52%, rgba(206, 222, 255, .06), transparent 60%),
+    radial-gradient(120% 90% at 50% 44%, transparent 55%, rgba(4, 10, 40, .30) 100%);
+}
+
+html[data-look="maritime"][data-palette="cobalt"] body:not(.mar-land) .fi-veil {
+  background: linear-gradient(180deg, #0a163a40, transparent 26%, transparent 56%, #06123366 82%, #040c26a0);
+}
+
+html[data-look="maritime"][data-palette="cobalt"] body .finnovation-ui {
+  --ui-ink: #f3f6fb;
+  --ui-muted: #c9d6ee;
+  --ui-line: #ffffff30;
+  --ui-panel: #ffffff10;
+  --ui-accent: #e6b877;
+  --uig-fill-1: #4a64b04d;
+  --uig-fill-2: #1d317447;
+  --uig-fill-3: #0a184257;
+  --uig-hover-1: #5a76c266;
+  --uig-hover-2: #2a40885c;
+  --uig-hover-3: #12225466;
+  --uig-foot-1: #2a3f8440;
+  --uig-foot-2: #13235a5c;
+  --uig-menu-1: #1a2c66e6;
+  --uig-menu-2: #0e1c4cd9;
+  --uig-hi-copy: #ffffff42;
+  --uig-hi-head: #ffffff33;
+  --uig-rim-1: #ffffff59;
+  --uig-rim-2: #ffffff26;
+  --uig-rim-3: #00000040;
+  --uig-rim-4: #ffffff40;
+  --uig-sh-copy: #0000002e;
+  --uig-sh-head: #00000024;
+  --uig-sh-foot: #00000024;
+  --uig-bd-foot: #ffffff2e;
+  --uig-bd-div: #ffffff1f;
+}
+
+html[data-look="maritime"][data-palette="cobalt"] body .fi-copy,
+html[data-look="maritime"][data-palette="cobalt"] body .fi-header,
+html[data-look="maritime"][data-palette="cobalt"] body .fi-rail,
+html[data-look="maritime"][data-palette="cobalt"] body .fi-footer {
+  text-shadow: 0 1px 14px #050d2e66;
+}
+
+html[data-look="maritime"][data-palette="cobalt"] body .fi-copy-action>span {
+  background: #1d317440;
+  text-shadow: 0 1px 8px #050d2e59;
+}
+
+html[data-look="maritime"][data-palette="cobalt"] body .fi-copy-action:hover>span {
+  background: #2a408866;
+}
+
+/* The one warm accent. */
+html[data-look="maritime"][data-palette="cobalt"] body .fi-copy-kicker { color: var(--ui-accent); }
+html[data-look="maritime"][data-palette="cobalt"] body .fi-rail button[aria-current="step"]::before { background: var(--ui-accent); }
+html[data-look="maritime"][data-palette="cobalt"] body .fi-footer-progress i { background: var(--ui-accent); }
+
+/* Footer bar (2026-10-21): no glass box, only the type floats over the scene. */
+body .finnovation-ui .fi-footer {
+  clip-path: none;
+  background: none;
+  border-top: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+body .finnovation-ui .fi-footer .fi-sound,
+body .finnovation-ui .fi-footer .fi-footer-next {
+  border: 0 !important;
+}
+
+body .finnovation-ui .fi-footer button,
+body .finnovation-ui .fi-footer button:hover {
+  background: none;
+}
+
+body .finnovation-ui .fi-footer button:hover { opacity: .7; }
+
+/* Highland: silver water needs dark editorial type in the low river chapter.
+   Return to white over the green land in the aerial chapter; no layout changes. */
+html[data-look="maritime"][data-terrain-mood="highland"] body .finnovation-ui {
+  --ui-accent: #d5d4a8;
+  --uig-fill-1: #60736b70;
+  --uig-fill-2: #324b4766;
+  --uig-fill-3: #193b3c70;
+}
+html[data-terrain-mood="highland"] body.mar-land:not(.is-watershed) .fi-copy {
+  color: #18383b;
+  --ui-ink: #18383b;
+  --ui-muted: #29464a;
+  text-shadow: 0 1px 14px #f2f7ed66;
+}
+html[data-terrain-mood="highland"] body.mar-land:not(.is-watershed) .fi-copy-kicker {
+  color: #405943;
+}
+html[data-look="maritime"][data-terrain-mood="highland"] body .fi-copy-action>span {
+  background: #183d42b8;
+  color: #f3f7ef;
+  text-shadow: none;
+}
+html[data-look="maritime"][data-terrain-mood="highland"] body .fi-copy-action:hover>span { background: #244e4ee0; }

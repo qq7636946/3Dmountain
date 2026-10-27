@@ -1,0 +1,8 @@
+.qa/index1-5/portal-cut-old/p-4.735.jpg
+  vs .qa/index1-5/portal-cut-old/p-4.745.jpg
+  size 1440x900
+    -0.6  -0.9   0.9  -0.3  -0.4  -0.6
+    -0.5   0.2   0.6  -0.4  -0.9  -0.6
+   -11.5  -7.4  -1.5  -0.6   2.1  -8.0
+     4.0  12.1  15.1  16.3  19.0  20.9
+  whole ΔL*  2.4   max|ΔL*| over grid 20.9   mean|ΔL*| per pixel 7.30

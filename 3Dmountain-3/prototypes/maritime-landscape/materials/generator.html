@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Maritime 材質產生器</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #101316; color: #d6dbe0; font: 13px/1.5 "Segoe UI", "Noto Sans TC", sans-serif; padding: 16px; }
+  h1 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  p { margin: 0 0 12px; color: #9aa4ad; max-width: 860px; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+  button, select { background: #1d2328; color: #e6eaee; border: 1px solid #33404a; border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  button:hover { background: #26303a; }
+  #status { color: #9aa4ad; }
+  h2 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  figure { margin: 0; }
+  figure img { width: 100%; aspect-ratio: 1; display: block; border-radius: 4px; background: #000; }
+  figcaption { color: #9aa4ad; margin-top: 3px; }
+  a { color: #9ccfff; }
+</style>
+</head>
+<body>
+<h1>Maritime 材質產生器</h1>
+<p>程序化、可無縫重複的 PBR 材質。每一組都從同一個真實高度場推導：Base color（sRGB）、Normal（OpenGL 慣例，+Y 向上）、ORM（R＝AO、G＝粗糙度、B＝金屬度 0）、Height（線性）。GPU 以 2× 超取樣產生，沒有使用任何外部圖片或掃描素材。</p>
+<div class="bar">
+  <label>尺寸 <select id="size"><option>512</option><option selected>1024</option><option>2048</option></select></label>
+  <span id="buttons"></span>
+  <span id="status"></span>
+</div>
+<div id="out"></div>
+<script>
+'use strict';
+/* ==========================================================================================
+   GLSL. Everything is periodic in uv with period 1, so every map tiles without a seam:
+   lattice coordinates are wrapped with mod() before hashing, every frequency is an integer
+   number of cycles per tile, and domain offsets are constants (a constant shift keeps a
+   periodic function periodic).
+   ========================================================================================== */
+const HEAD = `#version 300 es
+precision highp float;
+precision highp int;
+layout(location = 0) out vec4 o0;
+layout(location = 1) out vec4 o1;
+uniform vec2 uRes;
+uniform highp sampler2D uWaveTex;
+uniform int uWaveCount;
+uniform float uChop;
+`;
+
+const LIB = `
+uint pcg(uint v) { uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
+float hsh(ivec2 p, int s) { return float(pcg(uint(p.x) ^ pcg(uint(p.y) ^ pcg(uint(s) + 0x9e3779b9u)))) * (1.0 / 4294967296.0); }
+vec2 hsh2(ivec2 p, int s) { return vec2(hsh(p, s), hsh(p, s + 977)); }
+ivec2 wrp(vec2 i, vec2 per) { return ivec2(mod(i, per) + 0.5); }
+vec2 gdir(vec2 i, vec2 per, int s) { float a = 6.2831853 * hsh(wrp(i, per), s); return vec2(cos(a), sin(a)); }
+/* Periodic gradient noise, about -1..1. */
+float gn(vec2 x, vec2 per, int s) {
+  vec2 i = floor(x), f = fract(x);
+  vec2 u = f * f * f * (f * (f * 6. - 15.) + 10.);
+  float a = dot(gdir(i, per, s), f);
+  float b = dot(gdir(i + vec2(1., 0.), per, s), f - vec2(1., 0.));
+  float c = dot(gdir(i + vec2(0., 1.), per, s), f - vec2(0., 1.));
+  float d = dot(gdir(i + vec2(1., 1.), per, s), f - vec2(1., 1.));
+  return 1.4142 * mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float fbm(vec2 x, vec2 per, int oct, int s) {
+  float v = 0., a = .5, n = 0.;
+  for (int o = 0; o < 10; o++) {
+    if (o >= oct) break;
+    v += a * gn(x, per, s + o * 131); n += a;
+    x = x * 2. + vec2(.317, .743); per *= 2.; a *= .5;
+  }
+  return v / n;
+}
+float rfbm(vec2 x, vec2 per, int oct, int s) {
+  float v = 0., a = .5, n = 0.;
+  for (int o = 0; o < 10; o++) {
+    if (o >= oct) break;
+    float r = 1. - abs(gn(x, per, s + o * 131));
+    v += a * r * r; n += a;
+    x = x * 2. + vec2(.317, .743); per *= 2.; a *= .5;
+  }
+  return v / n;
+}
+/* Periodic Voronoi (cells per tile = per). Returns (distance to the cell border, distance to
+   the cell point, two random values of the cell); rel = cell point minus sample, cell units. */
+vec4 vor(vec2 x, vec2 per, int s, float jit, out vec2 rel) {
+  vec2 n = floor(x), f = fract(x);
+  vec2 mg = vec2(0.), mr = vec2(0.); float md = 8.;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 g = vec2(float(i), float(j));
+    vec2 r = g + .5 + jit * (hsh2(wrp(n + g, per), s) - .5) - f;
+    float d = dot(r, r);
+    if (d < md) { md = d; mr = r; mg = g; }
+  }
+  float ed = 8.;
+  for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) {
+    vec2 g = mg + vec2(float(i), float(j));
+    vec2 r = g + .5 + jit * (hsh2(wrp(n + g, per), s) - .5) - f;
+    vec2 dd = r - mr;
+    if (dot(dd, dd) > 1e-6) ed = min(ed, dot(.5 * (mr + r), normalize(dd)));
+  }
+  rel = mr;
+  ivec2 id = wrp(n + mg, per);
+  return vec4(ed, sqrt(md), hsh(id, s + 5), hsh(id, s + 11));
+}
+vec3 lin(vec3 c) { return mix(c / 12.92, pow((c + .055) / 1.055, vec3(2.4)), step(.04045, c)); }
+vec3 C3(float r, float g, float b) { return lin(vec3(r, g, b)); }
+/* A rounded edge: d metres in from the edge, radius r; returns the drop (<= 0). */
+float bevel(float d, float r) { if (d >= r) return 0.; float e = r - d; return -(r - sqrt(max(0., r * r - e * e))); }
+/* 1-D jittered segments along x (M per tile, phase ph), for plate i. Returns the position inside
+   the segment (0..1); segId = which segment (0..M-1); dEdge = tile units to the nearest end. */
+float jb(float k, float M, int i, int s) { return k + .38 * (hsh(ivec2(int(mod(k, M) + .5), i), s) - .5); }
+float seg1(float x, float M, float ph, int i, int s, out float segId, out float dEdge) {
+  float sx = x * M + ph;
+  float k0 = floor(sx), kk = k0;
+  if (sx < jb(k0, M, i, s)) kk = k0 - 1.;
+  else if (sx >= jb(k0 + 1., M, i, s)) kk = k0 + 1.;
+  float a = jb(kk, M, i, s), b = jb(kk + 1., M, i, s);
+  segId = mod(kk, M);
+  dEdge = min(sx - a, b - sx) / M;
+  return (sx - a) / (b - a);
+}
+`;
+
+/* ---------------------------------------------------------------------------------------------
+   COASTAL SCHIST — tile 4 m. Foliated metamorphic rock: thin plates stacked along a wavy,
+   crenulated foliation, grouped into packages; cross-fractures break every plate into lenses
+   and step it in or out; package joints are wider and weathered. Silver-grey with blue and warm
+   casts, mica sheen on the fresh plate faces, iron staining bleeding out of fractures, quartz
+   lenses, crustose lichen and moss in the joints.
+   --------------------------------------------------------------------------------------------- */
+const SCHIST = `
+/* One generation of flakes: elongated Voronoi lenses along the foliation, each a small plane
+   (its own offset, leaning across the foliation the same way as its neighbours, so the stack
+   steps), rounded where it meets the next. Added together over three sizes. */
+void flakes(vec2 fp, vec2 cells, int sd, float amp, float bev, inout float h, inout float edge, out vec4 cell) {
+  vec2 rel; vec4 v = vor(fp * cells, cells, sd, .85, rel);
+  float lean = .35 + .65 * v.w;
+  float across = v.x / cells.y * 4.;
+  h += (v.z - .5) * amp - rel.y * lean * amp + bevel(across, bev);
+  edge = min(edge, across);
+  cell = v;
+}
+void mat(vec2 uv, out float H, out vec3 alb, out float rough, out vec4 aux) {
+  const float T = 4.;
+  vec2 q = uv + .015 * vec2(fbm(uv * 3., vec2(3.), 4, 11), fbm(uv * 3. + vec2(5.2, 1.3), vec2(3.), 4, 12));
+  /* Foliation: folded at the large scale, crenulated at the small. */
+  float fol = q.y + .05 * fbm(q * 2., vec2(2.), 3, 21) + .012 * fbm(vec2(q.x * 7., q.y * 5.), vec2(7., 5.), 3, 22);
+  vec2 fp = vec2(q.x, fol);
+  float h = 0., edge = 9.;
+  vec4 cA, cB, cC;
+  flakes(fp, vec2(3., 14.), 31, .060, .030, h, edge, cA);
+  flakes(fp, vec2(7., 40.), 41, .025, .012, h, edge, cB);
+  flakes(fp, vec2(16., 110.), 51, .008, .004, h, edge, cC);
+  /* Joints: a ragged fracture network, mostly across the foliation; blocks step along it, and only
+     some joints are open (the rest are closed seams that only show as a step). */
+  vec2 qj = q + .035 * vec2(fbm(q * 6., vec2(6.), 3, 63), fbm(q * 6. + 2.7, vec2(6.), 3, 64));
+  vec2 jr; vec4 jv = vor(qj * vec2(6., 3.), vec2(6., 3.), 61, .95, jr);
+  float jEdge = jv.x / 4.5 * T;
+  float jMask = smoothstep(.15, .55, fbm(qj * 4., vec2(4.), 3, 65) * .5 + .5);
+  h += (jv.z - .5) * .05 + bevel(jEdge, .05) * 1.3 * jMask;
+  vec2 kr; vec4 kv = vor(qj * 13., vec2(13.), 71, .9, kr);
+  float kEdge = kv.x / 13. * T;
+  float kMask = smoothstep(.2, .6, fbm(q * 6., vec2(6.), 3, 73) * .5 + .5);
+  h += bevel(kEdge, .008) * kMask;
+  h += .10 * fbm(uv * 2., vec2(2.), 3, 81) + .03 * rfbm(uv * 5., vec2(5.), 4, 82);
+  h += .0012 * gn(vec2(fp.x * 40., fp.y * 700.), vec2(40., 700.), 83) + .0009 * gn(q * 320., vec2(320.), 84);
+
+  /* Colour: grey to blue-grey beds, warm and silvery flakes, dark beds, fine laminations. */
+  vec3 base = mix(C3(.40, .41, .42), C3(.34, .37, .40), smoothstep(.2, .6, cA.w));
+  base = mix(base, C3(.45, .42, .38), smoothstep(.6, .9, cB.z) * .6);
+  base = mix(base, C3(.25, .26, .27), step(.86, cA.z) * .7);
+  base = mix(base, C3(.56, .56, .54), step(.85, cB.w) * .5);
+  base *= (.86 + .28 * cB.z) * (.92 + .16 * cC.z);
+  base *= 1. + .14 * fbm(q * 5., vec2(5.), 4, 93);
+  base *= 1. + .10 * gn(vec2(fp.x * 6., fp.y * 160.), vec2(6., 160.), 94);
+  base = mix(base, base * vec3(.92, .97, 1.06), smoothstep(.2, .7, gn(vec2(fp.x * 2., fp.y * 30.), vec2(2., 30.), 95)) * .5);
+  base *= 1. + .05 * gn(q * 260., vec2(260.), 96);
+  float fresh = 1. - smoothstep(0., .01, edge);
+  base = mix(base, base * 1.18 + .015, fresh * .5);
+  float crev = max((1. - smoothstep(0., .03, jEdge)) * jMask, (1. - smoothstep(0., .004, kEdge)) * kMask);
+  base = mix(base, C3(.14, .14, .13), crev * .6);
+  float rs = gn(vec2(q.x * 24., q.y * 2.), vec2(24., 2.), 101) * .5 + .5;
+  float rust = smoothstep(.6, .9, rs) * smoothstep(.3, .75, fbm(q * 3., vec2(3.), 3, 102) * .5 + .5);
+  rust = max(rust, (1. - smoothstep(0., .12, jEdge)) * .5 * step(.55, jv.w));
+  base = mix(base, C3(.46, .35, .26), rust * .35);
+  float lich = smoothstep(.66, .72, fbm(q * 14., vec2(14.), 5, 111) * .5 + .5) * (1. - crev);
+  base = mix(base, C3(.66, .67, .62) * (.9 + .2 * gn(q * 200., vec2(200.), 112)), lich * .55);
+  float ly = smoothstep(.78, .82, gn(q * 48., vec2(48.), 113) * .5 + .5) * smoothstep(.5, .7, fbm(q * 3., vec2(3.), 3, 114) * .5 + .5) * (1. - crev);
+  base = mix(base, C3(.72, .60, .32), ly * .6);
+  float moss = (1. - smoothstep(0., .06, jEdge)) * jMask * smoothstep(.5, .7, fbm(q * 16., vec2(16.), 3, 121) * .5 + .5);
+  base = mix(base, C3(.23, .29, .17), moss * .75);
+  float qz = step(.994, cC.w);
+  base = mix(base, C3(.74, .73, .70), qz * .6);
+  h += moss * .008 + lich * .001 + ly * .001;
+  float mica = step(.6, cB.w) * (1. - fresh) * .5;
+  alb = base;
+  rough = clamp(.80 + .06 * fbm(q * 12., vec2(12.), 3, 131) - mica * .25 - qz * .25 + lich * .08 + crev * .08 + moss * .06, .35, 1.);
+  H = h;
+  aux = vec4(crev, lich, moss, rust);
+}
+`;
+
+/* ---------------------------------------------------------------------------------------------
+   HIGHLAND HEATH — tile 2 m. Short grass and heath: gritty soil with a few stones, a moss
+   carpet, low leaf rosettes, then three layers of wind-laid blades (each blade a tapered, gently
+   curved stroke that arches up from its root), grey-green to blue-green with silvery tips and a
+   little straw; broad dry and wet patches so it still reads at large scale.
+   --------------------------------------------------------------------------------------------- */
+const HEATH = `
+void mat(vec2 uv, out float H, out vec3 alb, out float rough, out vec4 aux) {
+  vec2 q = uv + .01 * vec2(fbm(uv * 4., vec2(4.), 3, 201), fbm(uv * 4. + 3.7, vec2(4.), 3, 202));
+  float h = .020 * fbm(uv * 3., vec2(3.), 3, 203) + .004 * fbm(q * 24., vec2(24.), 3, 204);
+  vec3 col = C3(.30, .26, .21) * (1. + .25 * fbm(q * 16., vec2(16.), 4, 205));
+  float rg = .95;
+  vec2 rs; vec4 sv = vor(q * 16., vec2(16.), 211, .9, rs);
+  float sr = mix(.16, .32, sv.z);
+  float sIn = step(.84, sv.w) * (1. - smoothstep(sr * .85, sr, sv.y));
+  if (sIn > 0.) {
+    h += sIn * sqrt(max(0., 1. - pow(sv.y / sr, 2.))) * .012;
+    col = mix(col, C3(.46, .47, .46) * (1. + .2 * gn(q * 300., vec2(300.), 213)), sIn);
+    rg = mix(rg, .72, sIn);
+  }
+  float mossN = fbm(q * 10., vec2(10.), 4, 221) * .5 + .5;
+  float moss = smoothstep(.30, .52, mossN) * (1. - sIn);
+  float mossB = fbm(q * 160., vec2(160.), 3, 222) * .5 + .5;
+  h = mix(h, h + .006 + .004 * mossB, moss);
+  col = mix(col, mix(C3(.26, .33, .20), C3(.34, .42, .30), mossB), moss);
+  rg = mix(rg, .9, moss);
+  float hg = h;
+
+  /* Leaf rosettes. */
+  vec2 x2 = q * 26.; vec2 n2 = floor(x2);
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 g = n2 + vec2(float(i), float(j)); ivec2 id = wrp(g, vec2(26.));
+    vec4 r = vec4(hsh2(id, 271), hsh2(id, 274));
+    if (r.w > .45) continue;
+    vec2 cp = g + r.xy;
+    float nl = 3. + floor(r.z * 3.), rot = r.z * 6.283;
+    for (int k = 0; k < 5; k++) {
+      if (float(k) >= nl) break;
+      float a = rot + float(k) * 6.283 / nl;
+      float d = length(x2 - (cp + .22 * vec2(cos(a), sin(a)))) / .2;
+      if (d < 1.) {
+        float lh = hg + .004 + .004 * sqrt(1. - d * d);
+        if (lh > h) { h = lh; col = mix(C3(.25, .36, .27), C3(.36, .46, .36), r.x) * (.85 + .25 * (1. - d)); rg = .55; }
+      }
+    }
+  }
+
+  /* Three layers of blades, clumped by a noise field and combed by a coherent wind field. */
+  float blades = 0.;
+  for (int L = 0; L < 3; L++) {
+    float cells = L == 0 ? 48. : L == 1 ? 36. : 26.;
+    int sd = 241 + L * 17;
+    float dens = L == 0 ? .92 : L == 1 ? .82 : .55;
+    float lift = .004 + float(L) * .006;
+    vec2 x = q * cells; vec2 n = floor(x);
+    for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) {
+      vec2 g = n + vec2(float(i), float(j));
+      ivec2 id = wrp(g, vec2(cells));
+      vec4 r = vec4(hsh2(id, sd), hsh2(id, sd + 3));
+      vec2 a = g + r.xy;
+      float clumpN = smoothstep(-.35, .35, gn(a / cells * 9., vec2(9.), 237));
+      if (r.w > dens * (.45 + .55 * clumpN)) continue;
+      float ang = 1.25 + 1.4 * gn(a / cells * 3., vec2(3.), sd + 5) + (r.z - .5) * 1.3;
+      vec2 dir = vec2(cos(ang), sin(ang)), perp = vec2(-dir.y, dir.x);
+      float len = mix(.7, 1.6, hsh(id, sd + 7)) * (L == 2 ? 1.35 : 1.);
+      float w = mix(.12, .22, hsh(id, sd + 9));
+      float s = clamp(dot(x - a, dir) / len, 0., 1.);
+      float bend = (hsh(id, sd + 13) - .5) * .6;
+      vec2 c = a + dir * len * s + perp * bend * s * s * len;
+      float ww = w * (1. - s * .9);
+      float dist = length(x - c);
+      if (dist >= ww) continue;
+      float b = 1. - dist / ww;
+      float hb = hg + lift + sin(s * 2.4) * (.010 + .008 * float(L)) + sqrt(b) * .0015;
+      if (hb > h) {
+        h = hb;
+        float hue = hsh(id, sd + 15);
+        vec3 c0 = hue < .55 ? C3(.20, .31, .27) : hue < .92 ? C3(.27, .34, .20) : C3(.40, .37, .25);
+        vec3 c1 = hue < .55 ? C3(.50, .59, .55) : hue < .92 ? C3(.47, .53, .32) : C3(.62, .57, .40);
+        col = mix(c0, c1, smoothstep(.2, 1., s)) * (.8 + .35 * b);
+        rg = .62 + .15 * hue;
+        blades = 1.;
+      }
+    }
+  }
+  /* Broad patches: drier straw-tinted turf and darker, damp hollows. */
+  float dry = smoothstep(.15, .55, fbm(uv * 3., vec2(3.), 4, 291));
+  col = mix(col, col * vec3(1.12, 1.06, .86), dry * .30 * blades);
+  col *= .88 + .24 * (fbm(uv * 2., vec2(2.), 3, 293) * .5 + .5);
+  alb = col; rough = rg; H = h;
+  aux = vec4(blades, moss, sIn, dry);
+}
+`;
+
+/* ---------------------------------------------------------------------------------------------
+   SHORE SHINGLE — tile 2 m. Rounded, flattened stones in three sizes over coarse sand; each one
+   an ellipse with its own size, aspect, turn and rock type (grey granite with dark mica specks,
+   basalt, blue-grey slate, a few brown sandstone, rare white quartz, quartz veins), water-worn
+   smooth (rougher sand between).
+   --------------------------------------------------------------------------------------------- */
+const SHINGLE = `
+void pebbles(vec2 uv, float cells, int sd, float rMin, float rMax, float thick, float density,
+             inout float h, inout vec3 col, inout float rg, inout float isPeb) {
+  vec2 x = uv * cells; vec2 n = floor(x);
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 g = n + vec2(float(i), float(j));
+    ivec2 id = wrp(g, vec2(cells));
+    vec4 r = vec4(hsh2(id, sd), hsh2(id, sd + 3));
+    if (r.w > density) continue;
+    vec2 c = g + .5 + (r.xy - .5) * .7;
+    float ang = r.z * 3.1416;
+    vec2 d = x - c;
+    d = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
+    float rad = mix(rMin, rMax, hsh(id, sd + 5));
+    float asp = mix(1., 1.7, hsh(id, sd + 7));
+    float e = length(d * vec2(1., asp)) / rad;
+    if (e >= 1.) continue;
+    float radM = rad / cells * 2.;
+    float ph = thick * radM * pow(1. - e * e, .55) + .002;
+    if (ph > h) {
+      h = ph;
+      float ty = hsh(id, sd + 9);
+      vec3 pc = ty < .30 ? C3(.55, .55, .53) : ty < .50 ? C3(.30, .31, .32) : ty < .68 ? C3(.44, .46, .47) : ty < .82 ? C3(.52, .45, .38) : ty < .94 ? C3(.38, .42, .40) : C3(.78, .77, .73);
+      pc *= .85 + .3 * hsh(id, sd + 11);
+      vec2 lp = d / rad;
+      float spk = gn(lp * 7. + r.zw * 20., vec2(1e4), sd + 13);
+      pc *= 1. + (ty < .30 ? -.35 : .12) * smoothstep(.2, .7, spk);
+      vec2 vd = vec2(cos(r.z * 9.), sin(r.z * 9.));
+      float vein = 1. - smoothstep(0., .035 + .03 * r.x, abs(dot(lp, vd) - (r.w - .5) * .8));
+      pc = mix(pc, C3(.84, .83, .80), vein * step(.80, hsh(id, sd + 17)));
+      pc *= mix(.8, 1., smoothstep(1., .6, e));
+      col = pc;
+      rg = mix(.42, .66, hsh(id, sd + 19));
+      isPeb = 1.;
+    }
+  }
+}
+void mat(vec2 uv, out float H, out vec3 alb, out float rough, out vec4 aux) {
+  vec2 q = uv + .006 * vec2(fbm(uv * 3., vec2(3.), 3, 301), fbm(uv * 3. + 4., vec2(3.), 3, 302));
+  float h = .010 * fbm(uv * 3., vec2(3.), 3, 303) + .0012 * gn(q * 420., vec2(420.), 304);
+  vec3 col = C3(.55, .51, .45) * (1. + .10 * fbm(q * 24., vec2(24.), 3, 305)) * (1. + .14 * gn(q * 520., vec2(520.), 306));
+  float rg = .93, isPeb = 0.;
+  pebbles(q, 34., 341, .38, .62, .45, .95, h, col, rg, isPeb);
+  pebbles(q, 16., 311, .40, .66, .42, .90, h, col, rg, isPeb);
+  pebbles(q, 7., 321, .42, .68, .40, .75, h, col, rg, isPeb);
+  H = h; alb = col; rough = rg;
+  aux = vec4(isPeb, 0., 0., 0.);
+}
+`;
+
+/* ---------------------------------------------------------------------------------------------
+   SEA SURFACE — tile 12 m. A sum of ~900 waves on the tile's own wave-number lattice (so it
+   tiles), amplitudes from a Phillips spectrum peaking near 1.8 m, mostly downwind with a little
+   cross and back chop, normalised to an RMS slope of .13. The horizontal (choppy) displacement's
+   Jacobian marks where crests pinch: that is where whitecaps form. A bubble-lace pattern is made
+   alongside for both the whitecaps and shore surf.
+   --------------------------------------------------------------------------------------------- */
+const SEA = `
+void mat(vec2 uv, out float H, out vec3 alb, out float rough, out vec4 aux) {
+  vec2 x = uv * 12.;
+  float h = 0., dxx = 0., dyy = 0., dxy = 0.;
+  for (int i = 0; i < 2048; i++) {
+    if (i >= uWaveCount) break;
+    vec4 w = texelFetch(uWaveTex, ivec2(i, 0), 0);
+    float th = dot(w.xy, x) + w.w;
+    float c = cos(th);
+    float k = length(w.xy);
+    h += w.z * c;
+    float a = uChop * w.z / max(k, 1e-4);
+    dxx -= a * w.x * w.x * c; dyy -= a * w.y * w.y * c; dxy -= a * w.x * w.y * c;
+  }
+  float J = (1. + dxx) * (1. + dyy) - dxy * dxy;
+  vec2 r1; vec4 b1 = vor(uv * 34., vec2(34.), 401, .9, r1);
+  vec2 r2; vec4 b2 = vor(uv * 90., vec2(90.), 411, .9, r2);
+  vec2 r3; vec4 b3 = vor(uv * 200., vec2(200.), 421, .9, r3);
+  float rad1 = mix(.18, .42, b1.z), rad2 = mix(.20, .42, b2.z);
+  float hole1 = (1. - smoothstep(rad1 * .8, rad1, b1.y)) * step(.35, b1.w);
+  float hole2 = (1. - smoothstep(rad2 * .75, rad2, b2.y)) * step(.25, b2.w);
+  float hole3 = (1. - smoothstep(.22, .34, b3.y)) * step(.40, b3.w);
+  float sheet = (1. - hole1 * .92) * (1. - hole2 * .85) * (1. - hole3 * .6);
+  /* Streaks along the wind: the wind is along (2,1), so (2x+y, -x+2y) keeps the tile. */
+  float sAlong = 2. * uv.x + uv.y, sAcross = -uv.x + 2. * uv.y;
+  float streak = fbm(vec2(sAlong * 2., sAcross * 7.), vec2(2., 7.), 4, 431) * .5 + .5;
+  float cov = smoothstep(.42, .68, streak);
+  float vein = (1. - smoothstep(0., .05, b1.x)) * smoothstep(.30, .55, streak) * .7;
+  float lace = max(cov * sheet, vein);
+  H = h; alb = vec3(.03, .07, .10); rough = .04;
+  aux = vec4(J, lace, sheet, 0.);
+}
+`;
+
+const MAIN = `
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  float H; vec3 alb; float rough; vec4 aux;
+  mat(uv, H, alb, rough, aux);
+  o0 = vec4(H, aux.xyz);
+  o1 = vec4(alb, rough);
+}
+`;
+
+/* Second stage: everything that needs neighbours (normal, AO) or the height range. Works at the
+   supersampled size; the third stage averages 2x2 down and encodes. */
+const DERIVE = `#version 300 es
+precision highp float;
+precision highp int;
+out vec4 o;
+uniform highp sampler2D uT0;
+uniform highp sampler2D uT1;
+uniform int uMode;
+uniform vec2 uRes;
+uniform float uTexel;
+uniform vec2 uHR;
+uniform float uAOR, uAOS, uNS;
+uniform vec2 uFoamJ;
+ivec2 W(ivec2 p) { ivec2 n = ivec2(uRes); return (p + n * 8) % n; }
+float Hh(ivec2 p) { return texelFetch(uT0, W(p), 0).r; }
+vec3 nrm(ivec2 c) {
+  float tl = Hh(c + ivec2(-1, 1)), t = Hh(c + ivec2(0, 1)), tr = Hh(c + ivec2(1, 1));
+  float l = Hh(c + ivec2(-1, 0)), r = Hh(c + ivec2(1, 0));
+  float bl = Hh(c + ivec2(-1, -1)), b = Hh(c + ivec2(0, -1)), br = Hh(c + ivec2(1, -1));
+  float dx = ((tr + 2. * r + br) - (tl + 2. * l + bl)) / (8. * uTexel);
+  float dy = ((tl + 2. * t + tr) - (bl + 2. * b + br)) / (8. * uTexel);
+  return normalize(vec3(-dx * uNS, -dy * uNS, 1.));
+}
+/* Horizon-based occlusion over uAOR metres in 12 directions. */
+float ao(ivec2 c) {
+  float hc = Hh(c), occ = 0.;
+  float rpx = uAOR / uTexel;
+  for (int d = 0; d < 12; d++) {
+    float a = (float(d) + .5) * .5235988;
+    vec2 dir = vec2(cos(a), sin(a));
+    float m = 0.;
+    for (int s = 1; s <= 10; s++) {
+      float rr = max(float(s), rpx * pow(float(s) / 10., 1.5));
+      ivec2 p = c + ivec2(round(dir * rr));
+      m = max(m, (Hh(p) - hc) / (rr * uTexel));
+    }
+    occ += m / sqrt(1. + m * m);
+  }
+  return clamp(1. - uAOS * occ / 12., 0., 1.);
+}
+void main() {
+  ivec2 c = ivec2(gl_FragCoord.xy);
+  vec4 t0 = texelFetch(uT0, c, 0), t1 = texelFetch(uT1, c, 0);
+  if (uMode == 0) o = vec4(t1.rgb, 1.);
+  else if (uMode == 1) o = vec4(nrm(c), 1.);
+  else if (uMode == 2) o = vec4(vec3(t1.a), 1.);
+  else if (uMode == 3) o = vec4(vec3(ao(c)), 1.);
+  else if (uMode == 4) o = vec4(vec3((t0.r - uHR.x) / max(uHR.y - uHR.x, 1e-6)), 1.);
+  else if (uMode == 5) o = vec4(ao(c), t1.a, 0., 1.);
+  else if (uMode == 6) {
+    /* Whitecaps: where the choppy surface pinches (Jacobian in its lowest few percent). */
+    float crest = smoothstep(uFoamJ.x, uFoamJ.y, t0.g);
+    o = vec4(vec3(clamp(crest * (.40 + .60 * t0.a) + crest * crest * .45, 0., 1.)), 1.);
+  } else {
+    /* Shore lace: the bubble network, patchy, for surf along a waterline. */
+    o = vec4(vec3(clamp(t0.b, 0., 1.)), 1.);
+  }
+}
+`;
+
+const RESOLVE = `#version 300 es
+precision highp float;
+precision highp int;
+out vec4 o;
+uniform highp sampler2D uD;
+uniform int uKind;
+vec3 enc(vec3 l) { l = clamp(l, 0., 1.); return mix(l * 12.92, 1.055 * pow(l, vec3(1. / 2.4)) - .055, step(.0031308, l)); }
+void main() {
+  ivec2 c = ivec2(gl_FragCoord.xy) * 2;
+  vec4 s = (texelFetch(uD, c, 0) + texelFetch(uD, c + ivec2(1, 0), 0) + texelFetch(uD, c + ivec2(0, 1), 0) + texelFetch(uD, c + ivec2(1, 1), 0)) * .25;
+  vec3 v = s.rgb;
+  if (uKind == 1) v = enc(v);
+  else if (uKind == 2) v = normalize(v) * .5 + .5;
+  /* Half-step dither so smooth heights and normals do not band at 8 bits. */
+  v += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - .5) / 255.;
+  o = vec4(clamp(v, 0., 1.), 1.);
+}
+`;
+
+const VS = `#version 300 es
+in vec2 p;
+void main() { gl_Position = vec4(p, 0., 1.); }
+`;
+
+/* ==========================================================================================
+   Materials: real-world tile size, AO reach and strength, which maps to export.
+   ========================================================================================== */
+const MATERIALS = {
+  'coastal-schist': { label: '海岸片岩 Coastal schist', glsl: SCHIST, tile: 4, aoR: .30, aoS: 1.5, ns: 1, maps: ['basecolor', 'normal', 'orm', 'height', 'roughness', 'ao'] },
+  'highland-heath': { label: '高地草坡 Highland heath', glsl: HEATH, tile: 2, aoR: .04, aoS: 1.6, ns: 1, maps: ['basecolor', 'normal', 'orm', 'height', 'roughness', 'ao'] },
+  'shore-shingle': { label: '岸邊礫石 Shore shingle', glsl: SHINGLE, tile: 2, aoR: .06, aoS: 1.6, ns: 1, maps: ['basecolor', 'normal', 'orm', 'height', 'roughness', 'ao'] },
+  'sea-surface': { label: '海面 Sea surface', glsl: SEA, tile: 12, aoR: .2, aoS: 0, ns: 1, waves: true, maps: ['normal', 'height', 'foam', 'lace'] }
+};
+/* map name -> [derive mode, resolve kind (0 linear, 1 sRGB colour, 2 normal)] */
+const MAPS = { basecolor: [0, 1], normal: [1, 2], roughness: [2, 0], ao: [3, 0], height: [4, 0], orm: [5, 0], foam: [6, 0], lace: [7, 0] };
+
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function seaWaves(seed = 7) {
+  const rnd = mulberry32(seed), T = 12, waves = [];
+  const wind = .42, wx = Math.cos(wind), wy = Math.sin(wind);
+  const kPeak = 2 * Math.PI / 1.8, Lp = .7071 / kPeak;
+  const gauss = () => { let u = 0; while (!u) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); };
+  for (let m = -60; m <= 60; m++) for (let n = -60; n <= 60; n++) {
+    if (!m && !n) continue;
+    const kx = 2 * Math.PI * m / T, ky = 2 * Math.PI * n / T, k = Math.hypot(kx, ky);
+    if (k > 2 * Math.PI * 60 / T) continue;
+    const c = (kx * wx + ky * wy) / k;
+    const spread = c > 0 ? Math.pow(c, 4) : .06 * Math.pow(-c, 6);
+    const P = Math.exp(-1 / ((k * Lp) ** 2)) / k ** 4 * spread * Math.exp(-((k * .01) ** 2));
+    if (!(P > 0)) continue;
+    waves.push([kx, ky, Math.sqrt(P) * Math.abs(gauss()), rnd() * Math.PI * 2]);
+  }
+  const slope = w => w[2] * Math.hypot(w[0], w[1]);
+  waves.sort((a, b) => slope(b) - slope(a));
+  const keep = waves.slice(0, 900);
+  const ms = keep.reduce((s, w) => s + .5 * slope(w) ** 2, 0);
+  const g = .13 / Math.sqrt(ms);
+  for (const w of keep) w[2] *= g;
+  return keep;
+}
+
+/* ==========================================================================================
+   WebGL2 plumbing.
+   ========================================================================================== */
+const canvas = document.createElement('canvas');
+const gl = canvas.getContext('webgl2', { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
+if (!gl) throw new Error('WebGL2 unavailable');
+if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('EXT_color_buffer_float unavailable');
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+const vbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+function program(fs) {
+  const sh = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(s), lines = src.split('\n');
+      const m = /ERROR: \d+:(\d+)/.exec(log || ''), at = m ? +m[1] : 0;
+      throw new Error('shader: ' + log + '\n' + lines.slice(Math.max(0, at - 4), at + 2).map((l, i) => (at - 3 + i) + ': ' + l).join('\n'));
+    }
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+  gl.bindAttribLocation(p, 0, 'p'); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('link: ' + gl.getProgramInfoLog(p));
+  return p;
+}
+const uni = (p, n) => gl.getUniformLocation(p, n);
+function target(size, count) {
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  const texs = [];
+  for (let i = 0; i < count; i++) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, size, size);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0);
+    texs.push(t);
+  }
+  gl.drawBuffers(texs.map((_, i) => gl.COLOR_ATTACHMENT0 + i));
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('framebuffer incomplete');
+  return { fb, texs, dispose() { gl.deleteFramebuffer(fb); texs.forEach(t => gl.deleteTexture(t)); } };
+}
+const derive = program(DERIVE), resolve = program(RESOLVE);
+const programs = {};
+
+/* Quantile of every 7th sample, for the whitecap threshold. */
+function quantile(arr, stride, offset, q) {
+  const s = []; for (let i = offset; i < arr.length; i += stride * 7) s.push(arr[i]);
+  s.sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(q * s.length))];
+}
+
+function generateMaterial(name, size = 1024) {
+  const M = MATERIALS[name]; if (!M) throw new Error('unknown material ' + name);
+  const S = size * 2, t0 = performance.now();
+  const prog = programs[name] ??= program(HEAD + LIB + M.glsl + MAIN);
+  const A = target(S, 2);
+  gl.viewport(0, 0, S, S);
+  gl.useProgram(prog);
+  gl.uniform2f(uni(prog, 'uRes'), S, S);
+  let waveTex = null;
+  if (M.waves) {
+    const w = seaWaves(7), data = new Float32Array(w.length * 4);
+    w.forEach((v, i) => data.set(v, i * 4));
+    waveTex = gl.createTexture(); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, waveTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w.length, 1, 0, gl.RGBA, gl.FLOAT, data);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.uniform1i(uni(prog, 'uWaveTex'), 2); gl.uniform1i(uni(prog, 'uWaveCount'), w.length); gl.uniform1f(uni(prog, 'uChop'), 1.25);
+  }
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  const px = new Float32Array(S * S * 4);
+  gl.readBuffer(gl.COLOR_ATTACHMENT0);
+  gl.readPixels(0, 0, S, S, gl.RGBA, gl.FLOAT, px);
+  let hMin = Infinity, hMax = -Infinity;
+  for (let i = 0; i < px.length; i += 4) { const v = px[i]; if (v < hMin) hMin = v; if (v > hMax) hMax = v; }
+  const foamJ = M.waves ? [quantile(px, 4, 1, .10), quantile(px, 4, 1, .008)] : [0, 1];
+  const jStats = M.waves ? { p1: quantile(px, 4, 1, .01), p10: quantile(px, 4, 1, .10), p50: quantile(px, 4, 1, .5) } : null;
+
+  const D = target(S, 1);
+  canvas.width = canvas.height = size;
+  const out = {};
+  for (const map of M.maps) {
+    const [mode, kind] = MAPS[map];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, D.fb); gl.viewport(0, 0, S, S);
+    gl.useProgram(derive);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, A.texs[0]);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, A.texs[1]);
+    gl.uniform1i(uni(derive, 'uT0'), 0); gl.uniform1i(uni(derive, 'uT1'), 1);
+    gl.uniform1i(uni(derive, 'uMode'), mode);
+    gl.uniform2f(uni(derive, 'uRes'), S, S);
+    gl.uniform1f(uni(derive, 'uTexel'), M.tile / S);
+    gl.uniform2f(uni(derive, 'uHR'), hMin, hMax);
+    gl.uniform1f(uni(derive, 'uAOR'), M.aoR); gl.uniform1f(uni(derive, 'uAOS'), M.aoS); gl.uniform1f(uni(derive, 'uNS'), M.ns);
+    gl.uniform2f(uni(derive, 'uFoamJ'), foamJ[0], foamJ[1]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, size, size);
+    gl.useProgram(resolve);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, D.texs[0]);
+    gl.uniform1i(uni(resolve, 'uD'), 0); gl.uniform1i(uni(resolve, 'uKind'), kind);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    out[map] = canvas.toDataURL('image/png');
+  }
+  A.dispose(); D.dispose(); if (waveTex) gl.deleteTexture(waveTex);
+  const meta = {
+    material: name, label: M.label, size, supersample: 2, tileMeters: M.tile,
+    heightMeters: { min: +hMin.toFixed(5), max: +hMax.toFixed(5), range: +(hMax - hMin).toFixed(5) },
+    conventions: {
+      basecolor: 'sRGB', normal: 'tangent space, OpenGL (+Y = +V up), linear', orm: 'R = ambient occlusion, G = roughness, B = metalness (0), linear',
+      height: 'linear, 0 = heightMeters.min, 1 = heightMeters.max', roughness: 'linear', ao: 'linear'
+    },
+    ms: Math.round(performance.now() - t0)
+  };
+  if (jStats) meta.jacobian = { ...jStats, foamFrom: foamJ[0], foamFull: foamJ[1], chop: 1.25, waves: 900 };
+  return { meta, maps: out };
+}
+window.MATERIALS = Object.fromEntries(Object.entries(MATERIALS).map(([k, v]) => [k, { label: v.label, tile: v.tile, maps: v.maps }]));
+window.generateMaterial = generateMaterial;
+
+/* ---- the page itself: buttons, thumbnails, links ---- */
+const status = document.getElementById('status'), outEl = document.getElementById('out');
+for (const [name, M] of Object.entries(MATERIALS)) {
+  const b = document.createElement('button'); b.textContent = M.label;
+  b.addEventListener('click', () => {
+    status.textContent = '產生中…';
+    setTimeout(() => {
+      try {
+        const size = +document.getElementById('size').value;
+        const r = generateMaterial(name, size);
+        const sec = document.createElement('section');
+        sec.innerHTML = `<h2>${M.label} · ${size}² · 每張 ${M.tile} m · ${r.meta.ms} ms · 高度範圍 ${(r.meta.heightMeters.range * 100).toFixed(1)} cm</h2><div class="row"></div>`;
+        for (const [map, url] of Object.entries(r.maps)) {
+          const f = document.createElement('figure');
+          f.innerHTML = `<img src="${url}" alt="${map}"><figcaption>${map} · <a download="${name}_${map}.png" href="${url}">下載</a></figcaption>`;
+          sec.querySelector('.row').append(f);
+        }
+        outEl.prepend(sec); status.textContent = '';
+      } catch (e) { status.textContent = e.message; console.error(e); }
+    }, 30);
+  });
+  document.getElementById('buttons').append(b, ' ');
+}
+window.__generatorReady = true;
+</script>
+</body>
+</html>

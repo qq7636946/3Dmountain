@@ -1,4 +1,4 @@
-# perf-ab：index4-6-3 的 A/B 效能與畫面對照工具
+# perf-ab：index.html 的 A/B 效能與畫面對照工具
 
 用**真實 GPU**（headless Chrome + ANGLE/D3D11）量測，並用頁面內建的 `__MONTIS_STUDY__.step()` 逐幀確定性推進，
 所以「優化前 vs 優化後」可以逐章節比較 draw call、GPU 時間、每幀配置量與畫面像素差。
@@ -9,7 +9,7 @@
 
 ```bash
 # 1) 伺服器：同時服務專案根目錄（/）與基準快照（/__base__/，找不到的檔案會回退到根目錄）
-node scripts/perf-ab/static-server2.cjs . 5200 backups/opt-20261001-baseline
+node scripts/perf-ab/static-server2.cjs . 5200 _archive/backups/opt-20261001-baseline
 
 # 2) 量測（--profile: desktop = 1440x900@DPR2→1.65 | desktop1x | desktop4k 壓力 | phone = 390x844@DPR3，觸發 DROPLET_LITE）
 node scripts/perf-ab/perf-harness.cjs --base http://127.0.0.1:5200/__base__/ --label base --profile desktop --frames 90 --raf 90 --png .qa/perf/png --out .qa/perf/base-desktop.json
@@ -29,6 +29,8 @@ node scripts/perf-ab/compare.cjs .qa/perf/base-desktop.json .qa/perf/opt-desktop
 | `heap-profile.cjs <baseUrl> [scenarios] [frames]` | Chrome 取樣式 heap profiler，列出每幀垃圾的來源函式（含已被 GC 的短命物件） |
 | `prog-probe.cjs <baseUrl> [scenarios]` | 統計 three 每幀對哪些材質重新執行 `getParameters()`（材質在 Mesh／InstancedMesh 間交錯造成的 program 抖動） |
 | `gpumem.cjs <baseUrl> <desktop\|phone> [scenarios]` | 用 Windows「GPU Process Memory」計數器量 Chrome 行程樹的專用顯存 |
+| `boot-profile.cjs <baseUrl> [cpuThrottle]` | 啟動期 CPU 取樣剖析（到 hero 出現為止），可模擬手機 CPU 慢 4 倍 |
+| `toggle-ab.cjs <baseUrl> [outDir]` | 同一幀只切換一個開關（Bloom／陰影／MSAA…）的全解析度像素與效能對照 |
 | `motion-ab.cjs <baseUrlA> <baseUrlB>` | **捲動中**對照：靜態章節裡景深動態模糊／前進轉場等 pass 是關閉的，這支沿同一條確定性軌跡逐幀擷取、列出當下啟用的 pass 並比對像素（已固定場景時鐘；請一併跑「基準 vs 基準」當對照組） |
 
 ## 注意
@@ -47,3 +49,5 @@ node scripts/perf-ab/compare.cjs .qa/perf/base-desktop.json .qa/perf/opt-desktop
 - `boot-profile.cjs` 回報最長任務及 `heroTbtMs` / `chapterTbtMs`：導航到對應時點的 `sum(max(0, longTaskDuration - 50))`。這是診斷用阻塞時間，**不是 Lighthouse 正式 TBT 或 PageSpeed 分數**。
 - `phone` 只有手機尺寸、UA、觸控、網路及 CPU 模擬，GPU 仍是測試電腦。`--raf` 預設關閉 vsync，不能拿它宣称一般 60 Hz 的實機 FPS。
 - 測試結果會先存檔才關閉 Chrome，避免 Windows 暫存設定檔清理卡住時丟失測量。
+
+> 2026-10-10 起頁面已拆成 `index.html` + `css/` + `js/`：量測治具會自動修補 `index.html` 或 `js/main.js`（哪個含標記就改哪個）。原始基準快照現位於 `_archive/backups/opt-20261001-baseline/`。

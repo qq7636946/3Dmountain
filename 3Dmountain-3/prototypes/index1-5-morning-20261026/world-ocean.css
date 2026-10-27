@@ -1,0 +1,680 @@
+/* index1-5 · 海洋章節 Ocean (world-ocean.js, built in by world-ocean-build.cjs). The RESPONSIBILITY chapters as a
+   horizontal section over the sea, oceanx-style, in this site's UI language: mono kicker with a gold square, gold
+   tracked line, Didone headline, Noto Sans TC body, a glass pill with a gold dot (in-page navigation only).
+   Everything is keyed on #fiWorld.fiwo-on (set by the module), so the shared css/world.css stays as it is and the
+   no-JS / readable page keeps the original vertical layout. */
+
+#fiWorld.fiwo-on {
+  --fiwo-x: .075;
+  --fiwo-y: .86;
+  --fiwo-gold: var(--alp-gold, #e2c28a);
+  --fiwo-gold-hi: var(--alp-gold-hi, #f3dfb6);
+  --fiwo-ice: var(--alp-blue, #a9d3f2);
+  --fiwo-white: var(--alp-white, #f6f4ee);
+  --fiwo-display: var(--alp-display, Didot, "Bodoni 72", "Sitka Banner", "Bodoni MT", "Noto Serif", Georgia, serif);
+  --fiwo-mono: var(--alp-mono, ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace);
+  --fiwo-shadow: 0 1px 16px #020a1899, 0 0 2px #020a1880;
+}
+
+/* ---------- the section: a pinned frame; each chapter is a layer the module slides over the sea ---------- */
+#fiWorld .fiw-resp.fiwo { position: relative; padding: 0; }
+#fiWorld .fiwo-pin { position: sticky; top: 0; height: var(--fiwo-h, 100vh); overflow: hidden; }
+#fiWorld .fiwo-track { position: absolute; inset: 0; }
+#fiWorld .fiwo-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--fiwo-w, 100vw);
+  will-change: transform, opacity;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: block;
+  box-sizing: border-box;
+  --fill: clamp(0, calc((var(--p, 1) - .42) * 2.1), 1);
+}
+#fiWorld .fiwo-panel .fiw-index,
+#fiWorld .fiwo-panel .fiw-line { display: none; }
+
+/* ---------- the chapter block (lower left, like the reference) ---------- */
+#fiWorld .fiwo-text {
+  position: absolute;
+  left: calc(var(--fiwo-x) * 100%);
+  bottom: calc((1 - var(--fiwo-y)) * 100%);
+  width: min(35rem, 41vw);
+  text-shadow: var(--fiwo-shadow);
+}
+/* the parts arrive one after another as the chapter slides in (--p: 0 → 1, set per frame) */
+#fiWorld .fiwo-text > *,
+#fiWorld .fiwo-detail {
+  --r: clamp(0, calc((var(--p, 1) - var(--d, 0)) * 3.4), 1);
+  opacity: var(--r);
+  transform: translate3d(calc((1 - var(--r)) * 54px), 0, 0);
+}
+#fiWorld .fiwo-text > :nth-child(2) { --d: .05; }
+#fiWorld .fiwo-text > :nth-child(3) { --d: .1; }
+#fiWorld .fiwo-text > :nth-child(4) { --d: .2; }
+#fiWorld .fiwo-text > :nth-child(5) { --d: .28; }
+#fiWorld .fiwo-detail { --d: .34; }
+
+#fiWorld .fiwo-kicker {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 16px;
+  color: #f6f4eed9;
+  font: 500 10.5px/1 var(--fiwo-mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+#fiWorld .fiwo-kicker i { flex: none; width: 7px; height: 7px; background: var(--fiwo-gold); box-shadow: 0 0 10px #e2c28a66; }
+#fiWorld .fiwo-sub {
+  margin: 0 0 12px;
+  color: var(--fiwo-gold-hi);
+  font: 500 11.5px/1.4 "Jost", "Noto Sans TC", sans-serif;
+  letter-spacing: .28em;
+}
+#fiWorld .fiwo-panel .fiw-title {
+  grid-column: auto;
+  max-width: 12.5em;
+  margin: 0 0 20px;
+  color: #fff;
+  font: 400 clamp(36px, 3.45vw, 60px)/1.04 var(--fiwo-display);
+  letter-spacing: .004em;
+  text-transform: none;
+  text-wrap: balance;
+}
+#fiWorld .fiwo-word { display: inline-block; white-space: nowrap; }
+/* letters light up in reading order as the chapter arrives */
+#fiWorld .fiwo-ch { opacity: clamp(.2, calc((var(--fill) * (var(--n) + 10) - var(--i)) / 10), 1); }
+#fiWorld .fiwo-panel .fiw-desc {
+  grid-column: auto;
+  max-width: 29em;
+  margin: 0 0 28px;
+  color: #e4ecf3;
+  font: 300 clamp(14px, 1.04vw, 16.5px)/1.95 "Noto Sans TC", sans-serif;
+  letter-spacing: .08em;
+}
+#fiWorld .fiwo-lead {
+  grid-column: auto;
+  max-width: 21em;
+  margin: 0 0 32px;
+  color: #f4f7fa;
+  font: 300 clamp(19px, 1.62vw, 27px)/1.8 "Noto Sans TC", sans-serif;
+  letter-spacing: .1em;
+}
+
+/* the glass pill with the gold dot */
+#fiWorld .fiwo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  height: 46px;
+  padding: 0 9px 0 24px;
+  border: 1px solid #f6f4ee5c;
+  border-radius: 999px;
+  background: #f6f4ee17;
+  -webkit-backdrop-filter: blur(12px) saturate(1.25);
+  backdrop-filter: blur(12px) saturate(1.25);
+  color: var(--fiwo-white);
+  font: 500 10.5px/1 "Jost", sans-serif;
+  letter-spacing: .22em;
+  text-shadow: none;
+  cursor: pointer;
+  transition: background .35s, color .35s, border-color .35s;
+}
+#fiWorld .fiwo-pill i { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; }
+#fiWorld .fiwo-pill i::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--fiwo-gold); box-shadow: 0 0 12px #e2c28a99; transition: transform .35s; }
+#fiWorld .fiwo-pill:hover,
+#fiWorld .fiwo-pill:focus-visible { background: var(--fiwo-white); border-color: var(--fiwo-white); color: #0c1b2c; outline: none; }
+#fiWorld .fiwo-pill:hover i::before { transform: scale(1.25); }
+
+/* ---------- the chapter's detail (lower right) ---------- */
+#fiWorld .fiwo-detail {
+  position: absolute;
+  right: var(--fiw-margin);
+  bottom: calc((1 - var(--fiwo-y)) * 100% + 8px);
+  width: min(31rem, 33vw);
+  padding-top: 18px;
+  border-top: 1px solid #f6f4ee38;
+  text-shadow: var(--fiwo-shadow);
+}
+#fiWorld .fiwo-detail .fiw-paras,
+#fiWorld .fiwo-detail .fiw-second,
+#fiWorld .fiwo-detail .fiw-tabs,
+#fiWorld .fiwo-detail .fiw-items { grid-column: auto; }
+#fiWorld .fiwo-detail .fiw-paras { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 26px; row-gap: 20px; }
+#fiWorld .fiwo-detail .fiw-items { gap: 18px; }
+#fiWorld .fiwo-detail p,
+#fiWorld .fiwo-detail .fiw-second { color: #e1e9f0; font-size: 13.5px; line-height: 1.85; }
+#fiWorld .fiwo-detail .fiw-paras p b,
+#fiWorld .fiwo-detail .fiw-items h4 { color: var(--fiwo-gold-hi); letter-spacing: .2em; }
+#fiWorld .fiwo-detail .fiw-tabpanel p { font-size: 14px; }
+#fiWorld .fiwo-detail .fiw-tablist button[aria-selected="true"] { color: var(--fiwo-gold-hi); }
+#fiWorld .fiwo-detail .fiw-tablist button::after { background: var(--fiwo-gold); }
+
+/* ---------- progress: one tick per stop ---------- */
+#fiWorld .fiwo-progress {
+  position: absolute;
+  left: var(--fiw-margin);
+  right: var(--fiw-margin);
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: #f6f4eecc;
+  font: 500 9.5px/1 var(--fiwo-mono);
+  letter-spacing: .16em;
+  text-shadow: var(--fiwo-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .6s;
+}
+#fiWorld.is-ocean .fiwo-progress { opacity: 1; pointer-events: auto; }
+#fiWorld .fiwo-progress-line { position: relative; flex: 1; height: 1px; background: repeating-linear-gradient(90deg, #f6f4ee5e 0 2px, transparent 2px 6px); }
+#fiWorld .fiwo-progress-line i { position: absolute; inset: 0; background: var(--fiwo-ice); transform-origin: left; transform: scaleX(var(--q, 0)); box-shadow: 0 0 8px #a9d3f280; }
+#fiWorld .fiwo-progress ol { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+#fiWorld .fiwo-progress button { padding: 8px 6px; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; opacity: .5; cursor: pointer; transition: opacity .3s, color .3s; }
+#fiWorld .fiwo-progress button:hover { opacity: .9; }
+#fiWorld .fiwo-progress button[aria-current="step"] { opacity: 1; color: var(--fiwo-gold-hi); }
+#fiWorld .fiwo-progress button:focus-visible { outline: 1px solid var(--fiwo-white); outline-offset: 2px; }
+
+/* the journey-style chapter rail would sit on the chapter block: the progress replaces it here */
+#fiWorld.is-ocean .fiw-chapters { opacity: 0 !important; pointer-events: none !important; }
+
+/* ---------- reduced motion: no travel, the chapters cross-fade in place ---------- */
+#fiWorld.fiwo-still .fiwo-panel { transform: none !important; }
+#fiWorld.fiwo-still .fiwo-text > *,
+#fiWorld.fiwo-still .fiwo-detail { opacity: 1; transform: none; }
+#fiWorld.fiwo-still .fiwo-ch { opacity: 1; }
+
+/* ---------- narrower screens: the block and its detail stack at the bottom ---------- */
+@media (max-width: 960px) {
+  #fiWorld .fiwo-panel { display: flex; flex-direction: column; justify-content: flex-end; padding: 0 var(--fiw-margin) 86px; }
+  #fiWorld .fiwo-text,
+  #fiWorld .fiwo-detail { position: relative; left: auto; right: auto; bottom: auto; width: auto; max-width: 38rem; }
+  #fiWorld .fiwo-detail { margin-top: 4px; padding-top: 16px; }
+  #fiWorld .fiwo-panel .fiw-desc { margin-bottom: 18px; }
+  #fiWorld .fiwo-text .fiwo-pill { display: none; }
+  #fiWorld .fiwo-progress-label { display: none; }
+}
+@media (max-width: 680px) {
+  #fiWorld .fiwo-panel { padding-bottom: 74px; }
+  #fiWorld .fiwo-kicker { margin-bottom: 12px; font-size: 9.5px; }
+  #fiWorld .fiwo-sub { font-size: 10px; letter-spacing: .24em; margin-bottom: 8px; }
+  #fiWorld .fiwo-panel .fiw-title { margin-bottom: 12px; font-size: clamp(27px, 7.6vw, 34px); line-height: 1.06; }
+  #fiWorld .fiwo-panel .fiw-desc { margin-bottom: 12px; font-size: 13.5px; line-height: 1.8; letter-spacing: .06em; }
+  #fiWorld .fiwo-lead { margin-bottom: 8px; font-size: 17px; line-height: 1.8; letter-spacing: .08em; }
+  #fiWorld .fiwo-detail { padding-top: 12px; }
+  #fiWorld .fiwo-detail .fiw-paras { grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 10px; }
+  #fiWorld .fiwo-detail p,
+  #fiWorld .fiwo-detail .fiw-second,
+  #fiWorld .fiwo-detail .fiw-tabpanel p { font-size: 12px; line-height: 1.7; letter-spacing: .05em; }
+  #fiWorld .fiwo-detail .fiw-paras p b,
+  #fiWorld .fiwo-detail .fiw-items h4 { margin-bottom: 4px; font-size: 9px; }
+  #fiWorld .fiwo-detail .fiw-items { gap: 10px; }
+  #fiWorld .fiwo-detail .fiw-tablist { margin-bottom: 8px; gap: 4px 18px; }
+  #fiWorld .fiwo-progress { bottom: 16px; gap: 10px; }
+  #fiWorld .fiwo-progress ol { gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fiWorld .fiwo-pill,
+  #fiWorld .fiwo-pill i::before,
+  #fiWorld .fiwo-progress { transition: none; }
+}
+
+/* ---------- the header over the dark sea ----------
+   index1-5.css turns the header navy while the cards are open (body.is-portfolio), and the cards stay open under the
+   world; over the planet and the dark sea that navy disappears. css/world.css meant it light there (is-world-dark). */
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready.is-portfolio.is-world-dark .finnovation-ui .fi-header {
+  --ui-ink: var(--alp-white, #f6f4ee); --ui-muted: #c5cfd8; color: var(--alp-white, #f6f4ee); text-shadow: 0 1px 12px #020a1880;
+}
+html[data-alpine-ui]:not([data-render-mode="text"]) body.is-ready.is-portfolio.is-world-dark .finnovation-ui .fi-header :is(.fi-topnav button, .fi-topnav a, nav button, nav a) {
+  color: var(--alp-white, #f6f4ee); text-shadow: 0 1px 12px #020a1880;
+}
+
+/* The epilogue hides the whole footer (css/world.css), and the sound toggle went with it: water sound switched on in the valley
+   could not be switched off in the sea. Keep the toggle; the progress line makes room for it. */
+html body.is-world .finnovation-ui .fi-footer { opacity: 1 !important; visibility: visible !important; transition: none; }
+html body.is-world .finnovation-ui .fi-footer > :not(.fi-sound) { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+html body.is-world .finnovation-ui .fi-footer .fi-sound { pointer-events: auto !important; }
+#fiWorld .fiwo-progress { left: calc(var(--fiw-margin) + 112px); }
+html body.is-world #fiWorld.is-light ~ .finnovation-ui .fi-footer button.fi-sound { color: #1c2d42 !important; text-shadow: none !important; }
+
+/* the detail column leaves a little before, and comes in a little after, its chapter's text (--op2, set per frame by paint()) */
+#fiWorld .fiwo-detail { opacity: calc(var(--r) * var(--op2, 1)); }
+
+/* 2026-10-24: the client's two image positions, in the same moving panels as their copy.
+   Images are requested near the ocean only; source dimensions reserve their space. */
+#fiWorld .fiwo-photo {
+  position: absolute; top: 26%; width: 27%; max-width: 430px; margin: 0;
+  opacity: calc(var(--r, 1) * var(--op2, 1));
+  transform: translate3d(calc((1 - var(--r, 1)) * 36px), 0, 0);
+  --r: clamp(0, calc((var(--p, 1) - .16) * 3.4), 1);
+}
+#fiWorld .fiwo-photo--intro { left: calc(var(--fiwo-x) * 100%); }
+#fiWorld .fiwo-photo--chapter { right: var(--fiw-margin); }
+#fiWorld .fiwo-photo img {
+  display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover;
+  border: 1px solid #e5edf135; border-radius: 2px;
+  opacity: 0; transform: scale(1.015); transition: opacity .6s, transform 1s;
+  box-shadow: 0 14px 40px #07152130;
+}
+#fiWorld .fiwo-photo.is-loaded img { opacity: 1; transform: scale(1); }
+#fiWorld .fiwo-photo figcaption {
+  margin-top: 10px; color: #e4e8e9c9;
+  font: 400 8px/1.4 var(--fiwo-mono); letter-spacing: .17em;
+  text-shadow: var(--fiwo-shadow);
+}
+@media (max-width: 960px) {
+  #fiWorld .fiwo-photo { top: 18%; width: 34%; }
+  #fiWorld .fiwo-photo--intro { left: var(--fiw-margin); }
+}
+@media (max-width: 680px) {
+  #fiWorld .fiwo-photo { top: 15%; width: 58%; max-width: 250px; }
+  #fiWorld .fiwo-photo img { max-height: 18vh; object-fit: cover; }
+  #fiWorld .fiwo-photo--intro { left: var(--fiw-margin); }
+  #fiWorld .fiwo-photo figcaption { margin-top: 7px; font-size: 7px; letter-spacing: .1em; }
+}
+@media (max-height: 650px) and (min-width: 681px) {
+  #fiWorld .fiwo-photo { top: 19%; width: 22%; }
+  #fiWorld .fiwo-photo figcaption { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fiWorld .fiwo-photo, #fiWorld .fiwo-photo img { transform: none; transition: none; }
+}
+
+/* =====================================================================
+   OCEAN EDITORIAL · 2026-10-24
+   One left column for the opening image/copy; one shared right column for
+   chapter photography/details. Layout stays inside each moving panel.
+   No new fonts, images, blur layers or independently animated elements.
+   ===================================================================== */
+#fiWorld.fiwo-on {
+  --fiwo-copy: min(30rem, 31vw);
+  --fiwo-aside: min(31rem, 33vw);
+  --fiwo-shadow: 0 2px 16px #04132566;
+}
+#fiWorld .fiwo-text { width: min(39rem, 43vw); }
+#fiWorld .fiwo-kicker { gap: 12px; margin-bottom: 18px; font-size: 10px; letter-spacing: .18em; color: #f6f4eec9; }
+#fiWorld .fiwo-kicker i { width: 5px; height: 5px; box-shadow: none; }
+#fiWorld .fiwo-sub { margin-bottom: 16px; font-size: 10px; letter-spacing: .23em; color: #e2c28ad9; }
+#fiWorld .fiwo-panel .fiw-title {
+  max-width: 10.8em; margin-bottom: 24px;
+  font-size: clamp(43px, 4.05vw, 68px); line-height: 1.025; letter-spacing: -.018em;
+  color: var(--fiwo-white);
+}
+#fiWorld .fiwo-panel .fiw-desc {
+  max-width: 29em; margin-bottom: 30px;
+  font-size: clamp(14px, 1.02vw, 16px); line-height: 1.95; letter-spacing: .055em;
+  color: #e4ecf3d9;
+}
+
+/* The intro is one composed column: image and prose keep the same measure.
+   Relative flow removes the old fixed-top photograph / fixed-bottom copy collision. */
+#fiWorld .fiwo-intro {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: clamp(24px, 3.3vh, 38px); padding: 110px var(--fiw-margin) 96px;
+}
+#fiWorld .fiwo-intro .fiwo-text,
+#fiWorld .fiwo-intro .fiwo-photo {
+  position: relative; inset: auto; width: var(--fiwo-copy); max-width: none;
+}
+#fiWorld .fiwo-intro .fiwo-text { order: 2; }
+#fiWorld .fiwo-intro .fiwo-photo { order: 1; flex: 0 0 auto; }
+#fiWorld .fiwo-intro .fiwo-kicker { margin-bottom: 19px; }
+#fiWorld .fiwo-lead {
+  max-width: none; margin-bottom: 27px;
+  font-size: clamp(20px, 1.58vw, 26px); line-height: 1.85; letter-spacing: .065em;
+  text-wrap: pretty; color: var(--fiwo-white);
+}
+
+/* The image, caption and evidence column share the same right edge and width. */
+#fiWorld .fiwo-photo--chapter { top: 20%; right: var(--fiw-margin); width: var(--fiwo-aside); max-width: none; }
+#fiWorld .fiwo-photo img {
+  box-sizing: border-box; aspect-ratio: 16 / 9;
+  border: 1px solid #e5edf126; border-radius: 0;
+  box-shadow: 0 9px 28px #06172424;
+}
+#fiWorld .fiwo-photo figcaption {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px; color: #dfe7edb3;
+  font-size: 9px; line-height: 1.4; letter-spacing: .14em; text-shadow: none;
+}
+#fiWorld .fiwo-photo figcaption::before {
+  content: ''; flex: 0 0 22px; height: 1px; background: #e2c28a7a;
+}
+#fiWorld .fiwo-detail { width: var(--fiwo-aside); padding-top: 22px; border-top-color: #e0e9ef38; }
+#fiWorld .fiwo-detail .fiw-paras { column-gap: 30px; row-gap: 25px; }
+#fiWorld .fiwo-detail p,
+#fiWorld .fiwo-detail .fiw-second,
+#fiWorld .fiwo-detail .fiw-tabpanel p { font-size: 13.5px; line-height: 1.85; color: #e0e9efd6; }
+#fiWorld .fiwo-detail .fiw-paras p b,
+#fiWorld .fiwo-detail .fiw-items h4 { margin-bottom: 9px; font-size: 9px; line-height: 1.45; letter-spacing: .18em; color: #efdab3; }
+#fiWorld .fiwo-detail .fiw-items { gap: 22px; }
+
+/* Controls are quiet, sharp and legible over moving water. */
+#fiWorld .fiwo-pill {
+  height: 43px; padding: 0 9px 0 21px; gap: 18px;
+  border-color: #f6f4ee52; background: #10283940;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  font-size: 10px; letter-spacing: .18em;
+  transition: background .25s, color .25s, border-color .25s;
+}
+#fiWorld .fiwo-pill i { width: 25px; height: 25px; }
+#fiWorld .fiwo-pill i::before { width: 6px; height: 6px; box-shadow: none; }
+#fiWorld .fiwo-progress { bottom: 24px; color: #e4eaf0a6; font-size: 9px; }
+#fiWorld .fiwo-progress-line { background: #e5edf12b; }
+#fiWorld .fiwo-progress-line i { background: #e2c28ab3; box-shadow: none; }
+#fiWorld .fiwo-progress button { padding: 9px 8px; opacity: .48; }
+
+/* Tablet: retain the scene's central breathing space; chapters still stack. */
+@media (max-width: 960px) {
+  #fiWorld.fiwo-on { --fiwo-copy: min(23rem, 42vw); }
+  #fiWorld .fiwo-intro { gap: 27px; padding-top: 108px; padding-bottom: 104px; }
+  #fiWorld .fiwo-intro .fiwo-text,
+  #fiWorld .fiwo-intro .fiwo-photo { width: var(--fiwo-copy); }
+  #fiWorld .fiwo-text,
+  #fiWorld .fiwo-detail { width: auto; max-width: 38rem; }
+  #fiWorld .fiwo-photo--chapter { top: 17%; width: min(23rem, 38vw); }
+  #fiWorld .fiwo-panel .fiw-title { font-size: clamp(35px, 4.6vw, 46px); }
+  #fiWorld .fiwo-panel .fiw-desc { margin-bottom: 20px; }
+  #fiWorld .fiwo-detail { padding-top: 18px; margin-top: 16px; }
+  #fiWorld .fiwo-detail .fiw-paras { row-gap: 22px; }
+}
+
+/* Phone: a small photograph above the scene; prose stays in the reading band. */
+@media (max-width: 680px) {
+  #fiWorld .fiwo-intro { display: block; padding: 0; }
+  #fiWorld .fiwo-intro .fiwo-text {
+    position: absolute; left: var(--fiw-margin); right: var(--fiw-margin); bottom: 108px;
+    width: auto; max-width: none;
+  }
+  #fiWorld .fiwo-intro .fiwo-photo,
+  #fiWorld .fiwo-photo--chapter {
+    position: absolute; top: 15%; width: 58%; max-width: 250px;
+  }
+  #fiWorld .fiwo-intro .fiwo-photo { left: var(--fiw-margin); }
+  #fiWorld .fiwo-photo--chapter { right: var(--fiw-margin); }
+  #fiWorld .fiwo-photo img { aspect-ratio: 8 / 5; max-height: 18vh; }
+  #fiWorld .fiwo-photo figcaption { gap: 8px; margin-top: 9px; font-size: 7px; letter-spacing: .12em; }
+  #fiWorld .fiwo-photo figcaption::before { flex-basis: 14px; }
+  #fiWorld .fiwo-kicker { font-size: 9px; margin-bottom: 13px; letter-spacing: .16em; }
+  #fiWorld .fiwo-sub { font-size: 9px; margin-bottom: 12px; letter-spacing: .22em; }
+  #fiWorld .fiwo-panel .fiw-title { font-size: clamp(28px, 7.6vw, 34px); line-height: 1.06; margin-bottom: 16px; letter-spacing: -.015em; }
+  #fiWorld .fiwo-panel .fiw-desc { margin-bottom: 14px; font-size: 13px; line-height: 1.85; letter-spacing: .045em; }
+  #fiWorld .fiwo-lead { font-size: 17px; line-height: 1.9; letter-spacing: .06em; margin-bottom: 0; }
+  #fiWorld .fiwo-intro .fiwo-kicker { margin-bottom: 17px; }
+  #fiWorld .fiwo-detail { margin-top: 15px; padding-top: 15px; }
+  #fiWorld .fiwo-detail .fiw-paras { column-gap: 21px; row-gap: 18px; }
+  #fiWorld .fiwo-detail p,
+  #fiWorld .fiwo-detail .fiw-second,
+  #fiWorld .fiwo-detail .fiw-tabpanel p { font-size: 12px; line-height: 1.8; letter-spacing: .035em; }
+  #fiWorld .fiwo-detail .fiw-paras p b,
+  #fiWorld .fiwo-detail .fiw-items h4 { margin-bottom: 7px; font-size: 8.5px; letter-spacing: .16em; }
+  #fiWorld .fiwo-detail .fiw-items { gap: 16px; }
+  #fiWorld .fiwo-progress { bottom: 18px; font-size: 8.5px; }
+  #fiWorld .fiwo-progress button { padding: 10px 6px; }
+}
+
+/* Short desktop windows keep column alignment by cropping the photo wider. */
+@media (max-height: 800px) and (min-width: 961px) {
+  #fiWorld .fiwo-intro { gap: 23px; padding-top: 98px; padding-bottom: 88px; }
+  #fiWorld .fiwo-intro .fiwo-photo img { aspect-ratio: 2 / 1; }
+  #fiWorld .fiwo-photo--chapter { top: 15%; width: var(--fiwo-aside); }
+  #fiWorld .fiwo-photo--chapter img { aspect-ratio: 2.3 / 1; }
+  #fiWorld .fiwo-panel .fiw-title { font-size: clamp(40px, 3.9vw, 58px); }
+  #fiWorld .fiwo-detail { padding-top: 17px; }
+  #fiWorld .fiwo-detail .fiw-paras { row-gap: 20px; }
+}
+@media (max-height: 650px) and (min-width: 681px) {
+  #fiWorld .fiwo-intro { gap: 20px; padding-top: 90px; padding-bottom: 78px; }
+  #fiWorld .fiwo-intro .fiwo-photo img { aspect-ratio: 2.25 / 1; }
+  #fiWorld .fiwo-lead { font-size: 18px; line-height: 1.7; }
+  #fiWorld .fiwo-photo--chapter { top: 15%; width: var(--fiwo-aside); }
+  #fiWorld .fiwo-photo--chapter img { aspect-ratio: 2.8 / 1; }
+  #fiWorld .fiwo-photo figcaption { display: none; }
+  #fiWorld .fiwo-detail p,
+  #fiWorld .fiwo-detail .fiw-second { font-size: 12px; line-height: 1.75; }
+  #fiWorld .fiwo-detail .fiw-paras { row-gap: 16px; }
+}
+@media (max-width: 680px) and (max-height: 740px) {
+  #fiWorld .fiwo-intro .fiwo-photo,
+  #fiWorld .fiwo-photo--chapter { top: 94px; width: 43%; max-width: 190px; }
+  #fiWorld .fiwo-photo img { max-height: 12vh; }
+  #fiWorld .fiwo-photo figcaption { display: none; }
+  #fiWorld .fiwo-panel .fiw-title { font-size: 27px; margin-bottom: 13px; }
+  #fiWorld .fiwo-panel .fiw-desc { font-size: 12.5px; line-height: 1.7; margin-bottom: 10px; }
+  #fiWorld .fiwo-detail { margin-top: 12px; padding-top: 12px; }
+  #fiWorld .fiwo-detail .fiw-paras { column-gap: 19px; row-gap: 12px; }
+  #fiWorld .fiwo-detail p,
+  #fiWorld .fiwo-detail .fiw-second,
+  #fiWorld .fiwo-detail .fiw-tabpanel p { font-size: 11.2px; line-height: 1.7; }
+  #fiWorld .fiwo-detail .fiw-paras p b,
+  #fiWorld .fiwo-detail .fiw-items h4 { margin-bottom: 6px; font-size: 8px; }
+}
+@media (max-width: 680px) and (max-height: 620px) {
+  #fiWorld .fiwo-intro .fiwo-photo,
+  #fiWorld .fiwo-photo--chapter { top: 82px; width: 34%; }
+  #fiWorld .fiwo-panel .fiw-title { font-size: 25px; }
+  #fiWorld .fiwo-kicker { margin-bottom: 9px; }
+  #fiWorld .fiwo-sub { margin-bottom: 9px; }
+  #fiWorld .fiwo-detail p,
+  #fiWorld .fiwo-detail .fiw-second,
+  #fiWorld .fiwo-detail .fiw-tabpanel p { font-size: 10.8px; line-height: 1.65; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fiWorld .fiwo-pill { transition: none; }
+}
+@media (min-width: 961px) {
+  #fiWorld .fiwo-intro { padding-left: calc(var(--fiwo-x) * 100%); }
+}
+
+/* =====================================================================
+   FOUR INVESTMENT STRATEGIES · 2026-10-24
+   One compact editorial spread: copy immediately beside photography.
+   The photograph, caption and index travel as a single visual column.
+   ===================================================================== */
+#fiWorld .fiwo-panel.fiwo-strategy {
+  display: grid;
+  grid-template-columns: minmax(0, 480px) minmax(0, 500px);
+  grid-template-rows: minmax(0, 1fr);
+  justify-content: center;
+  align-items: center;
+  column-gap: clamp(28px, 3vw, 48px);
+  padding: clamp(112px, 13vh, 148px) clamp(28px, 6vw, 96px) clamp(88px, 10vh, 112px);
+  opacity: 1 !important;
+}
+#fiWorld .fiwo-strategy-copy {
+  grid-column: 1; grid-row: 1;
+  width: 100%; min-width: 0; max-width: none;
+  text-shadow: 0 2px 20px #04132566;
+}
+#fiWorld .fiwo-strategy-copy > * { opacity: 1 !important; transform: none !important; }
+#fiWorld .fiwo-strategy .fiwo-kicker {
+  margin: 0 0 19px;
+  color: #e4ebefc9;
+  font-size: 10px; line-height: 1.4; letter-spacing: .16em;
+}
+#fiWorld .fiwo-strategy .fiwo-sub {
+  margin: 0 0 17px; color: var(--fiwo-gold-hi);
+  font: 400 clamp(15px, 1.15vw, 18px)/1.5 "Noto Sans TC", sans-serif;
+  letter-spacing: .12em;
+}
+#fiWorld .fiwo-strategy .fiwo-strategy-title {
+  max-width: none; margin: 0 0 clamp(24px, 3vh, 32px);
+  color: var(--fiwo-white);
+  font: 400 clamp(44px, 4.25vw, 72px)/1.035 var(--fiwo-display);
+  letter-spacing: -.025em; text-transform: none; text-wrap: balance;
+}
+#fiWorld .fiwo-strategy .fiwo-strategy-title > span { display: block; }
+#fiWorld .fiwo-strategy-tagline {
+  max-width: 27em; margin: 0 0 13px;
+  color: #f0e4c9;
+  font: 400 clamp(18px, 1.35vw, 21px)/1.65 "Noto Sans TC", sans-serif;
+  letter-spacing: .025em; text-wrap: pretty;
+}
+#fiWorld .fiwo-strategy-body {
+  max-width: 33em; margin: 0 0 17px;
+  color: #e1e9efed;
+  font: 300 clamp(14px, 1.02vw, 16px)/1.95 "Noto Sans TC", sans-serif;
+  letter-spacing: .03em; text-wrap: pretty;
+}
+#fiWorld .fiwo-strategy-en {
+  max-width: 33em; margin: 0 0 25px;
+  color: #c7d4ddbf;
+  font: 400 clamp(12px, .9vw, 14px)/1.65 "Jost", sans-serif;
+  letter-spacing: .03em;
+}
+#fiWorld .fiwo-strategy .fiwo-pill {
+  min-height: 42px; height: auto; padding-block: 11px;
+  border-color: #e5edf14d; background: #10283935; letter-spacing: .15em;
+}
+#fiWorld .fiwo-strategy-visual {
+  grid-column: 2; grid-row: 1;
+  display: grid; gap: 23px;
+  width: 100%; min-width: 0;
+}
+#fiWorld .fiwo-strategy .fiwo-photo--strategy {
+  position: relative; inset: auto;
+  width: 100%; max-width: none; margin: 0;
+  opacity: 1 !important; transform: none !important;
+  --r: 1; --op2: 1;
+}
+#fiWorld .fiwo-strategy .fiwo-photo--strategy img {
+  aspect-ratio: 4 / 3; width: 100%; height: auto; max-height: none;
+  object-fit: cover; border: 1px solid #e4edf126;
+  box-shadow: 0 12px 32px #06172424;
+  opacity: 0; transform: none; transition: none;
+}
+#fiWorld .fiwo-strategy .fiwo-photo--strategy.is-loaded img { opacity: 1; transform: none; }
+#fiWorld .fiwo-strategy .fiwo-photo--strategy figcaption {
+  margin-top: 12px; color: #d7e0e7b8;
+  font: 400 8.5px/1.5 var(--fiwo-mono);
+  letter-spacing: .13em;
+}
+#fiWorld .fiwo-strategy-meta {
+  display: flex; align-items: center; gap: 22px;
+  width: 100%; padding-top: 17px;
+  border-top: 1px solid #e0e9ef38;
+  opacity: 1 !important; transform: none !important;
+}
+#fiWorld .fiwo-strategy-number {
+  flex: 0 0 auto; color: #f2eee373;
+  font: 400 59px/.95 var(--fiwo-display); letter-spacing: -.045em;
+}
+#fiWorld .fiwo-strategy-keywords {
+  margin: 0; color: #d5c5a4d9;
+  font: 400 8.5px/1.85 var(--fiwo-mono);
+  letter-spacing: .12em; text-transform: uppercase;
+}
+#fiWorld .fiwo-strategy-keywords > span { display: block; }
+#fiWorld .fiwo-strategy .fiwo-ch { opacity: 1 !important; }
+
+@media (min-width: 681px) and (max-width: 960px) {
+  #fiWorld .fiwo-panel.fiwo-strategy {
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    column-gap: 30px; padding-inline: clamp(30px, 5vw, 48px);
+    padding-top: 116px; padding-bottom: 92px;
+  }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: clamp(35px, 4.5vw, 43px); }
+  #fiWorld .fiwo-strategy .fiwo-kicker { font-size: 8.5px; letter-spacing: .1em; }
+  #fiWorld .fiwo-strategy .fiwo-sub { font-size: 14px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 17px; }
+  #fiWorld .fiwo-strategy-body { font-size: 13.5px; line-height: 1.9; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { aspect-ratio: 4 / 5; }
+  #fiWorld .fiwo-strategy-visual { gap: 20px; }
+  #fiWorld .fiwo-strategy-number { font-size: 51px; }
+  #fiWorld .fiwo-strategy-keywords { font-size: 7.5px; letter-spacing: .07em; }
+}
+
+@media (min-width: 681px) and (max-height: 800px) {
+  #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 104px; padding-bottom: 84px; }
+  #fiWorld .fiwo-strategy .fiwo-kicker { margin-bottom: 13px; }
+  #fiWorld .fiwo-strategy .fiwo-sub { margin-bottom: 13px; font-size: 15px; }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: clamp(35px, 4.05vw, 61px); margin-bottom: 23px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 18px; line-height: 1.6; margin-bottom: 11px; }
+  #fiWorld .fiwo-strategy-body { font-size: 14px; line-height: 1.85; margin-bottom: 14px; }
+  #fiWorld .fiwo-strategy-en { font-size: 12px; line-height: 1.5; margin-bottom: 20px; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { aspect-ratio: 1.5; }
+  #fiWorld .fiwo-strategy-visual { gap: 19px; }
+  #fiWorld .fiwo-strategy-meta { padding-top: 15px; }
+  #fiWorld .fiwo-strategy-number { font-size: 53px; }
+}
+
+@media (max-width: 680px) {
+  #fiWorld .fiwo-panel.fiwo-strategy {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: center; align-items: start;
+    gap: 24px;
+    padding: 108px clamp(24px, 6.2vw, 36px) 80px;
+  }
+  #fiWorld .fiwo-strategy-copy { grid-column: 1; grid-row: 2; }
+  #fiWorld .fiwo-strategy-visual { grid-column: 1; grid-row: 1; gap: 0; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { aspect-ratio: 2.6; max-height: 16vh; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy figcaption { margin-top: 9px; font-size: 7px; letter-spacing: .09em; }
+  #fiWorld .fiwo-strategy-meta { display: none; }
+  #fiWorld .fiwo-strategy .fiwo-kicker { font-size: 8px; margin-bottom: 12px; letter-spacing: .11em; }
+  #fiWorld .fiwo-strategy .fiwo-sub { font-size: 14px; margin-bottom: 12px; letter-spacing: .1em; }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: clamp(33px, 9.5vw, 43px); line-height: 1.025; margin-bottom: 21px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 17px; line-height: 1.6; margin-bottom: 12px; letter-spacing: .02em; }
+  #fiWorld .fiwo-strategy-body { font-size: 13.5px; line-height: 1.85; margin-bottom: 14px; letter-spacing: .025em; }
+  #fiWorld .fiwo-strategy-en { font-size: 11.5px; line-height: 1.5; margin-bottom: 20px; letter-spacing: .025em; }
+  #fiWorld .fiwo-strategy .fiwo-pill { display: inline-flex; min-height: 39px; padding-block: 10px; font-size: 9px; }
+}
+
+@media (max-width: 680px) and (max-height: 740px) {
+  #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 103px; padding-bottom: 74px; gap: 18px; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { aspect-ratio: 3.2; max-height: 13vh; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy figcaption { display: none; }
+  #fiWorld .fiwo-strategy .fiwo-kicker { margin-bottom: 10px; }
+  #fiWorld .fiwo-strategy .fiwo-sub { font-size: 13px; margin-bottom: 10px; }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: 33px; margin-bottom: 16px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 16px; line-height: 1.55; margin-bottom: 11px; }
+  #fiWorld .fiwo-strategy-body { font-size: 13px; line-height: 1.8; margin-bottom: 16px; }
+  #fiWorld .fiwo-strategy-en { display: none; }
+  #fiWorld .fiwo-strategy .fiwo-pill { min-height: 36px; padding-block: 9px; }
+}
+@media (max-width: 680px) and (max-height: 610px) {
+  #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 93px; padding-bottom: 66px; gap: 13px; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { max-height: 9vh; aspect-ratio: 4; }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: 29px; margin-bottom: 13px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 15px; margin-bottom: 9px; }
+  #fiWorld .fiwo-strategy-body { font-size: 12.5px; line-height: 1.75; margin-bottom: 13px; }
+}
+@media (min-width: 681px) and (max-height: 650px) {
+  #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 94px; padding-bottom: 78px; }
+  #fiWorld .fiwo-strategy .fiwo-kicker { margin-bottom: 11px; font-size: 9px; }
+  #fiWorld .fiwo-strategy .fiwo-sub { margin-bottom: 10px; font-size: 14px; }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: clamp(34px, 3.7vw, 45px); margin-bottom: 17px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 16px; line-height: 1.55; }
+  #fiWorld .fiwo-strategy-body { font-size: 13px; line-height: 1.8; }
+  #fiWorld .fiwo-strategy-en { display: none; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { aspect-ratio: 1.9; }
+  #fiWorld .fiwo-strategy-visual { gap: 16px; }
+  #fiWorld .fiwo-strategy-number { font-size: 45px; }
+}
+@media (min-width: 681px) and (max-height: 520px) {
+  #fiWorld.is-ocean .fiw-viewport {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 56px, #000 90px);
+    mask-image: linear-gradient(to bottom, transparent 0, transparent 56px, #000 90px);
+  }
+  #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 84px; padding-bottom: 60px; }
+  #fiWorld .fiwo-strategy .fiwo-kicker { display: none; }
+  #fiWorld .fiwo-strategy .fiwo-sub { font-size: 13px; margin-bottom: 7px; }
+  #fiWorld .fiwo-strategy .fiwo-strategy-title { font-size: 32px; line-height: 1.025; margin-bottom: 10px; }
+  #fiWorld .fiwo-strategy-tagline { font-size: 14px; line-height: 1.4; margin-bottom: 7px; }
+  #fiWorld .fiwo-strategy-body { font-size: 12px; line-height: 1.65; margin-bottom: 12px; }
+  #fiWorld .fiwo-strategy .fiwo-pill { min-height: 31px; padding-block: 6px; font-size: 8px; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy img { aspect-ratio: 1.6; }
+  #fiWorld .fiwo-strategy .fiwo-photo--strategy figcaption,
+  #fiWorld .fiwo-strategy-meta { display: none; }
+}
+
+/* VISUAL BOARD 2026-10-24 (ocean photos): the photographs sit in the sea's light instead of on it — less colour, a hairline,
+   no drop shadow, the lower edge dissolving into the water. ?visual=classic restores them. */
+html[data-atmos="on"]:not([data-visual="classic"]) #fiWorld .fiwo-photo img {
+  filter: saturate(.72) contrast(1.06) brightness(.94); border-color: rgba(246, 244, 238, .18); box-shadow: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent);
+}

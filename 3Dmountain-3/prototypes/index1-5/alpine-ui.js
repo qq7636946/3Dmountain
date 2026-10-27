@@ -26,16 +26,18 @@ const isText = () => html.dataset.renderMode === 'text';
 if (params.get('visual') === 'classic') html.dataset.visual = 'classic';
 if (params.get('atmos') === '1') html.dataset.atmos = 'on';   // film grain, vignette and the ocean-photo grading (switched off by default, client 2026-10-24)
 if (params.get('fonts') === 'classic') html.dataset.fonts = 'classic';   // the platform serif / mono stacks of before the one-type-system pass   // visual board pass (2026-10-24) off: the previous look
+// A single film layer covers every chapter of index1-5, including the lake.
+const unifiedGrain = html.dataset.look === 'index1-5' && params.get('atmos') !== '0' && html.dataset.visual !== 'classic';
 let atmos = [];
 /* one vignette under the interface and one film grain over everything: the page and the canvas share the same air */
 function buildAtmos() {
-  if (html.dataset.visual === 'classic' || params.get('atmos') !== '1' || atmos.length) return;   // grain + vignette are opt-in now (?atmos=1)
+  if (html.dataset.visual === 'classic' || (!unifiedGrain && params.get('atmos') !== '1') || atmos.length) return;   // grain + vignette are opt-in now (?atmos=1)
   try {
     const c = document.createElement('canvas'); c.width = c.height = 160; const g = c.getContext('2d'), img = g.createImageData(160, 160);
     for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255 | 0; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
-    g.putImageData(img, 0, 0); html.style.setProperty('--alp-grain-url', `url(${c.toDataURL('image/png')})`);
+    g.putImageData(img, 0, 0); html.style.setProperty('--alp-grain-url', `url(${c.toDataURL('image/png')})`); if (unifiedGrain) html.dataset.grain = 'unified';
   } catch { /* no grain */ }
-  for (const cls of ['alp-vignette', 'alp-grain']) { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); document.body.append(d); atmos.push(d); }
+  for (const cls of (unifiedGrain && params.get('atmos') !== '1' ? ['alp-grain'] : ['alp-vignette', 'alp-grain'])) { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); document.body.append(d); atmos.push(d); }
 }
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const hidden = n => { n.setAttribute('aria-hidden', 'true'); return n; };
@@ -288,11 +290,18 @@ function updateLabels(S, v, now) {
 
 /* ---------- loop ---------- */
 let dir = null, vec = null, fitted = false;
-let bridgeInk = -1, inkHeader = null, inkSet = null;
+let bridgeInk = -1, inkHeader = null, inkSet = null, filmGrainAmount = -1;
 function frame(now) {
   raf = requestAnimationFrame(frame);
   if (now - lastStats > 200) updateSceneClock();
   const S = window.__MONTIS_STUDY__;
+  if (unifiedGrain && S?.CONFIG?.scene) {
+    const rawGrain = Number(S.CONFIG.scene.grain);
+    const amount = Number.isFinite(rawGrain) ? Math.max(0, Math.min(.25, rawGrain * (.035 / .006))) : .035;
+    if (amount !== filmGrainAmount) {
+      filmGrainAmount = amount; html.style.setProperty('--fi-film-grain-opacity', amount.toFixed(4));
+    }
+  }
   if (!S?.canyon?.camera || !S.journey) return;
   if (!dir) { dir = S.canyon.camera.position.clone(); vec = dir.clone(); }
   // the header stays white while the bridge's haze is still thin, then turns navy with the haze (0 until the bridge is .45 across, 1 at .7)

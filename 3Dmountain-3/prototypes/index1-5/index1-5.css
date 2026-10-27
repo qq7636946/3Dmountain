@@ -515,3 +515,14 @@ html[data-alpine-ui]:not([data-fonts="classic"]) body *:not(svg):not(svg *) { fo
 /* ==== VISUAL BOARD END ==== */
 
 /* ==== ALPINE-UI END ==== */
+
+/* One fine film layer, with identical density before and after the world handoff. */
+html[data-look="index1-5"][data-grain="unified"] body.is-ready .grain { display: none; }
+html[data-look="index1-5"][data-grain="unified"] .alp-grain {
+  inset: -8%; z-index: 9; opacity: var(--fi-film-grain-opacity, .035); background-size: 160px 160px;
+}
+html[data-look="index1-5"][data-render-mode="text"] .alp-grain { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-look="index1-5"][data-grain="unified"] .alp-grain { animation: none; }
+}

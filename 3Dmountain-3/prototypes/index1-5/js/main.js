@@ -15,7 +15,7 @@
     import { createOpeningPortal, OPENING_PORTAL_DEFAULTS, OPENING_PORTAL_ROWS } from './opening-portal.js?v=restore-1-5-blue-8547de57661f';
     import { ALPINE_LIGHT, ALPINE_LIGHT_ROWS } from './alpine-light-params.js?v=restore-1-5-blue-8547de57661f';
     import { ALPINE_TERRAIN, ALPINE_TERRAIN_ROWS } from './alpine-terrain-params.js?v=restore-1-5-blue-8547de57661f';
-    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=restore-1-5-blue-8547de57661f';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from './water-journey-scene-463.js?v=river-continuous-20261027-r1';
     import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from './water-canyon-watershed-463.js?v=restore-1-5-blue-8547de57661f';
     import { createJourneyRiver } from '../../../js/water-journey-river.js?v=restore-1-5-blue-8547de57661f';
     import { createFinnovationCursor, CURSOR_DEFAULTS } from '../../../js/finnovation-cursor.js?v=restore-1-5-blue-8547de57661f';
@@ -6627,7 +6627,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }).catch(error => console.warn('Portfolio epilogue unavailable:', error));
       /* 卡牌之後（只有 index1-1）：地球、理念、頁尾。卡牌浮出時才下載；載不到就停在卡牌，跟原本一樣。 */
       let world = null, worldJob = null;
-      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=closing-logo-no-grid-20261027-r1').then(module => {
+      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=i15-sparkles-grain-20261027-r3').then(module => {
         world = module.mountWorld({ root: document.querySelector('#fiWorld'), reducedMotion: reduceMotion, epilogue: () => portfolio, carry: delta => advanceJourney(delta, 'touch'), grade: () => CONFIG.grade, mist: () => CONFIG.mist, video: () => CONFIG.video, ocean: () => CONFIG.worldOcean, logo: () => CONFIG,
           /* its preparation keeps out of the way while the valley-to-cards bridge is moving (scrolled within the last moment), except the bridge's last tenth (F5): the planet's GL build then finishes before the cards hand over */
           busy: () => !!portfolio?.open && portfolio.transition > 0 && portfolio.transition < .9 && performance.now() - (journey.lastInput || 0) < 1400 });
@@ -9090,6 +9090,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         openingLungeBlur.update({ dt: scrollDt, progress: journey.progress, velocity: journey.velocity,
           stage: dropTransition.progress, mesh: disperseMesh, hero: dropRoot, secondary: logoDrops,
           heroRadius: currentDropRadius(), heroScale: CONFIG.drop.scale, width: innerWidth, height: innerHeight });
+        /* UNIFIED_FILM_GRAIN: one shared layer, after all per-scene uniform updates. */
+        if (document.documentElement.dataset.grain === 'unified') grainPass.uniforms.uAmount.value = 0;
         renderFrame++;
         sceneCursor.update(dt, time);
         // Refraction and the final view share the same transforms. Traverse once

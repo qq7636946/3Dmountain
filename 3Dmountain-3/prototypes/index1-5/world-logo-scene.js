@@ -62,6 +62,9 @@ export const LAKE_DEFAULTS = {
   /* ---- droplets and motes ---- */
   moteCount: 22, moteSize: 0.55, moteSpeed: 0.35, moteOpacity: 0.24, moteColor: '#f3dfb6',
   speckDensity: 0.22, skySpecks: 0.42,
+  /* Local rising helix, exposed separately in the M tuner. */
+  orbitRandomness: 85, orbitSpeed: 1.15, orbitRiseSpeed: 1, orbitRadius: 1.22, orbitSize: 1.1, orbitBrightness: 1.1,
+  orbitDensity: 100, orbitScatter: .9, orbitInteraction: 1.4,
   /* ---- frame ---- */
   vignette: 0.23, exposure: 0.96, outputDisplay: 1,
   /* ---- camera and composition ---- */
@@ -602,8 +605,64 @@ attribute vec4 aSeed;       // x: -1..1 across, y: 0..1 up, z: 0..1 depth, w: ra
 uniform float uTime, uSpeed, uSize, uResY, uCount;
 uniform vec4 uView;         // tan(half fov), aspect, horizon ndc, camera height
 uniform vec2 uDepth;
+#ifdef LOGO_NEAR_SPECKS
+uniform vec3 uMarkCenter, uMarkExtent;
+uniform vec2 uOrbitClock;
+uniform vec4 uOrbitStyle; // randomness, radius, size, brightness
+uniform vec2 uOrbitSpread; // density, wandering amplitude
+uniform vec4 uOrbitPointer; // world XY, strength, influence radius
+uniform float uMarkVisibility;
+#endif
 varying vec4 vInfo;
 void main() {
+#ifdef LOGO_NEAR_SPECKS
+  // Vertical helix: X/Z orbit the mark's Y axis; Y only rises during each life.
+  // https://mathworld.wolfram.com/Helix.html (axes permuted for Three.js Y-up).
+  if (aSeed.w > 1.) {
+    float seed = aSeed.w - 2., t = uOrbitClock.x;
+    if (fract(seed * 79.13) >= uOrbitSpread.x) {
+      gl_Position = vec4(2., 2., 2., 1.); gl_PointSize = 1.; vInfo = vec4(0.); return;
+    }
+    float random = uOrbitStyle.x, scatter = uOrbitSpread.y;
+    float life = fract(aSeed.y + uOrbitClock.y * mix(.078, .058 + seed * .04, random));
+    float plume = smoothstep(.66, 1., life);
+    // Separate angular and upward clocks let either speed change without teleporting particles.
+    float angle = aSeed.y * 6.2831853 * 2.15
+      + t * mix(.9, .68 + .42 * fract(seed * 17.3), random)
+      + aSeed.x * (.22 + random * 2.1)
+      + sin(t * .23 + seed * 31.) * random * (.22 + scatter * .2);
+    float radius = (uMarkExtent.x + uMarkExtent.y * .13)
+      * uOrbitStyle.y * (1. + (aSeed.z - .5) * (mix(.12, .42, random) + scatter * .34)
+      + sin(t * .41 + seed * 23.) * random * (.07 + scatter * .09)) * (1. - .72 * plume);
+    vec3 p = uMarkCenter;
+    p.x += cos(angle) * radius;
+    p.z += sin(angle) * radius;
+    p.y += mix(-.98, 1.78, life) * uMarkExtent.y;
+    // The stream loosens above the tip into a soft upward plume.
+    p.x += sin(t * .8 + seed * 43.) * plume * uMarkExtent.y * .06;
+    p.z += cos(t * .7 + seed * 31.) * plume * uMarkExtent.y * .06;
+    // Soft wandering keeps a loose helix, with the widest movement around the mark.
+    p.x += sin(t * .53 + seed * 61.) * scatter * uMarkExtent.y * .12;
+    p.z += cos(t * .47 + seed * 47.) * scatter * uMarkExtent.y * .12;
+    vec2 away = p.xy - uOrbitPointer.xy;
+    float influence = (1. - smoothstep(0., max(.01, uOrbitPointer.w), length(away))) * uOrbitPointer.z;
+    p.xy += normalize(away + vec2(.001, .002)) * influence * uMarkExtent.y * .32;
+    p.z += sin(seed * 43.) * influence * uMarkExtent.y * .16;
+    vec4 mv = modelViewMatrix * vec4(p, 1.);
+    gl_Position = projectionMatrix * mv;
+    float screenY = .5 - .5 * gl_Position.y / gl_Position.w;
+    float pulse = .5 + .5 * sin(t * 1.7 + seed * 29.);
+    float depthLight = .65 + .35 * smoothstep(-.6, .75, sin(angle));
+    float fade = smoothstep(0., .075, life) * (1. - smoothstep(.87, 1., life));
+    fade *= smoothstep(.015, .065, screenY) * (1. - smoothstep(.71, .79, screenY));
+    fade *= smoothstep(.03, .35, p.y);
+    vInfo = vec4(0., uMarkVisibility * (.72 + .28 * pulse) * depthLight * fade * uOrbitStyle.w * (1. + influence * .18), 1., seed);
+    float diameter = 6. + 10. * seed * seed + 16. * pow(seed, 14.);
+    float perspective = clamp((-uMarkCenter.z) / max(1., -mv.z), .7, 1.4);
+    gl_PointSize = clamp(diameter * perspective * (.94 + .12 * pulse) * uResY / 950. * uOrbitStyle.z, 1., 64.);
+    return;
+  }
+#endif
   float r = fract(aSeed.w * 7.13);
   float z = mix(uDepth.x, uDepth.y, pow(aSeed.z, 1.3));
   float t = uTime * uSpeed;
@@ -631,6 +690,14 @@ void main() {
   vec2 c = gl_PointCoord * 2. - 1.; c.y = -c.y;
   float r2 = dot(c, c);
   if (r2 > 1.) discard;
+#ifdef LOGO_NEAR_SPECKS
+  if (vInfo.z > .5) {
+    float core = exp(-r2 * 27.), halo = exp(-r2 * 5.5);
+    vec3 light = mix(vec3(.67, .84, 1.), vec3(1.), core);
+    gl_FragColor = vec4(light, (core + halo * .38) * vInfo.y * .8);
+    return;
+  }
+#endif
   vec3 col; float a;
   if (vInfo.x < .5) { a = exp(-r2 * 3.4) * .6; col = uColor; }
   else {
@@ -755,23 +822,62 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
 
   /* ---- motes ---- */
   const MAX_MOTES = small ? 160 : 480;
+  // Main page only: nearby sparkles share the existing mote draw and mirror lifecycle.
+  const nearMarkCount = globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])') ? (small ? 72 : 180) : 0;
+  const markBounds = new THREE.Box3();
+  let orbitClockStarted = false;
   const moteGeo = new THREE.BufferGeometry();
   {
-    const seed = new Float32Array(MAX_MOTES * 4), pos = new Float32Array(MAX_MOTES * 3);
+    const seed = new Float32Array((MAX_MOTES + nearMarkCount) * 4), pos = new Float32Array((MAX_MOTES + nearMarkCount) * 3);
     let s = 1234567;
     const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < MAX_MOTES; i++) { seed[i * 4] = rnd() * 2 - 1; seed[i * 4 + 1] = rnd(); seed[i * 4 + 2] = rnd(); seed[i * 4 + 3] = rnd(); }
+    for (let i = nearMarkCount; i < MAX_MOTES + nearMarkCount; i++) { seed[i * 4] = rnd() * 2 - 1; seed[i * 4 + 1] = rnd(); seed[i * 4 + 2] = rnd(); seed[i * 4 + 3] = rnd(); }
+    // A separate seed keeps all original background motes in their previous positions.
+    s = 89371;
+    for (let i = 0; i < nearMarkCount; i++) { seed[i * 4] = rnd() * 2 - 1; seed[i * 4 + 1] = (i + rnd() * .7) / nearMarkCount; seed[i * 4 + 2] = rnd(); seed[i * 4 + 3] = 2 + rnd(); }
     moteGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     moteGeo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 4));
     moteGeo.setDrawRange(0, 0);
   }
   const MU = {
+    uMarkCenter: { value: new THREE.Vector3() }, uMarkExtent: { value: new THREE.Vector3() }, uMarkVisibility: { value: 0 },
+    uOrbitClock: { value: new THREE.Vector2() }, uOrbitStyle: { value: new THREE.Vector4() },
+    uOrbitSpread: { value: new THREE.Vector2() }, uOrbitPointer: { value: new THREE.Vector4(0, 0, 0, 1) },
     uTime: U.uTime, uSpeed: { value: 1 }, uSize: { value: 1 }, uResY: { value: H }, uCount: { value: 0 },
     uView: { value: new THREE.Vector4(.325, 1.6, -.2, L.camHeight) }, uDepth: { value: new THREE.Vector2(2.5, 30) },
     uColor: { value: new THREE.Vector3(1, .95, .88) }, uSkyTint: { value: new THREE.Vector3(.35, .45, .6) }, uSunV: { value: new THREE.Vector2(-.5, .4) },
     uOpacity: { value: .8 }, uDisplay: { value: 1 }
   };
+  // One passive pointer field for the GPU particles; it never captures touch or prevents scrolling.
+  const orbitPointerTarget = new THREE.Vector2(), orbitPointerCurrent = new THREE.Vector2();
+  const orbitPointerRay = new THREE.Vector3();
+  let orbitPointerSeen = false, orbitPointerAt = -Infinity, orbitPointerWeight = 0;
+  const orbitPointerEnabled = nearMarkCount > 0 && !reducedMotion;
+  const stopOrbitPointer = () => { orbitPointerAt = -Infinity; };
+  const moveOrbitPointer = event => {
+    if (!orbitPointerEnabled || event.isPrimary === false || MU.uMarkVisibility.value < .01
+      || renderer.domElement.style.visibility === 'hidden') return;
+    if (event.target?.closest?.('.lgp,#tuner,.letters-panel,button,a,input,textarea,select,[contenteditable]')) { stopOrbitPointer(); return; }
+    const box = renderer.domElement.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const x = (event.clientX - box.left) / box.width, y = (event.clientY - box.top) / box.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) { stopOrbitPointer(); return; }
+    orbitPointerTarget.set(x * 2 - 1, 1 - y * 2);
+    if (!orbitPointerSeen) { orbitPointerCurrent.copy(orbitPointerTarget); orbitPointerSeen = true; }
+    orbitPointerAt = performance.now();
+  };
+  const releaseOrbitPointer = event => { if (event.pointerType !== 'mouse') stopOrbitPointer(); };
+  const leaveOrbitPointer = event => { if (!event.relatedTarget) stopOrbitPointer(); };
+  if (orbitPointerEnabled) {
+    window.addEventListener('pointermove', moveOrbitPointer, { passive: true });
+    window.addEventListener('pointerdown', moveOrbitPointer, { passive: true });
+    window.addEventListener('pointerup', releaseOrbitPointer, { passive: true });
+    window.addEventListener('pointercancel', stopOrbitPointer, { passive: true });
+    window.addEventListener('pointerout', leaveOrbitPointer, { passive: true });
+    window.addEventListener('blur', stopOrbitPointer);
+  }
   const motes = new THREE.Points(moteGeo, new THREE.ShaderMaterial({
+    defines: nearMarkCount ? { LOGO_NEAR_SPECKS: 1 } : {},
     vertexShader: MOTE_VERTEX, fragmentShader: MOTE_FRAGMENT, uniforms: MU, transparent: true, depthWrite: false, toneMapped: false
   }));
   motes.name = 'lakeMotes'; motes.frustumCulled = false; motes.renderOrder = 20; scene.add(motes);
@@ -1011,12 +1117,14 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     U.uRefl.value.set(L.reflStrength, L.reflLength, L.reflRipple, L.reflBlur);
     U.uOut.value.set(L.exposure, L.vignette, L.outputDisplay > .5 ? 1 : 0, 0);
     MU.uSpeed.value = L.moteSpeed; MU.uSize.value = L.moteSize; MU.uOpacity.value = L.moteOpacity; MU.uDisplay.value = L.outputDisplay > .5 ? 1 : 0;
+    MU.uOrbitStyle.value.set(clamp(L.orbitRandomness, 0, 100) / 100, clamp(L.orbitRadius, .65, 2), clamp(L.orbitSize, .4, 2), clamp(L.orbitBrightness, 0, 2));
+    MU.uOrbitSpread.value.set(clamp(L.orbitDensity, 0, 100) / 100, clamp(L.orbitScatter, 0, 2));
     setCol(MU.uColor, L.moteColor);
     {
       const sky = new THREE.Color(L.skyMid).lerp(new THREE.Color(L.skyHorizon), .35);
       MU.uSkyTint.value.set(sky.r * 1.1, sky.g * 1.1, sky.b * 1.2);
     }
-    moteGeo.setDrawRange(0, Math.round(clamp(L.moteCount, 0, MAX_MOTES)));
+    moteGeo.setDrawRange(0, nearMarkCount + Math.round(clamp(L.moteCount, 0, MAX_MOTES)));
     sunLight.color.set(L.sunColor); sunLight.intensity = L.lightSun; sunLight.target.position.set(0, 0, -MARK_DIST);
     const openingWorld = L.matchOpening > .5 ? globalThis.__FINNOVATION_OPENING_LOOK__?.world : null;
     fillLight.color.set(openingWorld?.hemiSky || L.skyMid); fillLight.groundColor.set(openingWorld?.hemiGround || L.deep); fillLight.intensity = L.lightFill;
@@ -1150,6 +1258,23 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     }
     if (Math.abs(qq - lastQ) > 1e-4) { lastQ = qq; sunQ = qq; applyQ(); }
     applyDaylight();
+    if (nearMarkCount) {
+      const clock = MU.uOrbitClock.value;
+      if (!orbitClockStarted) {
+        clock.set(STATIC_TIME, STATIC_TIME); orbitClockStarted = true;
+      } else if (!reducedMotion) {
+        clock.x += dtt * clamp(L.orbitSpeed, 0, 3);
+        clock.y += dtt * clamp(L.orbitRiseSpeed, 0, 3);
+      }
+      markAnchor.updateWorldMatrix(true, true);
+      markBounds.setFromObject(markAnchor);
+      const ready = markShown && !markBounds.isEmpty();
+      MU.uMarkVisibility.value = ready ? smooth(.55, .95, riseE) : 0;
+      if (ready) {
+        markBounds.getCenter(MU.uMarkCenter.value);
+        markBounds.getSize(MU.uMarkExtent.value).multiplyScalar(.5);
+      }
+    }
     lightSpecks.update({time:tt,camera,width:W,height:H,progress:qq*5});
     /* q: a slow push-in (the camera walks forward) and a slight breath of pitch; time: a faint sway */
     const e = qq * qq * (3 - 2 * qq), push = L.drift * MARK_DIST * (1 - e);
@@ -1157,6 +1282,17 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     camera.position.set(Math.sin(tt * .09) * .06 * L.sway, L.camHeight, push);
     camera.rotation.set(Math.sin(tt * .071 + 1.3) * .5 * sw, Math.sin(tt * .053) * sw, 0);
     camera.updateMatrixWorld();
+    if (orbitPointerEnabled) {
+      const active = MU.uMarkVisibility.value > .01 && performance.now() - orbitPointerAt < 1000;
+      const ease = 1 - Math.exp(-dtt * 6);
+      orbitPointerWeight += ((active ? 1 : 0) - orbitPointerWeight) * ease;
+      orbitPointerCurrent.lerp(orbitPointerTarget, 1 - Math.exp(-dtt * 9));
+      orbitPointerRay.set(orbitPointerCurrent.x, orbitPointerCurrent.y, .5).unproject(camera).sub(camera.position).normalize();
+      const distance = (MU.uMarkCenter.value.z - camera.position.z) / Math.min(-.001, orbitPointerRay.z);
+      MU.uOrbitPointer.value.set(camera.position.x + orbitPointerRay.x * distance,
+        camera.position.y + orbitPointerRay.y * distance,
+        orbitPointerWeight * clamp(L.orbitInteraction, 0, 3), MU.uMarkExtent.value.y * .85);
+    }
     U.uRefl2.value.w = camera.position.z - markAnchor.position.z;
     if (envDirty && prepared) bakeEnvironment();
   }
@@ -1194,6 +1330,14 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   function dispose() {
     if (disposed) return; disposed = true;
     scene.onBeforeRender = () => { };
+    if (orbitPointerEnabled) {
+      window.removeEventListener('pointermove', moveOrbitPointer);
+      window.removeEventListener('pointerdown', moveOrbitPointer);
+      window.removeEventListener('pointerup', releaseOrbitPointer);
+      window.removeEventListener('pointercancel', stopOrbitPointer);
+      window.removeEventListener('pointerout', leaveOrbitPointer);
+      window.removeEventListener('blur', stopOrbitPointer);
+    }
     lightSpecks.dispose();
     renderer.localClippingEnabled = prevLocalClipping;
     for (const m of clippedList) { m.clippingPlanes = null; m.needsUpdate = true; }

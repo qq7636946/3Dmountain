@@ -34,7 +34,7 @@ import { createWorldDiveFx } from './world-dive-fx.js?v=restore-1-5-blue-8547de5
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=restore-1-5-blue-8547de57661f';
 import { createWorldOcean } from './world-ocean.js?v=restore-1-5-blue-8547de57661f';
-import { createWorldLogo } from './world-logo.js?v=closing-logo-no-grid-20261027-r1';
+import { createWorldLogo } from './world-logo.js?v=i15-sparkles-grain-20261027-r3';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=restore-1-5-blue-8547de57661f';
 import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=restore-1-5-blue-8547de57661f';

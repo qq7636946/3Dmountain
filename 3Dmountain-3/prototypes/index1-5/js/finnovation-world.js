@@ -36,7 +36,7 @@ import { createWorldSectionMotion } from './section-motion.js?v=restore-1-5-blue
 import { createWorldOcean } from './world-ocean.js?v=i15-no-ocean-logo-video-20261027-r1';
 import { createWorldLogo } from './world-logo.js?v=i15-sparkles-grain-20261027-r3';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=restore-1-5-blue-8547de57661f';
+import { createWorldPrinciples } from './world-principles.js?v=i15-no-principles-images-20261027-r1';
 import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=restore-1-5-blue-8547de57661f';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=restore-1-5-blue-8547de57661f';
 

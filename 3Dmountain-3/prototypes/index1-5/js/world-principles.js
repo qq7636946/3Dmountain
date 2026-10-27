@@ -75,8 +75,8 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  const body=section.querySelector('.fiwp-layout'),resp=root.querySelector('[data-world-part="responsibility"]');
  const status=section.querySelector('.fiwp-progress'),chapters=[...section.querySelectorAll('[data-principles-chapter]')];
  let W=innerWidth,H=innerHeight,top=0,height=0,overflow=0,secondTop=0,contentEnd=0,last=null,disposed=false,ready=false,failed=false;
- let scene=null,camera=null,material=null,quad=null,texture=null,texture2=null,old=null;
- let secondRequested=false,secondReady=false,secondFailed=false,secondReadyAt=0;
+ let scene=null,camera=null,material=null,quad=null,texture=null,old=null;
+ let secondReady=false,secondFailed=false,secondReadyAt=0;
  const mouse=new THREE.Vector2(),targetMouse=new THREE.Vector2();
  const onPointer=e=>targetMouse.set((e.clientX/Math.max(1,W)-.5)*2,(.5-e.clientY/Math.max(1,H))*2);
  if(!reducedMotion)addEventListener('pointermove',onPointer,{passive:true});
@@ -113,34 +113,20 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
   last={y,enter,read,exit,sceneMix,show:smooth(.25,.90,enter)*(1-exit),active:y>top-H*1.10&&y<top+height+H*1.8};
   return last;
  }
- function setupTexture(t){t.colorSpace=THREE.NoColorSpace;t.generateMipmaps=true;t.minFilter=THREE.LinearMipmapLinearFilter;t.magFilter=THREE.LinearFilter;return t;}
  function begin(renderer){
   scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
   texture=new THREE.DataTexture(new Uint8Array([17,42,55,255]),1,1);texture.needsUpdate=true;
   material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,depthTest:false,depthWrite:false,toneMapped:false,blending:THREE.NoBlending,
    uniforms:{uPhoto:{value:texture},uPhoto2:{value:texture},uOld:{value:texture},uRes:{value:new THREE.Vector2(W,H)},uMouse:{value:mouse},uTime:{value:0},uEnter:{value:1},uRead:{value:0},uAspect:{value:16/9},uAspect2:{value:16/9},uSceneMix:{value:0},uMotion:{value:reducedMotion?0:1}}});
   quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);quad.frustumCulled=false;scene.add(quad);
-  new THREE.TextureLoader().load(new URL('../assets/principles/canopy-v1.webp',import.meta.url).href,t=>{
-   if(disposed){t.dispose();return;}const previous=texture;texture=setupTexture(t);
-   material.uniforms.uPhoto.value=t;material.uniforms.uAspect.value=t.image.width/t.image.height;ready=true;
-   if(!secondReady){material.uniforms.uPhoto2.value=t;material.uniforms.uAspect2.value=t.image.width/t.image.height;}
-   if(material.uniforms.uOld.value===previous)material.uniforms.uOld.value=t;
-   previous.dispose();
-  },undefined,e=>{failed=true;ready=true;console.warn('Principles background unavailable',e);});
- }
- function loadSecond(){
-  if(secondRequested||!material)return;secondRequested=true;
-  new THREE.TextureLoader().load(new URL('../assets/principles/c-bg-v1.webp',import.meta.url).href,t=>{
-   if(disposed){t.dispose();return;}texture2=setupTexture(t);
-   material.uniforms.uPhoto2.value=t;material.uniforms.uAspect2.value=t.image.width/t.image.height;
-   secondReady=true;secondReadyAt=performance.now();
-  },undefined,()=>{secondFailed=true;}); // A missing second image keeps the first scene; copy remains readable.
+  // Both reading chapters retain the neutral slate-blue base without photos.
+  // No photo requests or asynchronous image handoff remain in this version.
+  ready=secondReady=true;
  }
  const size=new THREE.Vector2();
  function render(s,time,ctx){
   const p=s.principles;if(!p||disposed)return false;
   if(!scene&&p.y>top-H*2.5)begin(ctx.renderer);
-  if(scene&&p.y>secondTop-H*2.5)loadSecond();
   if(!scene||p.enter<=0)return false;
   const r=ctx.renderer,u=material.uniforms;r.getDrawingBufferSize(size);
   u.uRes.value.copy(size);u.uTime.value=reducedMotion?0:time;u.uEnter.value=reducedMotion?smooth(0,1,p.enter):p.enter;u.uRead.value=p.read;
@@ -164,6 +150,6 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  let statusOpacityText='';
  const stopY=()=>top+H*.12;
  function close(){root.classList.remove('is-principles');body.style.visibility='hidden';}
- function dispose(){disposed=true;close();removeEventListener('pointermove',onPointer);texture?.dispose();texture2?.dispose();old?.dispose();material?.dispose();quad?.geometry.dispose();if(pill&&was){pill.dataset.worldGo=was.go;if(label)label.textContent=was.text;}}
+ function dispose(){disposed=true;close();removeEventListener('pointermove',onPointer);texture?.dispose();old?.dispose();material?.dispose();quad?.geometry.dispose();if(pill&&was){pill.dataset.worldGo=was.go;if(label)label.textContent=was.text;}}
  return{layout,measure,sample,render,paint,stopY,close,dispose,get state(){return{top,height,overflow,secondTop,contentEnd,ready,failed,secondReady,secondFailed,flow:'document',sample:last};}};
 }

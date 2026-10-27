@@ -34,7 +34,7 @@ const DEFAULTS = /*OCEAN-DEFAULTS*/{
   "dive": 2.2, "depth": 1.8, "waveAngle": 12, "waveLength": 0.17, "waveAmp": 0.045, "crest": 1, "refract": 1.6, "waveSoft": 0.04, "wobble": 0.06, "spray": 1, "push": 0.3,
   "valley": 1, "tone": 1, "deep": "#345067", "lit": "#6c8fad", "ink": "#20303e", "foam": "#eef2f6", "glintColor": "#ffead4",
   "glint": 1.6, "glintText": 0.85, "glintKnee": 1, "glintSize": 0.45, "rough": 1.1, "waveScale": 1, "waveSpeed": 1, "wind": 35,
-  "heroSize": 0.546, "heroX": 0, "heroY": 0, "heroContrast": 1.25,
+  "heroEnabled": 0, "heroSize": 0.546, "heroX": 0, "heroY": 0, "heroContrast": 1.25,
   "vignette": 0.6, "scrim": 0.8,
   "clouds": 0.55, "cloudOpacity": 0.9, "cloudSpeed": 1, "cloudShadow": 0.5, "cloudHeight": 0.3, "cloudScale": 1.3,
   "gulls": 7, "gullSpeed": 1, "gullSize": 1, "flap": 1,
@@ -836,7 +836,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     u.uHero.value.set(num('heroX', -1, 1) * narrow * narrow, num('heroY', -.6, .6), heroD, num('heroContrast', 0, 3));
     const vReady = video && video.image && video.image.readyState >= 2;
     u.uVideo.value = vReady ? video : blank; u.uPhoto.value = photo || blank;
-    u.uHeroMix.value.set(vReady ? clamp(videoMix) : 0, (vReady || photo) ? 1 : 0, photoSize[0] / photoSize[1], videoSize[0] / videoSize[1]);
+    u.uHeroMix.value.set(vReady ? clamp(videoMix) : 0, num('heroEnabled', 0, 1) * ((vReady || photo) ? 1 : 0), photoSize[0] / photoSize[1], videoSize[0] / videoSize[1]);
     // clouds: drifting with the wind, a layer above the sea (parallax), their shadows below
     const cloudAlt = num('cloudHeight', 0, .9);
     const windR = num('wind', -180, 180) * Math.PI / 180;

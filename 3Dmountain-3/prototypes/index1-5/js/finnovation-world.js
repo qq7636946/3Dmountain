@@ -33,7 +33,7 @@ import { globeScrollDegrees } from './world-globe-motion.js?v=restore-1-5-blue-8
 import { createWorldDiveFx } from './world-dive-fx.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=restore-1-5-blue-8547de57661f';
-import { createWorldOcean } from './world-ocean.js?v=restore-1-5-blue-8547de57661f';
+import { createWorldOcean } from './world-ocean.js?v=i15-no-ocean-logo-video-20261027-r1';
 import { createWorldLogo } from './world-logo.js?v=i15-sparkles-grain-20261027-r3';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=restore-1-5-blue-8547de57661f';
@@ -442,6 +442,14 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // motion the still stays. Small screens get the 480p loop.
   let video = null, videoTexture = null, videoMix = 0, videoWanted = false;
   function frameVideo(s, speed) {
+    // The ocean-logo film and its still fallback are disabled for index1-5.
+    if (ocean && +(oceanConfig()?.heroEnabled ?? 1) < .5) {
+      if (videoWanted) { video?.pause(); videoWanted = false; }
+      videoMix = 0;
+      if (background) background.material.uniforms.uVideoMix.value = 0;
+      ocean.setVideoMix(0);
+      return;
+    }
     const near = open && !reducedMotion && y > at.block - H * 2.2;
     const showing = open && s.photo > .001 && s.footerTop > 1;
     if (near && !video) {

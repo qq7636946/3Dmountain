@@ -149,6 +149,8 @@ function patchWorld(src) {
   p("}).then(() => Promise.all(pictures)).then(([earth, asia, cloud, ocean])", "}).then(() => ocean?.bake()).then(() => Promise.all(pictures)).then(([earth, asia, cloud, ocean])", 'prewarm after deck');
   p("if (photo) { background.material.uniforms.uPhoto.value = photo; background.material.uniforms.uPhotoSize.value.set(photo.image.width, photo.image.height); }",
     "if (photo) { background.material.uniforms.uPhoto.value = photo; background.material.uniforms.uPhotoSize.value.set(photo.image.width, photo.image.height); ocean?.setPhoto(photo); }", 'photo');
+  // Keep this page from requesting the cancelled ocean-logo video.
+  p("  function frameVideo(s, speed) {", "  function frameVideo(s, speed) {\n    // The ocean-logo film and its still fallback are disabled for index1-5.\n    if (ocean && +(oceanConfig()?.heroEnabled ?? 1) < .5) {\n      if (videoWanted) { video?.pause(); videoWanted = false; }\n      videoMix = 0;\n      if (background) background.material.uniforms.uVideoMix.value = 0;\n      ocean.setVideoMix(0);\n      return;\n    }", 'ocean video disabled');
   // the film: mipmapped (the grade reads its local mean), handed to the ocean
   p("videoTexture.generateMipmaps = false; videoTexture.minFilter = THREE.LinearFilter;",
     "videoTexture.generateMipmaps = !!ocean; videoTexture.minFilter = ocean ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;", 'video mips');

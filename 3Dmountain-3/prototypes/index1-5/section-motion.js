@@ -66,13 +66,15 @@ export function createWorldSectionMotion({root,reducedMotion=false}){
  function measure(w,h,top,m){
   H=h;
   for(const el of [pin,body])if(el)paintedStyles.delete(el);
-  metrics={...m,respTop:resp?top(resp):0,respH:resp?.offsetHeight||0,principlesTop:principles?top(principles):0,principlesH:principles?.offsetHeight||0,bodyOffset:body?.offsetTop||0};
+  const footer=root.querySelector('.fiw-footer');
+  metrics={...m,footerTop:footer?top(footer):Infinity,footerEnd:footer?top(footer)+footer.offsetHeight-H:Infinity,respTop:resp?top(resp):0,respH:resp?.offsetHeight||0,principlesTop:principles?top(principles):0,principlesH:principles?.offsetHeight||0,bodyOffset:body?.offsetTop||0};
   rows=flow.map(el=>({el,top:top(el)-parseFloat(el.style.getPropertyValue('--motion-y')||0),height:el.offsetHeight}));
   pr=pn.map(el=>({el,top:top(el)-parseFloat(el.style.getPropertyValue('--motion-y')||0),height:el.offsetHeight}));
  }
  const movePin=(el,value,key)=>{const next='translate3d(0,'+value.toFixed(1)+'px,0)';if(el&&next!==key)el.style.transform=next;return next;};
  function paint(s,y){
   if(!metrics)return;
+  root.classList.toggle('is-footer-reading',y>=metrics.footerTop-1);
   const o=s.o,N=slides.length,stops=metrics.ocean?.stops;
   if(o&&stops?.length){
    const last=stops[N-1],out=clamp01((y-last-H*.06)/(H*.72));
@@ -102,7 +104,9 @@ export function createWorldSectionMotion({root,reducedMotion=false}){
   rows.forEach(({el,top,height},i)=>{
    const screen=top-y,enter=clamp01((H*.96-screen)/(H*.26));
    const exit=1-clamp01((screen+height-108)/(H*.20));
-   apply(el,enter,exit,i%3,reducedMotion);
+   // At the document end, legal text must not remain trapped in its entrance fade.
+   const settledFooter=el.parentElement?.classList.contains('fiw-footer')&&y>=metrics.footerEnd-2;
+   apply(el,settledFooter?1:enter,settledFooter?0:exit,i%3,reducedMotion);
   });
   const p=s.principles;
   if(p&&body){
@@ -121,6 +125,6 @@ export function createWorldSectionMotion({root,reducedMotion=false}){
    sn.forEach((el,i)=>apply(el,enter,exit,i,reducedMotion));
   }
  }
- function close(){root.classList.remove('has-section-motion');for(const el of [pin,ppin,spin])if(el){el.style.transform='';el.style.visibility='';paintedStyles.delete(el);}lastPin=lastPpin=lastSpin='';}
+ function close(){root.classList.remove('has-section-motion','is-footer-reading');for(const el of [pin,ppin,spin])if(el){el.style.transform='';el.style.visibility='';paintedStyles.delete(el);}lastPin=lastPpin=lastSpin='';}
  return {measure,paint,close};
 }

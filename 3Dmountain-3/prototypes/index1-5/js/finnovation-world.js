@@ -32,9 +32,9 @@ import { loadWorldImage } from './world-image-source.js?v=restore-1-5-blue-8547d
 import { globeScrollDegrees } from './world-globe-motion.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_GLOBE_SCROLL */
 import { createWorldDiveFx } from './world-dive-fx.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=restore-1-5-blue-8547de57661f';
-import { createWorldOcean } from './world-ocean.js?v=i15-tone-7da2c5eaf233';
-import { createWorldLogo } from './world-logo.js?v=i15-tone-7da2c5eaf233';
+import { createWorldSectionMotion } from './section-motion.js?v=experience-1f521c534526';
+import { createWorldOcean } from './world-ocean.js?v=experience-823e5588c5bd';
+import { createWorldLogo } from './world-logo.js?v=experience-9c2748e1589d';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.js?v=i15-tone-7da2c5eaf233';
 import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-tone-7da2c5eaf233';

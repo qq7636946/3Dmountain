@@ -20,7 +20,7 @@
     import { createJourneyRiver } from '../../../js/water-journey-river.js?v=restore-1-5-blue-8547de57661f';
     import { createFinnovationCursor, CURSOR_DEFAULTS } from '../../../js/finnovation-cursor.js?v=restore-1-5-blue-8547de57661f';
     import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from '../../../js/water-forward-transition.js?v=restore-1-5-blue-8547de57661f';
-    import { mountJourneyInterface } from './finnovation-interface.js?v=restore-1-5-blue-8547de57661f';
+    import { mountJourneyInterface } from './finnovation-interface.js?v=experience-ab007bcef85d';
     import { createLogoGeometryBuilder } from '../../../js/water-logo-geometry-client.js?v=restore-1-5-blue-8547de57661f';
     import { mountJourneyStory, stepJourneyMotion } from '../../../js/water-journey-story.js?v=restore-1-5-blue-8547de57661f';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
@@ -67,8 +67,11 @@
     import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 
     async function startJourneyScene() {
+      /* EARLY_READING_MODE_GUARD */
+      if (document.documentElement.dataset.renderMode === "text") return;
       // Let the loading screen paint before shader/model initialization.
       await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+      if (document.documentElement.dataset.renderMode === 'text') return;
       document.documentElement.dataset.renderMode = 'starting';
       const canvas = document.querySelector('#gl');
       const loader = document.querySelector('#loader');
@@ -727,7 +730,7 @@
       /* 海洋章節 Ocean（world-ocean-build.cjs）：地球之後的透鏡俯衝與橫向「責任」章節。 */
       CONFIG.worldOcean = {"heroEnabled":0,"dive":2.2,"depth":1.8,"waveAngle":12,"waveLength":0.17,"waveAmp":0.045,"crest":1,"refract":1.6,"waveSoft":0.04,"wobble":0.06,"spray":1,"push":0.3,"valley":1,"tone":1,"deep":"#345067","lit":"#6c8fad","ink":"#20303e","foam":"#eef2f6","glintColor":"#ffead4","glint":1.6,"glintText":0.85,"glintKnee":1,"glintSize":0.45,"rough":1.1,"waveScale":1,"waveSpeed":1,"wind":35,"heroSize":0.546,"heroX":0,"heroY":0,"heroContrast":1.25,"vignette":0.6,"scrim":0.8,"clouds":0.55,"cloudOpacity":0.9,"cloudSpeed":1,"cloudShadow":0.5,"cloudHeight":0.3,"cloudScale":1.3,"gulls":7,"gullSpeed":1,"gullSize":1,"flap":1,"travel":0.8,"stop":1.3,"ease":6,"textX":0.075,"textY":0.86};
       /* LOGO 收尾 Logo Seal（world-logo-build.cjs）：橫移之後的波浪轉場、符號旋轉一圈、黃昏湖。logoMark／logoLake 是材質與場景的參數。 */
-      CONFIG.logoSeal = {"transition":2,"cutClock":1,"cutAt":0.3,"cutTime":0.9,"glassSize":0.34,"glassSplit":0.6,"glassShift":0.45,"glassZoom":0.12,"glassBlur":0.28,"glassChroma":0.6,"glassFrost":0,"glassDip":0.3,"glassBloom":1.2,"glassBloomAt":0.42,"glassGlitch":0,"glassGrain":0,"glassSpread":0.55,"glassSeam":0.6,"glassPush":0.1,"glassTint":"#3f7fe0","tiles":8,"tileDepth":1.1,"tilePersp":1.3,"tileSpread":0.65,"tileJitter":0.35,"tileGlow":1.1,"tileLine":1.6,"tileGlowColor":"#3d8bff","tileField":"#05132a","tileFog":0.75,"tileGrid":0.25,"tileExtrude":0.55,"wave":1.7,"waveLead":0.4,"waveAngle":-8,"waveLength":0.2,"waveAmp":0.05,"waveSoft":0.045,"wobble":0.07,"crest":1.1,"spray":1,"refract":1.4,"refractNew":0.8,"spinStart":0.44,"spin":2.6,"spinEnd":0.92,"spinEase":0.94,"spinBlur":10,"restYaw":0,"riseStart":0.28,"riseEnd":0.48,"riseEase":0.9,"hold":1.65,"followDaylight":0,"prepare":0.1,"textIn":0.84,"textY":0.735,"textSize":1,"textShow":1,"markScale":0.89,"markY":0,"timeScale":1};
+      CONFIG.logoSeal = {"transition":0,"cutClock":1,"cutAt":0.3,"cutTime":0.9,"glassSize":0.34,"glassSplit":0.6,"glassShift":0.45,"glassZoom":0.12,"glassBlur":0.28,"glassChroma":0.6,"glassFrost":0,"glassDip":0.3,"glassBloom":1.2,"glassBloomAt":0.42,"glassGlitch":0,"glassGrain":0,"glassSpread":0.55,"glassSeam":0.6,"glassPush":0.1,"glassTint":"#3f7fe0","tiles":8,"tileDepth":1.1,"tilePersp":1.3,"tileSpread":0.65,"tileJitter":0.35,"tileGlow":1.1,"tileLine":1.6,"tileGlowColor":"#3d8bff","tileField":"#05132a","tileFog":0.75,"tileGrid":0.25,"tileExtrude":0.55,"wave":1.7,"waveLead":0.4,"waveAngle":-8,"waveLength":0.2,"waveAmp":0.05,"waveSoft":0.045,"wobble":0.07,"crest":1.1,"spray":1,"refract":1.4,"refractNew":0.8,"spinStart":0.44,"spin":2.6,"spinEnd":0.92,"spinEase":0.94,"spinBlur":10,"restYaw":0,"riseStart":0.28,"riseEnd":0.48,"riseEase":0.9,"hold":1.65,"followDaylight":0,"prepare":0.1,"textIn":0.84,"textY":0.735,"textSize":1,"textShow":1,"markScale":0.89,"markY":0,"timeScale":1};
       CONFIG.logoMark = {"variant":1,"castRelief":0,"style":0,"size":1.56,"thickness":0.148,"tubeAspect":2,"edgeRadius":0.067,"bevelSoft":0.37,"edgeCurve":3.8,"edgeSegments":25,"crown":0.31,"transmission":1,"volume":2.73,"ior":1.52,"dispersion":0.18,"tint":"#eef6fb","attenuationColor":"#c8dfeb","attenuationDistance":12,"roughness":0.1,"clearcoat":1,"clearcoatRoughness":0.085,"specular":0.92,"envIntensity":3.6,"envFallback":0,"envSpin":0,"bgDisplay":1,"bgAlpha":0,"doubleSide":1,"thickFloor":0.45,"sheen":0.13,"sheenColor":"#5a6c81","sheenRoughness":1,"iridescence":0.11,"rimStrength":1.9,"rimPower":4.5,"rimLine":0.62,"rimColor":"#b9dff7","wallGlow":0.03,"wallColor":"#f0f6ff","glow":0.2,"glowColor":"#dfe9f6","caustic":0.16,"causticScale":3.5,"causticSpeed":0.35,"shimmer":0,"shimmerScale":6,"brandBlue":1,"brandBlueColor":"#0c437e","brandBlueDeep":"#2e689e","brandBlueGlow":0.12,"brandBlueAbsorb":2.03,"glowPulse":0.55,"glowSpeed":0.6};
       CONFIG.logoLake = {"matchOpening":0,"skyTop":"#244a70","skyMid":"#163047","skyHorizon":"#253d52","skyHaze":"#526c80","skyMidEl":7,"skyTopEl":30,"skyCurve":0.85,"hazeHeight":3.4,"hazeAmount":0,"sunAz":-3,"sunEl":27.5,"sunColor":"#ffd49a","bloomColor":"#f6c17f","sunSize":0.55,"sunDisc":1.1,"sunBloom":0.17,"sunBloomSize":9,"sunCore":0.32,"rangeOpacity":0.9,"rangeHeight":11,"rangeWidth":54,"rangeAz":5,"rangeLift":-0.3,"rangeHaze":0.12,"rangeTint":"#30475a","rangeContrast":1.16,"rangeSoft":0.35,"deep":"#0a2232","lit":"#294154","ink":"#030a11","foam":"#8eaabc","waterScale":2.22,"waterSpeed":1.03,"waterRough":2.71,"waterStretch":1.15,"waterSwell":0.1,"skyReflect":0.62,"fresnelMin":0.025,"fresnelPower":5,"waterNearDark":0.46,"glintColor":"#ffd49a","glintStrength":0.22,"glintSize":0.4,"glintBand":14,"glintFocus":0.93,"glintSpread":1.05,"glintKnee":2.5,"reflStrength":0.32,"reflLength":0.7,"reflRipple":1.15,"reflFresnel":0.68,"reflBlur":0.7,"moteCount":22,"moteSize":0.55,"moteSpeed":0.35,"moteOpacity":0.24,"moteColor":"#f3dfb6","speckDensity":0.22,"skySpecks":0.42,"vignette":0.23,"exposure":0.96,"outputDisplay":1,"camHeight":0.85,"fov":36,"horizon":0.7,"drift":0.018,"sway":0.06,"qLight":0,"markY":0.5,"markSize":0.3,"markWidth":0.92,"fovPortrait":56,"portraitHorizon":0.61,"portraitMarkY":0.375,"portraitMarkSize":0.255,"portraitSunShift":0.55,"riseSink":1.12,"riseCurve":0.75,"ringAmp":0.9,"ringSpacing":0.26,"ringReach":1.7,"ringSpeed":0.6,"ringDecay":2.6,"meniscus":0.8,"meniscusWidth":0.012,"cutGlow":0.6,"pushAmp":0.7,"preset":"dusk","glacierMode":0,"hills":0,"hillHeight":3.2,"hillScale":1,"hillSharp":0.6,"hillSnow":"#f2f6fc","hillBlue":"#7d9ae0","rangeRock":"#6d8ede","rangeRockMix":0,"cloudAmount":0,"cloudScale":1,"cloudSpeed":1,"cloudColor":"#ffffff","mistAmount":0.24,"mistHeight":1.4,"mistWidth":38,"waterFine":0.75,"waterTint":0.28,"reflWobble":0,"sparkCount":0,"sparkSize":1,"sparkSpeed":1,"sparkColor":"#6fa4ff","lightSun":3.95,"lightFill":0.89,"envIntensity":1.61,"orbitRandomness":67,"orbitDensity":58,"orbitScatter":0.2,"orbitInteraction":2.15,"orbitSpeed":0.45,"orbitRiseSpeed":1.65,"orbitRadius":1.07,"orbitSize":0.75,"orbitBrightness":0.95};
       /* 升空與鏡頭 Rise（valley-polish-build.cjs） */
@@ -6634,6 +6637,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           if (p <= journey.max + .001 && (portfolio?.open || world?.open)) { world?.close(); portfolio?.close(); }
           skipEntry(); journey.velocity = 0; journey.target = THREE.MathUtils.clamp(p, 0, journey.max);
           portfolioNavPending = p > journey.max; if (portfolioNavPending) void loadPortfolio();
+          /* VISITOR_NAVIGATION_EVENT */
+          window.dispatchEvent(new CustomEvent("finnovation:navigate", {detail:{target:journey.target}}));
         }
       });
       /* 尾聲的卡牌：旅程快到結尾時才載入模組（之後它自己再去抓 OGL 與圖片）。載不到就當沒有這一段。 */
@@ -6652,7 +6657,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       }).catch(error => console.warn('Portfolio epilogue unavailable:', error));
       /* 卡牌之後（只有 index1-1）：地球、理念、頁尾。卡牌浮出時才下載；載不到就停在卡牌，跟原本一樣。 */
       let world = null, worldJob = null;
-      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=i15-tone-7da2c5eaf233').then(module => {
+      const loadWorld = () => worldJob ??= import('./finnovation-world.js?v=experience-daf9452cce37').then(module => {
         world = module.mountWorld({ root: document.querySelector('#fiWorld'), reducedMotion: reduceMotion, epilogue: () => portfolio, carry: delta => advanceJourney(delta, 'touch'), grade: () => CONFIG.grade, mist: () => CONFIG.mist, video: () => CONFIG.video, ocean: () => CONFIG.worldOcean, logo: () => CONFIG,
           /* its preparation keeps out of the way while the valley-to-cards bridge is moving (scrolled within the last moment), except the bridge's last tenth (F5): the planet's GL build then finishes before the cards hand over */
           busy: () => !!portfolio?.open && portfolio.transition > 0 && portfolio.transition < .9 && performance.now() - (journey.lastInput || 0) < 1400 });
@@ -8808,7 +8813,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         // keys remain available after using the chapter rail or an action.
         if (event.key === ' ' && event.target.closest('button,a')) return;
         const moves = { ArrowDown: .15, ArrowUp: -.15, PageDown: .85, PageUp: -.85, ' ': event.shiftKey ? -.85 : .85 };
-        if (event.key === 'Home') { event.preventDefault(); journey.target = 0; }
+        if (event.key === 'Home') { event.preventDefault(); journeyUI.root.querySelector('[data-chapter="0"]')?.click(); }
         else if (event.key === 'End' && world?.open) { event.preventDefault(); world.scrollTo(Infinity); }
         else if (event.key === 'End') { event.preventDefault(); journey.target = journey.max; }
         else if (event.key in moves) { event.preventDefault(); advanceJourney(moves[event.key]); }
@@ -8989,6 +8994,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       /* Scene time is accumulated from clamped deltas rather than read off the
          clock, so a caller can hand in a fixed step and replay the timeline
          deterministically. */
+      const runtimeQuality = { covered: false, suspendedFrames: 0, resumptions: 0 };
       let sceneTime = 0;
       let animationFrame = 0;
       document.addEventListener('visibilitychange', () => {
@@ -9004,9 +9010,15 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         const realDelta = clock.getDelta();
         // The world has its own loop. Do not update the hidden valley, droplets,
         // particles or optical captures behind its opaque full-screen canvas.
-        if (mobileRenderBudget.mobile && !manual && world?.covering && portfolio?.open) {
+        /* WORLD_COVER_RUNTIME_QUALITY */
+        const settledJourney = Math.abs(journey.target - journey.progress) < 1e-4 && Math.abs(journey.velocity || 0) < 1e-4;
+        if (!manual && world?.covering && portfolio?.open && (mobileRenderBudget.mobile || settledJourney)) {
+          runtimeQuality.covered = true; runtimeQuality.suspendedFrames++;
+          suppressSceneDaylight(CONFIG.sceneDaylight.worldOff > .5);
+          setSceneTime(getSceneDaylight().hour);
           animationFrame = requestAnimationFrame(tick); return;
         }
+        if (runtimeQuality.covered && !manual) { runtimeQuality.covered = false; runtimeQuality.resumptions++; }
         const scrollDt = Math.min(fixedDelta === undefined ? realDelta : fixedDelta, .18);
         const dt = Math.min(scrollDt, .04);
         sceneTime += dt;
@@ -9186,7 +9198,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       const tick = () => { animationFrame = 0; frame(); };
 
       /* Read-only diagnostics for local verification; never shown in the visitor interface. */
-      window.__MONTIS_STUDY__ = { mobileRenderBudget, openingLungeBlur, get portfolio() { return portfolio; }, get world() { return world; }, canyonMotion, forwardMosaic, bridgeMosaic, get ready() { return warmJourney(); }, get chapterReady() { return { logo: logoReady, journey: journeyReady }; }, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark: { root: logoRoot, spin: logoSpin, glass: logoGlass, cards: logoCards, drops: logoDrops, letters: logoLetters, variants: logoVariants, get activeVariant() { return activeLogoVariant; }, get mesh() { return logoMesh; } }, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
+      window.__MONTIS_STUDY__ = { runtimeQuality, mobileRenderBudget, openingLungeBlur, get portfolio() { return portfolio; }, get world() { return world; }, canyonMotion, forwardMosaic, bridgeMosaic, get ready() { return warmJourney(); }, get chapterReady() { return { logo: logoReady, journey: journeyReady }; }, canyonMotes, sceneCursor, forwardTransition, logoFlight, journeyClock, logoChapterEnd, forwardLength, brandMark: { root: logoRoot, spin: logoSpin, glass: logoGlass, cards: logoCards, drops: logoDrops, letters: logoLetters, variants: logoVariants, get activeVariant() { return activeLogoVariant; }, get mesh() { return logoMesh; } }, journey, journeyUI, brandStory, canyon, mainRenderPass, CONFIG, entry, cluster, disperseMesh, disperseSeeds, DISPERSE_SIZES, disperseMaterial, shotTime, updateDispersal, clusterMaterial, gatherState, clusterBeads, gatherCycle, dropTransition, camera, cameraLook, renderer, dropRoot, dropTouch, currentDropRadius, openSectionTwo, closeSectionTwo, skipEntry, rayHitsCluster, addFieldBall, clearField, dropSDF, dropletProxy, dropletMaterial, dropletUniforms, dropletTrail, dropletShadow, replayGather: () => { entry.running = false; entry.done = false; beginEntry(); }, step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++)frame(true, dt); } };
 
       let lastWidth = 0, lastHeight = 0, lastDpr = 0, resizeFrame = 0;
       function resize() {
@@ -9216,6 +9228,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         cancelAnimationFrame(animationFrame); animationFrame = 0;
         cancelAnimationFrame(resizeFrame); resizeFrame = 0;
         stopChapterPlayback();
+        /* READING_SCENE_DISPOSAL */
+        world?.dispose(); portfolio?.dispose();
         clearTimeout(envBakeTimer); envBakeTimer = 0;
         logoGeometryBuilder?.dispose();
         cancelShaderWarmups();

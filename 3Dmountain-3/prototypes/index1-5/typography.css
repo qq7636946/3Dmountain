@@ -1,13 +1,16 @@
 /* INDEX1-5 TYPOGRAPHY — the single source for the entire visitor interface.
-   Desktop display: 45px / 5px. Edit the tokens, not individual scene sheets.
+   Responsive display, reading and interface roles. Edit the tokens, not scene sheets.
    Roles: display, lead, body, support, label. SVG brand art remains artwork. */
 html[data-look="index1-5"] {
   --site-font: 'DM Sans', 'Noto Sans TC', sans-serif;
-  --type-hero-size: 45px;
-  --type-hero-tracking: 5px;
-  --type-display-leading: 1.06;
-  --type-strategy-size: var(--type-hero-size);
-  --type-principles-size: var(--type-hero-size);
+  --type-hero-size: clamp(40px, 3.45vw, 62px);
+  --type-hero-tracking: .045em;
+  --type-display-leading: 1.08;
+  --type-strategy-size: clamp(38px, 3.3vw, 58px);
+  --type-principles-size: clamp(42px, 4.2vw, 72px);
+  --type-editorial-tracking: -.015em;
+  --type-menu-size: clamp(34px, 3.4vw, 50px);
+  --type-menu-tracking: -.025em;
   --type-seal-size: calc(var(--type-hero-size) * var(--fisl-k, 1));
   --type-lead: 20px;
   --type-body: 16px;
@@ -61,7 +64,8 @@ body {
   text-transform: none;
 }
 .fiwo-strategy-title { font-size: var(--type-strategy-size); }
-.fiwp-title { font-size: var(--type-principles-size); }
+.fiwp-title { font-size: var(--type-principles-size); letter-spacing: var(--type-editorial-tracking); }
+.fi-menu h2 { font-size: var(--type-menu-size); letter-spacing: var(--type-menu-tracking); line-height: 1.12; }
 .fisl-title { font-size: var(--type-seal-size); }
 
 /* LEAD — Chinese scene introductions, strategy summaries and editorial leads. */
@@ -163,7 +167,10 @@ body {
 /* Only the tokens change by viewport; components keep their shared rules. */
 @media (max-width:760px) {
   html[data-look="index1-5"] {
-    --type-hero-size: clamp(30px,8.7vw,36px);
+    --type-hero-size: clamp(30px,8.5vw,36px);
+    --type-strategy-size: clamp(30px,8.5vw,36px);
+    --type-principles-size: clamp(32px,8.7vw,40px);
+    --type-menu-size: clamp(29px,8vw,36px);
     --type-hero-tracking: .025em;
     --type-display-leading: 1.12;
     --type-lead: 18px;
@@ -208,3 +215,10 @@ body {
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+
+/* VISITOR_EXPERIENCE_TYPE */
+
+:is(.loader-reading,.fi-menu-reading,.fi-navigation-status,.fi-navigation-status button,.fi-skip,.fi-readable-return,.fiw-outro-kicker,.fiw-outro-links button) {font:500 var(--type-label)/1.6 var(--site-font);letter-spacing:.07em;}
+.fiw-outro-title {font-size:clamp(30px,3.6vw,56px);line-height:1.13;font-weight:400;letter-spacing:-.035em;}
+.fiw-outro-copy {font-size:var(--type-body);line-height:1.9;letter-spacing:.04em;}
+@media(max-width:760px){.fiw-outro-title{font-size:clamp(30px,8.6vw,44px);}.fi-navigation-status{font-size:10px;}.fi-navigation-status button{font-size:10px;}}

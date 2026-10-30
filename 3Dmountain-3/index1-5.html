@@ -2,7 +2,7 @@
 <html data-direct-logo-zoom data-wordmark-lowered data-opening-sea-depth lang="zh-Hant" prefix="og: https://ogp.me/ns#" data-letter-direction="rising-helix" data-epilogue="world" data-landscape="1010" data-look="index1-5" data-alpine-ui>
 
 <head>
-  <meta name="build-version" content="i15-mobile-no-strategy-photos-12966f996da8">
+  <meta name="build-version" content="i15-experience-20261030-35723164f4f2">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1d3446">
@@ -101,7 +101,7 @@
 
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
-  <link rel="modulepreload" href="prototypes/index1-5/js/main.js?v=i15-water-letters-f0abbb25d222">
+  <link rel="modulepreload" href="prototypes/index1-5/js/main.js?v=experience-06014fcc2a67">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -137,15 +137,21 @@
   
   
   <link rel="icon" href="images/logo.svg" type="image/svg+xml">
+  
+  
+  
+  <link rel="stylesheet" href="prototypes/index1-5/experience.css?v=f13b80a09617" data-i15-experience>
+  <script defer src="prototypes/index1-5/experience.js?v=a04a76c839d8"></script>
   <link rel="preload" href="prototypes/index1-5/assets/fonts/dm-sans/latin.woff2" as="font" type="font/woff2" crossorigin data-i15-font>
-  <link rel="stylesheet" href="prototypes/index1-5/site-layout.css?v=i15-mobile-no-strategy-photos-12966f996da8" data-i15-layout>
-  <link rel="stylesheet" href="prototypes/index1-5/typography.css?v=restore-1-5-blue-8547de57661f" data-i15-typography>
+  <link rel="stylesheet" href="prototypes/index1-5/site-layout.css?v=687e09ebd7b4" data-i15-layout>
+  <link rel="stylesheet" href="prototypes/index1-5/typography.css?v=9b551d45005a" data-i15-typography>
   <noscript>
     <link rel="stylesheet" href="./css/readable.css">
   </noscript>
 </head>
 
 <body>
+  <button type="button" class="fi-skip" data-reading-mode>跳至文字閱讀</button>
   <canvas id="gl"
     aria-label="A drop of liquid metal hanging above a sea of the same metal, in a field of pale light"></canvas>
   <div class="wash"></div>
@@ -165,7 +171,8 @@
     <div class="loader-inner">
       <div class="loader-logo">FINNOVATION</div>
       <div class="loader-line"><i></i></div>
-      <div class="loader-note">FORMING ATMOSPHERE</div>
+      <div class="loader-note">準備水光之境 · FORMING THE CURRENT</div>
+      <button class="loader-reading" type="button" data-reading-mode>文字閱讀 · READ WITHOUT MOTION</button>
     </div>
   </div>
   <div class="fallback" id="fallback" data-nosnippet>THIS STUDY REQUIRES WEBGL</div>
@@ -374,25 +381,12 @@
               <li><button type="button" data-world-go="global">Global reach</button></li>
               <li><button type="button" data-world-go="responsibility">Investment strategies</button></li>
             </ul>
-            <ul class="fiw-legal">
-              <li><a href="#contact" data-todo="contact">Contact</a></li>
-              <li><a href="#" data-todo="privacy">Privacy policy</a></li>
-              <li><a href="#" data-todo="terms">Terms of use</a></li>
-            </ul>
           </nav>
-          <div class="fiw-offices">
-            <section class="fiw-office" aria-label="總部">
-              <div><h3>Taipei, Taiwan<small>總部 HEADQUARTERS</small></h3><p class="fiw-todo" data-todo="address">地址待提供</p></div>
-              <div class="fiw-contact"><span class="fiw-todo" data-todo="phone">T : 待提供</span><span class="fiw-todo" data-todo="email">E : 待提供</span></div>
-            </section>
-            <section class="fiw-office" aria-label="合作洽詢">
-              <div><h3>Partnerships<small>合作洽詢</small></h3><p>產業合作與投資洽詢，歡迎與我們聯繫。</p></div>
-              <div class="fiw-contact"><span class="fiw-todo" data-todo="email-partners">E : 待提供</span></div>
-            </section>
-            <section class="fiw-office" aria-label="加入我們">
-              <div><h3>Careers<small>加入我們</small></h3><p>我們在尋找對科技與金融同樣好奇的人。</p></div>
-              <div class="fiw-contact"><span class="fiw-todo" data-todo="email-careers">E : 待提供</span></div>
-            </section>
+          <div class="fiw-outro">
+            <p class="fiw-outro-kicker" lang="en">FINANCE × INNOVATION</p>
+            <h2 class="fiw-outro-title" lang="en">Knowledge in flow.<span>Capital moving forward.</span></h2>
+            <p class="fiw-outro-copy">以知為本，以紀律守護長期價值。<br>讓知識、科技與資本相互連結，源遠流長。</p>
+            <div class="fiw-outro-links"><button type="button" data-world-go="principles">我們的理念 <span aria-hidden="true">↗</span></button><button type="button" data-world-go="responsibility">四大投資策略 <span aria-hidden="true">↗</span></button></div>
           </div>
           <div class="fiw-footer-line" aria-hidden="true"></div>
           <div class="fiw-sign">
@@ -634,10 +628,12 @@
               <path d="M4 10h11m-5-5 5 5-5 5" />
             </svg></button></nav>
       </div>
-      <div class="fi-menu-bottom"><span>恒灝創新 FINNOVATION</span><span>EXPLORE WITH PURPOSE</span></div>
+      <div class="fi-menu-bottom"><span>恒灝創新 FINNOVATION</span><button class="fi-menu-reading" type="button" data-reading-mode>文字閱讀 · READING MODE</button></div>
     </dialog>
   </div>
   <!-- FINNOVATION_STATIC_UI_END -->
+  <div class="fi-navigation-status" role="status" aria-live="polite" aria-atomic="true"><span></span><button type="button" data-reading-mode>文字閱讀</button></div>
+  <button type="button" class="fi-readable-return" data-resume-experience>回到互動體驗 · RETURN TO THE EXPERIENCE</button>
 
   <script>
     // Independent of WebGL/modules so the same HTML remains usable if 3D cannot start.
@@ -653,6 +649,7 @@
       }
       document.querySelectorAll("[data-journey-ui] .fi-copy-panel").forEach(panel => {
         panel.inert = false; panel.removeAttribute("aria-hidden");
+        panel.querySelectorAll("[inert]").forEach(el => { el.inert = false; });
       });
     };
     // A module graph that dies AFTER it was fetched (unresolved import, blocked CDN) raises a window error instead of the script's
@@ -662,7 +659,7 @@
     });
   </script>
 
-  <script type="module" id="journeyModule" src="prototypes/index1-5/js/main.js?v=i15-water-letters-f0abbb25d222" onerror="showFinnovationText()"></script>
+  <script type="module" id="journeyModule" src="prototypes/index1-5/js/main.js?v=experience-06014fcc2a67" onerror="showFinnovationText()"></script>
   <!-- ALPINE-UI: everest-style interface layer (stat bar, scene labels, chapter numerals); styles in index1-5.css -->
   <script type="module" src="prototypes/index1-5/alpine-ui.js?v=i15-sparkles-grain-20261027-r3"></script>
 </body>

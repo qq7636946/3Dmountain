@@ -598,6 +598,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
      The linear-target variant matters too: the wave first captures the planet in sceneRT. */
   let bakeTask=null,bakePending=false,oceanDisposed=false,releaseAfterBake=false;
   const bakeTiming={};
+  let waveBakes = 0, waveBakeWind = NaN, waveBakeClock = NaN;
   async function compileFor(targetScene,targetCamera,target) {
     const previous=renderer.getRenderTarget();let pending;
     try {
@@ -608,7 +609,10 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
   }
   function drawBake(material,target) {
     const previous=renderer.getRenderTarget();
-    try {bakeMesh.material=material;renderer.setRenderTarget(target);renderer.render(bakeScene,bakeCam);}
+    try {
+      bakeMesh.material=material;renderer.setRenderTarget(target);renderer.render(bakeScene,bakeCam);
+      if (target === waveRT) { waveBakes++; waveBakeWind = waveWind; waveBakeClock = waveMat.uniforms.uTime.value; }
+    }
     finally {renderer.setRenderTarget(previous);}
   }
   function bake() {
@@ -793,7 +797,8 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     if (visible) {
       setWaves(num('wind', -180, 180));
       waveMat.uniforms.uTime.value = waveClock * 1.15;
-      bakeMesh.material = waveMat; renderer.setRenderTarget(waveRT); renderer.render(bakeScene, bakeCam); renderer.setRenderTarget(null);
+      // Reduced motion (or wave speed zero) reuses the exact baked field until its inputs change.
+      if (waveBakeWind !== waveWind || waveBakeClock !== waveMat.uniforms.uTime.value) drawBake(waveMat, waveRT);
     }
     const u = oceanMat.uniforms, k = skyMat.uniforms;
     const readOpacity=1;
@@ -907,7 +912,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     layout, measure, sample, earth, setGlobe, build, bake, setVideo, setVideoMix, setPhoto, render, paint, omega, stopY,
     get swipe() { return swipe(); }, get active() { return !!cur?.active; }, get N() { return N; },
     close() { photoFx.close(); painted = { q: NaN, tx: '', ty: '', k: '' }; panelState.forEach(st => { st.p = -1; st.op = -1; st.op2 = -1; st.x = NaN; st.vis = null; }); root.classList.remove('is-ocean'); },
-    get state() { return { at: { ...at }, stops: Array.from({ length: N }, (_, k) => stopY(k)), o: cur && { ...cur }, globe: { ...globe }, gulls: gullGeo?.instanceCount ?? 0, photoInertia: photoFx.state, prewarm: { ready:baked, running:bakePending&&!oceanDisposed, timings:{...bakeTiming} }, islands: islands?.state, photos: photos.map(i => ({ ready: !!i.naturalWidth, src: i.currentSrc })) }; },
+    get state() { return { at: { ...at }, stops: Array.from({ length: N }, (_, k) => stopY(k)), o: cur && { ...cur }, globe: { ...globe }, gulls: gullGeo?.instanceCount ?? 0, photoInertia: photoFx.state, prewarm: { ready:baked, running:bakePending&&!oceanDisposed, timings:{...bakeTiming} }, waveField: { renders:waveBakes, wind:waveBakeWind, time:waveBakeClock, reducedMotion }, islands: islands?.state, photos: photos.map(i => ({ ready: !!i.naturalWidth, src: i.currentSrc })) }; },
     dispose() {
       if(oceanDisposed)return;oceanDisposed=true;photoFx.dispose();
       // Detach now, but retain pending compile materials until Three's ready poll settles.

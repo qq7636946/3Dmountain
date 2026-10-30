@@ -358,6 +358,7 @@ uniform vec4 uRing;         // ring slope amplitude, wave number, phase, reach
 uniform vec4 uRing2;        // meniscus strength, meniscus width, push, on
 uniform vec4 uFootInfo;     // half span, plane z, texel, glow around the meniscus
 uniform sampler2D uFoot;    // distance (world units) from each x on the waterline to the mark's footprint
+uniform vec4 uPointerRipples[3]; // ground XZ, birth time, slope strength; fixed-size impulse pool
 vec2 ghash(vec2 p) { p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return -1. + 2. * fract(sin(p) * 43758.5453123); }
 /* gradient noise + analytic derivative (value, d/dx, d/dy) */
 vec3 gnoised(vec2 p) {
@@ -437,6 +438,25 @@ vec2 ringSlope(vec3 P, float fp, float px, out float men) {
   men = uRing2.x * (mm + uFootInfo.w * .35 * exp(-(dxu * dxu) / (wx * wx * 25.) - (dzm * dzm) / (wz * wz * 36.)));
   return dir * (ring + push);
 }
+/* Three damped surface impulses: optical normals only, no extra draw/texture pass.
+   Pixel-footprint filtering keeps the expanding crests quiet at the horizon. */
+vec2 pointerWaterSlope(vec2 p, float footprint) {
+  vec2 slope = vec2(0.);
+  for (int i = 0; i < 3; i++) {
+    vec4 hit = uPointerRipples[i];
+    float age = uTime - hit.z;
+    if (hit.w <= 0. || age < 0. || age > 3.2) continue;
+    vec2 delta = p - hit.xy;
+    float radius = length(delta), front = radius - age * 1.15;
+    float width = .32 + age * .075, k = 10.;
+    float envelope = exp(-front * front / (width * width));
+    float fade = smoothstep(.015, .13, age) * (1. - smoothstep(2., 3.2, age)) * exp(-age * .9);
+    fade *= 1. - smoothstep(.22, .65, footprint * k);
+    float derivative = k * cos(front * k) - 2. * front / (width * width) * sin(front * k);
+    slope += delta / max(radius, .02) * derivative * envelope * fade * hit.w;
+  }
+  return slope;
+}
 vec3 lakeWater(vec3 d) {
   float t = -cameraPosition.y / min(d.y, -1e-5);
   vec3 P = cameraPosition + d * t;
@@ -457,7 +477,7 @@ vec3 lakeWater(vec3 d) {
   s += swell.yz * swellFade * 1.15;
   float men;
   vec2 rs = ringSlope(P, t * t * uPix / max(uCamH, .02), t * uPix, men);
-  s += rs;
+  s += rs + pointerWaterSlope(P.xz, t * t * uPix / max(uCamH, .02));
   vec3 N = normalize(vec3(-s.x, 1., -s.y));
   float cosT = clamp(dot(N, -d), 0., 1.);
   float F = clamp((uFres.x + (1. - uFres.x) * pow(1. - cosT, uFres.y)) * uFres.z, 0., 1.);
@@ -810,7 +830,8 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     uHillsA: { value: new THREE.Vector4() }, uHillSnow: { value: new THREE.Vector3() }, uHillBlue: { value: new THREE.Vector3() },
     uRangeRock: { value: new THREE.Vector3() }, uRangeC: { value: new THREE.Vector4() }, uMist: { value: new THREE.Vector4() },
     uWaterB: { value: new THREE.Vector4(1, 0, .55, 0) }, uRing: { value: new THREE.Vector4(0, 20, 0, 3) }, uRing2: { value: new THREE.Vector4(0, .03, 0, 0) },
-    uFootInfo: { value: new THREE.Vector4(2, -MARK_DIST, 1 / 128, 0) }, uFoot: { value: null }
+    uFootInfo: { value: new THREE.Vector4(2, -MARK_DIST, 1 / 128, 0) }, uFoot: { value: null },
+    uPointerRipples: { value: Array.from({ length: 3 }, () => new THREE.Vector4(0, 0, -1e6, 0)) }
   };
   const blank = new THREE.DataTexture(new Uint8Array([203, 216, 230, 255]), 1, 1); blank.needsUpdate = true;
   U.uRangeTex.value = blank;
@@ -856,6 +877,10 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   const orbitPointerRay = new THREE.Vector3();
   let orbitPointerSeen = false, orbitPointerAt = -Infinity, orbitPointerWeight = 0;
   const orbitPointerEnabled = nearMarkCount > 0 && !reducedMotion;
+  // Fine-pointer desktop only. Reuses the existing passive event path; touch keeps native scrolling.
+  const waterPointerEnabled = orbitPointerEnabled && !small && matchMedia('(pointer: fine)').matches;
+  const waterPointerRay = new THREE.Vector3(), waterLastPoint = new THREE.Vector2(Infinity, Infinity);
+  let waterPointerSlot = 0, waterPointerStamp = -Infinity, waterPointerEmitted = 0;
   const stopOrbitPointer = () => { orbitPointerAt = -Infinity; };
   const moveOrbitPointer = event => {
     if (!orbitPointerEnabled || event.isPrimary === false || MU.uMarkVisibility.value < .01
@@ -868,6 +893,19 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     orbitPointerTarget.set(x * 2 - 1, 1 - y * 2);
     if (!orbitPointerSeen) { orbitPointerCurrent.copy(orbitPointerTarget); orbitPointerSeen = true; }
     orbitPointerAt = performance.now();
+    if (waterPointerEnabled && event.pointerType === 'mouse' && orbitPointerAt - waterPointerStamp > 160) {
+      waterPointerRay.set(x * 2 - 1, 1 - y * 2, .5).unproject(camera).sub(camera.position).normalize();
+      if (waterPointerRay.y < -.045) {
+        const distance = -camera.position.y / waterPointerRay.y;
+        const wx = camera.position.x + waterPointerRay.x * distance;
+        const wz = camera.position.z + waterPointerRay.z * distance;
+        if (distance > 0 && distance < 28 && (event.type === 'pointerdown' || Math.hypot(wx - waterLastPoint.x, wz - waterLastPoint.y) > .22)) {
+          U.uPointerRipples.value[waterPointerSlot].set(wx, wz, U.uTime.value, .0035);
+          waterPointerSlot = (waterPointerSlot + 1) % 3; waterPointerEmitted++;
+          waterPointerStamp = orbitPointerAt; waterLastPoint.set(wx, wz);
+        }
+      }
+    }
   };
   const releaseOrbitPointer = event => { if (event.pointerType !== 'mouse') stopOrbitPointer(); };
   const leaveOrbitPointer = event => { if (!event.relatedTarget) stopOrbitPointer(); };
@@ -1072,7 +1110,8 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   let sunQ = 0;                                   /* q: the dials are the END pose (q = 1); earlier the light is a touch higher and cooler */
   function applyQ() {
     const k = L.qLight * (1 - sunQ);
-    const az = L.sunAz * lerp(1, L.portraitSunShift, frame.pt) * RAD, el = (L.sunEl + 2.2 * k) * RAD;
+    // Keep the compact sun clear of the centered mobile brand lockup.
+    const az = (L.sunAz * lerp(1, L.portraitSunShift, frame.pt) - 8 * frame.pt) * RAD, el = (L.sunEl + 2.2 * k) * RAD;
     U.uSunDir.value.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)).normalize();
     U.uSunA.value.set(L.sunSize * RAD, L.sunDisc, L.sunBloom * (1 - .15 * k), Math.max(.5, L.sunBloomSize) * RAD);
     U.uOut.value.x = L.exposure * (1 + .05 * k);
@@ -1371,7 +1410,9 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     warm() { return renderer.compileAsync ? renderer.compileAsync(scene, camera).then(() => renderer.compileAsync(convScene, convCam)) : (renderer.compile(scene, camera), Promise.resolve()); },
     update, setSize, setLook, dispose,
     setMarkAspect(value) { const next=Math.max(.1,Number(value)||1); if(Math.abs(next-markAspect)>.001){markAspect=next;layout();} },
-    getLook() { return { ...L }; }
+    getLook() { return { ...L }; },
+    get interaction() { return { enabled: waterPointerEnabled, emitted: waterPointerEmitted,
+      active: U.uPointerRipples.value.filter(hit => hit.w > 0 && U.uTime.value - hit.z >= 0 && U.uTime.value - hit.z < 3.2).length }; }
   };
 
   syncOpeningLook(); layout(); update({ q: 0, time: 0 });

@@ -21,7 +21,7 @@ import * as THREE from 'three';
 
 /* The defaults. Strict JSON: world-logo-build.cjs copies it into main.js's CONFIG.logoSeal. */
 const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
-  "transition": 2,
+  "transition": 0,
   "cutClock": 1,
   "cutAt": 0.3,
   "cutTime": 0.9,
@@ -330,7 +330,8 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
 
   const cfg = () => config() || {};
   const dials = () => cfg().logoSeal || DEFAULTS;
-  const num = (key, lo = -Infinity, hi = Infinity) => { const v = +dials()[key]; return clamp(Number.isFinite(v) ? v : DEFAULTS[key], lo, hi); };
+  /* CONTINUOUS_LOGO_WAVE: this edition has no screen-space glass tiles, including saved workshop presets. */
+  const num = (key, lo = -Infinity, hi = Infinity) => { const v = key === 'transition' ? 0 : +dials()[key]; return clamp(Number.isFinite(v) ? v : DEFAULTS[key], lo, hi); };
   const colours = new Map();
   const colour = hex => { let c = colours.get(hex); if (!c) { c = new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace); colours.set(hex, c); } return c; };
 
@@ -770,7 +771,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
       return {
         gl: lastRenderer && { programs: lastRenderer.info.programs?.length, textures: lastRenderer.info.memory.textures, geometries: lastRenderer.info.memory.geometries },
         at: abs(), plan: plan && { ...plan }, sample: last && { ...last }, phase: state, ready: !!R?.ready, failed, lost, timings: R ? { ...R.timings, progs: R.progs } : null, newPrograms: R?.newPrograms || null, glassFound: R?.glassFound || null, log: R ? R.log.slice() : null,
-        model: R?.mark?.model || null, spinFx: null,
+        model: R?.mark?.model || null, spinFx: null, interaction: R?.lake?.interaction || null,
         built: R ? { lake: !!R.lake, mark: !!R.mark, texOld: R.texOld ? [R.texOld.image.width, R.texOld.image.height] : null, texNew: R.texNew ? [R.texNew.image.width, R.texNew.image.height] : null } : null
       };
     },

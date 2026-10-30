@@ -1,0 +1,107 @@
+/* Visitor controls and the editorial close. Typography remains in typography.css. */
+html[data-look="index1-5"] .fi-skip {
+  position:fixed; top:16px; left:16px; z-index:10000; transform:translateY(-160%);
+  color:#102838; background:#e2c28a; border:0; padding:13px 20px; border-radius:3px;
+}
+html[data-look="index1-5"] .fi-skip:focus { transform:translateY(0); }
+html[data-look="index1-5"] .loader-reading {
+  margin:28px auto 0; min-height:44px; display:block; color:#d3e1e8; background:transparent;
+  border:0; border-bottom:1px solid #718895; padding:8px 3px; cursor:pointer;
+}
+html[data-look="index1-5"] .loader-reading:is(:hover,:focus-visible) {color:#e2c28a;border-color:currentColor;}
+html[data-look="index1-5"] .fi-menu-reading {background:transparent;border:0;color:inherit;min-height:44px;cursor:pointer;padding:8px 0;}
+html[data-look="index1-5"] .fi-menu-reading:is(:hover,:focus-visible) {color:#e2c28a;}
+html[data-look="index1-5"] .fi-navigation-status {
+  position:fixed; z-index:29; right:max(32px,env(safe-area-inset-right)); bottom:28px;
+  display:flex; align-items:center; gap:14px; max-width:calc(100vw - 48px); padding:10px 17px;
+  color:#edf3f5; background:rgba(10,28,42,.94); border:1px solid rgba(226,194,138,.3); border-radius:3px;
+  opacity:0; visibility:hidden; transform:translateY(5px); transition:opacity .25s,transform .25s,visibility .25s;
+}
+html[data-look="index1-5"] .fi-navigation-status.is-visible {opacity:1;visibility:visible;transform:none;}
+html[data-look="index1-5"] .fi-navigation-status button {background:transparent;color:#e2c28a;border:0;border-left:1px solid #566573;padding:0 0 0 14px;min-height:32px;cursor:pointer;white-space:nowrap;}
+html[data-look="index1-5"] #fiWorld .fiw-footer {padding-bottom:max(56px,env(safe-area-inset-bottom));}
+html[data-look="index1-5"] #fiWorld .fiw-outro {grid-column:10 / 24; align-self:start; padding-top:2px;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-kicker {color:#e2c28a;margin:0 0 27px;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-title {margin:0;max-width:12em;color:#f0f4f6;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-title span {display:block;color:#a5bbc7;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-copy {color:#c3d1da;max-width:31em;margin:28px 0 35px;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-links {display:flex;flex-wrap:wrap;gap:24px;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-links button {border:0;border-bottom:1px solid #72838d;background:none;color:#e9f0f4;padding:8px 0;min-height:44px;cursor:pointer;transition:color .25s,border-color .25s;}
+html[data-look="index1-5"] #fiWorld .fiw-outro-links button:is(:hover,:focus-visible) {color:#e2c28a;border-color:#e2c28a;}
+html[data-look="index1-5"] #fiWorld .fiw-legalline {color:#a3b8c6;}
+html[data-look="index1-5"] .fi-readable-return {display:none;}
+@media(max-width:760px) {
+ html[data-look="index1-5"] .fi-navigation-status {bottom:82px;right:24px;left:24px;justify-content:space-between;}
+ html[data-look="index1-5"] #fiWorld .fiw-outro {grid-column:1 / -1;order:-1;margin-bottom:44px;}
+ html[data-look="index1-5"] #fiWorld .fiw-outro-title {max-width:13em;}
+ html[data-look="index1-5"] #fiWorld .fiw-outro-kicker {margin-bottom:20px;}
+}
+/* Explicit reading mode always wins over pinned/animated scene styling. */
+html[data-look="index1-5"][data-render-mode="text"] {overflow:auto;height:auto;}
+html[data-look="index1-5"][data-render-mode="text"] body {overflow:auto;height:auto;min-height:100vh;background:#edf4f8;color:#17364f;}
+html[data-look="index1-5"][data-render-mode="text"] :is(#fiWorld,.fi-navigation-status,.alp-grain,.fi-skip) {display:none;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui {position:relative;inset:auto;height:auto;opacity:1;visibility:visible;color:#17364f;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-header {position:relative;inset:auto;display:flex;justify-content:center;height:auto;min-height:120px;transform:none;padding:20px;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-brand {position:static;transform:none;filter:none;color:#17364f;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-brand-context {display:none;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-copy {position:static;inset:auto;width:100%;transform:none;max-width:none;display:grid;visibility:visible;opacity:1;text-align:left;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-copy-panel {position:static;inset:auto;transform:none;opacity:1;visibility:visible;pointer-events:auto;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-copy-panel .fi-motion-node {opacity:1;transform:none;visibility:visible;}
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-copy-panel :is(h1,h2,.fi-copy-kicker,.fi-copy-zh,.fi-zh-head,.fi-zh-body) {color:#17364f;text-shadow:none;}
+html[data-look="index1-5"][data-render-mode="text"] .fi-readable-return {display:block;margin:0 auto 48px;background:#17364f;color:#fff;border:0;border-radius:3px;padding:14px 24px;cursor:pointer;}
+@media(prefers-reduced-motion:reduce) {
+ html[data-look="index1-5"] :is(.fi-navigation-status,.fiw-outro-links button) {transition:none;}
+}
+
+/* READING_VISIBILITY: pinned panels carry inline visibility while in the 3D timeline. */
+html[data-look="index1-5"][data-render-mode="text"] .finnovation-ui .fi-copy-panel {visibility:visible !important;pointer-events:auto !important;}
+
+/* FOOTER_FINISH: one uninterrupted field through the final reading position. */
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer {
+ min-height:100svh; box-sizing:border-box; align-content:start;
+ padding-top:clamp(158px,20vh,190px); padding-bottom:88px;
+ background:linear-gradient(145deg,#122c3d,#0d1f30 75%); color:#dce7ee;
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-footer::before {display:none;}
+html[data-look="index1-5"] #fiWorld .fiw-menu {grid-row:1;}
+html[data-look="index1-5"] #fiWorld .fiw-outro {grid-row:1;}
+html[data-look="index1-5"] #fiWorld .fiw-menu ul {gap:0;}
+html[data-look="index1-5"] #fiWorld .fiw-menu button {min-height:42px;}
+html[data-look="index1-5"] #fiWorld .fiw-footer .fiw-top {top:132px;}
+html[data-look="index1-5"] #fiWorld .fiw-footer-line {margin:64px 0 26px;}
+@media(max-width:1000px) and (min-width:761px) {
+ html[data-look="index1-5"] #fiWorld .fiw-menu {grid-column:3 / 9;grid-template-columns:1fr;}
+ html[data-look="index1-5"] #fiWorld .fiw-outro {grid-column:10 / 24;}
+}
+@media(max-width:760px) {
+ html[data-look="index1-5"] #fiWorld .fiw-outro {grid-column:1 / -1;grid-row:1;}
+ html[data-look="index1-5"] #fiWorld .fiw-menu {grid-column:1 / -1;grid-row:2;grid-template-columns:1fr;}
+ html[data-look="index1-5"] #fiWorld .fiw-menu ul {grid-template-columns:1fr 1fr;column-gap:18px;}
+ html[data-look="index1-5"] #fiWorld .fiw-footer-line {margin:40px 0 26px;}
+ html[data-look="index1-5"] #fiWorld .fiw-footer .fiw-top {top:125px;}
+}
+
+/* READING_CASCADE_RESET: the readable document owns positioning and contrast. */
+html[data-look="index1-5"][data-render-mode="text"] body > .finnovation-ui {
+ position:relative !important; inset:auto !important; width:100% !important; max-width:1120px !important;
+ height:auto !important; margin:0 auto !important; padding:clamp(20px,5vw,56px) !important; box-sizing:border-box;
+}
+html[data-look="index1-5"][data-render-mode="text"] body .finnovation-ui .fi-copy {
+ position:static !important; inset:auto !important; transform:none !important; translate:none !important;
+ width:100% !important; max-width:none !important; display:grid !important;
+ grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; text-align:left;
+}
+html[data-look="index1-5"][data-render-mode="text"] body .finnovation-ui .fi-copy-panel {
+ position:static !important; inset:auto !important; width:auto !important; max-width:none !important;
+ transform:none !important; translate:none !important; opacity:1 !important; box-sizing:border-box;
+}
+html[data-look="index1-5"][data-render-mode="text"] body .finnovation-ui .fi-copy-panel :is(h1,h2,p,span) {
+ color:#17364f !important; opacity:1 !important; text-shadow:none !important; max-width:100%;
+}
+html[data-look="index1-5"][data-render-mode="text"] body .finnovation-ui .fi-copy-panel :is(h1,h2) {text-wrap:balance;}
+html[data-look="index1-5"][data-render-mode="text"] body .finnovation-ui .fi-copy-panel .fi-copy-zh {margin:18px 0 0;}
+@media(max-width:680px) {
+ html[data-look="index1-5"][data-render-mode="text"] body .finnovation-ui .fi-copy {grid-template-columns:minmax(0,1fr);}
+}
+
+html[data-look="index1-5"] #fiWorld.is-footer-reading .fiw-viewport {mask-image:none;-webkit-mask-image:none;}

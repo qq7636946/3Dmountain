@@ -12,19 +12,6 @@
     status?.classList.remove('is-visible');
     document.querySelector('[data-journey-ui]')?.removeAttribute('aria-busy');
   }
-  function readingMode() {
-    if (!window.showFinnovationText) return;
-    document.querySelector('.fi-menu[open]')?.close();
-    clearNavigation(); window.showFinnovationText();
-    document.querySelectorAll(".fi-copy-panel [inert]").forEach(el=>{el.inert=false;});
-    const title = document.querySelector('#chapter-knowledge h1');
-    if (title) { title.tabIndex = -1; title.focus({ preventScroll:true }); }
-    scrollTo(0,0);
-  }
-  document.addEventListener('click', event => {
-    if (event.target.closest('[data-reading-mode]')) { event.preventDefault(); readingMode(); }
-    if (event.target.closest('[data-resume-experience]')) location.reload();
-  }, opts);
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-chapter]');
     const nav = button && document.querySelector('.fi-rail [data-chapter="'+button.dataset.chapter+'"]');
@@ -58,12 +45,6 @@
   },opts);
   addEventListener('wheel',clearNavigation,{...opts,passive:true});
   addEventListener('touchstart',clearNavigation,{...opts,passive:true});
-  const note=document.querySelector('.loader-note');
-  const slowTimer=setTimeout(()=>{if(!document.body.classList.contains('is-ready')&&html.dataset.renderMode!=='text')setText(note,'正在準備水光與場景，可先選擇文字閱讀');},9000);
-  const bootObserver=new MutationObserver(()=>{if(document.body.classList.contains('is-ready')){clearTimeout(slowTimer);bootObserver.disconnect();}});
-  bootObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
-  const motion=matchMedia('(prefers-reduced-motion: reduce)');
-  motion.addEventListener('change',event=>{if(event.matches && html.dataset.renderMode!=='text')readingMode();},opts);
-  addEventListener('finnovation:text-mode',()=>{clearNavigation();clearTimeout(slowTimer);bootObserver.disconnect();},opts);
-  addEventListener('pagehide',event=>{clearNavigation();if(!event.persisted){disposed=true;clearTimeout(slowTimer);bootObserver.disconnect();abort.abort();}},opts);
+  addEventListener('finnovation:text-mode',clearNavigation,opts);
+  addEventListener('pagehide',event=>{clearNavigation();if(!event.persisted){disposed=true;abort.abort();}},opts);
 })();

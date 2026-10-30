@@ -218,7 +218,7 @@ body {
 
 /* VISITOR_EXPERIENCE_TYPE */
 
-:is(.loader-reading,.fi-menu-reading,.fi-navigation-status,.fi-navigation-status button,.fi-skip,.fi-readable-return,.fiw-outro-kicker,.fiw-outro-links button) {font:500 var(--type-label)/1.6 var(--site-font);letter-spacing:.07em;}
+:is(.fi-navigation-status,.fiw-outro-kicker,.fiw-outro-links button) {font:500 var(--type-label)/1.6 var(--site-font);letter-spacing:.07em;}
 .fiw-outro-title {font-size:clamp(30px,3.6vw,56px);line-height:1.13;font-weight:400;letter-spacing:-.035em;}
 .fiw-outro-copy {font-size:var(--type-body);line-height:1.9;letter-spacing:.04em;}
-@media(max-width:760px){.fiw-outro-title{font-size:clamp(30px,8.6vw,44px);}.fi-navigation-status{font-size:10px;}.fi-navigation-status button{font-size:10px;}}
+@media(max-width:760px){.fiw-outro-title{font-size:clamp(30px,8.6vw,44px);}.fi-navigation-status{font-size:10px;}}

@@ -27,11 +27,11 @@ function patchInterface(ui) {
 }
 function patchHTML(html) {
  if(!html.includes('data-i15-experience'))html=html.replace('</head>','  <link rel="stylesheet" href="prototypes/index1-5/experience.css?v=experience-20261030" data-i15-experience>\n  <script defer src="prototypes/index1-5/experience.js?v=experience-20261030"></script>\n</head>');
- if(!html.includes('class="fi-skip"'))html=html.replace('<body>','<body>\n  <button type="button" class="fi-skip" data-reading-mode>跳至文字閱讀</button>');
- html=html.replace(/(<div class="loader-note">)[^<]*(<\/div>)/,'$1準備水光之境 · FORMING THE CURRENT$2');
- if(!html.includes('class="loader-reading"'))html=html.replace(/(<div class="loader-note">[\s\S]*?<\/div>)/,'$1\n      <button class="loader-reading" type="button" data-reading-mode>文字閱讀 · READ WITHOUT MOTION</button>');
- if(!html.includes('class="fi-menu-reading"'))html=html.replace('<span>EXPLORE WITH PURPOSE</span>','<button class="fi-menu-reading" type="button" data-reading-mode>文字閱讀 · READING MODE</button>');
- if(!html.includes('class="fi-navigation-status"'))html=html.replace('  <!-- FINNOVATION_STATIC_UI_END -->','  <!-- FINNOVATION_STATIC_UI_END -->\n  <div class="fi-navigation-status" role="status" aria-live="polite" aria-atomic="true"><span></span><button type="button" data-reading-mode>文字閱讀</button></div>\n  <button type="button" class="fi-readable-return" data-resume-experience>回到互動體驗 · RETURN TO THE EXPERIENCE</button>');
+ // Keep loading and navigation immersive; reading controls are not part of this design.
+ html=html.replace(/\s*<button\b[^>]*(?:data-reading-mode|data-resume-experience)[^>]*>[\s\S]*?<\/button>/g,'');
+ html=html.replace(/(<div class="loader-note">)[^<]*(<\/div>)/,'$1FORMING ATMOSPHERE$2');
+ html=html.replace(/(<div class="fi-menu-bottom"><span>恒灝創新 FINNOVATION<\/span>)(<\/div>)/,'$1<span>EXPLORE WITH PURPOSE</span>$2');
+ if(!html.includes('class="fi-navigation-status"'))html=html.replace('  <!-- FINNOVATION_STATIC_UI_END -->','  <!-- FINNOVATION_STATIC_UI_END -->\n  <div class="fi-navigation-status" role="status" aria-live="polite" aria-atomic="true"><span></span></div>');
  html=html.replace(/\s*<ul class="fiw-legal">[\s\S]*?<\/ul>/,'');
  const outro='<div class="fiw-outro">\n            <p class="fiw-outro-kicker" lang="en">FINANCE × INNOVATION</p>\n            <h2 class="fiw-outro-title" lang="en">Knowledge in flow.<span>Capital moving forward.</span></h2>\n            <p class="fiw-outro-copy">以知為本，以紀律守護長期價值。<br>讓知識、科技與資本相互連結，源遠流長。</p>\n            <div class="fiw-outro-links"><button type="button" data-world-go="principles">我們的理念 <span aria-hidden="true">↗</span></button><button type="button" data-world-go="responsibility">四大投資策略 <span aria-hidden="true">↗</span></button></div>\n          </div>\n';
  html=html.replace(/<div class="fiw-offices">[\s\S]*?(?=<div class="fiw-footer-line")/,outro+'          ');

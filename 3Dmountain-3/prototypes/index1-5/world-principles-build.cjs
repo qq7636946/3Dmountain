@@ -81,6 +81,7 @@ function patchWorld(src,version=''){
 }
 module.exports=({main,drops,letters,glass,html,extra})=>{
  if(!extra?.['finnovation-world.js'])throw Error('Principles: world module missing');
+ // The image-free silver-blue texture (#172b41) and its scrim are authored in the local source and copied intact.
  extra['finnovation-world.js']=patchWorld(extra['finnovation-world.js']);extra['world-principles.js']=read(path.join(__dirname,'world-principles.js'));
  return{main,drops,letters,glass,html:patchHTML(html),extra};
 };

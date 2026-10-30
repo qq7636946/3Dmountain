@@ -115,6 +115,14 @@ const ROWS = [
 
 function patchWorld(src) {
   const p = (a, b, label) => { src = once(src, a, b, label); };
+  // Keep this page's orbit/cloud handoff in the same silver-blue water family.
+  // The shared world module and all other page versions retain their own palette.
+  p("  skyTop: '#5f6f80', skyBottom: '#425163', deepTop: '#0f1f2a', deepBottom: '#07131b',",
+    "  skyTop: '#526d88', skyBottom: '#3a536f', deepTop: '#10243a', deepBottom: '#081624',", 'orbit sky palette');
+  p("  ocean: '#1b2e42', oceanHi: '#2d4862', land: '#5a7590', landHi: '#a4bacd', ice: '#e3ebf2',",
+    "  ocean: '#203b55', oceanHi: '#4d718e', land: '#6888a4', landHi: '#a9c2d7', ice: '#e4edf5',", 'orbit surface palette');
+  p("  cloud: '#e8eef4', rim: '#bcd2e6', halo: '#c9dcec', deck: '#eef2f6', deckShade: '#b7c2cd',",
+    "  cloud: '#e4edf5', rim: '#bcd2e6', halo: '#c9dcec', deck: '#e4edf5', deckShade: '#afc4d6',", 'orbit cloud palette');
   src = '/* index1-5 LOCAL COPY of js/finnovation-world.js (prototypes/index1-5/world-ocean-build.cjs): asset URLs re-pointed,\n' +
     '   hooks into world-ocean.js (the oceanx-style dive and the horizontal RESPONSIBILITY section). The shared file is untouched. */\n' + src;
   p("import { GRADE_GLSL, gradeVector }", "import { createWorldOcean } from './world-ocean.js';\nimport { GRADE_GLSL, gradeVector }", 'import');

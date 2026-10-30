@@ -21,25 +21,25 @@ const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 const C = hex => new THREE.Color(hex);
-// Artist-controlled sky/light stops: the same grey-blue rock is warmed by light, rather than recoloured per chapter.
+// One silver-blue water family: midday light is cool white; dawn and sunset retain a restrained warm edge.
 const STOPS = [
-  [5.5, '#243c5d', '#697e99', '#b1a8ae', '#a2afbd', '#ffbb88', '#eee0d4', '#6f819b', '#7c94ae', '#416374', 1.3, 1.55],
-  [7.0, '#29496d', '#7799b3', '#c6c9c9', '#b6c6d1', '#ffd3a6', '#f5e9db', '#8095ab', '#90a6bf', '#4d7483', 3.4, 1.7],
-  [11.5, '#2d5682', '#7299b9', '#c4d2dd', '#b7c9d7', '#ffebce', '#f0f1ec', '#7e96b1', '#91a9c1', '#527a8b', 5.1, 1.8],
-  [15.0, '#304e75', '#7a94af', '#c0c7cd', '#b1c1cd', '#ffddae', '#f1e6d8', '#7c91a8', '#8ca4bd', '#4b7083', 4.5, 1.75],
-  [16.4, '#344d70', '#8794a7', '#c7b5a9', '#b4b9c3', '#ffc895', '#efdbc9', '#7c8ba6', '#8b9cb5', '#496a7d', 3.2, 1.65],
-  [17.7, '#2b405f', '#7b7e98', '#c39c8a', '#a3a8ba', '#ffaf7c', '#dbc3bc', '#6b7d9c', '#8196b2', '#3c596e', 1.65, 1.55],
-  [18.5, '#20334f', '#536b8c', '#9190a6', '#7c91ab', '#f3b99b', '#a8b7cc', '#4d6586', '#728eb1', '#304b65', .05, 1.45],
+  [5.5, '#243c5d', '#697e99', '#b1a8ae', '#a2afbd', '#ebc3a3', '#e8e2de', '#71859e', '#7c94ae', '#3e607b', 1.3, 1.55],
+  [7.0, '#29496d', '#7799b3', '#c6c9c9', '#b6c6d1', '#efdcc5', '#e9edf0', '#8197af', '#90a6bf', '#4a6e8b', 3.4, 1.7],
+  [11.5, '#2d5682', '#7299b9', '#c4d2dd', '#b8cbdc', '#e4edf5', '#e8eef4', '#8098b2', '#91a9c1', '#4d718e', 5.1, 1.8],
+  [15.0, '#304e75', '#7a94af', '#c0c7cd', '#b1c1cd', '#e9e6db', '#e8ebed', '#7e93ad', '#8ca4bd', '#496b87', 4.5, 1.75],
+  [16.4, '#344d70', '#8794a7', '#c7b5a9', '#b4b9c3', '#edcfb4', '#e7dfd8', '#7c8da8', '#8b9cb5', '#466681', 3.2, 1.65],
+  [17.7, '#2b405f', '#7b7e98', '#c39c8a', '#a3a8ba', '#edbfa0', '#d7c9c4', '#6c809f', '#8196b2', '#3b5873', 1.65, 1.55],
+  [18.5, '#20334f', '#536b8c', '#9190a6', '#7c91ab', '#d9c8bf', '#a8b8cd', '#4e688a', '#728eb1', '#304b65', .05, 1.45],
   [20.0, '#13263d', '#2d4668', '#657e9e', '#657f9f', '#cad7ed', '#8da6c5', '#3e587b', '#6888ae', '#29425e', 0, 1.35]
 ].map(([hour, top, mid, horizon, fog, sun, cloudLit, cloudShade, shadow, sea, intensity, fill]) =>
   ({ hour, top: C(top), mid: C(mid), horizon: C(horizon), fog: C(fog), sun: C(sun), cloudLit: C(cloudLit), cloudShade: C(cloudShade), shadow: C(shadow), sea: C(sea), intensity, fill }));
 const state = {
   enabled: true, hour: 6.25, phase: 'DAWN', elevation: 3, azimuth: -27, daylight: 1, dusk: 0, night: 0, intensity: 2,
-  sunDirection: new THREE.Vector3(), sunColor: C('#ffd3a6'), skyTop: C('#29496d'), skyMid: C('#7799b3'), horizon: C('#c6c9c9'), fog: C('#b6c6d1'),
-  cloudLit: C('#f5e9db'), cloudShade: C('#8095ab'), shadow: C('#90a6bf'), sea: C('#4d7483'), exposure: 1
+  sunDirection: new THREE.Vector3(), sunColor: C('#efdcc5'), skyTop: C('#29496d'), skyMid: C('#7799b3'), horizon: C('#c6c9c9'), fog: C('#b6c6d1'),
+  cloudLit: C('#e9edf0'), cloudShade: C('#8197af'), shadow: C('#90a6bf'), sea: C('#4a6e8b'), exposure: 1
 };
 let config = null, base = null, wasEnabled = false, lastKey = '', cssKey = '';
-const tmp = new THREE.Color(), neutral = C('#f4e9da');
+const tmp = new THREE.Color(), neutral = C('#e4edf5');
 const hex = color => '#' + color.getHexString();
 export function getSceneDaylight() { return state; }
 export function configureSceneDaylight(CFG) {

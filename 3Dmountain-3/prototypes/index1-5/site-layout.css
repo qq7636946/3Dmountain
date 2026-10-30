@@ -4368,3 +4368,9 @@ html[data-look="index1-5"][data-render-mode="text"] .alp-grain { display: none; 
 @media (prefers-reduced-motion: reduce) {
   html[data-look="index1-5"][data-grain="unified"] .alp-grain { animation: none; }
 }
+/* Mobile strategy chapters: keep the copy and CTA, omit the photo column. */
+@media (max-width: 680px) {
+  html[data-look="index1-5"] #fiWorld .fiwo-strategy-visual { display: none; }
+  html[data-look="index1-5"] #fiWorld .fiwo-panel.fiwo-strategy { grid-template-rows: auto; row-gap: 0; }
+  html[data-look="index1-5"] #fiWorld .fiwo-strategy-copy { grid-row: 1; }
+}

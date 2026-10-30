@@ -37,36 +37,36 @@
    colour-managed pipeline. No tone mapping is used or needed (the picture is soft-clipped in the shader).
    ===================================================================== */
 
-import { getSceneDaylight } from './scene-daylight.js';
+import { getSceneDaylight } from './scene-daylight.js?v=i15-tone-7da2c5eaf233';
 import { createLightSpecks } from './light-specks.js';
 
 export const LAKE_DEFAULTS = {
   matchOpening: 0,
   /* ---- sky ---- */
-  skyTop: "#244a70", skyMid: "#163047", skyHorizon: "#253d52", skyHaze: "#526c80",
+  skyTop: "#2c4c70", skyMid: "#203b55", skyHorizon: "#58738d", skyHaze: "#91a9bd",
   skyMidEl: 7, skyTopEl: 30, skyCurve: 0.85, hazeHeight: 3.4, hazeAmount: 0,
   /* ---- sun ---- */
-  sunAz: -3, sunEl: 27.5, sunColor: "#ffd49a", bloomColor: "#f6c17f",
+  sunAz: -3, sunEl: 27.5, sunColor: "#e4edf5", bloomColor: "#dce9f5",
   sunSize: 0.55, sunDisc: 1.1, sunBloom: 0.17, sunBloomSize: 9, sunCore: 0.32,
   /* ---- distant range ---- */
   rangeOpacity: 0.9, rangeHeight: 11, rangeWidth: 54, rangeAz: 5, rangeLift: -0.3,
-  rangeHaze: 0.12, rangeTint: "#30475a", rangeContrast: 1.16, rangeSoft: 0.35,
+  rangeHaze: 0.12, rangeTint: "#405b73", rangeContrast: 1.16, rangeSoft: 0.35,
   /* ---- lake ---- */
-  deep: "#0a2232", lit: "#294154", ink: "#030a11", foam: "#8eaabc",
+  deep: "#163047", lit: "#56778f", ink: "#0c1b2b", foam: "#d1e1ed",
   waterScale: 2.22, waterSpeed: 1.03, waterRough: 2.71, waterStretch: 1.15, waterSwell: 0.1,
   skyReflect: 0.62, fresnelMin: 0.025, fresnelPower: 5, waterNearDark: 0.46,
   /* ---- sun glints (soft, banded, rolled off) ---- */
-  glintColor: "#ffd49a", glintStrength: 0.22, glintSize: 0.4, glintBand: 14, glintFocus: 0.93, glintSpread: 1.05, glintKnee: 2.5,
+  glintColor: "#dce9f5", glintStrength: 0.22, glintSize: 0.4, glintBand: 14, glintFocus: 0.93, glintSpread: 1.05, glintKnee: 2.5,
   /* ---- the mark's reflection ---- */
   reflStrength: 0.32, reflLength: 0.7, reflRipple: 1.15, reflFresnel: 0.68, reflBlur: 0.7,
   /* ---- droplets and motes ---- */
-  moteCount: 22, moteSize: 0.55, moteSpeed: 0.35, moteOpacity: 0.24, moteColor: '#f3dfb6',
+  moteCount: 22, moteSize: 0.55, moteSpeed: 0.35, moteOpacity: 0.24, moteColor: "#e4edf5",
   speckDensity: 0.22, skySpecks: 0.42,
   /* Local rising helix, exposed separately in the M tuner. */
-  orbitRandomness: 85, orbitSpeed: 1.15, orbitRiseSpeed: 1, orbitRadius: 1.22, orbitSize: 1.1, orbitBrightness: 1.1,
-  orbitDensity: 100, orbitScatter: .9, orbitInteraction: 1.4,
+  orbitRandomness: 67, orbitSpeed: 0.45, orbitRiseSpeed: 1.65, orbitRadius: 1.07, orbitSize: 0.75, orbitBrightness: 0.95,
+  orbitDensity: 58, orbitScatter: 0.2, orbitInteraction: 2.15,
   /* ---- frame ---- */
-  vignette: 0.23, exposure: 0.96, outputDisplay: 1,
+  vignette: 0.23, exposure: 0.98, outputDisplay: 1,
   /* ---- camera and composition ---- */
   camHeight: 0.85, fov: 36, horizon: 0.7, drift: 0.018, sway: 0.06, qLight: 0,
   markY: 0.5, markSize: 0.3, markWidth: 0.92,
@@ -84,7 +84,7 @@ export const LAKE_DEFAULTS = {
   waterFine: 0.75, waterTint: 0.28, reflWobble: 0,
   sparkCount: 0, sparkSize: 1, sparkSpeed: 1, sparkColor: '#6fa4ff',
   /* ---- light on the glass ---- */
-  lightSun: 3.95, lightFill: 0.89, envIntensity: 1.61
+  lightSun: 3.95, lightFill: 0.96, envIntensity: 1.61
 };
 
 /* [label, key, min, max, step]; colour rows have no range (same row format as alpine-light-params.js). */
@@ -634,6 +634,9 @@ void main() {
     float radius = (uMarkExtent.x + uMarkExtent.y * .13)
       * uOrbitStyle.y * (1. + (aSeed.z - .5) * (mix(.12, .42, random) + scatter * .34)
       + sin(t * .41 + seed * 23.) * random * (.07 + scatter * .09)) * (1. - .72 * plume);
+    // A few motes first appear close to the lit solid, then join the rising orbit.
+    float fromGlass = step(.72, fract(seed * 11.7));
+    radius *= mix(1., mix(.6, 1., smoothstep(0., .18, life)), fromGlass);
     vec3 p = uMarkCenter;
     p.x += cos(angle) * radius;
     p.z += sin(angle) * radius;

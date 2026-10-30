@@ -110,6 +110,35 @@ export function mountLogoPanel({ config, defaults, sections, getWorld = () => nu
     return n;
   }
   const storedValues=readStore();
+  // Adopt the approved light preset once. Keep all unrelated edits and an exact recovery copy.
+  // Later M-panel edits remain user-controlled; this is not a per-load reset.
+  const lightRelease = STORE + ':inner-light-20261027';
+  try {
+    if (localStorage.getItem(lightRelease) !== 'applied') {
+      localStorage.setItem(lightRelease + ':before', JSON.stringify(storedValues));
+      const lightKeys = {"logoLake":["orbitRandomness","orbitDensity","orbitScatter","orbitInteraction","orbitSpeed","orbitRiseSpeed","orbitRadius","orbitSize","orbitBrightness"],"logoMark":["glow","glowPulse","glowSpeed","caustic","rimStrength","rimLine","wallGlow","brandBlueGlow"]};
+      for (const [group, keys] of Object.entries(lightKeys)) {
+        if (!storedValues[group]) continue;
+        for (const key of keys) delete storedValues[group][key];
+      }
+      localStorage.setItem(STORE, JSON.stringify(storedValues));
+      localStorage.setItem(lightRelease, 'applied');
+    }
+  } catch { /* Storage may be disabled; the page still runs with its available values. */ }
+  // Adopt only this release's colour/material values once; keep the original saved map recoverable.
+  const toneRelease = STORE + ':water-tone-20261028';
+  try {
+    if (localStorage.getItem(toneRelease) !== 'applied') {
+      localStorage.setItem(toneRelease + ':before', JSON.stringify(storedValues));
+      const toneKeys = {"logoSeal":["glassTint","tileGlowColor","tileField"],"logoLake":["skyTop","skyMid","skyHorizon","skyHaze","sunColor","bloomColor","rangeTint","deep","lit","ink","foam","glintColor","moteColor","exposure","lightFill"],"logoMark":["tint","attenuationColor","sheenColor","rimColor","wallColor","glowColor","brandBlueColor","brandBlueDeep","dispersion","iridescence"]};
+      for (const [group, keys] of Object.entries(toneKeys)) {
+        if (!storedValues[group]) continue;
+        for (const key of keys) delete storedValues[group][key];
+      }
+      localStorage.setItem(STORE, JSON.stringify(storedValues));
+      localStorage.setItem(toneRelease, 'applied');
+    }
+  } catch { /* Storage may be disabled; use the available defaults. */ }
   applyMap(storedValues);   // before the world builds the mark: its first frame already has them (no onChange here: the tuner may not exist yet)
 
   /* ---- the panel (built the first time it opens) ---- */

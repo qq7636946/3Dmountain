@@ -36,7 +36,7 @@ vec3 photo(sampler2D source,vec2 uv,float r,float aspect,float horizon){
   c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,.56)*vec3(.78,.92,1.03)*.88;
   scrim+=.22+.10*(1.-smoothstep(.35,.80,uv.y));
  }
- return mix(c,vec3(.035,.09,.125),scrim);
+ return mix(c,vec3(.04,.075,.13),scrim);
 }
 void main(){
  vec2 uv=vUv;float q=smoothstep(0.,1.,uEnter),s=sin(q*3.14159265);
@@ -115,7 +115,7 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  }
  function begin(renderer){
   scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-  texture=new THREE.DataTexture(new Uint8Array([17,42,55,255]),1,1);texture.needsUpdate=true;
+  texture=new THREE.DataTexture(new Uint8Array([23,43,65,255]),1,1);texture.needsUpdate=true;
   material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,depthTest:false,depthWrite:false,toneMapped:false,blending:THREE.NoBlending,
    uniforms:{uPhoto:{value:texture},uPhoto2:{value:texture},uOld:{value:texture},uRes:{value:new THREE.Vector2(W,H)},uMouse:{value:mouse},uTime:{value:0},uEnter:{value:1},uRead:{value:0},uAspect:{value:16/9},uAspect2:{value:16/9},uSceneMix:{value:0},uMotion:{value:reducedMotion?0:1}}});
   quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);quad.frustumCulled=false;scene.add(quad);

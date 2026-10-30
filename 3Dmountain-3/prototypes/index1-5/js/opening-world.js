@@ -15,12 +15,12 @@ import * as THREE from 'three';
 import { createLightSpecks } from './light-specks.js?v=restore-1-5-blue-8547de57661f';
 
 export const OPENING_WORLD_DEFAULTS = {
-  sunAzimuth: -18, sunElevation: 11, sunColor: '#ffd6a8', sunStrength: 1.2, sunDisc: 2.4, sunSharp: 22000, goldHorizon: .2, goldHeight: 9,
-  glintColor: '#ffe2c4', glintStrength: .74,
+  sunAzimuth: -18, sunElevation: 11, sunColor: '#e4edf5', sunStrength: 1.2, sunDisc: 2.4, sunSharp: 22000, goldHorizon: .2, goldHeight: 9,
+  glintColor: '#e4edf5', glintStrength: .74,
   follow: 1,
   rangeOpacity: .9, rangeHeight: 9, rangeWidth: 40, rangeAzimuth: 5, rangeLift: 0, rangeHaze: .13, rangeSoft: .35,
-  seaTint: '#4f818f', seaTintAmount: .5,
-  motes: .42, moteColor: '#ffe7c9', glintTint: '#ffd9ab',
+  seaTint: '#4d718e', seaTintAmount: .24,
+  motes: .42, moteColor: '#dce9f4', glintTint: '#e4edf5',
   hemiSky: '#cfe0f4', hemiGround: '#2f5566'
 };
 

@@ -68,5 +68,26 @@ ${noise}`);
     drops = once(drops, '        vAlpha=aBead.y;', '        vAlpha=aBead.y;\n        vOdSeed=aBead.x;');
     drops = once(drops, 'odChrome(odN,-V,fract(dot(vCenter,vec3(.71,.37,.53))*3.1))', 'odChrome(odN,-V,uOdFlow>.001?vOdSeed*5.17:fract(dot(vCenter,vec3(.71,.37,.53))*3.1))');
   }
+  /* Keep the published silver-blue refinement through a local rebuild. */
+  if (!main.includes('WATER_TONE_UNIFICATION_20261028')) {
+    main = once(main, '      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));', `      /* WATER_TONE_UNIFICATION_20261028: one silver-blue material family.
+         Keep the hero brighter than grazing water, with the same blue reflection
+         ratios; a softer flag keeps its centre luminous without white clipping. */
+      if (!document.documentElement.hasAttribute('data-opening-refinement')) {
+        Object.assign(CONFIG.drop, { matchSeaTint: 1, f0: .90, roughness: .032,
+          card: .80, lens: .40, iris: .07, irisEdge: 1.8 });
+        Object.assign(CONFIG.chrome, { iris: .045 });
+        Object.assign(CONFIG.droplet, { glowColor: '#244b6a', sheenColor: '#c6ddf0', sheen: .48 });
+        Object.assign(CONFIG.logoDrops, { swirlMetal: .94, swirlMetalVar: .025,
+          chromeCard: .80, chromeRough: .032, chromeLens: .40,
+          swirlSunRim: .035, swirlSunGlint: .18 });
+      }
+      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));`);
+  }
+  if (!main.includes('D.matchSeaTint ? 1.036')) {
+    main = once(main,
+      'dropChromeUniforms.uChromeF0.value.set(D.f0, D.f0 * 1.012, D.f0 * 1.036);',
+      'dropChromeUniforms.uChromeF0.value.set(D.f0, D.f0 * (D.matchSeaTint ? 1.036 : 1.012), D.f0 * (D.matchSeaTint ? 1.099 : 1.036));');
+  }
   return { main, drops, ...rest };
 };

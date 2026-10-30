@@ -27,12 +27,12 @@ import * as THREE from 'three';
 import { createOceanIslands } from './world-ocean-islands.js?v=restore-1-5-blue-8547de57661f';
 import { createOceanPhotos } from './world-ocean-photos.js?v=restore-1-5-blue-8547de57661f';
 import { oceanProgress, oceanPanelState } from './world-ocean-scroll.js?v=restore-1-5-blue-8547de57661f';
-import { getSceneDaylight } from './scene-daylight.js?v=restore-1-5-blue-8547de57661f';
+import { getSceneDaylight } from './scene-daylight.js?v=i15-tone-7da2c5eaf233';
 
 /* The defaults. Strict JSON: world-ocean-build.cjs copies it into main.js's CONFIG.worldOcean. */
 const DEFAULTS = /*OCEAN-DEFAULTS*/{
   "dive": 2.2, "depth": 1.8, "waveAngle": 12, "waveLength": 0.17, "waveAmp": 0.045, "crest": 1, "refract": 1.6, "waveSoft": 0.04, "wobble": 0.06, "spray": 1, "push": 0.3,
-  "valley": 1, "tone": 1, "deep": "#345067", "lit": "#6c8fad", "ink": "#20303e", "foam": "#eef2f6", "glintColor": "#ffead4",
+  "valley": 1, "tone": 1, "deep": "#344d66", "lit": "#799ab5", "ink": "#1f344a", "foam": "#e4edf5", "glintColor": "#e4edf5",
   "glint": 1.6, "glintText": 0.85, "glintKnee": 1, "glintSize": 0.45, "rough": 1.1, "waveScale": 1, "waveSpeed": 1, "wind": 35,
   "heroEnabled": 0, "heroSize": 0.546, "heroX": 0, "heroY": 0, "heroContrast": 1.25,
   "vignette": 0.6, "scrim": 0.8,

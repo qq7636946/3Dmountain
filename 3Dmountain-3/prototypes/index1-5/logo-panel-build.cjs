@@ -38,7 +38,7 @@ const SECTIONS = [
   ['玻璃光學', false, ['transmission', 'volume', 'ior', 'dispersion', 'tint', 'attenuationColor', 'attenuationDistance', 'roughness', 'clearcoat', 'clearcoatRoughness',
     'specular', 'envIntensity', 'envSpin', 'doubleSide', 'thickFloor', 'bgDisplay'].map(k => ['logoMark', k])],
   ['表面與邊緣光', false, ['sheen', 'sheenColor', 'sheenRoughness', 'iridescence', 'rimStrength', 'rimPower', 'rimLine', 'rimColor'].map(k => ['logoMark', k])],
-  ['水感（內部光、焦散）', false, ['glow', 'glowColor', 'caustic', 'causticScale', 'causticSpeed', 'shimmer', 'shimmerScale'].map(k => ['logoMark', k])],
+  ['水感（內部光、焦散）', false, ['glow', 'glowPulse', 'glowSpeed', 'glowColor', 'caustic', 'causticScale', 'causticSpeed', 'shimmer', 'shimmerScale'].map(k => ['logoMark', k])],
   ['品牌藍（上方葉片）', false, ['brandBlue', 'brandBlueColor', 'brandBlueDeep', 'brandBlueGlow', 'brandBlueAbsorb'].map(k => ['logoMark', k])],
   ['打光與倒影', false, [['logoLake', 'lightSun'], ['logoLake', 'lightFill'], ['logoLake', 'envIntensity'], ['logoLake', 'reflStrength'], ['logoLake', 'reflLength'],
     ['logoLake', 'reflRipple'], ['logoLake', 'reflFresnel'], ['logoLake', 'reflBlur']]]
@@ -71,7 +71,8 @@ function buildSections(from = __dirname) {
   const modelRows=extractExport(read(path.join(__dirname,'logo-panel.js')),'LOGO_MODEL_ROWS')||[];
   for(const row of modelRows)add('logoModel',row);
 
-  const sections = [{title:'Blender 建模',open:true,rows:modelRows.map(row=>[row[0],'logoModel',...row.slice(1)])}], missing = [],used=new Set(modelRows.map(row=>'logoModel/'+row[1]));
+  const orbitRows=[...known.values()].filter(row=>row[1]==='logoLake'&&row[2].startsWith('orbit'));
+  const sections = [{title:'LOGO 環繞光點',open:true,rows:orbitRows},{title:'Blender 建模',open:true,rows:modelRows.map(row=>[row[0],'logoModel',...row.slice(1)])}], missing = [],used=new Set([...modelRows.map(row=>'logoModel/'+row[1]),...orbitRows.map(row=>row[1]+'/'+row[2])]);
   for (const [title, open, keys] of SECTIONS) {
     const rows = [];
     for (const [g, k] of keys) { const row = known.get(g + '/' + k); if (row){rows.push(row);used.add(g+'/'+k);}else missing.push(g + '.' + k); }

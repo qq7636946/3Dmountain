@@ -41,7 +41,7 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "glassSpread": 0.55,
   "glassSeam": 0.6,
   "glassPush": 0.1,
-  "glassTint": "#3f7fe0",
+  "glassTint": "#6d91b4",
   "tiles": 8,
   "tileDepth": 1.1,
   "tilePersp": 1.3,
@@ -49,8 +49,8 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "tileJitter": 0.35,
   "tileGlow": 1.1,
   "tileLine": 1.6,
-  "tileGlowColor": "#3d8bff",
-  "tileField": "#05132a",
+  "tileGlowColor": "#91b0c8",
+  "tileField": "#10243a",
   "tileFog": 0.75,
   "tileGrid": 0.25,
   "tileExtrude": 0.55,
@@ -466,9 +466,9 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     });
   }
   async function build(R0, renderer) {
-    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=restore-1-5-blue-8547de57661f'), import('./world-logo-scene.js?v=i15-sparkles-grain-20261027-r3'), import('three/addons/loaders/SVGLoader.js')]);
+    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-tone-7da2c5eaf233'), import('./world-logo-scene.js?v=i15-tone-7da2c5eaf233'), import('three/addons/loaders/SVGLoader.js')]);
     if (dead(R0)) return;
-    R0.daylight = await import('./scene-daylight.js?v=restore-1-5-blue-8547de57661f').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
+    R0.daylight = await import('./scene-daylight.js?v=i15-tone-7da2c5eaf233').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
     renderer.getDrawingBufferSize(_size);
     R0.lake = await step(R0, 'lake', () => sceneMod.createLakeScene({ THREE, renderer, width: Math.round(_size.x), height: Math.round(_size.y), palette: paletteHex(), assetBase, small, mobilePerformance, reducedMotion }), true);
     if (dead(R0)) return;

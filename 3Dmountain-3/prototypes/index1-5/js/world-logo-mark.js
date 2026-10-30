@@ -35,6 +35,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const MARK_DEFAULTS = {
+  glowSpeed: 0.6,
+  glowPulse: 0.55,
   variant: 1,                // 1 = logo.svg; 3 = the 1010 backup's complete text_logo3.svg
   castRelief: 0,
   /* —— 外觀（0＝平板鑄造玻璃 cast slab，1＝圓潤水玻璃；1 時，還停在「鑄造預設值」的旋鈕改用水玻璃的值，動過的旋鈕照你調的）—— */
@@ -52,9 +54,9 @@ export const MARK_DEFAULTS = {
   transmission: 1,           // 透光
   volume: 2.73,               // 折射厚度（折射量、吸收量）
   ior: 1.52,                  // 折射率
-  dispersion: 0.18,          // 克制的色散，保留清楚字形
-  tint: "#eef6fb",           // 透過玻璃的底色
-  attenuationColor: "#c8dfeb", // 吸收色（極淡的冷灰藍）
+  dispersion: 0.08,          // 克制的色散，保留清楚字形
+  tint: "#e4edf5",           // 透過玻璃的底色
+  attenuationColor: "#bcd2e6", // 吸收色（極淡的冷灰藍）
   attenuationDistance: 12,  // 吸收距離（小＝越藍）
   roughness: 0.1,           // 鑄造玻璃的輕微柔化
   clearcoat: 1,              // 清漆
@@ -69,29 +71,29 @@ export const MARK_DEFAULTS = {
   thickFloor: 0.45,           // 邊緣最薄處保留的折射厚度（0–1）
   /* —— 表面 —— */
   sheen: 0.13,                  // 絨光（淡藍白霧感）
-  sheenColor: "#5a6c81",
+  sheenColor: "#6d88a0",
   sheenRoughness: 1,
-  iridescence: 0.11,            // 薄膜虹彩
+  iridescence: 0.045,            // 薄膜虹彩
   /* —— 邊緣光 —— */
-  rimStrength: 1.65,         // 柔邊光
+  rimStrength: 1.9,         // 柔邊光
   rimPower: 4.5,               // 柔邊光寬度（數字越大光帶越窄）
-  rimLine: 0.55,             // 邊緣亮線
-  rimColor: "#b9dff7",
-  wallGlow: 0.018,            // 側壁／斜切面的乳白亮度
-  wallColor: '#f0f6ff',
+  rimLine: 0.62,             // 邊緣亮線
+  rimColor: "#bad6eb",
+  wallGlow: 0.03,            // 側壁／斜切面的乳白亮度
+  wallColor: "#e4edf5",
   /* —— 水（內部）—— */
-  glow: 0.04,                // 內部散射光（厚處發亮）
-  glowColor: '#dfe9f6',
-  caustic: 0.1,                // 內部水紋焦散
+  glow: 0.2,                // 內部散射光（厚處發亮）
+  glowColor: "#d9e8f5",
+  caustic: 0.16,                // 內部水紋焦散
   causticScale: 3.5,           // 焦散細緻度
   causticSpeed: 0.35,         // 焦散流速
   shimmer: 0,                // 折射流動（法線微擾）
   shimmerScale: 6,           // 流動的波長（越大越細碎）
   /* —— 品牌藍（上方葉片；0＝整片清透玻璃）—— */
   brandBlue: 1,              // 品牌藍的量
-  brandBlueColor: "#0c437e", // 呼應全站的水藍色
-  brandBlueDeep: "#2e689e",
-  brandBlueGlow: 0.07,       // 內部藍光
+  brandBlueColor: "#245b8c", // 呼應全站的水藍色
+  brandBlueDeep: "#3b74a6",
+  brandBlueGlow: 0.12,       // 內部藍光
   brandBlueAbsorb: 2.03       // 吸收距離（小＝越深越藍）
 };
 
@@ -154,6 +156,8 @@ export const MARK_ROWS = [
   ['側壁乳白亮度', 'wallGlow', 0, 2, 0.01],
   ['側壁顏色', 'wallColor'],
   ['內部散射光', 'glow', 0, 1.5, 0.01],
+  ['內光律動', 'glowPulse', 0, 1, 0.01],
+  ['內光上流速度', 'glowSpeed', 0, 2, 0.05],
   ['散射光顏色', 'glowColor'],
   ['水紋焦散', 'caustic', 0, 2.5, 0.01],
   ['焦散細緻度', 'causticScale', 1, 14, 0.1],
@@ -960,7 +964,7 @@ function makeMaterial(THREE, U) {
       uniform float uWallGlow; uniform vec3 uWallColor;
       uniform float uBrand, uBlueGlow, uBlueAbsorb;
       uniform vec3 uBlueA, uBlueB;
-      uniform float uTime, uYaw, uSettle, uRimStrength, uRimPow, uRimLine, uGlow, uCaustic, uCausticScale, uCausticSpeed, uShimmer, uShimmerScale, uThickFloor, uBgDisplay, uBgAlpha;
+      uniform float uTime, uYaw, uSettle, uRimStrength, uRimPow, uRimLine, uGlow, uGlowPulse, uGlowSpeed, uCaustic, uCausticScale, uCausticSpeed, uShimmer, uShimmerScale, uThickFloor, uBgDisplay, uBgAlpha;
       uniform vec3 uRimColor, uGlowColor;
       float causticWeb(vec2 q, float t){
         vec2 p = mod(q * 6.28318530718, 6.28318530718) - 250.0;
@@ -1006,7 +1010,15 @@ function makeMaterial(THREE, U) {
         float th = clamp(vThick, 0.0, 1.0);
         float rim = pow(fr, uRimPow) * uRimStrength + smoothstep(0.80, 0.975, fr) * uRimLine;
         vec3 extra = mix(uRimColor, vec3(0.80, 0.93, 1.0), brandMix * 0.5) * rim * (0.72 + 0.28 * clamp(normal.y * 0.5 + 0.5, 0.0, 1.0));
-        extra += mix(uGlowColor, brandTint, brandMix) * uGlow * (0.2 + 0.8 * th) * (0.55 + 0.45 * nv);
+        // Broad, slow upward light inside the glass, rather than a flat white surface.
+        // Local coordinates keep the light attached to the solid as it rotates.
+        float flowTime = uTime * uGlowSpeed;
+        float flowY = vObjPos.y + .065 * sin(vObjPos.x * 9.0 - flowTime * .45);
+        float innerBeam = pow(.5 + .5 * sin(flowY * 10.0 - flowTime * 2.4), 6.0);
+        float innerEcho = pow(.5 + .5 * sin(flowY * 6.0 + vObjPos.x * 4.0 - flowTime * 1.3 + 1.7), 4.0);
+        float innerFlow = 1.0 - uGlowPulse * .35 + uGlowPulse * (innerBeam * .85 + innerEcho * .35);
+        vec3 innerColor = mix(uGlowColor, mix(brandTint, uGlowColor, .28), brandMix);
+        extra += innerColor * uGlow * innerFlow * (.2 + .8 * th) * (.55 + .45 * nv);
         extra += brandTint * uBlueGlow * brandMix * (0.25 + 0.75 * th) * (0.5 + 0.5 * nv);
         /* the flat side walls / chamfers of a slab read as polished, slightly milky faces */
         extra += uWallColor * uWallGlow * smoothstep(0.5, 0.92, length(vObjN.xy));
@@ -1020,7 +1032,7 @@ function makeMaterial(THREE, U) {
     fs = patchChunk(THREE, fs, 'opaque_fragment', 'diffuseColor.a *= material.transmissionAlpha;', 'diffuseColor.a *= mix(1.0, material.transmissionAlpha, uBgAlpha);');
     shader.vertexShader = vs; shader.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => 'logo-mark-water-glass-v2';
+  mat.customProgramCacheKey = () => 'logo-mark-water-glass-inner-flow-v3';
   return mat;
 }
 
@@ -1041,7 +1053,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
   const U = {
     uTime: { value: 0 }, uYaw: { value: 0 }, uSettle: { value: 1 },
     uRimStrength: { value: 0 }, uRimPow: { value: 3 }, uRimLine: { value: 0 }, uRimColor: { value: new THREE.Color() },
-    uGlow: { value: 0 }, uGlowColor: { value: new THREE.Color() },
+    uGlow: { value: 0 }, uGlowPulse: { value: 0 }, uGlowSpeed: { value: .6 }, uGlowColor: { value: new THREE.Color() },
     uCaustic: { value: 0 }, uCausticScale: { value: 5 }, uCausticSpeed: { value: 0.5 },
     uShimmer: { value: 0 }, uShimmerScale: { value: 6 }, uThickFloor: { value: 0.4 }, uBgDisplay: { value: 1 }, uBgAlpha: { value: 0 },
     uWallGlow: { value: 0 }, uWallColor: { value: new THREE.Color() },
@@ -1130,6 +1142,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
     material.side = (E.doubleSide && !s) ? THREE.DoubleSide : THREE.FrontSide;
     U.uRimStrength.value = E.rimStrength; U.uRimPow.value = E.rimPower; U.uRimLine.value = E.rimLine; U.uRimColor.value.set(E.rimColor);
     U.uGlow.value = E.glow; U.uGlowColor.value.set(E.glowColor);
+    U.uGlowPulse.value = clamp(E.glowPulse, 0, 1); U.uGlowSpeed.value = clamp(E.glowSpeed, 0, 2);
     U.uCaustic.value = E.caustic; U.uCausticScale.value = E.causticScale; U.uCausticSpeed.value = E.causticSpeed;
     U.uShimmer.value = E.shimmer; U.uShimmerScale.value = E.shimmerScale;
     U.uThickFloor.value = E.thickFloor; U.uBgDisplay.value = clamp(E.bgDisplay,0,1); U.uBgAlpha.value = E.bgAlpha ? 1 : 0;

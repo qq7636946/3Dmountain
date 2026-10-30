@@ -2,7 +2,7 @@
 // index4-6-3 專用分支（LOGO 山道）：從 water-journey-scene.js 複製而來，只有 index4-6-3.html 載入；
 // 其他頁面仍用原檔，一個位元組都不受影響。
 import { preloadIndex15Terrain, installIndex15Terrain } from './index1-5-terrain.js?v=restore-1-5-blue-8547de57661f';
-import { createFollowLightLines } from './follow-light-lines.js?v=restore-1-5-blue-8547de57661f';
+import { createFollowLightLines } from './follow-light-lines.js?v=river-continuous-20261027-r1';
 import { createAlpineCloudBanks } from './alpine-cloud-banks.js?v=restore-1-5-blue-8547de57661f';
 import { createAlpineAtmosphere } from './alpine-atmosphere.js?v=restore-1-5-blue-8547de57661f';
 import { createCanyonWatershedBuilder } from './water-canyon-watershed-463.js?v=restore-1-5-blue-8547de57661f';
@@ -1101,7 +1101,10 @@ float reliefStreak(vec2 p,vec2 dir){
   /* 峽谷鏡頭 CANYON_RACING：取直後的轉向、側滑、側傾與高度，都是路線位置的純函數（往回捲完全對稱），表在 canyon-racing.js */
   const racingLine = createCanyonRacing({ length: pathLength, centre: s => { const p = curve.getPointAt(Math.min(1, s / pathLength)); return [p.x, p.z]; }, halfWidth: s => widthAt(Math.min(1, s / pathLength)) });
   const viewAxis = new THREE.Vector3();
-  const followLights = createFollowLightLines(THREE, { curve, widthAt, lite });
+  const followLights = createFollowLightLines(THREE, {
+    curve, widthAt, lite,
+    continuation: watershed.flowPaths.find(path => path.curve === watershed.downstream)
+  });
   scene.add(followLights.group);
   const stats = { pathLength, terrainVertices: terrainVertices + dp.count, bankSegments: longitudinal, riverHalfWidthMin: 15.8, maxBankRadians: .035, routeEnd: .865, riverCount:5, watershed:watershed.stats };
   if (shore) stats.shore = { lite, bankRows: longitudinal + 1, bankColumns: lateral + 1, bankTriangles: longitudinal * lateral * 4, ...shoreRocks.stats };

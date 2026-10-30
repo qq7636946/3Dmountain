@@ -1,12 +1,15 @@
-/* index1-5: camera-following blue currents carried by the existing river.
+/* index1-5: continuous blue currents carried by the existing river.
    Geometry is baked once; only six uniforms change each frame. The world-space
    strands never slide with the camera, and rock/water retain their depth test. */
-export function createFollowLightLines(THREE, { curve, widthAt, lite = false } = {}) {
+export function createFollowLightLines(THREE, { curve, widthAt, continuation = null, lite = false } = {}) {
   const group = new THREE.Group(); group.name = 'index1-5 first-person blue currents';
-  const length = curve.getLength(), rows = Math.ceil(length / (lite ? 5 : 3));
+  const mainLength = curve.getLength();
+  const continuationLength = continuation?.curve?.getLength() || 0;
+  const length = mainLength + continuationLength, rows = Math.ceil(length / (lite ? 5 : 3));
+  const mainChannel = { curve, widthAt };
   const lanes = [-9, -3.8, .6, 4.4, 9.6], ribbons = [];
   const common = {
-    uTime: { value: 0 }, uTail: { value: -30 }, uHead: { value: 280 },
+    uTime: { value: 0 }, uTail: { value: -40 }, uHead: { value: length + 70 },
     uBright: { value: 0 }, uFog: { value: .00172 }, uPixel: { value: 0 }
   };
   const vertexShader = /* glsl */`
@@ -38,11 +41,16 @@ export function createFollowLightLines(THREE, { curve, widthAt, lite = false } =
     const positions = new Float32Array((rows + 1) * 6), sides = new Float32Array(positions.length);
     const flow = new Float32Array((rows + 1) * 4), indices = new Uint16Array(rows * 6);
     for (let i = 0; i <= rows; i++) {
-      const t = i / rows, s = t * length, p = curve.getPointAt(t), tangent = curve.getTangentAt(t);
+      // One distance coordinate spans both pieces of the real river. Weave,
+      // light packets and ribbon triangles carry straight across their join.
+      const s = i / rows * length, downstream = continuationLength > 0 && s > mainLength;
+      const channel = downstream ? continuation : mainChannel;
+      const t = downstream ? (s - mainLength) / continuationLength : Math.min(1, s / mainLength);
+      const p = channel.curve.getPointAt(t), tangent = channel.curve.getTangentAt(t);
       const h = Math.hypot(tangent.x, tangent.z) || 1, nx = -tangent.z / h, nz = tangent.x / h;
       const weave = lanes[lane] * (.75 + .3 * Math.sin(s * .0042 + 1.1))
         + 2.7 * Math.sin(s * .0067 + lane * 1.7) + 1.1 * Math.sin(s * .021 + lane * 2.3);
-      const offset = THREE.MathUtils.clamp(weave, -widthAt(t) * .68, widthAt(t) * .68);
+      const offset = THREE.MathUtils.clamp(weave, -channel.widthAt(t) * .68, channel.widthAt(t) * .68);
       const y = 1.40 + .12 * lane + .15 * Math.sin(s * .017 + lane);
       for (let k = 0; k < 2; k++) {
         const v = i * 2 + k;
@@ -67,13 +75,11 @@ export function createFollowLightLines(THREE, { curve, widthAt, lite = false } =
   return {
     group, stats: { strands: lanes.length, vertices: (rows + 1) * 2 * lanes.length, drawCalls: lanes.length },
     update(route,time,reduced,reveal,camera,fogDensity,viewportH) {
-      const s = THREE.MathUtils.clamp(route,0,1) * length;
-      // The ascending shot releases the near-camera window into the main river;
-      // its energy recedes while the existing five-river confluence wakes up.
-      const release = sm(.04,.38,reveal), gain = sm(.005,.07,route) * (1-sm(.14,.62,reveal));
+      // Cover the complete river even before the camera lifts. A window ending
+      // 340 units ahead left all five strands visibly cut across open water.
+      // Distance fog now softens the far reach; the confluence keeps its fade.
+      const gain = sm(.005,.07,route) * (1-sm(.14,.62,reveal));
       common.uTime.value=reduced?0:time;common.uFog.value=fogDensity;
-      common.uTail.value=THREE.MathUtils.lerp(s-32,-40,release);
-      common.uHead.value=THREE.MathUtils.lerp(s+340,length+70,release);
       const pixel=2*Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))/Math.max(1,viewportH);
       ribbons.forEach((mesh,k)=>{
         mesh.material.uniforms.uBright.value=gain*[.64,.88,1.08,.82,.60][k]*(lite?.85:1);

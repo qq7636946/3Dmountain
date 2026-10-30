@@ -33,11 +33,11 @@ import { globeScrollDegrees } from './world-globe-motion.js?v=restore-1-5-blue-8
 import { createWorldDiveFx } from './world-dive-fx.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from './section-motion.js?v=restore-1-5-blue-8547de57661f';
-import { createWorldOcean } from './world-ocean.js?v=i15-no-ocean-logo-video-20261027-r1';
-import { createWorldLogo } from './world-logo.js?v=i15-sparkles-grain-20261027-r3';
+import { createWorldOcean } from './world-ocean.js?v=i15-tone-7da2c5eaf233';
+import { createWorldLogo } from './world-logo.js?v=i15-tone-7da2c5eaf233';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-no-principles-images-20261027-r1';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=restore-1-5-blue-8547de57661f';
+import { createWorldPrinciples } from './world-principles.js?v=i15-tone-7da2c5eaf233';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-tone-7da2c5eaf233';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=restore-1-5-blue-8547de57661f';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
@@ -61,9 +61,9 @@ const EARTH_ROI = { lon0: 40, lon1: 180, lat0: -50, lat1: 62 };
 
 /* Colours, sRGB. SKY is the slate behind the planet, DEEP the dark it recedes into. */
 const LOOK = {
-  skyTop: '#5f6f80', skyBottom: '#425163', deepTop: '#0f1f2a', deepBottom: '#07131b',
-  ocean: '#1b2e42', oceanHi: '#2d4862', land: '#5a7590', landHi: '#a4bacd', ice: '#e3ebf2',
-  cloud: '#e8eef4', rim: '#bcd2e6', halo: '#c9dcec', deck: '#eef2f6', deckShade: '#b7c2cd',
+  skyTop: '#526d88', skyBottom: '#3a536f', deepTop: '#10243a', deepBottom: '#081624',
+  ocean: '#203b55', oceanHi: '#4d718e', land: '#6888a4', landHi: '#a9c2d7', ice: '#e4edf5',
+  cloud: '#e4edf5', rim: '#bcd2e6', halo: '#c9dcec', deck: '#e4edf5', deckShade: '#afc4d6',
   photoLow: '#03111a', photoHigh: '#6e98a3'
 };
 

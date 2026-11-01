@@ -3,7 +3,7 @@
    Both sprites share one GPU Points draw and the existing frame clock. Opening
    contacts sample the actual five-component sea field; no extra render target. */
 import * as THREE from 'three';
-export const LIGHT_SPECK_DEFAULTS = Object.freeze({ enabled:1,count:640,size:.92,glow:1.65,opacity:.72,speed:.52,air:.035,height:1,scrollGlow:.75,color:'#7ccaff',rise:1,riseSpeed:1,waterGlow:.9 });
+export const LIGHT_SPECK_DEFAULTS = Object.freeze({ enabled:1,count:640,size:.92,glow:1.65,opacity:.72,speed:.52,air:.035,height:1,scrollGlow:.75,color:'#7ccaff',rise:1,riseSpeed:1,waterGlow:.9,soft:1 });
 export const LIGHT_SPECK_ROWS = [
  ['顯示水面浮光','lightSpecks','enabled',0,1,1],
  ['浮光數量（手機自動減量）','lightSpecks','count',0,2000,10],
@@ -17,15 +17,17 @@ export const LIGHT_SPECK_ROWS = [
  ['浮升循環速度','lightSpecks','riseSpeed',.2,2,.01],
  ['水下藍光／起點反光','lightSpecks','waterGlow',0,1.5,.01],
  ['捲動光感（停下柔和收束）','lightSpecks','scrollGlow',0,1.5,.01],
+ ['光點柔順（0 原本／1 絲滑）','lightSpecks','soft',0,2,.01],
  ['浮光色彩','lightSpecks','color']
 ];
 const VERTEX=/* glsl */ `
 attribute vec4 aSpeck;
 attribute float aLayer;
-uniform float uSpeckTime,uSpeckSize,uSpeckSpeed,uAir,uHeight,uMode,uPixel,uRise,uRiseSpeed;
+uniform float uSpeckTime,uSpeckSize,uSpeckSpeed,uAir,uHeight,uMode,uPixel,uRise,uRiseSpeed,uSoft,uCentre;
 uniform vec3 uSpeckFlow;
 uniform vec4 uSpeckView;
-varying float vLight,vAlpha,vFlow,vLayer,vLife;
+varying float vLight,vAlpha,vFlow,vLayer,vLife,vScale;
+varying vec3 vK,vAmp;
 /* WATER_FIELD */
 void main(){
  float t=uSpeckTime*uSpeckSpeed,r=fract(aSpeck.w*7.137);
@@ -54,11 +56,19 @@ void main(){
  float z=max(.5,-mv.z),perspective=pow(12./z,.22);
  float dia=mix(7.+6.*r*r,35.+34.*r,aLayer)*perspective*uSpeckSize;
  if(aLayer>.5)dia*=.8+.35*smoothstep(0.,.3,life);
- gl_PointSize=clamp(dia*uPixel,2.*uPixel,92.*uPixel);
+ float px=clamp(dia*uPixel,2.*uPixel,92.*uPixel);
+ /* Silky: a glint is a band-limited gaussian, never narrower than the pixel grid. A core smaller than a pixel falls between pixels, so it steps and
+    flickers as it drifts; held above that it slides smoothly at sub-pixel speeds. Its light is nearly conserved as it widens: a tiny speck reads softer
+    and dimmer rather than bigger. On a high-DPR screen the floors are not reached and nothing changes. The sprite grows to hold the tails. */
+ float R2=.25*px*px,sft=max(uSoft,.001),sprite=aLayer<.5&&uSoft>.001?max(px,11.):px;
+ gl_PointSize=sprite;
+ vScale=px/sprite;
+ vK=vec3(min(40.,R2/(1.3225*sft*sft)),min(14.,R2/(2.56*sft*sft)),min(5.8,R2/(5.76*sft*sft)));
+ vAmp=pow(vK/vec3(40.,14.,5.8),vec3(.8));
  vec2 uv=gl_Position.xy/max(gl_Position.w,.001)*.5+.5;
  float centre=exp(-pow((uv.x-.5)/.24,4.))*exp(-pow((uv.y-.27)/.16,4.));
  float mark=exp(-dot((uv-vec2(.5,.62))/vec2(.18,.22),(uv-vec2(.5,.62))/vec2(.18,.22)));
- vAlpha=(1.-.64*centre)*(1.-.38*mark)*(1.-.88*smoothstep(.82,.98,uv.y));
+ vAlpha=(1.-.64*centre*uCentre)*(1.-.38*mark)*(1.-.88*smoothstep(.82,.98,uv.y));
  vAlpha*=smoothstep(.45,1.3,z)*(1.-smoothstep(95.,160.,z))*mix(1.,.3,smoothstep(8.,75.,z));
  vAlpha*=mix(born*expire,1.,isAir);
  if(aLayer>.5)vAlpha*=1.-isAir;
@@ -67,15 +77,16 @@ void main(){
 const FRAGMENT=/* glsl */ `
 uniform vec3 uSpeckColor;
 uniform float uSpeckOpacity,uSpeckGlow,uSpeckDisplay,uWaterGlow;
-varying float vLight,vAlpha,vFlow,vLayer,vLife;
+varying float vLight,vAlpha,vFlow,vLayer,vLife,vScale;
+varying vec3 vK,vAmp;
 vec3 displayRGB(vec3 c){c=clamp(c,0.,1.);return mix(c*12.92,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c));}
 void main(){
- vec2 p=gl_PointCoord*2.-1.;
+ vec2 q=gl_PointCoord*2.-1.,p=q/vScale;
  p.y/=mix(1.+.28*vFlow,.17,vLayer);
- float r2=dot(p,p);if(r2>1.)discard;
+ float r2=dot(p,p),edge=vLayer<.5?dot(q,q):r2;if(edge>1.)discard;
  vec3 col;
  if(vLayer<.5){
-  float core=exp(-r2*40.),shoulder=exp(-r2*14.),halo=exp(-r2*5.8);
+  float core=exp(-r2*vK.x)*vAmp.x,shoulder=exp(-r2*vK.y)*vAmp.y,halo=exp(-r2*vK.z)*vAmp.z;
   col=mix(uSpeckColor,vec3(1.),.68)*core*2.9+uSpeckColor*(shoulder*.7+halo*.32);
  }else{
   float radius=.16+.61*smoothstep(0.,.28,vLife);
@@ -85,7 +96,7 @@ void main(){
  }
  col*=uSpeckGlow*vLight*(1.+.26*vFlow);
  if(uSpeckDisplay>.5)col=displayRGB(col);
- float a=vAlpha*uSpeckOpacity*(1.-smoothstep(.62,1.,r2));
+ float a=vAlpha*uSpeckOpacity*(1.-smoothstep(.62,1.,edge));
  gl_FragColor=vec4(col,a);
 }
 `;
@@ -100,7 +111,7 @@ export function createLightSpecks({points=null,scene=null,getConfig=()=>null,mod
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));geometry.setAttribute('aSpeck',new THREE.BufferAttribute(seeds,4));geometry.setAttribute('aLayer',new THREE.BufferAttribute(layers,1));geometry.setDrawRange(0,0);
  const waterRise={value:new THREE.Vector4()},waterColor={value:new THREE.Color()};
  const uniforms={...(surface?.uniforms||{}),uTime:{value:0},uOpacity:{value:1},uSize:{value:1},uSpeed:{value:1},uColor:{value:new THREE.Color()},uTransition:{value:0},
-  uSpeckTime:{value:0},uSpeckSize:{value:1},uSpeckSpeed:{value:1},uAir:{value:.035},uHeight:{value:1},uMode:{value:mode==='lake'?1:0},uPixel:{value:1},uRise:{value:1},uRiseSpeed:{value:1},uWaterGlow:{value:.65},
+  uSoft:{value:1},uCentre:{value:1},uSpeckTime:{value:0},uSpeckSize:{value:1},uSpeckSpeed:{value:1},uAir:{value:.035},uHeight:{value:1},uMode:{value:mode==='lake'?1:0},uPixel:{value:1},uRise:{value:1},uRiseSpeed:{value:1},uWaterGlow:{value:.65},
   uSpeckView:{value:new THREE.Vector4(.35,1.6,2.5,0)},uSpeckFlow:{value:new THREE.Vector3()},uSpeckColor:waterColor,uSpeckOpacity:{value:.72},uSpeckGlow:{value:1.4},uSpeckDisplay:{value:mode==='lake'?1:0}};
  if(surface?.material){surface.material.uniforms.uWaterRise=waterRise;surface.material.uniforms.uWaterRiseColor=waterColor;}
  const waterContact=surface?.glsl?`
@@ -131,6 +142,7 @@ export function createLightSpecks({points=null,scene=null,getConfig=()=>null,mod
   if(count!==lastCount){geometry.setDrawRange(0,count*layersPerSpeck);lastCount=count;}
   points.visible=visible&&count>0;
   uniforms.uSpeckTime.value=reducedMotion?0:time;
+  uniforms.uSoft.value=clamp(+C.soft,0,2);uniforms.uCentre.value=Number.isFinite(+C.centre)?clamp(+C.centre,0,1):1;
   uniforms.uSpeckSize.value=C.size*(mode==='lake'?1.35:1);uniforms.uSpeckSpeed.value=C.speed;uniforms.uAir.value=C.air;uniforms.uHeight.value=C.height;
   uniforms.uRise.value=clamp(C.rise,0,1.8);uniforms.uRiseSpeed.value=clamp(C.riseSpeed,.2,2);uniforms.uWaterGlow.value=clamp(C.waterGlow,0,1.5);
   uniforms.uSpeckOpacity.value=C.opacity*opacity*(mode==='lake' ? .8 : 1);uniforms.uSpeckGlow.value=C.glow*(1+(D?.night||0)*.12);

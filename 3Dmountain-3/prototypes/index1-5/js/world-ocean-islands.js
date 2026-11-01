@@ -2,6 +2,7 @@
 /* Ocean islands: diffuse colour + normal/height atlases baked from the actual alpine valley.
    A single instanced draw. The coast shares the sea's wave field, light, clouds and frame grading. */
 import * as THREE from 'three';
+import { decodedFirst } from './perf-firstpass.js?v=i15-mvxv94ut';
 const ROWS = [
   [-.65, .29, .42, -.20, 0], [.98, -.48, .54, .22, 1],
   [2.16, .28, .52, -.15, 0], [3.32, -.48, .60, .32, 1],
@@ -135,12 +136,14 @@ export function createOceanIslands({ waterUniforms, gradeGlsl, viewGlsl, waterGl
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'Alpine valley islands · shared ocean shore'; mesh.frustumCulled = false; mesh.renderOrder = 4.5; mesh.visible = false;
   let disposed = false, textures = null, pending = null;
+  /* firstpass: decoded before three sees it, so the upload in the callback is a copy and not a decode */
+  const loadDecoded = (loader, url) => loader.loadAsync(url).then(texture => decodedFirst(texture));
   function load() {
     if (pending) return pending;
     const loader = new THREE.TextureLoader();
     const suffix = small ? '-small.webp' : '.webp';
     pending = Promise.all(['valley-islands-albedo-v3', 'valley-islands-form-v3'].map(name =>
-      loader.loadAsync(new URL('../assets/ocean/' + name + suffix, import.meta.url).href))).then(loaded => {
+      loadDecoded(loader, new URL('../assets/ocean/' + name + suffix, import.meta.url).href))).then(loaded => {
       if (disposed) { loaded.forEach(t => t.dispose()); return; }
       textures = loaded;
       for (const texture of textures) {

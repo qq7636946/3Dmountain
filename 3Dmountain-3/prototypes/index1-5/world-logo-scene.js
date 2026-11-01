@@ -43,36 +43,36 @@ import { createLightSpecks } from './light-specks.js';
 export const LAKE_DEFAULTS = {
   matchOpening: 0,
   /* ---- sky ---- */
-  skyTop: "#2c4c70", skyMid: "#203b55", skyHorizon: "#58738d", skyHaze: "#91a9bd",
+  skyTop: "#244a70", skyMid: "#163047", skyHorizon: "#253d52", skyHaze: "#526c80",
   skyMidEl: 7, skyTopEl: 30, skyCurve: 0.85, hazeHeight: 3.4, hazeAmount: 0,
   /* ---- sun ---- */
-  sunAz: -3, sunEl: 27.5, sunColor: "#e4edf5", bloomColor: "#dce9f5",
+  sunAz: -3, sunEl: 27.5, sunColor: "#ffd49a", bloomColor: "#f6c17f",
   sunSize: 0.55, sunDisc: 1.1, sunBloom: 0.17, sunBloomSize: 9, sunCore: 0.32,
   /* ---- distant range ---- */
   rangeOpacity: 0.9, rangeHeight: 11, rangeWidth: 54, rangeAz: 5, rangeLift: -0.3,
-  rangeHaze: 0.12, rangeTint: "#405b73", rangeContrast: 1.16, rangeSoft: 0.35,
+  rangeHaze: 0.12, rangeTint: "#30475a", rangeContrast: 1.16, rangeSoft: 0.35,
   /* ---- lake ---- */
-  deep: "#163047", lit: "#56778f", ink: "#0c1b2b", foam: "#d1e1ed",
+  deep: "#0a2232", lit: "#294154", ink: "#030a11", foam: "#8eaabc",
   waterScale: 2.22, waterSpeed: 1.03, waterRough: 2.71, waterStretch: 1.15, waterSwell: 0.1,
   skyReflect: 0.62, fresnelMin: 0.025, fresnelPower: 5, waterNearDark: 0.46,
   /* ---- sun glints (soft, banded, rolled off) ---- */
-  glintColor: "#dce9f5", glintStrength: 0.22, glintSize: 0.4, glintBand: 14, glintFocus: 0.93, glintSpread: 1.05, glintKnee: 2.5,
+  glintColor: "#ffd49a", glintStrength: 0.22, glintSize: 0.4, glintBand: 14, glintFocus: 0.93, glintSpread: 1.05, glintKnee: 2.5,
   /* ---- the mark's reflection ---- */
   reflStrength: 0.32, reflLength: 0.7, reflRipple: 1.15, reflFresnel: 0.68, reflBlur: 0.7,
   /* ---- droplets and motes ---- */
-  moteCount: 22, moteSize: 0.55, moteSpeed: 0.35, moteOpacity: 0.24, moteColor: "#e4edf5",
-  speckDensity: 0.22, skySpecks: 0.42,
+  moteCount: 22, moteSize: 0.55, moteSpeed: 0.35, moteOpacity: 0.24, moteColor: "#f3dfb6",
+  speckDensity: 0.42, skySpecks: 0.16, seaRise: 0.42, seaAir: 0.02, seaSize: 0.46, seaOpacity: 0.62, seaRings: 0.3, seaCentre: 0,
   /* Local rising helix, exposed separately in the M tuner. */
   orbitRandomness: 67, orbitSpeed: 0.45, orbitRiseSpeed: 1.65, orbitRadius: 1.07, orbitSize: 0.75, orbitBrightness: 0.95,
-  orbitDensity: 58, orbitScatter: 0.2, orbitInteraction: 2.15,
+  orbitDensity: 0, orbitScatter: 0.2, orbitInteraction: 2.15, orbitShutter: 0.0167, orbitSoft: 1,
   /* ---- frame ---- */
-  vignette: 0.23, exposure: 0.98, outputDisplay: 1,
+  vignette: 0.23, exposure: 0.96, outputDisplay: 1,
   /* ---- camera and composition ---- */
   camHeight: 0.85, fov: 36, horizon: 0.7, drift: 0.018, sway: 0.06, qLight: 0,
-  markY: 0.5, markSize: 0.3, markWidth: 0.92,
+  markY: 0.5, markSize: 0.3, markWidth: 0.92, shortFrom: 860, shortTo: 560, shortSize: 0.82,
   fovPortrait: 56, portraitHorizon: 0.61, portraitMarkY: 0.375, portraitMarkSize: 0.255, portraitSunShift: 0.55,
   /* ---- the mark climbs out of the lake (update({ rise })); rise = 1 is the end pose, nothing below changes it ---- */
-  riseSink: 1.12, riseCurve: 0.75,
+  riseSink: 1.12, riseCurve: 0.75, riseTrueFoot: 1,
   ringAmp: 0.9, ringSpacing: 0.26, ringReach: 1.7, ringSpeed: 0.6, ringDecay: 2.6,
   meniscus: 0.8, meniscusWidth: 0.012, cutGlow: 0.6, pushAmp: 0.7,
   /* ---- look presets and the glacier extras (all zero / neutral in the dusk look) ---- */
@@ -84,7 +84,7 @@ export const LAKE_DEFAULTS = {
   waterFine: 0.75, waterTint: 0.28, reflWobble: 0,
   sparkCount: 0, sparkSize: 1, sparkSpeed: 1, sparkColor: '#6fa4ff',
   /* ---- light on the glass ---- */
-  lightSun: 3.95, lightFill: 0.96, envIntensity: 1.61
+  lightSun: 3.95, lightFill: 0.89, envIntensity: 1.61
 };
 
 /* [label, key, min, max, step]; colour rows have no range (same row format as alpine-light-params.js). */
@@ -92,8 +92,11 @@ export const LAKE_ROWS = [
   ['色調｜與第一區塊同步', 'matchOpening', 0, 1, 1],
   ['水浪｜漂浮幅度', 'waterSwell', 0, .12, .001],
   ['字標｜最大畫面寬度', 'markWidth', .3, .94, .01],
-  ['亮光點｜密度倍率', 'speckDensity', 0, 1, .01],
+  ['海上光點｜密度', 'speckDensity', 0, 1, .01], ['海上光點｜往上飄的高度', 'seaRise', 0, 1.8, .01], ['海上光點｜水面漣漪', 'seaRings', 0, 1.5, .01], ['海上光點｜空中微光比例', 'seaAir', 0, .65, .01], ['海上光點｜大小', 'seaSize', .1, 1.5, .01], ['海上光點｜不透明', 'seaOpacity', 0, 1.5, .01], ['海上光點｜中央減光（0 平均分散）', 'seaCentre', 0, 1, .01],
   ['遠景光點｜密度', 'skySpecks', 0, 1, .01],
+  ['隨機幅度（%）', 'orbitRandomness', 0, 100, 1], ['光點數量（%）', 'orbitDensity', 0, 100, 1], ['散開幅度', 'orbitScatter', 0, 2, .05], ['互動強度', 'orbitInteraction', 0, 3, .05],
+  ['環繞速度', 'orbitSpeed', 0, 3, .05], ['上升速度', 'orbitRiseSpeed', 0, 3, .05], ['環繞範圍', 'orbitRadius', .65, 2, .01], ['光點大小', 'orbitSize', .4, 2, .05], ['光點亮度', 'orbitBrightness', 0, 2, .05],
+  ['光點柔順（0 原本／1 絲滑）', 'orbitSoft', 0, 2, .01], ['動態模糊（秒，0 關）', 'orbitShutter', 0, .05, .001],
   ['天空｜頂部顏色', 'skyTop'], ['天空｜中段顏色', 'skyMid'], ['天空｜近地平線顏色', 'skyHorizon'], ['天空｜地平線霧色', 'skyHaze'],
   ['天空｜中段高度（度）', 'skyMidEl', 6, 40, .5], ['天空｜頂部高度（度）', 'skyTopEl', 30, 85, 1], ['天空｜漸層曲線', 'skyCurve', .4, 2.2, .01],
   ['天空｜地平線霧 高度（度）', 'hazeHeight', 1, 14, .1], ['天空｜地平線霧 濃度', 'hazeAmount', 0, 1, .01],
@@ -118,11 +121,13 @@ export const LAKE_ROWS = [
   ['畫面｜暗角', 'vignette', 0, 1.5, .01], ['畫面｜曝光', 'exposure', .4, 1.8, .01], ['畫面｜輸出（1＝顯示色，0＝線性）', 'outputDisplay', 0, 1, 1],
   ['鏡頭｜高度', 'camHeight', .1, 1.5, .01], ['鏡頭｜視角（度）', 'fov', 18, 70, .5], ['鏡頭｜地平線（由上）', 'horizon', .35, .8, .005],
   ['鏡頭｜推進量（0→1）', 'drift', 0, .3, .005], ['鏡頭｜微晃', 'sway', 0, 1.5, .01], ['光線｜隨進度變化', 'qLight', 0, 2, .01],
+  ['矮視窗｜符號開始讓位的視窗高（px）', 'shortFrom', 500, 1000, 10], ['矮視窗｜符號讓到最小的視窗高（px）', 'shortTo', 320, 700, 10], ['矮視窗｜符號最小倍率', 'shortSize', .5, 1, .01],
   ['符號｜高度（中心，由上）', 'markY', .15, .7, .005], ['符號｜大小（畫面高度比）', 'markSize', .1, .7, .005],
   ['手機｜視角（度）', 'fovPortrait', 30, 90, .5], ['手機｜地平線（由上）', 'portraitHorizon', .35, .8, .005],
   ['手機｜符號高度（由上）', 'portraitMarkY', .12, .7, .005], ['手機｜符號大小', 'portraitMarkSize', .1, .6, .005], ['手機｜太陽方位收攏（1＝不收）', 'portraitSunShift', .2, 1, .01],
   ['玻璃光｜太陽光強度', 'lightSun', 0, 6, .05], ['玻璃光｜天光填充', 'lightFill', 0, 3, .01], ['玻璃光｜環境反射倍率', 'envIntensity', 0, 4, .01],
   ['升起｜起始沉入深度（符號高度倍）', 'riseSink', .6, 2.5, .01], ['升起｜緩動（0 線性，1 平滑）', 'riseCurve', 0, 1, .01],
+  ['升起｜水線跟隨實際底部（1 開）', 'riseTrueFoot', 0, 1, 1],
   ['升起｜漣漪環 強度', 'ringAmp', 0, 3, .01], ['升起｜漣漪環 間距（符號高度倍）', 'ringSpacing', .08, 1, .005], ['升起｜漣漪環 擴散範圍（符號高度倍）', 'ringReach', .3, 5, .01],
   ['升起｜漣漪環 擴散速度', 'ringSpeed', 0, 3, .01], ['升起｜漣漪環 衰減時間（秒）', 'ringDecay', .3, 10, .05],
   ['升起｜水線亮邊 強度', 'meniscus', 0, 3, .01], ['升起｜水線亮邊 寬度（符號高度倍）', 'meniscusWidth', .002, .06, .001], ['升起｜水線柔光暈', 'cutGlow', 0, 3, .01],
@@ -625,48 +630,62 @@ attribute vec4 aSeed;       // x: -1..1 across, y: 0..1 up, z: 0..1 depth, w: ra
 uniform float uTime, uSpeed, uSize, uResY, uCount;
 uniform vec4 uView;         // tan(half fov), aspect, horizon ndc, camera height
 uniform vec2 uDepth;
+uniform float uSoft;
+varying vec4 vSilk;      // streak in sprite coordinates (x, y), the speck's share of the sprite, 0
+varying vec2 vKs;        // gaussian widths: core, halo
+varying vec2 vAmps;      // their amplitudes (light is kept as they widen)
 #ifdef LOGO_NEAR_SPECKS
 uniform vec3 uMarkCenter, uMarkExtent;
-uniform vec2 uOrbitClock;
+uniform vec2 uOrbitClock, uOrbitShutter;
 uniform vec4 uOrbitStyle; // randomness, radius, size, brightness
 uniform vec2 uOrbitSpread; // density, wandering amplitude
 uniform vec4 uOrbitPointer; // world XY, strength, influence radius
 uniform float uMarkVisibility;
 #endif
 varying vec4 vInfo;
-void main() {
 #ifdef LOGO_NEAR_SPECKS
-  // Vertical helix: X/Z orbit the mark's Y axis; Y only rises during each life.
-  // https://mathworld.wolfram.com/Helix.html (axes permuted for Three.js Y-up).
+// Vertical helix: X/Z orbit the mark's Y axis; Y only rises during each life.
+// https://mathworld.wolfram.com/Helix.html (axes permuted for Three.js Y-up).
+vec3 orbitAt(float seed, float t, float rise, float random, float scatter, out float life, out float plume, out float angle) {
+  life = fract(aSeed.y + rise * mix(.078, .058 + seed * .04, random));
+  plume = smoothstep(.66, 1., life);
+  // Separate angular and upward clocks let either speed change without teleporting particles.
+  angle = aSeed.y * 6.2831853 * 2.15
+    + t * mix(.9, .68 + .42 * fract(seed * 17.3), random)
+    + aSeed.x * (.22 + random * 2.1)
+    + sin(t * .23 + seed * 31.) * random * (.22 + scatter * .2);
+  float radius = (uMarkExtent.x + uMarkExtent.y * .13)
+    * uOrbitStyle.y * (1. + (aSeed.z - .5) * (mix(.12, .42, random) + scatter * .34)
+    + sin(t * .41 + seed * 23.) * random * (.07 + scatter * .09)) * (1. - .72 * plume);
+  // A few motes first appear close to the lit solid, then join the rising orbit.
+  float fromGlass = step(.72, fract(seed * 11.7));
+  radius *= mix(1., mix(.6, 1., smoothstep(0., .18, life)), fromGlass);
+  vec3 p = uMarkCenter;
+  p.x += cos(angle) * radius;
+  p.z += sin(angle) * radius;
+  p.y += mix(-.98, 1.78, life) * uMarkExtent.y;
+  // The stream loosens above the tip into a soft upward plume.
+  p.x += sin(t * .8 + seed * 43.) * plume * uMarkExtent.y * .06;
+  p.z += cos(t * .7 + seed * 31.) * plume * uMarkExtent.y * .06;
+  // Soft wandering keeps a loose helix, with the widest movement around the mark.
+  p.x += sin(t * .53 + seed * 61.) * scatter * uMarkExtent.y * .12;
+  p.z += cos(t * .47 + seed * 47.) * scatter * uMarkExtent.y * .12;
+  return p;
+}
+#endif
+void main() {
+  vSilk = vec4(0., 0., 1., 0.); vKs = vec2(27., 3.4); vAmps = vec2(1.);
+#ifdef LOGO_NEAR_SPECKS
   if (aSeed.w > 1.) {
     float seed = aSeed.w - 2., t = uOrbitClock.x;
     if (fract(seed * 79.13) >= uOrbitSpread.x) {
       gl_Position = vec4(2., 2., 2., 1.); gl_PointSize = 1.; vInfo = vec4(0.); return;
     }
     float random = uOrbitStyle.x, scatter = uOrbitSpread.y;
-    float life = fract(aSeed.y + uOrbitClock.y * mix(.078, .058 + seed * .04, random));
-    float plume = smoothstep(.66, 1., life);
-    // Separate angular and upward clocks let either speed change without teleporting particles.
-    float angle = aSeed.y * 6.2831853 * 2.15
-      + t * mix(.9, .68 + .42 * fract(seed * 17.3), random)
-      + aSeed.x * (.22 + random * 2.1)
-      + sin(t * .23 + seed * 31.) * random * (.22 + scatter * .2);
-    float radius = (uMarkExtent.x + uMarkExtent.y * .13)
-      * uOrbitStyle.y * (1. + (aSeed.z - .5) * (mix(.12, .42, random) + scatter * .34)
-      + sin(t * .41 + seed * 23.) * random * (.07 + scatter * .09)) * (1. - .72 * plume);
-    // A few motes first appear close to the lit solid, then join the rising orbit.
-    float fromGlass = step(.72, fract(seed * 11.7));
-    radius *= mix(1., mix(.6, 1., smoothstep(0., .18, life)), fromGlass);
-    vec3 p = uMarkCenter;
-    p.x += cos(angle) * radius;
-    p.z += sin(angle) * radius;
-    p.y += mix(-.98, 1.78, life) * uMarkExtent.y;
-    // The stream loosens above the tip into a soft upward plume.
-    p.x += sin(t * .8 + seed * 43.) * plume * uMarkExtent.y * .06;
-    p.z += cos(t * .7 + seed * 31.) * plume * uMarkExtent.y * .06;
-    // Soft wandering keeps a loose helix, with the widest movement around the mark.
-    p.x += sin(t * .53 + seed * 61.) * scatter * uMarkExtent.y * .12;
-    p.z += cos(t * .47 + seed * 47.) * scatter * uMarkExtent.y * .12;
+    float life, plume, angle, lifeB, plumeB, angleB;
+    vec3 p = orbitAt(seed, t, uOrbitClock.y, random, scatter, life, plume, angle);
+    // Motion blur: where this speck was one shutter ago, along its own path. Between frames a fast speck would jump several pixels (strobing).
+    vec3 pOwn = p, pB = orbitAt(seed, t - uOrbitShutter.x, uOrbitClock.y - uOrbitShutter.y, random, scatter, lifeB, plumeB, angleB);
     vec2 away = p.xy - uOrbitPointer.xy;
     float influence = (1. - smoothstep(0., max(.01, uOrbitPointer.w), length(away))) * uOrbitPointer.z;
     p.xy += normalize(away + vec2(.001, .002)) * influence * uMarkExtent.y * .32;
@@ -682,7 +701,18 @@ void main() {
     vInfo = vec4(0., uMarkVisibility * (.72 + .28 * pulse) * depthLight * fade * uOrbitStyle.w * (1. + influence * .18), 1., seed);
     float diameter = 6. + 10. * seed * seed + 16. * pow(seed, 14.);
     float perspective = clamp((-uMarkCenter.z) / max(1., -mv.z), .7, 1.4);
-    gl_PointSize = clamp(diameter * perspective * (.94 + .12 * pulse) * uResY / 950. * uOrbitStyle.z, 1., 64.);
+    float px = clamp(diameter * perspective * (.94 + .12 * pulse) * uResY / 950. * uOrbitStyle.z, 1., 64.);
+    vec4 cNow = projectionMatrix * modelViewMatrix * vec4(pOwn, 1.), cWas = projectionMatrix * modelViewMatrix * vec4(pB, 1.);
+    vec2 streak = (cNow.xy / cNow.w - cWas.xy / cWas.w) * .5 * vec2(uView.y, 1.) * uResY;   // device pixels
+    if (abs(life - lifeB) > .5) streak = vec2(0.);                                           // the wrap of its life (invisible then)
+    float len = length(streak), R2 = .25 * px * px, sft = max(uSoft, .001);
+    // Band-limited, as in light-specks.js: the core never narrower than the pixel grid, its light nearly conserved, the sprite big enough for the tails.
+    float sprite = (uSoft > .001 ? max(px, 11.) : px) + len;
+    gl_PointSize = sprite;
+    vKs = vec2(min(27., R2 / (1.3225 * sft * sft)), min(5.5, R2 / (5.76 * sft * sft)));
+    float coreRadius = sqrt(R2 / vKs.x);
+    vAmps = pow(vKs / vec2(27., 5.5), vec2(.8)) / (1. + len / (1.77 * max(coreRadius, .5)));  // spread along the streak
+    vSilk = vec4(streak / sprite * 2., px / sprite, 0.);
     return;
   }
 #endif
@@ -696,7 +726,9 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(wp, 1.);
   float dia = uSize * (.012 + .05 * r * r);
   float px = dia * (uResY * .5) / (uView.x * z);
-  gl_PointSize = clamp(px, 1., 56.);
+  float pc = clamp(px, 1., 56.), R2 = .25 * pc * pc, sft = max(uSoft, .001), sprite = uSoft > .001 ? max(pc, 7.) : pc;
+  gl_PointSize = sprite;
+  vKs = vec2(27., min(3.4, R2 / (1.69 * sft * sft))); vAmps = vec2(1., pow(vKs.y / 3.4, .8)); vSilk = vec4(0., 0., pc / sprite, 0.);
   gl_Position = projectionMatrix * mv;
   float kind = step(.72, r) * step(z, 12.) * step(5., px);
   float edge = smoothstep(0., .08, up) * smoothstep(1., .9, up);
@@ -707,23 +739,30 @@ const MOTE_FRAGMENT = /* glsl */ `
 uniform vec3 uColor, uSkyTint;
 uniform vec2 uSunV;
 uniform float uOpacity, uDisplay;
-varying vec4 vInfo;
+varying vec4 vInfo, vSilk;
+varying vec2 vKs, vAmps;
 vec3 toSRGB(vec3 c) { c = clamp(c, 0., 1.); return mix(c * 12.92, 1.055 * pow(c, vec3(1. / 2.4)) - .055, step(.0031308, c)); }
 void main() {
-  vec2 c = gl_PointCoord * 2. - 1.; c.y = -c.y;
+  vec2 q = gl_PointCoord * 2. - 1.; q.y = -q.y;
+  float e2 = dot(q, q);
+  if (e2 > 1.) discard;
+  float rim01 = 1. - smoothstep(.62, 1., e2);
+  // the nearest point on the speck's streak, then the speck's own radius
+  float ss = dot(vSilk.xy, vSilk.xy);
+  vec2 c = (ss > 1e-7 ? q - vSilk.xy * clamp(dot(q, vSilk.xy) / ss, -.5, .5) : q) / vSilk.z;
   float r2 = dot(c, c);
-  if (r2 > 1.) discard;
 #ifdef LOGO_NEAR_SPECKS
   if (vInfo.z > .5) {
-    float core = exp(-r2 * 27.), halo = exp(-r2 * 5.5);
+    float core = exp(-r2 * vKs.x) * vAmps.x * rim01, halo = exp(-r2 * vKs.y) * vAmps.y * rim01;
     vec3 light = mix(vec3(.67, .84, 1.), vec3(1.), core);
     gl_FragColor = vec4(light, (core + halo * .38) * vInfo.y * .8);
     return;
   }
 #endif
   vec3 col; float a;
-  if (vInfo.x < .5) { a = exp(-r2 * 3.4) * .6; col = uColor; }
+  if (vInfo.x < .5) { a = exp(-r2 * vKs.y) * vAmps.y * .6 * rim01; col = uColor; }
   else {
+    if (r2 > 1.) discard;
     vec3 n = vec3(c, sqrt(1. - r2));
     float rim = pow(1. - n.z, 2.2);
     vec3 h = normalize(vec3(uSunV, 1.) + vec3(0., 0., 1.));
@@ -849,6 +888,7 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   // Main page only: nearby sparkles share the existing mote draw and mirror lifecycle.
   const nearMarkCount = globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])') ? (small ? 72 : 180) : 0;
   const markBounds = new THREE.Box3();
+  let markLo = 0, markHi = 0;   // the mark's real bottom and top, relative to the anchor (world units; measured)
   let orbitClockStarted = false;
   const moteGeo = new THREE.BufferGeometry();
   {
@@ -865,7 +905,7 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   }
   const MU = {
     uMarkCenter: { value: new THREE.Vector3() }, uMarkExtent: { value: new THREE.Vector3() }, uMarkVisibility: { value: 0 },
-    uOrbitClock: { value: new THREE.Vector2() }, uOrbitStyle: { value: new THREE.Vector4() },
+    uSoft: { value: 1 }, uOrbitShutter: { value: new THREE.Vector2() }, uOrbitClock: { value: new THREE.Vector2() }, uOrbitStyle: { value: new THREE.Vector4() },
     uOrbitSpread: { value: new THREE.Vector2() }, uOrbitPointer: { value: new THREE.Vector4(0, 0, 0, 1) },
     uTime: U.uTime, uSpeed: { value: 1 }, uSize: { value: 1 }, uResY: { value: H }, uCount: { value: 0 },
     uView: { value: new THREE.Vector4(.325, 1.6, -.2, L.camHeight) }, uDepth: { value: new THREE.Vector2(2.5, 30) },
@@ -934,7 +974,8 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
   sparks.name = 'lakeSparks'; sparks.frustumCulled = false; sparks.renderOrder = 21; sparks.visible = false; scene.add(sparks);
   const lightSpecks = createLightSpecks({scene,mode:'lake',small,reducedMotion,getConfig:()=>{
     const c=globalThis.__MONTIS_STUDY__?.CONFIG.lightSpecks || {};
-    return {...c,count:Math.round((c.count ?? 1000)*L.speckDensity),opacity:(c.opacity ?? .82)*.55,size:(c.size ?? 1.15)*.5};
+    /* over the sea, floating up from it as in the hero; fewer, smaller and dimmer than the hero's numbers, because the dusk behind them is much darker */
+    return {...c,count:Math.round((c.count ?? 1000)*L.speckDensity),opacity:(c.opacity ?? .82)*L.seaOpacity,size:(c.size ?? 1.15)*L.seaSize,rise:L.seaRise,air:L.seaAir,waterGlow:(c.waterGlow ?? .9)*L.seaRings,centre:L.seaCentre};
   }});
 
   /* ---- the distant range (the opening's band) ---- */
@@ -1159,6 +1200,8 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     U.uRefl.value.set(L.reflStrength, L.reflLength, L.reflRipple, L.reflBlur);
     U.uOut.value.set(L.exposure, L.vignette, L.outputDisplay > .5 ? 1 : 0, 0);
     MU.uSpeed.value = L.moteSpeed; MU.uSize.value = L.moteSize; MU.uOpacity.value = L.moteOpacity; MU.uDisplay.value = L.outputDisplay > .5 ? 1 : 0;
+    MU.uSoft.value = clamp(L.orbitSoft, 0, 2);
+    { const sh = reducedMotion ? 0 : clamp(L.orbitShutter, 0, .05); MU.uOrbitShutter.value.set(sh * clamp(L.orbitSpeed, 0, 3), sh * clamp(L.orbitRiseSpeed, 0, 3)); }
     MU.uOrbitStyle.value.set(clamp(L.orbitRandomness, 0, 100) / 100, clamp(L.orbitRadius, .65, 2), clamp(L.orbitSize, .4, 2), clamp(L.orbitBrightness, 0, 2));
     MU.uOrbitSpread.value.set(clamp(L.orbitDensity, 0, 100) / 100, clamp(L.orbitScatter, 0, 2));
     setCol(MU.uColor, L.moteColor);
@@ -1192,7 +1235,9 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     const markY = lerp(L.markY, L.portraitMarkY, pt);
     // The backup's full wordmark is much wider than the symbol: fit the actual
     // SVG bounds to the viewport, including portrait and intermediate yaw.
-    const markSize = Math.min(lerp(L.markSize, L.portraitMarkSize, pt), aspect * lerp(L.markWidth, Math.min(.9,L.markWidth+.1),pt) / Math.max(1,markAspect));
+    /* a short window (small laptop, browser zoom): the words keep a readable size, so the mark gives way around its centre */
+    const shortK = lerp(1, clamp(L.shortSize, .4, 1), smooth(L.shortFrom, L.shortTo, window.innerHeight || H));
+    const markSize = Math.min(lerp(L.markSize, L.portraitMarkSize, pt) * shortK, aspect * lerp(L.markWidth, Math.min(.9,L.markWidth+.1),pt) / Math.max(1,markAspect));
     frame.T = Math.tan(frame.fov * .5 * RAD); frame.y0 = 1 - 2 * frame.horizon;
     camera.aspect = aspect; camera.fov = frame.fov; camera.updateProjectionMatrix();
     const Hv = 2 * MARK_DIST * frame.T;                      // visible height at the mark's depth
@@ -1234,11 +1279,14 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
     const Hm = frame.Hm;
     // A wide wordmark is shorter than the symbol after fitting. Its complete
     // top still starts underwater, instead of floating above it on frame zero.
-    const startY = Math.min(frame.cy - L.riseSink * Hm, -Hm * .55);
+    /* riseTrueFoot: the mark is taller than Hm, so the nominal half height let its top pop out of the water and ended the meniscus while the base was still under */
+    const trueFoot = L.riseTrueFoot > .5 && markHi > 0;
+    const halfHi = trueFoot ? markHi : Hm * .5, halfLo = trueFoot ? -markLo : Hm * .5;
+    const startY = Math.min(frame.cy - L.riseSink * Hm, trueFoot ? -(halfHi + .03) : -Hm * .55);
     const y = lerp(startY, frame.cy, riseE);
     markAnchor.position.set(0, y, -MARK_DIST);
-    const foot = y - Hm * .5;
-    markShown = y + Hm * .5 > -.02;                           // sunk completely: nothing to draw, nothing to mirror
+    const foot = y - halfLo;
+    markShown = y + halfHi > -.02;                           // sunk completely: nothing to draw, nothing to mirror
     if (!markShown && markAnchor.visible) { markAnchor.visible = false; riseHidden = true; }
     else if (markShown && riseHidden) { markAnchor.visible = true; riseHidden = false; }
     clipPlane.constant = riseE >= .9999 ? 1e3 : 0;
@@ -1316,6 +1364,7 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
         markBounds.getCenter(MU.uMarkCenter.value);
         markBounds.getSize(MU.uMarkExtent.value).multiplyScalar(.5);
       }
+      if (!markBounds.isEmpty()) { markLo = markBounds.min.y - markAnchor.position.y; markHi = markBounds.max.y - markAnchor.position.y; }   // rotation is about y, so these are exact
     }
     lightSpecks.update({time:tt,camera,width:W,height:H,progress:qq*5});
     /* q: a slow push-in (the camera walks forward) and a slight breath of pitch; time: a faint sway */

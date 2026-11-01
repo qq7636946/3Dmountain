@@ -26,14 +26,16 @@ let letters=read(path.join(__dirname,'../highland-1-4-ascent/js/water-logo-lette
 // each: ({main,drops,letters,glass,html,extra}) => the same (+ optional extra:{file:source} local modules). extra = the local modules so far
 // (2026-10-24: world-logo-build.cjs, right after world-ocean-build, patches extra['finnovation-world.js'] in place and ships world-logo*.js)
 // bead-life (2026-10-24): the dispersal's beads wear the hero's moving sheen/iris and breath; needs opening-drops' tuner group first.
-for(const n of ['opening-drops-build.cjs','bead-life-build.cjs','opening-warm-build.cjs','letters-entrance-build.cjs','logo-look-build.cjs','opening-world-build.cjs','world-ocean-build.cjs','world-logo-build.cjs','world-principles-build.cjs','section-motion-build.cjs','valley-polish-build.cjs','valley-scene-build.cjs','user-preset-build.cjs','daylight-build.cjs','light-specks-build.cjs','world-daylight-off-build.cjs','logo-panel-build.cjs','forward-mosaic-build.cjs','world-dive-fx-build.cjs','opening-refinement-build.cjs','motion-polish-build.cjs','opening-sea-depth-build.cjs','wordmark-position-build.cjs','water-rise-build.cjs','direct-logo-zoom-build.cjs','droplet-coherence-build.cjs','opening-lunge-blur-build.cjs','mobile-runtime-build.cjs','mobile-touch-build.cjs','mobile-performance-build.cjs','world-mobile-performance-build.cjs','mobile-detail-build.cjs','unified-grain-build.cjs','water-tone-build.cjs','runtime-quality-build.cjs','experience-build.cjs']){if(!fs.existsSync(path.join(__dirname,n)))continue;const r=require('./'+n)({main,drops,letters,glass,html,extra,journey});({main,drops,letters,glass,html}=r);if(r.journey)journey=r.journey;if(r.extra)for(const [k,v]of Object.entries(r.extra)){extra[k]=v;LOCAL.add(k);}}
-// 2026-10-26: boot, firstpass and cover are OFF by default (their bisect showed timing-dependent frame differences we could not certify);
-// PERF_ON=boot,firstpass,cover switches them on. cpu and phone (inert) run as usual.
-const PERF_DEFAULT_OFF=['perf-boot','perf-firstpass','perf-cover'];
+for(const n of ['opening-drops-build.cjs','bead-life-build.cjs','opening-warm-build.cjs','letters-entrance-build.cjs','logo-look-build.cjs','opening-world-build.cjs','world-ocean-build.cjs','world-logo-build.cjs','world-principles-build.cjs','section-motion-build.cjs','valley-polish-build.cjs','valley-scene-build.cjs','user-preset-build.cjs','daylight-build.cjs','light-specks-build.cjs','world-daylight-off-build.cjs','logo-panel-build.cjs','forward-mosaic-build.cjs','world-dive-fx-build.cjs','opening-refinement-build.cjs','motion-polish-build.cjs','opening-sea-depth-build.cjs','wordmark-position-build.cjs','water-rise-build.cjs','direct-logo-zoom-build.cjs','droplet-coherence-build.cjs','opening-lunge-blur-build.cjs','mobile-runtime-build.cjs','mobile-touch-build.cjs','mobile-performance-build.cjs','world-mobile-performance-build.cjs','mobile-detail-build.cjs','unified-grain-build.cjs','water-tone-build.cjs','sea-original-build.cjs','runtime-quality-build.cjs','record-sync-build.cjs','silky-clock-build.cjs','flash-glow-build.cjs','light-shafts-build.cjs','title-water-build.cjs','button-glass-build.cjs','experience-build.cjs']){if(!fs.existsSync(path.join(__dirname,n)))continue;const r=require('./'+n)({main,drops,letters,glass,html,extra,journey});({main,drops,letters,glass,html}=r);if(r.journey)journey=r.journey;if(r.extra)for(const [k,v]of Object.entries(r.extra)){extra[k]=v;LOCAL.add(k);}}
+// 2026-10-31: firstpass and cover are on (fixed-clock parity 38/38, .qa/index1-5/perf-20261031/p50); PERF_OFF=firstpass,cover leaves them out.
+// boot and gpu stay OFF by default; PERF_ON=boot,gpu switches them on. cpu and phone (inert) run as usual.
+const PERF_DEFAULT_OFF=['perf-boot','perf-gpu'];
 const perfOn=n=>!PERF_DEFAULT_OFF.some(k=>n.includes(k))||(process.env.PERF_ON||'').split(',').some(k=>k&&n.includes(k));
+// 2026-10-31: perf helpers' html (and the one hand-kept module a helper patches) is taken out first, so a stream that is off leaves nothing behind (perf-reverse.cjs).
+html=require('./perf-reverse.cjs').strip(html);require('./perf-reverse.cjs').stripHandKept(OUT);
 // 2026-10-25 optimisation team: one helper file per work stream, run last. PERF_ONLY=<stream> builds with just that stream (e.g. boot), PERF_OFF=a,b leaves streams out;
 // a helper that throws is skipped with a warning (the snapshot is restored), so one unfinished file cannot break another's build.
-for(const n of ['perf-boot-build.cjs','perf-firstpass-build.cjs','perf-cover-build.cjs','perf-phone-build.cjs','perf-cpu-build.cjs']){
+for(const n of ['perf-boot-build.cjs','perf-firstpass-build.cjs','perf-cover-build.cjs','perf-phone-build.cjs','perf-cpu-build.cjs','perf-gpu-build.cjs']){
  if(!fs.existsSync(path.join(__dirname,n)))continue;
  if(!perfOn(n))continue;
  if(process.env.PERF_ONLY&&!n.includes(process.env.PERF_ONLY))continue;
@@ -61,7 +63,7 @@ const modules={
  'water-logo-letters.js':letters,
  'water-logo-reference-glass.js':glass,
 };
-for(const [name,source]of Object.entries(modules))fs.writeFileSync(path.join(OUT,name),'/* index1-5 generated by prototypes/index1-5/build.cjs */\n'+rewire(source));
+for(const [name,source]of Object.entries(modules))fs.writeFileSync(path.join(OUT,name),'/* index1-5 generated by prototypes/index1-5/build.cjs */\n'+rewire(source.replace(/^(?:\/\* index1-5 generated by prototypes\/index1-5\/build\.cjs \*\/\n)+/,'')));
 for(const name of ['index1-5-terrain.js','highland-material.js','follow-light-lines.js','alpine-cloud-banks.js']){
  const file=path.join(OUT,name);fs.writeFileSync(file,rewire(read(file)));
 }
@@ -69,5 +71,6 @@ html=html.replace(/(<script type="module" id="journeyModule" src=")[^"]+/,`$1pro
 html=html.replace(/(<link rel="modulepreload" href=")(?:js\/main\.js|prototypes\/index1-5\/js\/main\.js)(?:\?[^"]*)?/,`$1prototypes/index1-5/js/main.js?v=${version}`);
 html=html.replace(/prototypes\/index1-5\/index1-5.css(?:\?[^"']*)?/,`prototypes/index1-5/index1-5.css?v=${version}`);
 html=html.split('alpine-ui.js?v=VERSION').join('alpine-ui.js?v='+version).replace(/alpine-ui.js?v=i15-[0-9a-z]+/g,'alpine-ui.js?v='+version);
+html=html.replace(/\n(?:[ \t]*\n){2,}/g,'\n\n'); // 2026-10-31: helpers that take a block out and put it back left blank lines, 9 more on every build
 fs.writeFileSync(path.join(ROOT,'index1-5.html'),html);
 console.log('Built '+version+': index1-5 only; alpine ridges, rock and cloud banks; river corridor retained.');

@@ -24,10 +24,10 @@
    Dials: CONFIG.worldOcean (tuner 「海洋章節 Ocean」).
    ===================================================================== */
 import * as THREE from 'three';
-import { createOceanIslands } from './world-ocean-islands.js?v=restore-1-5-blue-8547de57661f';
-import { createOceanPhotos } from './world-ocean-photos.js?v=restore-1-5-blue-8547de57661f';
-import { oceanProgress, oceanPanelState } from './world-ocean-scroll.js?v=restore-1-5-blue-8547de57661f';
-import { getSceneDaylight } from './scene-daylight.js?v=i15-tone-7da2c5eaf233';
+import { createOceanIslands } from './world-ocean-islands.js?v=i15-mvxv94ut';
+import { createOceanPhotos } from './world-ocean-photos.js?v=i15-mvxv94ut';
+import { oceanProgress, oceanPanelState } from './world-ocean-scroll.js?v=i15-mvxv94ut';
+import { getSceneDaylight } from './scene-daylight.js?v=i15-mvxv94ut';
 
 /* The defaults. Strict JSON: world-ocean-build.cjs copies it into main.js's CONFIG.worldOcean. */
 const DEFAULTS = /*OCEAN-DEFAULTS*/{
@@ -717,8 +717,13 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
   const hexOr = (v, d) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const eveningBlue = new THREE.Color(), eveningFog = new THREE.Color(), eveningSun = new THREE.Color();
   const liveSun = new THREE.Color(), liveFog = new THREE.Color(), liveWater = new THREE.Color(), liveHighlight = new THREE.Color();
+  const seaWater = {}, seaLight = {};   /* SEA_ORIGINAL */
   function palette() {
-    const C = window.__MONTIS_STUDY__?.CONFIG, ww = C?.watershedWater || {}, al = C?.alpineLight || {};
+    const C = window.__MONTIS_STUDY__?.CONFIG, O = cfg(), W0 = C?.watershedWater || {}, A0 = C?.alpineLight || {};
+    // The sea's own colours (see sea-original-build.cjs); the valley's when a key is cleared.
+    seaWater.base = O.seaBase || W0.base; seaWater.highlight = O.seaHighlight || W0.highlight;
+    seaLight.sunColor = O.seaSun || A0.sunColor; seaLight.fogColor = O.seaFog || A0.fogColor; seaLight.cloudLit = O.seaCloudLit || A0.cloudLit; seaLight.cloudShade = O.seaCloudShade || A0.cloudShade;
+    const ww = seaWater, al = seaLight;
     // A scene clock creates thousands of intermediate colours; keep live colours in place instead of caching every hex.
     const sun = liveSun.setStyle(hexOr(al.sunColor, '#ffdcb8'), THREE.LinearSRGBColorSpace), fog = liveFog.setStyle(hexOr(al.fogColor, '#c4d3e4'), THREE.LinearSRGBColorSpace), white = colour('#ffffff');
     pal.cloudLit.setStyle(hexOr(al.cloudLit, '#fff6ec'), THREE.LinearSRGBColorSpace); pal.cloudShade.setStyle(hexOr(al.cloudShade, '#7487a6'), THREE.LinearSRGBColorSpace);

@@ -22,6 +22,7 @@ export const WORLD_DIVE_DEFAULTS = {
   mosaicShift: .28,
   mosaicZoom: .14,
   mosaicSeam: .38,
+  logoSwipe: 1,
   fogColor: '#d7dee6'
 };
 export const WORLD_DIVE_ROWS = [
@@ -32,7 +33,7 @@ export const WORLD_DIVE_ROWS = [
   ['igloo 變冷（去色偏藍）', 'worldDive', 'cold', 0, 1, .01], ['igloo 閃爍（每秒換幾次）', 'worldDive', 'flicker', 0, 30, 1],
   ['igloo 卡牌→地球 雲層轉場的拉絲＋色散＋顆粒（0 關）', 'worldDive', 'deck', 0, 2, .01],
   ['馬賽克 強度（浪前緣的毛玻璃方塊）', 'worldDive', 'mosaic', 0, 2, .01], ['馬賽克 方塊大小（螢幕高）', 'worldDive', 'mosaicSize', .05, 1.5, .01],
-  ['馬賽克 方塊錯位', 'worldDive', 'mosaicShift', 0, 2, .01], ['馬賽克 方塊放大', 'worldDive', 'mosaicZoom', 0, .6, .01], ['馬賽克 接縫與玻璃邊光', 'worldDive', 'mosaicSeam', 0, 2, .01], ['igloo 霧的顏色', 'worldDive', 'fogColor']
+  ['馬賽克 方塊錯位', 'worldDive', 'mosaicShift', 0, 2, .01], ['馬賽克 方塊放大', 'worldDive', 'mosaicZoom', 0, .6, .01], ['馬賽克 接縫與玻璃邊光', 'worldDive', 'mosaicSeam', 0, 2, .01], ['海洋→LOGO 也用這個刷過去（0 關，LOGO 轉場須為水波）', 'worldDive', 'logoSwipe', 0, 2, .01], ['igloo 霧的顏色', 'worldDive', 'fogColor']
 ];
 
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -169,7 +170,10 @@ export function createWorldDiveFx({ reducedMotion = false } = {}) {
     // compiled in the background the first time the world draws (long before the swipe), not at its first frame
     if (!state.warmed) { state.warmed = true; if (!mat) build(); renderer.compileAsync?.(scene, camera).catch(() => { }); }
     // the wave's front crosses the frame over o.w (0 → 1); the effect lives while it does
-    const w = o?.w || 0, amount = num(C, 'amount', D.amount, 0, 2);
+    // 2026-10-31: the sea → LOGO lake wave (world-logo.js, transition 0) is swept the same way, along its own front
+    const seal = window.__MONTIS_STUDY__?.CONFIG?.logoSeal || {}, sealQ = s.l?.qWave || 0, sealAmount = num(C, 'logoSwipe', D.logoSwipe, 0, 2);
+    const sealing = sealAmount > 0 && Math.round(+seal.transition) === 0 && sealQ > 0 && sealQ < 1;
+    const w = sealing ? sealQ : o?.w || 0, amount = num(C, 'amount', D.amount, 0, 2) * (sealing ? sealAmount : 1);
     let e = amount * smooth(0, .16, w) * (1 - smooth(.84, 1, w)), deck = 0;
     // the cards → planet cloud deck (s.c: rolls in, white-out, tears open): a light break-up, no fog front
     if (e < .002 && s.c > 0 && s.c < 1) { deck = num(C, 'deck', D.deck, 0, 2) * smooth(.02, .2, s.c) * (1 - smooth(.6, .95, s.c)); e = deck; }
@@ -182,7 +186,7 @@ export function createWorldDiveFx({ reducedMotion = false } = {}) {
     renderer.setRenderTarget(null);
     renderer.copyFramebufferToTexture(tex);
     // the same front as the ocean's wave (world-ocean.js): its direction, and where it is
-    const O = ocean(), ang = num(O, 'waveAngle', 12, -90, 90) * Math.PI / 180, dx = Math.sin(ang), dy = Math.cos(ang);
+    const O = sealing ? seal : ocean(), ang = num(O, 'waveAngle', 12, -90, 90) * Math.PI / 180, dx = Math.sin(ang), dy = Math.cos(ang);
     const Lw = num(O, 'waveLength', .17, .03, .6), soft = num(O, 'waveSoft', .04, .002, .3), wob = num(O, 'wobble', .06, 0, .3);
     const extent = .5 * (Math.abs(dx) * W / H + Math.abs(dy));
     const F = mix(-extent - Lw * 1.5 - wob - soft, extent + Lw * 3.5 + wob + soft, w);

@@ -252,6 +252,7 @@ function studioScene() {
   target.texture.name='Logo refraction backdrop';
   const floatKeys={uIorA:'iorA',uIorDelta:'iorDelta',uIrid:'iridescence',uSceneDepth:'sceneDepth',uNormalScale:'normalScale',uUvScale:'uvScale',uSceneMix:'sceneMix',uReflStr:'reflectionStrength',uFresnelPow:'fresnelPower',uReflFloor:'reflectFloor',uEnvRough:'envRoughness',uEnvSky:'envSky',uEnvStudio:'envStudio',uSunSpec:'sunSpec',uSunPow:'sunPow',uSunDisc:'sunDisc',uFrostBlur:'frostBlur',uIridPatch:'iridPatch',uBubble:'bubble',uBubbleScale:'bubbleScale',uBubbleSize:'bubbleSize',uCloud:'cloud',uFrost:'frost',uFrostFine:'frostFine',uFrostScale:'frostScale',uRim:'rim',uRimPow:'rimPow',uRough:'rough',uShade:'shade',uSSS:'sss',uGraze:'graze',uSpecCap:'specCap',uGlOn:'glOn',uGlDepth:'glDepth',uGlThick:'glThick',uGlLens:'glLens',uGlBand:'glBand',uGlBandY:'glBandY',uGlRim:'glRim',uGlInk:'glInk',uGlFill:'glFill',uGlBounce:'glBounce',uGlEdge:'glEdge',uGlGlint:'glGlint',uGlGlintPow:'glGlintPow',uGlInner:'glInner',uGlCaustic:'glCaustic'};
   const uniforms={
+    /* FLASH_GLOW */uFlash:{value:new THREE.Vector4()},uFlashColor:{value:new THREE.Color('#6fbcff')},
     uLiquidTime:{value:0},uLiquidAmount:{value:1},
     uBackdrop:{value:target.texture},uSpectrum:{value:spectrum},uNormalMap:{value:normalMap},uEnv:{value:cube.texture},
     uProjView:{value:new THREE.Matrix4()},uCam:{value:new THREE.Vector3()},uOpacity:{value:1},
@@ -297,6 +298,20 @@ function studioScene() {
     `,
     fragmentShader:NOISE_GLSL+/* glsl */`
       uniform float uLiquidTime,uLiquidAmount;
+
+uniform vec4 uFlash; uniform vec3 uFlashColor;   // edge line, noise scale, its clock, gain
+float flashTri(float x) { return abs(fract(x) - .5); }
+vec3 flashTri3(vec3 p) { return vec3(flashTri(p.z + flashTri(p.y)), flashTri(p.z + flashTri(p.x)), flashTri(p.y + flashTri(p.x))); }
+float flashNoise(vec3 p, float t) {
+  float z = 1.4, rz = 0.; vec3 bp = p;
+  for (int i = 0; i < 4; i++) { vec3 dg = flashTri3(bp * 2.); p += dg + t; bp *= 1.8; z *= 1.5; p *= 1.2; rz += flashTri(p.z + flashTri(p.x + flashTri(p.y))) / z; bp += .14; }
+  return rz;
+}
+vec3 flashLight(vec3 p) {
+  float n = flashNoise(p * uFlash.y, uFlash.z);
+  float edge = 1. - smoothstep(0., .1, abs(n - uFlash.x));
+  return uFlashColor * (edge * uFlash.w + uFlash.w * .07);
+}
       uniform sampler2D uBackdrop,uSpectrum,uNormalMap;
       uniform samplerCube uEnv;
       uniform mat4 uProjView;
@@ -385,6 +400,7 @@ function studioScene() {
         color=glacierSurface(color,N,V,NdV,R,vObj,glInner,glFace,glOutW);
         color*=exp(-vec3(.085,.027,.012)*pow(1.-NdV,1.6));
         color+=min(spec,vec3(uSpecCap));
+        if(uFlash.w>.001)color+=flashLight(vObj);
         gl_FragColor=vec4(color,uOpacity);
       }
     `

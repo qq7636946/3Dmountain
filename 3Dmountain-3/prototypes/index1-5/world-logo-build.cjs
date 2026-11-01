@@ -55,6 +55,7 @@ const SEAL_ROWS = [
   ['跟全站日照（0＝固定黃昏 ref-6／1＝跟全站太陽與場景時間）', 'logoSeal', 'followDaylight', 0, 1, 1],
   ['建置時機（進入海洋橫移段後多少螢幕高才開始建湖景＋預熱，0＝一進入就建）', 'logoSeal', 'prepare', 0, 6, .05],
   ['符號升起 開始（佔旋轉長度的比例，0＝旋轉一開始就升）', 'logoSeal', 'riseStart', 0, 1, .01], ['符號升起 完成（佔旋轉長度的比例）', 'logoSeal', 'riseEnd', 0, 1, .01],
+  ['符號跟著波浪升起（1 開／0 用上面兩列）', 'logoSeal', 'riseOnWave', 0, 1, 1], ['跟波浪升起 開始（佔波浪長度）', 'logoSeal', 'riseWaveStart', 0, 1, .01], ['跟波浪升起 完成（佔波浪長度）', 'logoSeal', 'riseWaveEnd', 0, 1, .01],
   ['符號升起 緩出（0 線性／1 到頂前明顯變慢）', 'logoSeal', 'riseEase', 0, 1, .01],
   ['文字 出現時機（旋轉進度）', 'logoSeal', 'textIn', 0, 1, .01], ['文字 垂直位置（由上）', 'logoSeal', 'textY', .3, .95, .005],
   ['文字 大小', 'logoSeal', 'textSize', .4, 2, .01], ['文字 顯示（0 隱藏）', 'logoSeal', 'textShow', 0, 1, .01],
@@ -115,6 +116,8 @@ function modules() {
 
 function patchWorld(src) {
   const p = (a, b, label) => { src = once(src, a, b, label); };
+  // 2026-11-01 fix: a click on the page focuses the scroll container itself, whose top is 0, so the focus rule (keep a focused item in view) took the first click anywhere in the world as a move back of .45 screen: the first click on the closing LOGO scrolled the page back and, during the turn, turned the mark back. The container needs no bringing into view.
+  p("if (!open || !viewport.contains(event.target) || event.target.closest?.('.fiwo-pin')) return;", "if (!open || event.target === viewport || !viewport.contains(event.target) || event.target.closest?.('.fiwo-pin')) return;", 'focusin container');
   src = src.replace(/^(\/\* index1-5 LOCAL COPY[\s\S]*?\*\/\n)/, (m) => m + '/* + LOGO 收尾 Logo Seal hooks (prototypes/index1-5/world-logo-build.cjs): world-logo.js */\n');
   p("import { createWorldOcean } from './world-ocean.js';\n", "import { createWorldOcean } from './world-ocean.js';\nimport { createWorldLogo } from './world-logo.js';\n", 'import');
   // 2026-10-25 fix (client: from the bottom, the brand logo / chapter links broke the page): frame() gives the canvas an inline

@@ -30,6 +30,7 @@ const SECTIONS = [
   ['旋轉模糊', false, [['logoSeal', 'spinBlur']]],
   ['位置、旋轉與升起', true, [['logoLake', 'markY'], ['logoLake', 'markSize'], ['logoSeal', 'markScale'], ['logoSeal', 'markY'], ['logoSeal', 'restYaw'],
     ['logoSeal', 'spinStart'], ['logoSeal', 'spin'], ['logoSeal', 'spinEnd'], ['logoSeal', 'spinEase'], ['logoSeal', 'riseStart'], ['logoSeal', 'riseEnd'], ['logoSeal', 'riseEase'],
+    ['logoSeal', 'riseOnWave'], ['logoSeal', 'riseWaveStart'], ['logoSeal', 'riseWaveEnd'],
     ['logoSeal', 'hold'], ['logoLake', 'portraitMarkY'], ['logoLake', 'portraitMarkSize']]],
   ['轉場（海洋 → LOGO，Hubtown 毛玻璃）', false, ['transition', 'cutClock', 'cutAt', 'cutTime', 'wave', 'waveLead', 'glassSize', 'glassSplit', 'glassShift', 'glassZoom', 'glassBlur', 'glassChroma', 'glassFrost', 'glassDip', 'glassBloom', 'glassBloomAt', 'glassSpread', 'glassSeam', 'glassPush', 'glassTint'].map(k => ['logoSeal', k])],
   ['LOGO 對照與鑄造質感', false, [['logoMark','variant'],['logoMark','castRelief'],['logoLake','markWidth'],['logoLake','speckDensity']]],
@@ -38,6 +39,12 @@ const SECTIONS = [
   ['玻璃光學', false, ['transmission', 'volume', 'ior', 'dispersion', 'tint', 'attenuationColor', 'attenuationDistance', 'roughness', 'clearcoat', 'clearcoatRoughness',
     'specular', 'envIntensity', 'envSpin', 'doubleSide', 'thickFloor', 'bgDisplay'].map(k => ['logoMark', k])],
   ['表面與邊緣光', false, ['sheen', 'sheenColor', 'sheenRoughness', 'iridescence', 'rimStrength', 'rimPower', 'rimLine', 'rimColor'].map(k => ['logoMark', k])],
+  ['水滴與 3D 字的閃光', false, ['on', 'color', 'heroAt', 'wordAt', 'wordDelay', 'attack', 'hold', 'release', 'line', 'heroScale', 'wordScale', 'wordScalePhone', 'heroGain', 'wordGain', 'speed', 'bloom', 'wordBloom', 'bloomCut'].map(k => ['flashGlow', k])],
+  ['水滴與 3D 字的光芒', false, ['on', 'phone', 'phoneStrength', 'wordPhone', 'wordPhoneLength', 'color', 'tint', 'hero', 'word', 'heroLength', 'wordLength', 'heroCore', 'wordCore', 'wordDrop', 'below', 'heroDim', 'wordDim', 'dimOut', 'shaftKnee', 'heroEdge', 'wordEdge', 'wordLines', 'pad', 'cut', 'knee', 'ceil', 'fall', 'streaks', 'count', 'sharp', 'speed', 'view'].map(k => ['lightShafts', k])],
+  ['點擊發光', false, ['emberOn', 'emberColor', 'emberSoft', 'emberSmooth', 'emberDetail', 'emberHole', 'emberBurn', 'emberScale', 'emberSpeed', 'emberIdleSpeed', 'emberGain', 'emberBody', 'emberBloom', 'emberBloomRadius', 'emberShake', 'emberLift'].map(k => ['logoMark', k])],
+  ['點擊發光的光芒', false, ['emberShafts', 'emberShaftKnee', 'emberShaftSettle', 'emberShaftLength', 'emberShaftFall', 'emberShaftCore', 'emberShaftTurnDim', 'emberShaftEdgeFrom', 'emberShaftEdgeTo', 'emberShaftDrop', 'emberShaftTint', 'emberShaftStreaks', 'emberShaftCount', 'emberShaftSharp', 'emberShaftSpeed', 'emberShaftWater', 'emberShaftWaterLine', 'emberShaftWaterReach', 'emberShaftWaterSoft', 'emberShaftWaterGap', 'emberShaftOverWater', 'emberShaftOverReach', 'emberShaftRipple', 'emberShaftRippleUp', 'emberShaftPhone', 'emberShaftPhoneStrength', 'emberShaftView'].map(k => ['logoMark', k])],
+  ['水珠粒子（滑鼠互動）', false, ['beads', 'beadGlass', 'beadSize', 'beadSpec', 'beadCaustic', 'beadEdge', 'beadFace', 'beadDeep', 'beadMid', 'beadLight', 'beadBlue', 'beadBlueDeep', 'beadSpring', 'beadDamp', 'beadPush', 'beadDrag', 'beadRadius', 'beadFlow', 'beadFlowScale', 'beadFlowSpeed', 'beadLag', 'beadDrip', 'beadDripSpeed', 'beadGatherFrom', 'beadGatherTo'].map(k => ['logoMark', k])],
+  ['外框導角水感', false, ['waterRim', 'waterRimWiden', 'waterWobble', 'waterWall', 'waterCurve', 'waterIor', 'waterGain', 'waterContrast', 'waterDeep', 'waterSky', 'waterEdge', 'waterMeniscus', 'waterGloss', 'waterFlow', 'waterFlowSpeed'].map(k => ['logoMark', k])],
   ['水感（內部光、焦散）', false, ['glow', 'glowPulse', 'glowSpeed', 'glowColor', 'caustic', 'causticScale', 'causticSpeed', 'shimmer', 'shimmerScale'].map(k => ['logoMark', k])],
   ['品牌藍（上方葉片）', false, ['brandBlue', 'brandBlueColor', 'brandBlueDeep', 'brandBlueGlow', 'brandBlueAbsorb'].map(k => ['logoMark', k])],
   ['打光與倒影', false, [['logoLake', 'lightSun'], ['logoLake', 'lightFill'], ['logoLake', 'envIntensity'], ['logoLake', 'reflStrength'], ['logoLake', 'reflLength'],
@@ -47,7 +54,20 @@ const SECTIONS = [
 const EXTRA_ROWS = [
   ['從水面升起 開始（佔旋轉長度）', 'logoSeal', 'riseStart', 0, 1, .01],
   ['從水面升起 結束（佔旋轉長度）', 'logoSeal', 'riseEnd', 0, 1, .01],
-  ['升起 緩動（0 線性／1 先快後慢）', 'logoSeal', 'riseEase', 0, 1, .01]
+  ['升起 緩動（0 線性／1 先快後慢）', 'logoSeal', 'riseEase', 0, 1, .01],
+  ['跟著波浪升起（1 開／0 用上面兩列）', 'logoSeal', 'riseOnWave', 0, 1, 1],
+  ['跟波浪升起 開始（佔波浪長度）', 'logoSeal', 'riseWaveStart', 0, 1, .01],
+  ['跟波浪升起 完成（佔波浪長度）', 'logoSeal', 'riseWaveEnd', 0, 1, .01],
+  ['閃光（1 開／0 關）', 'flashGlow', 'on', 0, 1, 1], ['閃光｜顏色', 'flashGlow', 'color'], ['閃光｜水滴：捲到哪裡觸發', 'flashGlow', 'heroAt', 0, 2, .01], ['閃光｜3D 字：退回這裡以上才會再亮一次（亮起是字落定的那一刻）', 'flashGlow', 'wordAt', 1, 5, .01], ['閃光｜3D 字：字落定後等幾秒', 'flashGlow', 'wordDelay', 0, 2, .01],
+  ['閃光｜亮起（秒）', 'flashGlow', 'attack', .02, 2, .01], ['閃光｜停留（秒）', 'flashGlow', 'hold', 0, 3, .01], ['閃光｜熄滅（秒）', 'flashGlow', 'release', .05, 4, .01], ['閃光｜紋路位置', 'flashGlow', 'line', .02, .4, .005],
+  ['閃光｜水滴紋路尺度', 'flashGlow', 'heroScale', .2, 8, .05], ['閃光｜3D 字紋路尺度', 'flashGlow', 'wordScale', .2, 8, .05], ['閃光｜3D 字紋路尺度（手機）', 'flashGlow', 'wordScalePhone', .2, 8, .05], ['閃光｜水滴亮度', 'flashGlow', 'heroGain', 0, 16, .1], ['閃光｜3D 字亮度', 'flashGlow', 'wordGain', 0, 16, .1],
+  ['閃光｜紋路速度', 'flashGlow', 'speed', 0, 4, .01], ['閃光｜水滴光暈強度', 'flashGlow', 'bloom', 0, 2, .01], ['閃光｜3D 字光暈強度', 'flashGlow', 'wordBloom', 0, 2, .01], ['閃光｜光暈門檻', 'flashGlow', 'bloomCut', .5, 2.5, .01],
+  ['光芒（1 開／0 關）', 'lightShafts', 'on', 0, 1, 1], ['光芒｜手機（1 省電版／0 關）', 'lightShafts', 'phone', 0, 1, 1], ['光芒｜手機強度倍數', 'lightShafts', 'phoneStrength', 0, 2, .01], ['光芒｜手機 3D 字再乘', 'lightShafts', 'wordPhone', 0, 6, .01], ['光芒｜手機 3D 字長度倍數', 'lightShafts', 'wordPhoneLength', .3, 3, .01], ['光芒｜顏色', 'lightShafts', 'color'], ['光芒｜染色（0 發光體原色／1 全用上面的顏色）', 'lightShafts', 'tint', 0, 1, .01],
+  ['光芒｜水滴強度', 'lightShafts', 'hero', 0, 8, .01], ['光芒｜3D 字強度', 'lightShafts', 'word', 0, 8, .01], ['光芒｜水滴長度（螢幕高）', 'lightShafts', 'heroLength', .05, 2, .01], ['光芒｜3D 字長度（螢幕高）', 'lightShafts', 'wordLength', .05, 2, .01],
+  ['光芒｜蓋在水滴上的比例', 'lightShafts', 'heroCore', 0, 1, .01], ['光芒｜蓋在字上的比例', 'lightShafts', 'wordCore', 0, 1, .01], ['光芒｜3D 字中心往下（螢幕高）', 'lightShafts', 'wordDrop', -.3, .5, .005], ['光芒｜往下（標題那邊）的比例', 'lightShafts', 'below', 0, 1, .01], ['光芒｜光源範圍（物件大小的倍數）', 'lightShafts', 'pad', 1, 2, .01],
+  ['光芒｜水滴時畫面壓暗（線間才黑）', 'lightShafts', 'heroDim', 0, .8, .01], ['光芒｜3D 字時畫面壓暗（線間才黑）', 'lightShafts', 'wordDim', 0, .8, .01], ['光芒｜畫面回亮最快速度（秒／全幅）', 'lightShafts', 'dimOut', .1, 5, .01], ['光芒｜亮度壓縮（大＝不隨紋路忽強忽弱）', 'lightShafts', 'shaftKnee', 0, 6, .01], ['光芒｜水滴邊緣柔度（螢幕高）', 'lightShafts', 'heroEdge', .005, .4, .005], ['光芒｜3D 字邊緣柔度（螢幕高）', 'lightShafts', 'wordEdge', .005, .4, .005], ['光芒｜3D 字細線疏密倍數', 'lightShafts', 'wordLines', .3, 3, .01], ['光芒｜門檻', 'lightShafts', 'cut', 0, 6, .01], ['光芒｜門檻柔邊', 'lightShafts', 'knee', .01, 6, .01], ['光芒｜亮度上限', 'lightShafts', 'ceil', 1, 30, .1], ['光芒｜衰減（越小越快淡出）', 'lightShafts', 'fall', .002, 1, .001],
+  ['光芒｜細線深度（0 無線條／1 線間全黑）', 'lightShafts', 'streaks', 0, 1, .01], ['光芒｜細線數量（一圈）', 'lightShafts', 'count', 8, 500, 1], ['光芒｜細線粗細（越大越細）', 'lightShafts', 'sharp', .3, 8, .01], ['光芒｜細線飄移速度', 'lightShafts', 'speed', 0, 2, .01],
+  ['光芒｜檢視（0 畫面／1 光源／2 只看光芒）', 'lightShafts', 'view', 0, 2, 1]
 ];
 
 const once = (source, anchor, replacement, label) => {

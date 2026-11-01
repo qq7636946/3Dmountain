@@ -2792,6 +2792,16 @@ html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready.is-water
 }
 html[data-look="index1-5"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui button:focus-visible { outline-color: currentColor; }
 
+html[data-look="index1-5"][data-grain="unified"] body.is-ready .grain { display: none; }
+html[data-look="index1-5"][data-grain="unified"] .alp-grain {
+  inset: -8%; z-index: 9; opacity: var(--fi-film-grain-opacity, .035); background-size: 160px 160px;
+}
+html[data-look="index1-5"][data-render-mode="text"] .alp-grain { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-look="index1-5"][data-grain="unified"] .alp-grain { animation: none; }
+}
+
 
 html[data-alpine-ui] {
   --alp-gold: #e2c28a;
@@ -3156,20 +3166,6 @@ html[data-alpine-ui] .fi-copy .fi-copy-zh .fi-zh-head + .fi-zh-body { margin-top
 html[data-alpine-ui]:not([data-fonts="classic"]) body.is-ready .finnovation-ui .fi-copy .fi-copy-zh { padding-left: 0; }
 
 @media (min-width: 700px) { html[data-alpine-ui] .fi-copy :where(#chapter-innovation) h2 { white-space: nowrap; } }
-
-
-
-
-
-html[data-look="index1-5"][data-grain="unified"] body.is-ready .grain { display: none; }
-html[data-look="index1-5"][data-grain="unified"] .alp-grain {
-  inset: -8%; z-index: 9; opacity: var(--fi-film-grain-opacity, .035); background-size: 160px 160px;
-}
-html[data-look="index1-5"][data-render-mode="text"] .alp-grain { display: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  html[data-look="index1-5"][data-grain="unified"] .alp-grain { animation: none; }
-}
 
 /* Layout: prototypes/index1-5/world-ocean.css */
 #fiWorld.fiwo-on {
@@ -4005,6 +4001,53 @@ html[data-render-mode="text"] .finnovation-ui .fi-header[data-header-logo2] {
   position: relative;
   display: flex;
   min-height: 124px;
+}
+
+
+html[data-look="index1-5"]:not([data-opening-refinement]) .finnovation-ui .fi-header[data-header-logo3] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 110px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  gap: 28px;
+}
+html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-logo3 {
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 184.5px;
+  min-height: 74px;
+}
+html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 645 / 190;
+  flex: none;
+}
+html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-header-right { margin-left: auto; }
+@media (max-width: 960px) {
+  html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-topnav { display: none; }
+}
+@media (max-width: 680px) {
+  html[data-look="index1-5"]:not([data-opening-refinement]) .finnovation-ui .fi-header[data-header-logo3] {
+    min-height: 84px;
+    padding: 16px 8px;
+    gap: 18px;
+  }
+  html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-logo3 {
+    width: clamp(126px, 36vw, 154.5px);
+    min-height: 52px;
+  }
+  html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] :is(.fi-header-right,.fi-header-actions) { position: static; }
+  
+  html[data-look="index1-5"]:not([data-opening-refinement]) #fiWorld .fiw-outro { margin-bottom: 24px; }
+  html[data-look="index1-5"]:not([data-opening-refinement]) #fiWorld .fiw-outro-copy { margin: 20px 0 24px; }
+  html[data-look="index1-5"]:not([data-opening-refinement]) #fiWorld .fiw-footer-line { margin: 22px 0 18px; }
 }
 
 /* Layout: prototypes/index1-5/world-principles.css */

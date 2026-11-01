@@ -27,25 +27,26 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=restore-1-5-blue-8547de57661f'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=restore-1-5-blue-8547de57661f';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { globeScrollDegrees } from './world-globe-motion.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=restore-1-5-blue-8547de57661f';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mvxv94ut';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mvxv94ut'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mvxv94ut';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mvxv94ut';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvxv94ut';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=experience-1f521c534526';
-import { createWorldOcean } from './world-ocean.js?v=experience-823e5588c5bd';
-import { createWorldLogo } from './world-logo.js?v=experience-9c2748e1589d';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mvxv94ut';
+import { createWorldOcean } from './world-ocean.js?v=i15-mvxv94ut';
+import { createWorldLogo } from './world-logo.js?v=i15-mvxv94ut';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-tone-7da2c5eaf233';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-tone-7da2c5eaf233';
-import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=restore-1-5-blue-8547de57661f';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mvxv94ut';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvxv94ut';
+import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
 const SCROLL_TRIGGER_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/ScrollTrigger/+esm';
 const SPLIT_TEXT_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/SplitText/+esm';
 const asset = name => new URL('../../../images/world/' + name, import.meta.url).href;
 const film = name => new URL('../../../media/' + name, import.meta.url).href;
-const STYLE_URL = new URL('../../../css/world.css?v=restore-1-5-blue-8547de57661f', import.meta.url).href;
+const STYLE_URL = new URL('../../../css/world.css?v=9f8137b289', import.meta.url).href;
 
 /* The markets on the planet: label, latitude, longitude, tag. TAIPEI is home. */
 const MARKETS = [
@@ -440,7 +441,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- the last part's video ----------
   // Fetched when the visitor gets within two screens of it, playing only while it is on screen; with reduced
   // motion the still stays. Small screens get the 480p loop.
-  let video = null, videoTexture = null, videoMix = 0, videoWanted = false;
+  let video = null, videoTexture = null, videoMix = 0, videoWanted = false, lakeCut = 0;
   function frameVideo(s, speed) {
     // The ocean-logo film and its still fallback are disabled for index1-5.
     if (ocean && +(oceanConfig()?.heroEnabled ?? 1) < .5) {
@@ -451,7 +452,9 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
       return;
     }
     const near = open && !reducedMotion && y > at.block - H * 2.2;
-    const showing = open && s.photo > .001 && s.footerTop > 1;
+    /* cover (perf): principles or the LOGO lake fully replace the ocean; the film is paused and its mix held meanwhile */
+    const coverHeld = !!((s.principles && s.principles.enter >= 1) || lakeCut >= 1);
+    const showing = open && s.photo > .001 && s.footerTop > 1 && !coverHeld;
     if (near && !video) {
       video = document.createElement('video');
       Object.assign(video, { muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
@@ -464,6 +467,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
         background.material.uniforms.uVideo.value = videoTexture;
         background.material.uniforms.uVideoSize.value.set(video.videoWidth, video.videoHeight);
         ocean?.setVideo(videoTexture);
+        uploadSoon(renderer, videoTexture, () => !disposed && !!videoTexture).catch(() => { });   /* firstpass: its first frame in a free moment */
       }, { once: true });
     }
     if (video) {
@@ -472,8 +476,10 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
       else if (!showing && videoWanted) { videoWanted = false; video.pause(); }
     }
     // the moving water fades in over the still once its frames arrive
-    const target = videoTexture && !video.paused && video.readyState >= 2 ? 1 : 0;
-    videoMix += (target - videoMix) * .08; if (Math.abs(target - videoMix) < .002) videoMix = target;
+    if (!coverHeld) {
+      const target = videoTexture && !video.paused && video.readyState >= 2 ? 1 : 0;
+      videoMix += (target - videoMix) * .08; if (Math.abs(target - videoMix) < .002) videoMix = target;
+    }
     if (background) background.material.uniforms.uVideoMix.value = videoMix;
     ocean?.setVideoMix(videoMix);
   }
@@ -686,6 +692,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     const drawBase = () => { ocean?.render(s, time); renderer.render(scene, camera); };
     const drawBeforeSeal = () => { if (!principles?.render(s, time, { renderer, draw: drawBase })) drawBase(); };
     const logoDrawn = logo ? logo.render(s, time, { renderer, world: () => {}, draw: drawBeforeSeal }) : false;
+    lakeCut = s.l?.pc ?? 0;
     if (!logoDrawn) drawBeforeSeal();
     diveFx.render(s, time, renderer);
     // Adaptive resolution: if frames come slower than ~40/s, draw fewer pixels; climb back when there is room.
@@ -730,7 +737,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     y = yt = clamp(viewport.scrollTop, 0, maxY); vy = 0; written = y; run();
   }, { passive: true });
   root.addEventListener('focusin', event => {
-    if (!open || !viewport.contains(event.target) || event.target.closest?.('.fiwo-pin')) return;
+    if (!open || event.target === viewport || !viewport.contains(event.target) || event.target.closest?.('.fiwo-pin')) return;
     const r = event.target.getBoundingClientRect();
     if (r.top < 80 || r.bottom > H - 60) { yt = clamp(y + r.top - H * .45, 0, maxY); run(); }
   });

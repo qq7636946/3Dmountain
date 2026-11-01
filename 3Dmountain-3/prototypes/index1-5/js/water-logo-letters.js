@@ -28,7 +28,7 @@
  * distances (Felzenszwalb's transform over the anti-aliased coverage) — so a
  * drop can march the extruded letter inside its own optics.
  */
-import { createLetterWaterFx, LETTER_FX_DEFAULTS } from './letters-water-fx.js?v=restore-1-5-blue-8547de57661f';
+import { createLetterWaterFx, LETTER_FX_DEFAULTS } from './letters-water-fx.js?v=i15-mvxv94ut';
 export const LOGO_LETTER_DEFAULTS = {
   ...LETTER_FX_DEFAULTS,
   /* The ice. TINT is the frosted face, INK what the clear walls deepen toward.
@@ -584,11 +584,11 @@ export function createLogoLetters(THREE, { glassMaterial, blueMaterial, config, 
     const riseDone = config.riseStart + config.riseStagger + config.riseLength;
     if (config.freeHelix) fuse = smooth(progress, riseDone + .015, riseDone + .145);
     fx.begin();
-    state.assembled = false; state.glass = false; state.pulse = 0;
+    state.assembled = false; state.glass = false; state.pulse = 0; state.landed = false;
     if (!on || !ready) { freeFlightTime = null; for (const record of freeRecords) if (record) record.flightClock = 0; group.visible = false; ice.uIceGlint.value.y = 0; return state; }
     group.visible = true;
     inverse.copy(spin).invert();
-    let home = 0;
+    let home = 0, landed = 0;   /* FLASH_GLOW */
     const last = Math.max(1, letters.length - 1);
     /* The breath the whole word takes as it sets. */
     const breath = reducedMotion ? 1 : 1 + config.fuseSwell * Math.sin(Math.PI * smooth(fuse, 0, 1));
@@ -673,6 +673,7 @@ export function createLogoLetters(THREE, { glassMaterial, blueMaterial, config, 
       state.pulse = Math.max(state.pulse, config.lockPulse * flash * smooth(snap, .6, 1));
       state.glass = true;
       if (snap >= 1 && set >= 1) home++;
+      if (snap >= 1) landed++;
     }
     state.pulse += config.fusePulse * Math.sin(Math.PI * smooth(fuse, 0, 1));
     /* It takes most of the setting to cross: on at the first letter, off past the last. */
@@ -682,6 +683,7 @@ export function createLogoLetters(THREE, { glassMaterial, blueMaterial, config, 
        down. (Asked to keep some frost — FUSED above 0 — they stay: the one
        wordmark has none to show.) */
     state.assembled = home === letters.length && config.fused <= .001;
+    state.landed = letters.length > 0 && landed === letters.length;
     if (state.assembled && !config.liquid) group.visible = false;
     return state;
   }

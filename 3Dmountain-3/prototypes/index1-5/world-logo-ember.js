@@ -1,0 +1,214 @@
+/* world-logo-ember.js — click the closing LOGO and it lights up (2026-11-01). After the idea of threejs-burning-skull by Anton Bobrov (MIT), written for this WebGL page: that demo is WebGPU with a
+   node material. A click anywhere on the screen toggles it: a moving noise eats small holes in the glass with burning edges, the mark glows, it starts, shakes and comes towards the viewer;
+   a second click, or scrolling away, puts it out. The eating and edges are in the glass's own shader (uEmber in world-logo-mark.js), so the lake's mirror shows them too. The bloom is a
+   quarter-resolution draw of the burning parts, blurred and added over the lake; nothing of this runs before the first click (but for one draw at no strength, to compile it, see warm), or after the mark has gone out.
+   The same draw feeds the shafts (light-shafts.js, 2026-11-01: 「這三處發光時候都加上類似這種光芒」): they fan out of the ring and the leaf, centred on the mark as this camera sees it in this frame, whichever
+   way it is turned, and the water mirrors them. Phones: the module's cheap version, emberShaftPhone = 0 turns them off there; reduced motion: none.
+   Dials: ember* in MARK_DEFAULTS. */
+import { createLightShafts } from './light-shafts.js';
+
+export const EMBER_GLSL = /* glsl */ `
+uniform vec4 uEmberSoft;   // line width, rounded creases, fine layers, holes (「紋路再柔和一點」: .1, 0, 1, 1 is the first, crisp version)
+float emberTri(float x) { float t = abs(fract(x) - .5) * 2.; return mix(t, t * t * (3. - 2. * t), uEmberSoft.y) * .5; }
+vec3 emberTri3(vec3 p) { return vec3(emberTri(p.z + emberTri(p.y)), emberTri(p.z + emberTri(p.x)), emberTri(p.y + emberTri(p.x))); }
+float emberNoise(vec3 p, float t) {
+  float z = 1.4, rz = 0.; vec3 bp = p;
+  for (int i = 0; i < 4; i++) {
+    vec3 dg = emberTri3(bp * 2.);
+    p += dg + t; bp *= 1.8; z *= 1.5; p *= 1.2;
+    float layer = emberTri(p.z + emberTri(p.x + emberTri(p.y)));
+    rz += (i < 2 ? layer : mix(.25, layer, uEmberSoft.z)) / z;   // the fine layers fade to their mean, so the line stays where it was
+    bp += .14;
+  }
+  return rz;
+}
+float emberLine(float n, float burn) { return (1. - smoothstep(0., uEmberSoft.x, abs(n - burn))) * min(1., .1 / uEmberSoft.x); }   // a wider line spreads the same light, it does not add any`;
+
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const num = (v, d) => { const n = +v; return Number.isFinite(n) ? n : d; };
+const inOutCubic = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const inOutSine = t => -(Math.cos(Math.PI * t) - 1) / 2;
+const rand = (a, b) => a + Math.random() * (b - a);
+
+const FULL_VERTEX = /* glsl */ `void main() { gl_Position = vec4(position.xy, 0., 1.); }`;
+
+export function createLogoEmber({ THREE, mark, host, holder, renderer, small = false, reducedMotion = false, look = () => ({}) }) {
+  const U = mark.uniforms, color = new THREE.Color(), display = new THREE.Color();
+  let on = false, k = 0, flame = 0, last = -1, ready = false;
+  /* the start: a run of quick random turns that die away, as in the demo; two when going out */
+  const shake = { steps: 0, step: 0, from: [0, 0], to: [0, 0], t: 1, dur: 1 };
+
+  /* ---- the bloom, made only once it is needed ---- */
+  let rtA, rtB, rtC, glowScene, glowMesh, glowMat, quadScene, quadCam, blurMat, addMat, quad, shafts = null;
+  const shaftLook = {}, shaftAt = { center: new THREE.Vector2(), at: new THREE.Vector2(), win: new THREE.Vector2(), min: new THREE.Vector2(), max: new THREE.Vector2(), p: new THREE.Vector3(), c: new THREE.Vector3(), hold: { from: .12, to: .5, keep: .1, knee: 2 }, mirror: { line: 0, gain: 0, soft: .01, reach: .3, gap: 1, sideways: 0, updown: 0, over: 0, overReach: .1 } };
+  /* what the shafts share with the journey's two moments, read from the mark's own dials */
+  function shaftConfig() {
+    const L = look(), S = shaftLook;
+    S.tint = num(L.emberShaftTint, .6); S.fall = num(L.emberShaftFall, .02); S.streaks = num(L.emberShaftStreaks, .96); S.count = num(L.emberShaftCount, 240); S.sharp = num(L.emberShaftSharp, 3.2); S.speed = num(L.emberShaftSpeed, .1); S.view = num(L.emberShaftView, 0);
+    return S;
+  }
+  const shaftStrength = L => (reducedMotion || (small && num(L.emberShaftPhone, 1) < .5) ? 0 : Math.max(0, num(L.emberShafts, 8)) * (small ? num(L.emberShaftPhoneStrength, .7) : 1));
+  const size = new THREE.Vector2();
+  function build() {
+    ready = true;
+    const opts = { type: THREE.HalfFloatType, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false };
+    rtA = new THREE.WebGLRenderTarget(4, 4, { ...opts, depthBuffer: true });
+    rtB = new THREE.WebGLRenderTarget(4, 4, { ...opts, depthBuffer: false });
+    rtC = new THREE.WebGLRenderTarget(4, 4, { ...opts, depthBuffer: false });
+    glowMat = new THREE.ShaderMaterial({
+      uniforms: { uEmber: U.uEmber, uEmberSoft: U.uEmberSoft, uColor: { value: new THREE.Color() }, uBody: { value: 0 } },
+      vertexShader: /* glsl */ `varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+      fragmentShader: /* glsl */ `precision highp float; ${EMBER_GLSL}
+        uniform vec4 uEmber; uniform vec3 uColor; uniform float uBody; varying vec3 vP;
+        void main() {
+          float n = emberNoise(vP * uEmber.y, uEmber.z);
+          if (n < uEmber.x * uEmberSoft.w) discard;
+          float edge = emberLine(n, uEmber.x);
+          gl_FragColor = vec4(uColor * (edge * 1.6 + uBody), 1.);
+        }`,
+      side: THREE.DoubleSide, toneMapped: false
+    });
+    glowMesh = new THREE.Mesh(host.geometry, glowMat);
+    glowMesh.frustumCulled = false; glowMesh.matrixAutoUpdate = false; glowMesh.matrixWorldAutoUpdate = false;
+    glowScene = new THREE.Scene(); glowScene.add(glowMesh);
+    shafts = createLightShafts({ renderer, getConfig: shaftConfig, small });
+    const tri = new THREE.BufferGeometry(); tri.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+    quad = new THREE.Mesh(tri); quad.frustumCulled = false;
+    quadScene = new THREE.Scene(); quadScene.add(quad); quadCam = new THREE.Camera();
+    blurMat = new THREE.ShaderMaterial({
+      uniforms: { tMap: { value: null }, uStep: { value: new THREE.Vector2() }, uRes: { value: new THREE.Vector2() } },
+      vertexShader: FULL_VERTEX, depthTest: false, depthWrite: false, blending: THREE.NoBlending, toneMapped: false,
+      fragmentShader: /* glsl */ `precision highp float; uniform sampler2D tMap; uniform vec2 uStep, uRes;
+        void main() {
+          vec2 uv = gl_FragCoord.xy / uRes; vec4 c = texture2D(tMap, uv) * .227;   // alpha too: the mark's coverage, which the shafts are held back over
+          c += (texture2D(tMap, uv + uStep * 1.385) + texture2D(tMap, uv - uStep * 1.385)) * .316;
+          c += (texture2D(tMap, uv + uStep * 3.231) + texture2D(tMap, uv - uStep * 3.231)) * .07;
+          gl_FragColor = c;
+        }`
+    });
+    addMat = new THREE.ShaderMaterial({
+      uniforms: { tMap: { value: null }, uRes: { value: new THREE.Vector2() }, uGain: { value: 1 } },
+      vertexShader: FULL_VERTEX, depthTest: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending, toneMapped: false,
+      fragmentShader: /* glsl */ `precision highp float; uniform sampler2D tMap; uniform vec2 uRes; uniform float uGain;
+        void main() { gl_FragColor = vec4(texture2D(tMap, gl_FragCoord.xy / uRes).rgb * uGain, 1.); }`
+    });
+  }
+
+  function toggle(want = !on) {
+    if (want === on) return;
+    const L = look();
+    if (want && num(L.emberOn, 1) < .5) return;
+    on = want;
+    if (!ready) build();
+    shake.steps = reducedMotion ? 0 : on ? 5 : 2; shake.step = 0; shake.t = 1; shake.dur = 0;
+  }
+
+  function update({ time = 0, zone = true } = {}) {
+    if (on && !zone) toggle(false);
+    const dt = last < 0 ? 1 / 60 : clamp(time - last, 0, .1); last = time;
+    if (!on && k <= 0) { if (U.uEmber.value.x !== 0 || U.uEmber.value.w !== 0) U.uEmber.value.set(0, 0, U.uEmber.value.z, 0); if (holder.position.z !== 0 || holder.rotation.x !== 0 || holder.rotation.y !== 0) { holder.position.z = 0; holder.rotation.set(0, 0, 0); } return; }
+    const L = look();
+    k = clamp(k + (on ? dt : -dt) / .5);
+    const e = inOutCubic(k), speed = on ? num(L.emberSpeed, 1) : num(L.emberIdleSpeed, .21);
+    flame += dt * speed;
+    U.uEmber.value.set(e * num(L.emberBurn, .105), num(L.emberScale, 2.4), flame * .2, e * num(L.emberGain, 2.6));
+    U.uEmberSoft.value.set(Math.max(.005, num(L.emberSoft, .18)), clamp(num(L.emberSmooth, .8)), clamp(num(L.emberDetail, .45)), clamp(num(L.emberHole, 0)));
+    U.uEmberBody.value = e * num(L.emberBody, .1);
+    U.uEmberColor.value.set(typeof L.emberColor === 'string' ? L.emberColor : '#6fbcff');
+    /* the start */
+    const amp = num(L.emberShake, 1);
+    if (shake.t >= 1 && shake.step <= shake.steps && shake.steps > 0) {
+      const n = shake.steps, i = shake.step++, env = Math.pow(1 - i / n, 2.2), twitch = Math.random() < .18 ? 1.8 : 1;
+      shake.from = [holder.rotation.x, holder.rotation.y];
+      shake.to = i >= n ? [0, 0] : [holder.rotation.x * .35 + rand(-.07, .07) * env * twitch * amp, holder.rotation.y * .35 + rand(-.5, .5) * env * twitch * amp];
+      shake.dur = i >= n ? .2 : rand(.055, .135); shake.t = 0;
+    }
+    if (shake.t < 1) {
+      shake.t = clamp(shake.t + dt / Math.max(.001, shake.dur));
+      const s = inOutSine(shake.t);
+      holder.rotation.x = shake.from[0] + (shake.to[0] - shake.from[0]) * s;
+      holder.rotation.y = shake.from[1] + (shake.to[1] - shake.from[1]) * s;
+    }
+    if (!reducedMotion) holder.position.z = e * num(L.emberLift, .35);
+  }
+
+  /* the shafts of this frame: the mark's box as this camera sees it gives the fan's centre and the window over which they are held back; the water's line is straight below that centre, at the mark's depth */
+  function drawShafts(L, source, w, h, amount, camera, target) {
+    const g = glowMesh.geometry, A = shaftAt;
+    if (!g.boundingBox) g.computeBoundingBox();
+    const b = g.boundingBox; A.min.set(9, 9); A.max.set(-9, -9);
+    for (let i = 0; i < 8; i++) {
+      A.p.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).applyMatrix4(glowMesh.matrixWorld).project(camera);
+      A.min.min(A.p); A.max.max(A.p);
+    }
+    const aspect = size.x / Math.max(1, size.y), unit = clamp(aspect / 1.1, .45, 1);   // a tall narrow window: shorter, as in the journey
+    A.c.set(b.min.x + b.max.x, b.min.y + b.max.y, b.min.z + b.max.z).multiplyScalar(.5).applyMatrix4(glowMesh.matrixWorld);
+    A.p.copy(A.c).project(camera);
+    A.at.set(A.p.x * .5 + .5, A.p.y * .5 + .5); A.center.copy(A.at); A.center.y -= num(L.emberShaftDrop, 0) * unit;
+    A.win.set((A.max.x - A.min.x) * .25, (A.max.y - A.min.y) * .25);
+    const M = A.mirror, water = num(L.emberShaftWater, .4);
+    A.hold.keep = num(L.emberShaftCore, .1); A.hold.knee = num(L.emberShaftKnee, 2); A.hold.from = num(L.emberShaftEdgeFrom, .12); A.hold.to = Math.max(A.hold.from + .001, num(L.emberShaftEdgeTo, .5));
+    A.p.set(A.c.x, 0, A.c.z).project(camera);
+    /* where the water's line lies: 0 the horizon, where sky and sea meet in the picture; 1 straight under the mark, at its depth, where a plane of light standing with the mark would meet the water, physically right but in the middle of the sea */
+    const contact = A.p.y * .5 + .5;
+    A.p.set(camera.position.x, 0, camera.position.z - 2500).project(camera);
+    M.line = A.p.y * .5 + .5; M.line += (contact - M.line) * num(L.emberShaftWaterLine, 0);
+    M.gain = water; M.soft = num(L.emberShaftWaterSoft, .012); M.reach = num(L.emberShaftWaterReach, .3); M.gap = num(L.emberShaftWaterGap, 1); M.sideways = num(L.emberShaftRipple, .012); M.updown = num(L.emberShaftRippleUp, .008); M.over = num(L.emberShaftOverWater, .5); M.overReach = num(L.emberShaftOverReach, .14);
+    /* edge-on all the burning parts lie along a few rays and the burst stands far above the hold's: it is held down as the mark turns away */
+    const facing = (A.max.x - A.min.x) * aspect / Math.max(.001, A.max.y - A.min.y) / Math.max(.05, (b.max.x - b.min.x) / Math.max(.001, b.max.y - b.min.y)), turned = 1 - clamp((facing - .12) / .58);
+    shafts.addOver({ source, width: w, height: h, center: A.center, at: A.at, win: A.win, aspect, gain: amount * (1 - num(L.emberShaftTurnDim, .55) * turned * turned * (3 - 2 * turned)), length: num(L.emberShaftLength, .6) * unit, core: 1, color: L.emberColor, hold: A.hold, mirror: M, settle: num(L.emberShaftSettle, .14), target });
+  }
+
+  /* one draw of all of it, at no strength, in a frame the world is about to cover and only once: the first draw of a program makes the browser wait for it, and the worst moment for that would be the click itself */
+  function warm(camera) {
+    if (num(look().emberOn, 1) < .5) return;
+    if (!ready) build();
+    const keep = k; k = .001; try { drawGlow(camera); } finally { k = keep; }
+  }
+
+  /* after the lake is on the canvas */
+  function drawGlow(camera) {
+    if (k <= 0 || !ready) return;
+    const L = look(), gain = num(L.emberBloom, 1), ray = shaftStrength(L);
+    if (gain <= 0 && ray <= 0) return;
+    renderer.getDrawingBufferSize(size);
+    const div = small ? 6 : 4, w = Math.max(2, Math.round(size.x / div)), h = Math.max(2, Math.round(size.y / div));
+    if (rtA.width !== w || rtA.height !== h) for (const r of [rtA, rtB, rtC]) r.setSize(w, h);
+    const prev = renderer.getRenderTarget(), auto = renderer.autoClear, clear = renderer.getClearColor(display), alpha = renderer.getClearAlpha();
+    renderer.autoClear = false; renderer.setClearColor(0x000000, 0);
+    glowMesh.geometry = host.geometry;
+    glowMesh.matrixWorld.copy(host.matrixWorld);
+    glowMat.uniforms.uColor.value.set(typeof L.emberColor === 'string' ? L.emberColor : '#6fbcff').convertLinearToSRGB();
+    glowMat.uniforms.uBody.value = U.uEmberBody.value * 2;
+    renderer.setRenderTarget(rtA); renderer.clear(true, true, false); renderer.render(glowScene, camera);
+    const reach = num(L.emberBloomRadius, 1), B = blurMat.uniforms, e = inOutCubic(k);
+    B.uRes.value.set(w, h);
+    const blur = (r, from) => {
+      quad.material = blurMat;
+      B.tMap.value = from.texture; B.uStep.value.set(r * reach / w, 0); renderer.setRenderTarget(rtB); renderer.render(quadScene, quadCam);
+      B.tMap.value = rtB.texture; B.uStep.value.set(0, r * reach / h); renderer.setRenderTarget(rtC); renderer.render(quadScene, quadCam);
+    };
+    blur(1, rtA);   // a tight glow. Also what the shafts come from: thin burning edges alone, at this small size, would make the shafts shimmer as they crawl across its pixels
+    if (ray > 0) drawShafts(L, rtC.texture, w, h, ray * e, camera, prev);
+    if (gain > 0 && !(ray > 0 && Math.round(num(L.emberShaftView, 0)) > 0)) {
+      blur(2.2, rtC);   // then a wide one
+      renderer.setRenderTarget(prev); renderer.setClearColor(clear, alpha);
+      quad.material = addMat;
+      addMat.uniforms.tMap.value = rtC.texture; addMat.uniforms.uRes.value.copy(size); addMat.uniforms.uGain.value = gain * e * 1.5;
+      renderer.render(quadScene, quadCam);
+    }
+    renderer.setRenderTarget(prev); renderer.setClearColor(clear, alpha);
+    renderer.autoClear = auto;
+  }
+
+  return {
+    toggle, update, drawGlow, warm,
+    get lit() { return on; },
+    get state() { return { on, k, ready, shafts: !!shafts }; },
+    dispose() {
+      if (!ready) return;
+      for (const r of [rtA, rtB, rtC]) r.dispose();
+      glowMat.dispose(); blurMat.dispose(); addMat.dispose(); quad.geometry.dispose(); shafts?.dispose();
+    }
+  };
+}

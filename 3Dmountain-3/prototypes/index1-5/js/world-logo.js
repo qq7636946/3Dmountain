@@ -26,8 +26,8 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "cutClock": 1,
   "cutAt": 0.3,
   "cutTime": 0.9,
-  "glassSize": 0.34,
-  "glassSplit": 0.6,
+  "glassSize": 0.22,
+  "glassSplit": 0.3,
   "glassShift": 0.45,
   "glassZoom": 0.12,
   "glassBlur": 0.28,
@@ -39,7 +39,7 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "glassGlitch": 0,
   "glassGrain": 0,
   "glassSpread": 0.55,
-  "glassSeam": 0.6,
+  "glassSeam": 0.9,
   "glassPush": 0.1,
   "glassTint": "#6d91b4",
   "tiles": 8,
@@ -66,7 +66,7 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "refract": 1.4,
   "refractNew": 0.8,
   "spinStart": 0.44,
-  "spin": 2.6,
+  "spin": 2.1,
   "spinEnd": 0.92,
   "spinEase": 0.94,
   "spinBlur": 10,
@@ -74,13 +74,16 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "riseStart": 0.28,
   "riseEnd": 0.48,
   "riseEase": 0.9,
+  "riseOnWave": 1,
+  "riseWaveStart": 0.26,
+  "riseWaveEnd": 0.56,
   "hold": 1.65,
   "followDaylight": 0,
   "prepare": 0.1,
   "textIn": 0.84,
   "textY": 0.735,
   "textSize": 1,
-  "textShow": 1,
+  "textShow": 0,
   "markScale": 0.89,
   "markY": 0,
   "timeScale": 1
@@ -331,8 +334,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
 
   const cfg = () => config() || {};
   const dials = () => cfg().logoSeal || DEFAULTS;
-  /* CONTINUOUS_LOGO_WAVE: this edition has no screen-space glass tiles, including saved workshop presets. */
-  const num = (key, lo = -Infinity, hi = Infinity) => { const v = key === 'transition' ? 0 : +dials()[key]; return clamp(Number.isFinite(v) ? v : DEFAULTS[key], lo, hi); };
+  const num = (key, lo = -Infinity, hi = Infinity) => { const v = +dials()[key]; return clamp(Number.isFinite(v) ? v : DEFAULTS[key], lo, hi); };
   const colours = new Map();
   const colour = hex => { let c = colours.get(hex); if (!c) { c = new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace); colours.set(hex, c); } return c; };
 
@@ -374,7 +376,9 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     const e = spinCurve(tSpin);
     const tText = reducedMotion ? qWave : tSpin;
     // the mark rises out of the water while it turns: from RISESTART to RISEEND of the spin (a share of it), slowing as it arrives; always up with reduced motion
-    const tr = clamp((tSpin - num('riseStart', 0, 1)) / Math.max(.001, num('riseEnd', 0, 1) - num('riseStart', 0, 1)));
+    // 2026-11-01: riseOnWave rises it with the wave, so the lake is never empty behind the front; 0: over the spin (riseStart, riseEnd)
+    const onWave = num('riseOnWave', 0, 1) > .5, tRise = onWave ? qWave : tSpin, r0 = num(onWave ? 'riseWaveStart' : 'riseStart', 0, 1), r1 = num(onWave ? 'riseWaveEnd' : 'riseEnd', 0, 1);
+    const tr = clamp((tRise - r0) / Math.max(.001, r1 - r0));
     const rise = reducedMotion ? 1 : tr >= 1 ? 1 : mix(tr, 1 - Math.pow(1 - tr, 3), num('riseEase', 0, 1));
     const l = {
       y, b: a.logo, w0: a.w0, qWave, qSpin: tSpin, rise, yaw: reducedMotion ? 0 : (e >= 1 ? TAU : TAU * e) + num('restYaw', -45, 45) * Math.PI / 180 * e,
@@ -398,6 +402,17 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
      CUTTIME seconds, and finishes even if the scroll rests; back over that line, it plays backwards. cutClock 0, the water wave (transition
      0) and reduced motion: it follows the scroll. */
   const cut = { p: 0, t: -1 };
+  /* where the visitor's pointer is, for the water beads (world-logo-beads.js) */
+  const pointer = { x: 0, y: 0, at: -1 };
+  const onPointer = e => { pointer.x = e.clientX / innerWidth * 2 - 1; pointer.y = 1 - e.clientY / innerHeight * 2; pointer.at = performance.now(); };
+  addEventListener('pointermove', onPointer, { passive: true });
+  /* a click on the closing screen lights the mark (world-logo-ember.js), unless it landed on something that does its own thing */
+  const onClick = e => {
+    if (!R?.ember || !last || last.qWave < 1 || last.y >= abs().end) return;
+    if (e.target?.closest?.('a,button,input,select,textarea,label,summary,[role="button"],.fi-header,.fi-menu,.logo-panel,.lgp')) return;
+    R.ember.toggle();
+  };
+  addEventListener('click', onClick);
   function cutProgress(l) {
     const now = performance.now() / 1000, dt = cut.t < 0 ? 0 : clamp(now - cut.t, 0, .1); cut.t = now;
     if (reducedMotion || num('cutClock', 0, 1) < .5 || Math.round(num('transition', 0, 2)) === 0) return cut.p = l.qWave;
@@ -467,9 +482,11 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     });
   }
   async function build(R0, renderer) {
-    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-tone-7da2c5eaf233'), import('./world-logo-scene.js?v=experience-99fb6da84ba8'), import('three/addons/loaders/SVGLoader.js')]);
+    /* index1-5 firstpass: the GLB starts to download now; its parse and preparation run in idle slices later */
+    import('./world-logo-mark.js?v=i15-mvxv94ut').then(m => m.prefetchLogoModel && m.prefetchLogoModel()).catch(() => { });
+    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mvxv94ut'), import('./world-logo-scene.js?v=i15-mvxv94ut'), import('three/addons/loaders/SVGLoader.js')]);
     if (dead(R0)) return;
-    R0.daylight = await import('./scene-daylight.js?v=i15-tone-7da2c5eaf233').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
+    R0.daylight = await import('./scene-daylight.js?v=i15-mvxv94ut').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
     renderer.getDrawingBufferSize(_size);
     R0.lake = await step(R0, 'lake', () => sceneMod.createLakeScene({ THREE, renderer, width: Math.round(_size.x), height: Math.round(_size.y), palette: paletteHex(), assetBase, small, mobilePerformance, reducedMotion }), true);
     if (dead(R0)) return;
@@ -492,6 +509,10 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
       // planes in update(), after the mark has been linked into its scene.
       R0.lake.setMarkAspect?.(R0.mark.aspect);
       R0.mark.update({yaw:0,time:0,q:1,rise:1});
+      R0.ember = markMod.createLogoEmber?.({ THREE, mark: R0.mark, host: R0.mark.group.getObjectByName('logo-mark mesh'), holder: R0.holder, renderer, small: small || mobilePerformance, reducedMotion, look: () => cfg().logoMark || {} });
+      /* the particle mark costs nothing until its dial is on (logoMark.beads) */
+      R0.makeBeads = () => { const host = R0.mark.group.getObjectByName('logo-mark mesh'); if (markMod.createLogoBeads && host) R0.beads = markMod.createLogoBeads({ THREE, host, renderer, small: small || mobilePerformance, reducedMotion, look: () => cfg().logoMark || {} }); };
+      if (+(cfg().logoMark || {}).beads > .5) { R0.makeBeads(); R0.beads?.update({ time: 0, yaw: 0, gather: 1 }); }
       R0.lake.update({q:1,time:0,rise:1});
       Object.assign(R0.looks.mark,cfg().logoMark || {});
       Object.assign(R0.looks.lake,cfg().logoLake || {});
@@ -614,7 +635,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     R0.dead = true;
     if (R0.compiling) { if (!R0.laterDispose) { R0.laterDispose = true; R0.compiling.then(() => { R0.laterDispose = false; disposeResources(R0); }); } return; }
     // each piece is let go once (a build that was still running makes its pieces after this has run: they are freed on its next look)
-    for (const [name, fn] of [['mark', () => R0.mark?.dispose?.()], ['lake', () => R0.lake?.dispose?.()], ['texOld', () => R0.texOld?.dispose()], ['texNew', () => R0.texNew?.dispose()],
+    for (const [name, fn] of [['ember', () => R0.ember?.dispose()], ['beads', () => R0.beads?.dispose()], ['mark', () => R0.mark?.dispose?.()], ['lake', () => R0.lake?.dispose?.()], ['texOld', () => R0.texOld?.dispose()], ['texNew', () => R0.texNew?.dispose()],
       ['noise', () => R0.noise?.dispose()], ['comp', () => { R0.comp?.mat.dispose(); R0.comp?.mesh.geometry.dispose(); }]]) {
       try { fn(); } catch (e) { console.warn('Logo seal: dispose ' + name + ' failed', e); }
       R0[name] = null;
@@ -667,7 +688,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     try {
       frame(R0, { ...l, qWave: 0, yaw: 0, q: 1, rise: 1 }, time, renderer);
       if (stage === 0) { R0.holder.visible = false; drawLake(R0, renderer); R0.holder.visible = true; }
-      else if (stage === 1) drawLake(R0, renderer);
+      else if (stage === 1) { drawLake(R0, renderer); R0.ember?.warm?.(R0.lake.camera); }
       else wave(R0, { ...l, qWave: 0 }, time, ctx, renderer);
       R0.timings['warm' + stage] = Math.round(R0.warmCost = performance.now() - t0); R0.log.push(['warm' + stage, Math.round(t0), Math.round(R0.warmCost)]);
       (R0.newPrograms ||= {})['warm' + stage] = renderer.info.programs.filter(p => !before.has(p)).map(p => p.name + ' ' + String(p.cacheKey));
@@ -688,13 +709,17 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     R0.holder.scale.setScalar(num('markScale', .2, 3)); R0.holder.position.y = num('markY', -2, 2);
     // order: the mark's pose first (the lake's mirror pass draws it), then the lake
     R0.mark.update({ yaw: l.yaw, time: t, q: l.q, rise: l.rise });
+    R0.ember?.update({ time, zone: l.qWave >= 1 && l.y < abs().end });
+    { const M = cfg().logoMark || {}, g0 = Number.isFinite(+M.beadGatherFrom) ? +M.beadGatherFrom : .2, g1 = Number.isFinite(+M.beadGatherTo) ? +M.beadGatherTo : .62;
+      if (+M.beads > .5 && !R0.beads) R0.makeBeads?.();
+      R0.beads?.update({ time, yaw: l.yaw, gather: reducedMotion ? 1 : clamp((l.qWave - g0) / Math.max(.001, g1 - g0)), pointer, camera: R0.lake.camera }); }
     // The lake reads the site's one sun (scene-daylight.js) in update(): by here that clock is in the blue hour, but the closing picture is the
     // dusk of ref-6. Unless it is asked to follow, the sun is switched off for the length of the call (the lake then uses its own look) and put back.
     const D = R0.daylight?.(), keep = D?.enabled;
     if (D && keep && num('followDaylight', 0, 1) < .5) D.enabled = false;
     try { R0.lake.update({ q: l.q, time: t, rise: l.rise }); } finally { if (D) D.enabled = keep; }
   }
-  function drawLake(R0, renderer) { renderer.setRenderTarget(null); renderer.render(R0.lake.scene, R0.lake.camera); }
+  function drawLake(R0, renderer) { renderer.setRenderTarget(null); renderer.render(R0.lake.scene, R0.lake.camera); R0.ember?.drawGlow(R0.lake.camera); }
   function draw(R0, l, time, ctx, renderer) {
     frame(R0, l, time, renderer);
     if ((Math.round(num('transition', 0, 2)) > 0 ? l.pc ?? l.qWave : l.qWave) >= 1) {
@@ -744,6 +769,8 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   const painted = { active: null, gone: null, p: -1, y: '', k: '' };
   function paint(s) {
     const l = s.l; if (!l) return;
+    const clickable = !!R?.ember && l.qWave >= 1 && l.y < abs().end && +(cfg().logoMark || {}).emberOn !== 0;
+    if (clickable !== painted.clickable) { painted.clickable = clickable; root.style.cursor = clickable ? 'pointer' : ''; }
     if (l.active !== painted.active) { painted.active = l.active; root.classList.toggle('is-logoseal', l.active); }
     // the ocean's chapters are off the top of the screen from here on: nothing in them may take the keyboard focus (and scroll us back)
     const gone = l.y > l.b - H * .6;
@@ -772,10 +799,10 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
       return {
         gl: lastRenderer && { programs: lastRenderer.info.programs?.length, textures: lastRenderer.info.memory.textures, geometries: lastRenderer.info.memory.geometries },
         at: abs(), plan: plan && { ...plan }, sample: last && { ...last }, phase: state, ready: !!R?.ready, failed, lost, timings: R ? { ...R.timings, progs: R.progs } : null, newPrograms: R?.newPrograms || null, glassFound: R?.glassFound || null, log: R ? R.log.slice() : null,
-        model: R?.mark?.model || null, spinFx: null, interaction: R?.lake?.interaction || null,
+        model: R?.mark?.model || null, ember: R?.ember?.state || null, spinFx: null, interaction: R?.lake?.interaction || null,
         built: R ? { lake: !!R.lake, mark: !!R.mark, texOld: R.texOld ? [R.texOld.image.width, R.texOld.image.height] : null, texNew: R.texNew ? [R.texNew.image.width, R.texNew.image.height] : null } : null
       };
     },
-    dispose() { if (pill && pillWas) { pill.dataset.worldGo = pillWas.go; if (pillLabel) pillLabel.textContent = pillWas.text; } release(); canvas?.removeEventListener('webglcontextlost', onLost); canvas?.removeEventListener('webglcontextrestored', onRestored); canvas = null; colours.clear(); }
+    dispose() { removeEventListener('pointermove', onPointer); removeEventListener('click', onClick); if (pill && pillWas) { pill.dataset.worldGo = pillWas.go; if (pillLabel) pillLabel.textContent = pillWas.text; } release(); canvas?.removeEventListener('webglcontextlost', onLost); canvas?.removeEventListener('webglcontextrestored', onRestored); canvas = null; colours.clear(); }
   };
 }

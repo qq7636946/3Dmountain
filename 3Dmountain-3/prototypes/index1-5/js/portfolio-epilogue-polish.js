@@ -160,7 +160,7 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
     paint();
     if (slider && (open || amount > 0) && !suspended) slider.frame(now, dt);
     if (!open && amount === 0) { restoreCopy(); if (bridge) { layer.classList.remove('is-on'); layer.style.visibility = 'hidden'; } }
-    else run();
+    else if (!(suspended && open && amount === target && velocity === 0)) run();   /* cover (perf): asleep at rest under a section; setExit / take / close wake it */
   }
   function beginBridge() {
     if (open || failed || disposed || !slider) return;
@@ -194,7 +194,7 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
     if (delta > 0 && slider.progress >= 1 && amount >= .92) onEnd?.(delta);
     return true;
   }
-  function run() { if (!raf && !disposed && !document.hidden) { if (!last) last = performance.now(); raf = requestAnimationFrame(tick); } }
+  function run() { if (!raf && !disposed && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(tick); } }
   function openNow() {
     if (open || pending || failed || disposed) return;
     pending = true;

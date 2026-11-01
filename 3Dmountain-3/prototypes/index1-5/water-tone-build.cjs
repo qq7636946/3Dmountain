@@ -13,18 +13,8 @@ const TONE_PATCH = {
   watershedWater: { base: '#6888a4', highlight: '#c5d9e9', reflection: .25 },
   watershedFlow: { color: '#7dabc9', coreTint: .24, brightness: .86 },
   worldOcean: { deep: '#344d66', lit: '#799ab5', ink: '#1f344a', foam: '#e4edf5', glintColor: '#e4edf5' },
-  logoSeal: { glassTint: '#6d91b4', tileGlowColor: '#91b0c8', tileField: '#10243a' },
-  logoLake: {
-    skyTop: '#2c4c70', skyMid: '#203b55', skyHorizon: '#58738d', skyHaze: '#91a9bd',
-    sunColor: '#e4edf5', bloomColor: '#dce9f5', rangeTint: '#405b73',
-    deep: '#163047', lit: '#56778f', ink: '#0c1b2b', foam: '#d1e1ed',
-    glintColor: '#dce9f5', moteColor: '#e4edf5', exposure: .98, lightFill: .96
-  },
-  logoMark: {
-    tint: '#e4edf5', attenuationColor: '#bcd2e6', sheenColor: '#6d88a0',
-    rimColor: '#bad6eb', wallColor: '#e4edf5', glowColor: '#d9e8f5',
-    brandBlueColor: '#245b8c', brandBlueDeep: '#3b74a6', dispersion: .08, iridescence: .045
-  }
+  logoSeal: { glassTint: '#6d91b4', tileGlowColor: '#91b0c8', tileField: '#10243a' }
+  // logoLake and logoMark are out since 2026-11-01: the client chose the closing LOGO and lake of 2026-10-27, from before this pass
 };
 const marker = '/* WATER_TONE_CHAPTERS_20261028 */';
 function patchMain(main) {

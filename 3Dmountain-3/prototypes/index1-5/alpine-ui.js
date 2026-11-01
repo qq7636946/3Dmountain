@@ -290,7 +290,8 @@ function updateLabels(S, v, now) {
 
 /* ---------- loop ---------- */
 let dir = null, vec = null, fitted = false;
-let bridgeInk = -1, inkHeader = null, inkSet = null, filmGrainAmount = -1;
+let filmGrainAmount = -1;
+let bridgeInk = -1, inkHeader = null, inkSet = null;
 function frame(now) {
   raf = requestAnimationFrame(frame);
   if (now - lastStats > 200) updateSceneClock();

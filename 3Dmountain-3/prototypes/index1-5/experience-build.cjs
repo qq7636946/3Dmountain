@@ -10,7 +10,7 @@ function patchMain(main) {
   main=main.replace("      document.documentElement.dataset.renderMode = 'starting';","      if (document.documentElement.dataset.renderMode === 'text') return;\n      document.documentElement.dataset.renderMode = 'starting';");
   main=main.replace("if (event.key === 'Home') { event.preventDefault(); journey.target = 0; }","if (event.key === 'Home') { event.preventDefault(); journeyUI.root.querySelector('[data-chapter=\"0\"]')?.click(); }");
  }
- main=main.replace(/CONFIG\.logoSeal = (\{[^\n]+\});/, (all,json)=>{const value=JSON.parse(json);value.transition=0;return "CONFIG.logoSeal = "+JSON.stringify(value)+";";}); /* CONTINUOUS_LOGO_DEFAULT */
+ /* 2026-10-31: no longer forces logoSeal.transition to the wave; the client asked for the grid cut at the end (world-logo.js DEFAULTS, dial in the LOGO panel). */
  if(!main.includes('/* READING_SCENE_DISPOSAL */')) {
   main=main.replace('        stopChapterPlayback();\n        world?.dispose(); portfolio?.dispose(); stopLettersPlay();','        stopChapterPlayback(); stopLettersPlay();');
   const anchor='        cancelAnimationFrame(resizeFrame); resizeFrame = 0;\n        stopChapterPlayback();';

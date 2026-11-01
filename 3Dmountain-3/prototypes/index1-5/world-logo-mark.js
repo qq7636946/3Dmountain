@@ -33,6 +33,10 @@ import { createCastGeometry, createCastNormal } from './world-logo-cast.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
+/* 2026-11-01: the client chose the look of 2026-10-27 from the saved versions, with a little more water on it (waterRim .55, shimmer, caustic, roughness); particle mark: beads 1. docs/logo-seal/water-rim-20261101.md. */
+export { createLogoBeads } from './world-logo-beads.js';
+import { EMBER_GLSL } from './world-logo-ember.js';
+export { createLogoEmber } from './world-logo-ember.js';
 export const MARK_DEFAULTS = {
   glowSpeed: 0.6,
   glowPulse: 0.55,
@@ -53,11 +57,11 @@ export const MARK_DEFAULTS = {
   transmission: 1,           // 透光
   volume: 2.73,               // 折射厚度（折射量、吸收量）
   ior: 1.52,                  // 折射率
-  dispersion: 0.08,          // 克制的色散，保留清楚字形
-  tint: "#e4edf5",           // 透過玻璃的底色
-  attenuationColor: "#bcd2e6", // 吸收色（極淡的冷灰藍）
+  dispersion: 0.18,          // 克制的色散，保留清楚字形
+  tint: "#eef6fb",           // 透過玻璃的底色
+  attenuationColor: "#c8dfeb", // 吸收色（極淡的冷灰藍）
   attenuationDistance: 12,  // 吸收距離（小＝越藍）
-  roughness: 0.1,           // 鑄造玻璃的輕微柔化
+  roughness: 0.06,           // 鑄造玻璃的輕微柔化
   clearcoat: 1,              // 清漆
   clearcoatRoughness: 0.085,
   specular: 0.92,               // 鏡面強度
@@ -70,30 +74,120 @@ export const MARK_DEFAULTS = {
   thickFloor: 0.45,           // 邊緣最薄處保留的折射厚度（0–1）
   /* —— 表面 —— */
   sheen: 0.13,                  // 絨光（淡藍白霧感）
-  sheenColor: "#6d88a0",
+  sheenColor: "#5a6c81",
   sheenRoughness: 1,
-  iridescence: 0.045,            // 薄膜虹彩
+  iridescence: 0.11,            // 薄膜虹彩
   /* —— 邊緣光 —— */
-  rimStrength: 1.9,         // 柔邊光
+  rimStrength: 1.65,         // 柔邊光
   rimPower: 4.5,               // 柔邊光寬度（數字越大光帶越窄）
-  rimLine: 0.62,             // 邊緣亮線
-  rimColor: "#bad6eb",
-  wallGlow: 0.03,            // 側壁／斜切面的乳白亮度
-  wallColor: "#e4edf5",
+  rimLine: 0.55,             // 邊緣亮線
+  rimColor: "#b9dff7",
+  wallGlow: 0.018,            // 側壁／斜切面的乳白亮度
+  wallColor: "#f0f6ff",
   /* —— 水（內部）—— */
-  glow: 0.2,                // 內部散射光（厚處發亮）
-  glowColor: "#d9e8f5",
-  caustic: 0.16,                // 內部水紋焦散
+  glow: 0.04,                // 內部散射光（厚處發亮）
+  glowColor: "#dfe9f6",
+  caustic: 0.22,                // 內部水紋焦散
   causticScale: 3.5,           // 焦散細緻度
-  causticSpeed: 0.35,         // 焦散流速
-  shimmer: 0,                // 折射流動（法線微擾）
-  shimmerScale: 6,           // 流動的波長（越大越細碎）
+  causticSpeed: 0.45,         // 焦散流速
+  shimmer: 0.5,                // 折射流動（法線微擾）
+  shimmerScale: 5,           // 流動的波長（越大越細碎）
   /* —— 品牌藍（上方葉片；0＝整片清透玻璃）—— */
   brandBlue: 1,              // 品牌藍的量
-  brandBlueColor: "#245b8c", // 呼應全站的水藍色
-  brandBlueDeep: "#3b74a6",
-  brandBlueGlow: 0.12,       // 內部藍光
-  brandBlueAbsorb: 2.03       // 吸收距離（小＝越深越藍）
+  brandBlueColor: "#0c437e", // 呼應全站的水藍色
+  brandBlueDeep: "#2e689e",
+  brandBlueGlow: 0.07,       // 內部藍光
+  brandBlueAbsorb: 2.03,      // 吸收距離（小＝越深越藍）
+  /* —— 導角水感（只在外框導角與側壁；正面維持平靜清透。0＝舊畫面）—— */
+  waterRim: 0.55,               // 導角水感的量（遮罩強度）
+  waterRimZ0: 0.9,           // 遮罩：法線 |z| 低於這個＝完全是導角
+  waterRimZ1: 0.995,         // 遮罩：法線 |z| 高於這個＝平面正面（不受影響）
+  waterRimWiden: 0,      // 水的彎月面往正面多延伸多寬（÷高度；0＝只在烘焙導角上，手機一律 0）
+  waterBevel: 0.02,          // 烘焙導角的寬度（logo3d-current.json 的 radius）
+  waterWobble: 0.3,          // 水邊寬度的緩慢起伏（0＝機械般均勻；大＝像液體爬在邊上）
+  waterWall: 0.15,           // 側壁的透鏡量（0＝側壁清澈看穿；1＝側壁全是折射影像，容易像金屬）
+  waterCurve: 1.5,           // 透鏡彎折量（大＝天空與地平線翻得更快）
+  waterIor: 1.33,            // 水的折射率
+  waterGain: 1.2,            // 折射影像亮度
+  waterContrast: 1.3,        // 折射影像對比
+  waterDeep: 0.35,           // 倒影裡湖水段的清澈藍（0＝湖的暗色）
+  waterSky: 0.6,             // 導角下緣收進來的天光
+  waterEdge: 0.6,            // 暗折射線
+  waterMeniscus: 1.4,          // 亮彎液面線
+  waterGloss: 1.4,           // 濕亮高光（細、轉動時滑過）
+  waterFlow: 0.04,           // 水面緩動（影像輕輕呼吸）
+  waterFlowSpeed: 0.45,      // 緩動速度
+  /* —— 水珠粒子（igloo 式，滑鼠可推動；world-logo-beads.js；0＝回到玻璃）—— */
+  /* —— 點擊發光（threejs-burning-skull 的做法；world-logo-ember.js）—— */
+  emberOn: 1,                // 1 可以點擊發光／0 關
+  emberColor: "#6fbcff",     // 光的顏色（高亮處會近白，身體與光暈帶這個色）
+  emberSoft: 0.18,           // 紋路柔和（線條寬度：.1 細而銳利，大＝柔開；原本的銳利版：.1、0、1、1，多寡 .15、亮度 6）
+  emberSmooth: 0.8,          // 紋路圓滑（0 尖角／1 圓潤）
+  emberDetail: 0.45,         // 細碎紋理（0 只留大紋路／1 全部）
+  emberHole: 0,              // 吃出小洞（0 無洞／1 洞吃到線上）
+  emberBurn: 0.105,          // 紋路多寡（線落在哪個高度）
+  emberScale: 2.4,           // 紋路尺度（大＝細碎）
+  emberSpeed: 1,             // 點亮時紋路速度
+  emberIdleSpeed: 0.21,      // 熄滅途中紋路速度
+  emberGain: 2.6,            // 紋路亮度
+  emberBody: 0.1,            // 整體微光
+  emberBloom: 1,             // 光暈強度
+  emberBloomRadius: 1,       // 光暈範圍
+  emberShake: 1,             // 點下時的抖動
+  emberLift: 0.35,           // 往前彈出
+  /* —— 點擊發光的光芒（light-shafts.js，光從環與葉片放射出去，水面有倒影）—— */
+  emberShafts: 0,          // 強度（0 關）
+  emberShaftKnee: 2,         // 亮度壓縮（大＝每條光芒亮度較平均）
+  emberShaftSettle: 0.14,    // 光芒明暗變化的緩衝（秒，0 無：大＝不閃、變化較慢）
+  emberShaftLength: 0.5,     // 長度（螢幕高）
+  emberShaftFall: 0.02,      // 衰減（越小越快淡出）
+  emberShaftCore: 0.1,       // 蓋在 LOGO 上的比例
+  emberShaftTurnDim: 0.55,   // LOGO 轉到側面時減弱（0 不減）
+  emberShaftEdgeFrom: 0.12,  // 算 LOGO 本體的邊：開始
+  emberShaftEdgeTo: 0.5,     // 算 LOGO 本體的邊：滿（兩個都小＝光芒離 LOGO 較遠，葉片與環之間較乾淨）
+  emberShaftDrop: 0.04,      // 放射中心往下（螢幕高）
+  emberShaftTint: 0.6,       // 染色（0 發光體原色／1 全用光的顏色）
+  emberShaftStreaks: 0.96,   // 細線深度
+  emberShaftCount: 24,      // 細線數量（一圈）
+  emberShaftSharp: 3.2,      // 細線粗細（越大越細）
+  emberShaftSpeed: 0.1,      // 細線飄移速度
+  emberShaftWater: 0.45,     // 水面倒影強度（0 無）
+  emberShaftWaterLine: 0,    // 倒影的水線（0 地平線／1 LOGO 正下方）
+  emberShaftWaterReach: 0.3, // 倒影延伸（螢幕高）
+  emberShaftWaterSoft: 0.02, // 水天交界的柔邊
+  emberShaftWaterGap: 1,     // 倒影在 LOGO 正下方留空（LOGO 寬的倍數）
+  emberShaftOverWater: 0.6,  // 光芒落在水面上的強度（0 無）
+  emberShaftOverReach: 0.16, // 光芒落在水面上的延伸（螢幕高）
+  emberShaftRipple: 0.006,   // 倒影左右波動
+  emberShaftRippleUp: 0.004, // 倒影上下波動
+  emberShaftPhone: 1,        // 手機（1 省電版／0 關）
+  emberShaftPhoneStrength: 0.7, // 手機強度倍數
+  emberShaftView: 0,         // 檢視（0 畫面／1 光源／2 只看光芒）
+  beads: 0,                  // 1 水珠粒子／0 玻璃
+  beadGlass: 0,              // 粒子底下也留著玻璃（0 只有粒子）
+  beadSize: 0.0115,          // 水珠大小（÷ 符號高度）
+  beadSpec: 1.25,            // 濕亮光點
+  beadCaustic: 0.3,          // 水珠內側聚光（水滴感）
+  beadEdge: 0.55,            // 每顆邊緣壓暗（顆粒感）
+  beadFace: 0.9,             // 跟著表面方向受光（大＝形體清楚）
+  beadDeep: "#20466e",       // 暗面
+  beadMid: "#7aa6cb",        // 中間
+  beadLight: "#dcf1fc",      // 亮面
+  beadBlue: "#1d8fe8",       // 品牌藍（亮）
+  beadBlueDeep: "#0a56a8",   // 品牌藍（深）
+  beadSpring: 26,            // 回到原位的力
+  beadDamp: 0.9,             // 阻尼（大＝滑得久）
+  beadPush: 3.4,             // 滑鼠推開的力
+  beadDrag: 1.5,             // 滑鼠帶動的力
+  beadRadius: 0.2,           // 滑鼠影響範圍
+  beadFlow: 0.05,            // 平時的緩慢流動
+  beadFlowScale: 3.2,        // 流動尺度
+  beadFlowSpeed: 0.12,       // 流動速度
+  beadLag: 0.9,              // 旋轉時的慣性
+  beadDrip: 0.03,            // 滴落的比例（只有下緣的水珠）
+  beadDripSpeed: 0.07,       // 滴落速度
+  beadGatherFrom: 0.2,       // 開始聚集（佔波浪長度）
+  beadGatherTo: 0.62         // 聚集完成（佔波浪長度）
 };
 
 /* 兩組完整外觀。cast（平板鑄造玻璃）就是 MARK_DEFAULTS；water（圓潤水玻璃）是客戶先前調出來的那一組。
@@ -167,7 +261,54 @@ export const MARK_ROWS = [
   ['品牌藍・亮端色', 'brandBlueColor'],
   ['品牌藍・深端色', 'brandBlueDeep'],
   ['品牌藍・內部藍光', 'brandBlueGlow', 0, 3, 0.01],
-  ['品牌藍・吸收距離（小＝越深）', 'brandBlueAbsorb', 0.02, 4, 0.01]
+  ['品牌藍・吸收距離（小＝越深）', 'brandBlueAbsorb', 0.02, 4, 0.01],
+  ['點擊發光（1 開／0 關）', 'emberOn', 0, 1, 1], ['點擊發光｜顏色', 'emberColor'], ['點擊發光｜紋路柔和（線條寬度）', 'emberSoft', .02, .6, .005], ['點擊發光｜紋路圓滑（0 尖角／1 圓潤）', 'emberSmooth', 0, 1, .01], ['點擊發光｜細碎紋理（0 只留大紋路／1 全部）', 'emberDetail', 0, 1, .01], ['點擊發光｜吃出小洞（0 無洞／1 洞吃到線上）', 'emberHole', 0, 1, .01], ['點擊發光｜紋路多寡', 'emberBurn', 0, .6, .005], ['點擊發光｜紋路尺度（大＝細碎）', 'emberScale', .5, 8, .05],
+  ['點擊發光｜紋路速度', 'emberSpeed', 0, 3, .01], ['點擊發光｜熄滅途中速度', 'emberIdleSpeed', 0, 2, .01], ['點擊發光｜紋路亮度', 'emberGain', 0, 12, .05], ['點擊發光｜整體微光', 'emberBody', 0, 1, .005],
+  ['點擊發光｜光暈強度', 'emberBloom', 0, 3, .01], ['點擊發光｜光暈範圍', 'emberBloomRadius', .2, 4, .01], ['點擊發光｜抖動', 'emberShake', 0, 2, .01], ['點擊發光｜往前彈出', 'emberLift', 0, 2, .01],
+  ['光芒｜LOGO 強度（0 關）', 'emberShafts', 0, 40, .1], ['光芒｜LOGO 亮度壓縮（大＝每條亮度較平均）', 'emberShaftKnee', 0, 12, .05], ['光芒｜LOGO 明暗緩衝（秒，大＝不閃、變化較慢）', 'emberShaftSettle', 0, 1, .01], ['光芒｜LOGO 長度（螢幕高）', 'emberShaftLength', .05, 2, .01], ['光芒｜LOGO 衰減（越小越快淡出）', 'emberShaftFall', .002, 1, .001], ['光芒｜蓋在 LOGO 上的比例', 'emberShaftCore', 0, 1, .01], ['光芒｜LOGO 轉到側面時減弱（0 不減）', 'emberShaftTurnDim', 0, 1, .01], ['光芒｜算 LOGO 本體的邊：開始', 'emberShaftEdgeFrom', 0, 1, .01], ['光芒｜算 LOGO 本體的邊：滿', 'emberShaftEdgeTo', .01, 1, .01],
+  ['光芒｜LOGO 中心往下（螢幕高）', 'emberShaftDrop', -.3, .3, .005], ['光芒｜LOGO 染色（0 發光體原色／1 全用光的顏色）', 'emberShaftTint', 0, 1, .01], ['光芒｜LOGO 細線深度（0 無線條／1 線間全黑）', 'emberShaftStreaks', 0, 1, .01], ['光芒｜LOGO 細線數量（一圈）', 'emberShaftCount', 8, 500, 1],
+  ['光芒｜LOGO 細線粗細（越大越細）', 'emberShaftSharp', .3, 8, .01], ['光芒｜LOGO 細線飄移速度', 'emberShaftSpeed', 0, 2, .01], ['光芒｜水面倒影強度（0 無）', 'emberShaftWater', 0, 2, .01], ['光芒｜水面倒影延伸（螢幕高）', 'emberShaftWaterReach', .02, 1.5, .01], ['光芒｜倒影的水線（0 地平線／1 LOGO 正下方）', 'emberShaftWaterLine', 0, 1, .01],
+  ['光芒｜水天交界柔邊', 'emberShaftWaterSoft', .001, .1, .001], ['光芒｜倒影在 LOGO 正下方留空（LOGO 寬的倍數）', 'emberShaftWaterGap', .05, 4, .01], ['光芒｜落在水面上的強度（0 無）', 'emberShaftOverWater', 0, 2, .01], ['光芒｜落在水面上的延伸（螢幕高）', 'emberShaftOverReach', .02, 1, .01], ['光芒｜倒影左右波動', 'emberShaftRipple', 0, .08, .001], ['光芒｜倒影上下波動', 'emberShaftRippleUp', 0, .08, .001],
+  ['光芒｜LOGO 手機（1 省電版／0 關）', 'emberShaftPhone', 0, 1, 1], ['光芒｜LOGO 手機強度倍數', 'emberShaftPhoneStrength', 0, 2, .01], ['光芒｜LOGO 檢視（0 畫面／1 光源／2 只看光芒）', 'emberShaftView', 0, 2, 1],
+  ['水珠粒子（1 開／0 回玻璃）', 'beads', 0, 1, 1],
+  ['水珠｜底下留玻璃（0 只有粒子）', 'beadGlass', 0, 1, 1],
+  ['水珠｜大小', 'beadSize', 0.004, 0.04, 0.0005],
+  ['水珠｜濕亮光點', 'beadSpec', 0, 3, 0.01],
+  ['水珠｜內側聚光（水滴感）', 'beadCaustic', 0, 1.5, 0.01],
+  ['水珠｜邊緣壓暗（顆粒感）', 'beadEdge', 0, 1, 0.01],
+  ['水珠｜跟著表面受光', 'beadFace', 0, 3, 0.01],
+  ['水珠｜暗面', 'beadDeep'], ['水珠｜中間', 'beadMid'], ['水珠｜亮面', 'beadLight'], ['水珠｜品牌藍（亮）', 'beadBlue'], ['水珠｜品牌藍（深）', 'beadBlueDeep'],
+  ['水珠｜回位的力', 'beadSpring', 2, 80, 0.5],
+  ['水珠｜阻尼', 'beadDamp', 0.5, 0.995, 0.001],
+  ['水珠｜滑鼠推開', 'beadPush', 0, 12, 0.05],
+  ['水珠｜滑鼠帶動', 'beadDrag', 0, 8, 0.05],
+  ['水珠｜滑鼠範圍', 'beadRadius', 0.03, 0.8, 0.005],
+  ['水珠｜平時流動', 'beadFlow', 0, 0.6, 0.005],
+  ['水珠｜流動尺度', 'beadFlowScale', 0.3, 12, 0.05],
+  ['水珠｜流動速度', 'beadFlowSpeed', 0, 2, 0.01],
+  ['水珠｜旋轉慣性', 'beadLag', 0, 4, 0.01],
+  ['水珠｜滴落比例', 'beadDrip', 0, 0.2, 0.001],
+  ['水珠｜滴落速度', 'beadDripSpeed', 0, 0.5, 0.005],
+  ['水珠｜開始聚集（佔波浪）', 'beadGatherFrom', 0, 1, 0.01],
+  ['水珠｜聚集完成（佔波浪）', 'beadGatherTo', 0, 1, 0.01],
+  ['導角水感（遮罩強度，0＝舊畫面）', 'waterRim', 0, 1, 0.01],
+  ['導角水感｜遮罩起點 |z|', 'waterRimZ0', 0.3, 0.99, 0.005],
+  ['導角水感｜遮罩終點 |z|', 'waterRimZ1', 0.9, 1, 0.001],
+  ['導角水感｜往正面延伸', 'waterRimWiden', 0, 0.08, 0.001],
+  ['導角水感｜烘焙導角寬', 'waterBevel', 0.005, 0.06, 0.001],
+  ['導角水感｜水邊寬度起伏', 'waterWobble', 0, 1, 0.01],
+  ['導角水感｜側壁透鏡量', 'waterWall', 0, 1, 0.01],
+  ['導角水感｜透鏡彎折', 'waterCurve', 0, 5, 0.01],
+  ['導角水感｜折射率', 'waterIor', 1, 1.8, 0.01],
+  ['導角水感｜影像亮度', 'waterGain', 0, 3, 0.01],
+  ['導角水感｜影像對比', 'waterContrast', 0.5, 2.5, 0.01],
+  ['導角水感｜倒影湖水藍', 'waterDeep', 0, 2, 0.01],
+  ['導角水感｜下緣天光', 'waterSky', 0, 3, 0.01],
+  ['導角水感｜暗折射線', 'waterEdge', 0, 1, 0.01],
+  ['導角水感｜亮彎液面線', 'waterMeniscus', 0, 4, 0.01],
+  ['導角水感｜濕亮高光', 'waterGloss', 0, 4, 0.01],
+  ['導角水感｜水面緩動', 'waterFlow', 0, 0.2, 0.001],
+  ['導角水感｜緩動速度', 'waterFlowSpeed', 0, 2, 0.01]
 ];
 
 const GEO_KEYS = ['style', 'variant', 'thickness', 'tubeAspect', 'edgeRadius', 'bevelSoft', 'edgeCurve', 'edgeSegments', 'crown'];
@@ -933,6 +1074,110 @@ function makeFallbackEnvironment(THREE, renderer) {
 }
 
 /* ============================================================================================================
+   4b. The rim field, only for waterRimWiden > 0: RG = smooth outward direction of the outline of the baked slab, A = distance to that outline
+       (÷ mark height; the blue leaf and the body are separate). It lets the water's meniscus run a little past the 8 px bevel and gives its
+       refraction a clean direction. The geometry is untouched. One HalfFloat texture read per fragment; computed in slices; phones skip it.
+   ============================================================================================================ */
+function* bakeWaterFieldSteps(THREE, g, small) {
+  g.computeBoundingBox();
+  const box = g.boundingBox, H = small ? 256 : 512, pad = 6, sy = box.max.y - box.min.y, sx = box.max.x - box.min.x;
+  const cell = sy / (H - 2 * pad), W = Math.ceil(sx / cell) + 2 * pad, x0 = box.min.x - pad * cell, y0 = box.min.y - pad * cell, N = W * H;
+  const label = new Uint8Array(N), P = g.attributes.position, Nrm = g.attributes.normal, B = g.attributes.aBrand, I = g.index;
+  const tris = (I ? I.count : P.count) / 3;
+  /* rasterise the triangles that face the viewer; the blue leaf and the body are separate labels, so each is its own lens */
+  for (let t = 0; t < tris; t++) {
+    const a = I ? I.getX(3 * t) : 3 * t, b = I ? I.getX(3 * t + 1) : 3 * t + 1, c = I ? I.getX(3 * t + 2) : 3 * t + 2;
+    if (Nrm.getZ(a) + Nrm.getZ(b) + Nrm.getZ(c) < .06) continue;
+    const ax = (P.getX(a) - x0) / cell - .5, ay = (P.getY(a) - y0) / cell - .5, bx = (P.getX(b) - x0) / cell - .5, by = (P.getY(b) - y0) / cell - .5, cx = (P.getX(c) - x0) / cell - .5, cy = (P.getY(c) - y0) / cell - .5;
+    const i0 = Math.max(0, Math.ceil(Math.min(ax, bx, cx))), i1 = Math.min(W - 1, Math.floor(Math.max(ax, bx, cx))), j0 = Math.max(0, Math.ceil(Math.min(ay, by, cy))), j1 = Math.min(H - 1, Math.floor(Math.max(ay, by, cy)));
+    const area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax), l = B && B.getX(a) > .5 ? 2 : 1;
+    if (!area) continue;
+    const s = area > 0 ? 1 : -1;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const e0 = s * ((bx - ax) * (j - ay) - (by - ay) * (i - ax)), e1 = s * ((cx - bx) * (j - by) - (cy - by) * (i - bx)), e2 = s * ((ax - cx) * (j - cy) - (ay - cy) * (i - cx));
+      if (e0 >= -1e-6 && e1 >= -1e-6 && e2 >= -1e-6) label[j * W + i] = l;
+    }
+    if ((t & 0x1fff) === 0x1fff) yield;
+  }
+  yield;
+  let count = 0;
+  for (let i = W; i < N - W; i++) if (label[i] && i % W && (i + 1) % W) count++;
+  const list = new Int32Array(count); count = 0;
+  for (let i = W; i < N - W; i++) if (label[i] && i % W && (i + 1) % W) list[count++] = i;
+  /* ∇²u = -1, u = 0 outside: over-relaxed sweeps. On a strip of half-width w, sqrt(2u) is exactly a circle of radius w */
+  const u = new Float32Array(N), sweeps = small ? 40 : 60, om = small ? 1.84 : 1.92;
+  for (let s = 0; s < sweeps; s++) {
+    for (let k = 0; k < count; k++) {
+      const id = list[k], l = label[id];
+      const sum = (label[id - 1] === l ? u[id - 1] : 0) + (label[id + 1] === l ? u[id + 1] : 0) + (label[id - W] === l ? u[id - W] : 0) + (label[id + W] === l ? u[id + W] : 0);
+      u[id] += om * ((sum + 1) * .25 - u[id]);
+    }
+    if (!(s % 6)) yield;
+  }
+  /* true distance to the outline (chamfer, two sweeps) */
+  const dist = new Float32Array(N).fill(0);
+  for (let k = 0; k < count; k++) dist[list[k]] = 1e6;
+  const near = (id, o, w) => { const v = (label[o] === label[id] ? dist[o] : 0) + w; if (v < dist[id]) dist[id] = v; };
+  for (let k = 0; k < count; k++) { const id = list[k]; near(id, id - 1, 1); near(id, id - W, 1); near(id, id - W - 1, 1.4142); near(id, id - W + 1, 1.4142); }
+  for (let k = count - 1; k >= 0; k--) { const id = list[k]; near(id, id + 1, 1); near(id, id + W, 1); near(id, id + W - 1, 1.4142); near(id, id + W + 1, 1.4142); }
+  yield;
+  /* the tilt: m = -∇u / sqrt(2u + |∇u|²): stable up to the outline, where it is the unit outward direction */
+  const mx = new Float32Array(N), my = new Float32Array(N), hh = new Float32Array(N), filled = new Uint8Array(N);
+  for (let k = 0; k < count; k++) {
+    const id = list[k], l = label[id];
+    const gx = ((label[id + 1] === l ? u[id + 1] : 0) - (label[id - 1] === l ? u[id - 1] : 0)) * .5, gy = ((label[id + W] === l ? u[id + W] : 0) - (label[id - W] === l ? u[id - W] : 0)) * .5;
+    const v = Math.max(0, u[id]), q = Math.sqrt(2 * v + gx * gx + gy * gy) || 1;
+    mx[id] = -gx / q; my[id] = -gy / q; hh[id] = Math.sqrt(2 * v); filled[id] = 1;
+  }
+  yield;
+  /* soften the raster staircase of the outline, stay inside the same label */
+  const fields = [mx, my, hh, dist], tmp = new Float32Array(N);
+  for (let pass = 0; pass < 3; pass++) for (const f of fields) {
+    tmp.set(f);
+    for (let k = 0; k < count; k++) {
+      const id = list[k], l = label[id]; let sum = tmp[id] * 2, n = 2;
+      for (const o of [id - 1, id + 1, id - W, id + W]) if (label[o] === l) { sum += tmp[o]; n++; }
+      f[id] = sum / n;
+    }
+    yield;
+  }
+  /* bleed a few cells outside, so bilinear reads on the outline do not fall to zero */
+  for (let pass = 0; pass < pad - 1; pass++) {
+    const add = [];
+    for (let j = 1; j < H - 1; j++) for (let i = 1; i < W - 1; i++) {
+      const id = j * W + i; if (filled[id]) continue;
+      let n = 0, a = 0, b = 0, h = 0;
+      for (const o of [id - 1, id + 1, id - W, id + W]) if (filled[o]) { a += mx[o]; b += my[o]; h += hh[o]; n++; }
+      if (n) add.push(id, a / n, b / n, h / n);
+    }
+    for (let k = 0; k < add.length; k += 4) { const id = add[k]; mx[id] = add[k + 1]; my[id] = add[k + 2]; hh[id] = add[k + 3]; filled[id] = 1; }
+    yield;
+  }
+  /* near and outside the outline the direction still carries the raster staircase, which refraction on the side walls would magnify: smooth it along the outline */
+  const edgeBand = []; for (let id = W; id < N - W; id++) if (filled[id] && (!label[id] || dist[id] < 7)) edgeBand.push(id);
+  for (let pass = 0; pass < (small ? 5 : 9); pass++) {
+    for (const f of [mx, my]) {
+      tmp.set(f);
+      for (let k = 0; k < edgeBand.length; k++) {
+        const id = edgeBand[k], l = label[id]; let sum = tmp[id] * 2, n = 2;
+        for (const o of [id - 1, id + 1, id - W, id + W]) if (filled[o] && (!l || !label[o] || label[o] === l)) { sum += tmp[o]; n++; }
+        f[id] = sum / n;
+      }
+    }
+    yield;
+  }
+  const data = new Uint16Array(N * 4), hf = THREE.DataUtils.toHalfFloat;
+  for (let id = 0; id < N; id++) {
+    if (!filled[id]) continue;
+    data[4 * id] = hf(mx[id]); data[4 * id + 1] = hf(my[id]); data[4 * id + 2] = hf(hh[id] * cell); data[4 * id + 3] = hf(dist[id] * cell);
+    if (!(id & 0x7fff)) yield;
+  }
+  const tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat, THREE.HalfFloatType);
+  tex.minFilter = tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = false; tex.needsUpdate = true; tex.name = 'logo-mark water field';
+  return { tex, box: [x0, y0, 1 / (W * cell), 1 / (H * cell)] };
+}
+
+/* ============================================================================================================
    5. Material
    ============================================================================================================ */
 function patch(src, find, replace, label) {
@@ -954,17 +1199,22 @@ function makeMaterial(THREE, U) {
     for (const k of Object.keys(U)) shader.uniforms[k] = U[k];
     let vs = shader.vertexShader, fs = shader.fragmentShader;
     vs = patch(vs, '#include <common>', `#include <common>
-      attribute float aThick; attribute vec2 aBrand; varying float vThick; varying vec2 vBrand; varying vec3 vObjPos; varying vec3 vObjView; varying vec3 vObjN;`, 'vs common');
+      attribute float aThick; attribute vec2 aBrand; varying float vThick; varying vec2 vBrand; varying vec3 vObjPos; varying vec3 vObjView; varying vec3 vObjN; varying mat3 vM3;`, 'vs common');
     vs = patch(vs, '#include <begin_vertex>', `#include <begin_vertex>
       vThick = aThick; vBrand = aBrand; vObjPos = position; vObjN = normal;
+      vM3 = mat3(normalize(modelMatrix[0].xyz), normalize(modelMatrix[1].xyz), normalize(modelMatrix[2].xyz));
       vObjView = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz - position;`, 'vs begin_vertex');
     fs = patch(fs, '#include <common>', `#include <common>
-      varying float vThick; varying vec2 vBrand; varying vec3 vObjPos; varying vec3 vObjView; varying vec3 vObjN;
+      varying float vThick; varying vec2 vBrand; varying vec3 vObjPos; varying vec3 vObjView; varying vec3 vObjN; varying mat3 vM3;
+      uniform sampler2D uLensField; uniform vec4 uLensBox;
+      uniform float uWaterWobble, uWaterWall, uWaterRim, uWaterRimZ0, uWaterRimZ1, uWaterRimWiden, uWaterBevel, uWaterCurve, uWaterIor, uWaterGain, uWaterContrast, uWaterDeep, uWaterSky, uWaterEdge, uWaterMeniscus, uWaterGloss, uWaterFlow, uWaterFlowSpeed;
       uniform float uWallGlow; uniform vec3 uWallColor;
       uniform float uBrand, uBlueGlow, uBlueAbsorb;
       uniform vec3 uBlueA, uBlueB;
       uniform float uTime, uYaw, uSettle, uRimStrength, uRimPow, uRimLine, uGlow, uGlowPulse, uGlowSpeed, uCaustic, uCausticScale, uCausticSpeed, uShimmer, uShimmerScale, uThickFloor, uBgDisplay, uBgAlpha;
       uniform vec3 uRimColor, uGlowColor;
+      uniform vec4 uEmber; uniform vec3 uEmberColor; uniform float uEmberBody;   // burn, noise scale, its clock, edge gain (world-logo-ember.js)
+      ${EMBER_GLSL}
       float causticWeb(vec2 q, float t){
         vec2 p = mod(q * 6.28318530718, 6.28318530718) - 250.0;
         vec2 i = p; float c = 1.0; const float inten = 0.005;
@@ -994,12 +1244,43 @@ function makeMaterial(THREE, U) {
           sin(sp.x * 1.7 + sp.y * 1.1 + tt * 1.3) + sin(sp.y * 2.3 - sp.z * 3.7 - tt * 0.9) + 0.5 * sin(sp.x * 4.1 - sp.y * 3.3 + tt * 2.1),
           cos(sp.y * 1.9 - sp.x * 1.3 + tt * 1.1) + sin(sp.z * 3.1 + sp.x * 2.7 + tt) + 0.5 * cos(sp.y * 4.3 + sp.x * 2.9 - tt * 1.7));
         normal = normalize(normal + vec3(w, 0.0) * 0.022 * uShimmer * uSettle);
+      }
+      /* water on the rim only. THE MASK: the front faces of the baked slab are planar (object normal = ±Z) and the chamfer's split normals leave ±Z,
+         so 1 - smoothstep(Z0, Z1, |z|) is 1 on the bevel and the side walls, 0 on the front. wN = the normal of the water surface, object space */
+      float wM = 0.0, wOwn = 0.0, wWave = 0.0; vec3 wN = vec3(0.0, 0.0, 1.0);
+      if (uWaterRim > 0.001) {
+        vec3 wN0 = normalize(vObjN);
+        float wZ0 = abs(wN0.z);
+        float wMask = 1.0 - smoothstep(uWaterRimZ0, uWaterRimZ1, wZ0);
+        float ft = uTime * uWaterFlowSpeed; vec2 fp = vObjPos.xy;
+        wWave = sin(fp.x * 5.3 + fp.y * 3.1 + ft * .61) + .6 * sin(fp.y * 8.7 - fp.x * 4.3 - ft * .47);
+        wN = wN0;
+        if (uWaterRimWiden > 0.0005) {
+          /* the meniscus: a quarter circle from the silhouette to (bevel + widen), continuous with the bevel, its width breathing slowly like a liquid.
+             It goes flat before the ridge of a narrow band (|RG| falls to 0 there, where the outward direction flips), so there is no crease; it fades into the calm front */
+          vec4 wF = texture2D(uLensField, (vObjPos.xy - uLensBox.xy) * uLensBox.zw);
+          float wLen = length(wF.xy);
+          float wU = (1.0 - clamp(wF.a / ((uWaterBevel + uWaterRimWiden * (1.0 + uWaterWobble * wWave * 0.62)) ), 0.0, 1.0)) * smoothstep(0.0, 0.45, wLen);
+          vec3 wNv = vec3(wF.xy / max(wLen, 1e-3) * wU, sqrt(max(1.0 - wU * wU, 0.0)) * (wN0.z < 0.0 ? -1.0 : 1.0));
+          wN = normalize(mix(wNv, wN0, 1.0 - smoothstep(0.12, 0.5, wZ0)));   // the walls keep their smooth baked normals
+          wMask = max(wMask, smoothstep(0.0, 0.38, wU));
+        }
+        /* the walls stay mostly see-through (the glass pass reads the real sky behind them); all lens would look like chrome */
+        wOwn = clamp(uWaterRim, 0.0, 1.0) * wMask;
+        wM = wOwn * mix(uWaterWall, 1.0, smoothstep(0.02, 0.25, wZ0));
+        wN.xy += uWaterFlow * vec2(wWave, cos(fp.y * 4.7 - fp.x * 3.7 + ft * .53) + .6 * sin(fp.x * 7.9 + fp.y * 5.1 + ft * .41));
+        wN = normalize(wN);
+        normal = normalize(mix(normal, mat3(viewMatrix) * (vM3 * wN) * faceDirection, wM));
       }`, 'fs normal maps');
     fs = patch(fs, '#include <lights_physical_fragment>', `#include <lights_physical_fragment>
       #ifdef USE_TRANSMISSION
         material.thickness *= mix(uThickFloor, 1.0, clamp(vThick, 0.0, 1.0));
         material.attenuationColor = mix(material.attenuationColor, brandTint, brandMix);
         material.attenuationDistance = mix(material.attenuationDistance, uBlueAbsorb, brandMix);
+      #endif
+      material.roughness = mix(material.roughness, 0.0525, wM);
+      #ifdef USE_CLEARCOAT
+        material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.0525, wM);
       #endif`, 'fs lights_physical_fragment');
     fs = patch(fs, 'vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;', `
       {
@@ -1025,13 +1306,59 @@ function makeMaterial(THREE, U) {
         vec2 p0 = vObjPos.xy - vd.xy * clamp(vObjPos.z / max(abs(vd.z), 0.5), -0.22, 0.22);
         float cw = causticWeb(p0 * uCausticScale, uTime * uCausticSpeed + uYaw * 0.6);
         extra += mix(vec3(0.86, 0.95, 1.0), brandTint * 1.4 + vec3(0.1, 0.18, 0.25), brandMix * 0.7) * cw * uCaustic * (0.25 + 0.75 * th) * smoothstep(0.08, 0.55, nv);
-        totalEmissiveRadiance += extra * uSettle;
+        totalEmissiveRadiance += extra * uSettle * (1.0 - wOwn);   // the water owns the rim: the old rim light does not paint over it
+      }
+      /* the rim is a lens of water: the eye ray goes through a ball-like body (object space) and reads the world from the environment the scene bakes.
+         The top of a band looks down over the horizon at the lake, the bottom looks up at the sky: the sky and the horizon arrive upside-down. */
+      if (wOwn > 0.001) {
+        float wNV = abs(dot(normalize(vObjN), normalize(vObjView))), wSliver = smoothstep(0.02, 0.22, wNV);
+        totalSpecular *= mix(1.0, wSliver, wOwn);
+        vec3 wI = normalize(-vObjView), wNn = wN * faceDirection;
+        wNn = normalize(vec3(wNn.xy * (1.0 + uWaterCurve), wNn.z + vObjPos.z * 10.0 * uWaterCurve * (1.0 - smoothstep(0.0, 0.35, abs(wN.z)))));
+        float wC = dot(wNn, -wI);
+        if (wC < 0.03) { wNn = normalize(wNn - wI * (0.03 - wC)); wC = dot(wNn, -wI); }
+        vec3 wT1 = refract(wI, wNn, 1.0 / uWaterIor);
+        vec3 wN2 = wNn - 2.0 * dot(wNn, wT1) * wT1;
+        vec3 wT2 = refract(wT1, -wN2, uWaterIor);
+        if (dot(wT2, wT2) < 1e-4) wT2 = wT1;
+        vec3 wD = normalize(vM3 * wT2), wCol = vec3(0.04, 0.08, 0.13);
+        #if defined(USE_ENVMAP) && defined(ENVMAP_TYPE_CUBE_UV)
+          /* the blur follows the ray's footprint: a strong lens on a thin bevel can never sparkle from frame to frame */
+          wCol = textureCubeUV(envMap, envMapRotation * wD, clamp(length(fwidth(wD)) * 0.6, 0.015, 0.2)).rgb;
+        #endif
+        wCol = min(wCol * pow(clamp(dot(wCol, vec3(0.2126, 0.7152, 0.0722)) / 0.05, 1e-3, 3.0), uWaterContrast - 1.0) * uWaterGain, vec3(2.5));
+        wCol += vec3(0.05, 0.17, 0.30) * uWaterDeep * (1.0 - smoothstep(-0.24, 0.0, wD.y));
+        wCol += vec3(0.42, 0.62, 0.86) * uWaterSky * smoothstep(0.22, 0.85, wD.y);
+        /* the leaf is the same water, dyed: the world still reads through a saturated blue */
+        vec3 wDye = brandTint / max(max(brandTint.r, brandTint.g), max(brandTint.b, 0.001));
+        wCol = mix(wCol, wCol * wDye * 1.6 + brandTint * 0.12, brandMix);
+        /* the two lines, placed by how far the water surface has turned; never thinner than a pixel, so they cannot flicker */
+        float wZ = abs(wN.z), wAA = fwidth(wZ);
+        float wDark = exp(-pow((wZ - 0.66) / max(0.14, wAA), 2.0)) * min(1.0, 0.14 / max(wAA, 1e-3));
+        float wLine = exp(-pow((wZ - 0.28) / max(0.20, wAA), 2.0)) * smoothstep(0.02, 0.1, wZ) * min(1.0, 0.2 / max(wAA, 1e-3)) * wSliver;
+        vec3 wNw = normalize(vM3 * wN), wVw = normalize(vM3 * (-wI));
+        float wLit = 0.5 + 0.5 * dot(wNw, normalize(vec3(-0.42, 0.74, 0.52)));
+        wCol *= 1.0 - uWaterEdge * wDark;
+        wCol += mix(vec3(0.84, 0.93, 1.0), vec3(0.55, 0.85, 1.0), brandMix) * uWaterMeniscus * wLine * (0.3 + 0.7 * wLit * wLit) * (0.85 + 0.15 * wWave / 1.6);
+        /* wet highlights: thin arcs where the bending surface mirrors a bright window; they slide as the mark turns */
+        if (uWaterGloss > 0.001) {
+          float wG1 = max(dot(wNw, normalize(normalize(vec3(-0.42, 0.74, 0.52)) + wVw)), 0.0);
+          float wG2 = max(dot(wNw, normalize(normalize(vec3(0.62, 0.34, 0.70)) + wVw)), 0.0);
+          wCol += (vec3(1.0) * pow(wG1, 180.0) + vec3(0.62, 0.78, 1.0) * 0.5 * pow(wG2, 140.0)) * uWaterGloss * wSliver;
+        }
+        float wF0 = pow((uWaterIor - 1.0) / (uWaterIor + 1.0), 2.0);
+        totalDiffuse = mix(totalDiffuse, wCol * (1.0 - (wF0 + (1.0 - wF0) * pow(1.0 - clamp(wC, 0.0, 1.0), 5.0))), wM);
+      }
+      if (uEmber.w > .001) {   // clicked: a moving noise eats holes, their edges burn, the body lights a little
+        float emberN = emberNoise(vObjPos * uEmber.y, uEmber.z);
+        if (emberN < uEmber.x * uEmberSoft.w) discard;
+        totalEmissiveRadiance += uEmberColor * (emberLine(emberN, uEmber.x) * uEmber.w + uEmberBody);
       }
       vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;`, 'fs outgoingLight');
     fs = patchChunk(THREE, fs, 'opaque_fragment', 'diffuseColor.a *= material.transmissionAlpha;', 'diffuseColor.a *= mix(1.0, material.transmissionAlpha, uBgAlpha);');
     shader.vertexShader = vs; shader.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => 'logo-mark-water-glass-inner-flow-v3';
+  mat.customProgramCacheKey = () => 'logo-mark-water-glass-inner-flow-v3-water-rim-a4-ember';
   return mat;
 }
 
@@ -1051,13 +1378,36 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
 
   const U = {
     uTime: { value: 0 }, uYaw: { value: 0 }, uSettle: { value: 1 },
+    uEmber: { value: new THREE.Vector4() }, uEmberSoft: { value: new THREE.Vector4(.1, 0, 1, 1) }, uEmberColor: { value: new THREE.Color() }, uEmberBody: { value: 0 },
     uRimStrength: { value: 0 }, uRimPow: { value: 3 }, uRimLine: { value: 0 }, uRimColor: { value: new THREE.Color() },
     uGlow: { value: 0 }, uGlowPulse: { value: 0 }, uGlowSpeed: { value: .6 }, uGlowColor: { value: new THREE.Color() },
     uCaustic: { value: 0 }, uCausticScale: { value: 5 }, uCausticSpeed: { value: 0.5 },
     uShimmer: { value: 0 }, uShimmerScale: { value: 6 }, uThickFloor: { value: 0.4 }, uBgDisplay: { value: 1 }, uBgAlpha: { value: 0 },
     uWallGlow: { value: 0 }, uWallColor: { value: new THREE.Color() },
-    uBrand: { value: 1 }, uBlueGlow: { value: 0 }, uBlueAbsorb: { value: 0.35 }, uBlueA: { value: new THREE.Color() }, uBlueB: { value: new THREE.Color() }
+    uBrand: { value: 1 }, uBlueGlow: { value: 0 }, uBlueAbsorb: { value: 0.35 }, uBlueA: { value: new THREE.Color() }, uBlueB: { value: new THREE.Color() },
+    uLensField: { value: null }, uLensBox: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uWaterWobble: { value: 0 }, uWaterWall: { value: 1 }, uWaterRim: { value: 0 }, uWaterRimZ0: { value: .9 }, uWaterRimZ1: { value: .995 }, uWaterRimWiden: { value: 0 }, uWaterBevel: { value: .02 }, uWaterCurve: { value: 0 }, uWaterIor: { value: 1.33 },
+    uWaterGain: { value: 1 }, uWaterContrast: { value: 1 }, uWaterDeep: { value: 0 }, uWaterSky: { value: 0 }, uWaterEdge: { value: 0 }, uWaterMeniscus: { value: 0 }, uWaterGloss: { value: 0 }, uWaterFlow: { value: 0 }, uWaterFlowSpeed: { value: 0 }
   };
+  /* the rim field is only made when the meniscus is widened (waterRim 0 or waterRimWiden 0 = no bake, no texture read; phones never) */
+  let fieldTex = null, fieldKey = '', fieldTask = null;
+  const wantField = () => !small && (E.waterRim ?? 0) > 0 && (E.waterRimWiden ?? 0) > 0;
+  function syncWaterRim() { U.uWaterRimWiden.value = wantField() && fieldTex && fieldKey === geoKey ? E.waterRimWiden : 0; }
+  function ensureWaterField() {
+    syncWaterRim();
+    if (!wantField() || !geometry || (fieldKey === geoKey && fieldTex)) return Promise.resolve();
+    if (fieldTask) return fieldTask;
+    const forKey = geoKey;
+    fieldTask = runSliced(bakeWaterFieldSteps(THREE, geometry, small)).then(result => {
+      fieldTask = null;
+      if (disposed) { result.tex.dispose(); return; }
+      fieldTex?.dispose(); fieldTex = result.tex; fieldKey = forKey;
+      U.uLensField.value = fieldTex; U.uLensBox.value.set(...result.box);
+      syncWaterRim();
+      if (geoKey !== forKey) return ensureWaterField();
+    }).catch(error => { fieldTask = null; console.warn('[logo-mark] rim field failed', error); });
+    return fieldTask;
+  }
   const material = makeMaterial(THREE, U);
   const castNormal = createCastNormal(THREE);
   material.normalMap = castNormal;
@@ -1108,6 +1458,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
     const old = geometry; geometry = g;
     if (mesh) mesh.geometry = g; else { mesh = new THREE.Mesh(g, material); mesh.name = 'logo-mark mesh'; mesh.renderOrder = 5; mesh.scale.setScalar(E.size); group.add(mesh); }
     if (old) old.dispose();
+    ensureWaterField();
   }
 
   function applyEnv() {
@@ -1121,6 +1472,11 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
     const s = small;
     material.color.set(E.tint);
     material.transmission = E.transmission;
+    U.uWaterWobble.value = E.waterWobble ?? 0; U.uWaterWall.value = E.waterWall ?? 1; U.uWaterRim.value = clamp(E.waterRim ?? 0, 0, 1); U.uWaterRimZ0.value = E.waterRimZ0 ?? .9; U.uWaterRimZ1.value = Math.max(U.uWaterRimZ0.value + .001, E.waterRimZ1 ?? .995);
+    U.uWaterBevel.value = E.waterBevel ?? .02; U.uWaterCurve.value = E.waterCurve ?? 0; U.uWaterIor.value = clamp(E.waterIor ?? 1.33, 1, 1.8);
+    U.uWaterGain.value = E.waterGain ?? 1; U.uWaterContrast.value = E.waterContrast ?? 1; U.uWaterDeep.value = E.waterDeep ?? 0; U.uWaterSky.value = E.waterSky ?? 0;
+    U.uWaterEdge.value = E.waterEdge ?? 0; U.uWaterMeniscus.value = E.waterMeniscus ?? 0; U.uWaterGloss.value = E.waterGloss ?? 0; U.uWaterFlow.value = E.waterFlow ?? 0; U.uWaterFlowSpeed.value = E.waterFlowSpeed ?? 0;
+    ensureWaterField();
     material.thickness = E.volume;
     material.ior = clamp(E.ior, 1, 2.333);
     material.dispersion = s ? 0 : Math.max(0, E.dispersion);
@@ -1154,7 +1510,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
   }
   /* defines that depend on these must be recompiled when they flip */
   function syncFlags() {
-    const f = [material.dispersion > 0, E.sheen > 0, E.iridescence > 0, E.clearcoat > 0, E.transmission > 0, material.side, !!material.envMap].join();
+    const f = [material.dispersion > 0, E.sheen > 0, E.iridescence > 0, E.clearcoat > 0, material.transmission > 0, material.side, !!material.envMap].join();
     if (f !== flags) { flags = f; material.needsUpdate = true; }
   }
 
@@ -1196,6 +1552,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
   window.addEventListener('finnovation:logo-model',onAuthoredModel);
   await rebuild();
   applyLook();
+  await ensureWaterField();
   if(geometry?.userData.revision)window.dispatchEvent(new CustomEvent('finnovation:logo-model-ready',{detail:{revision:geometry.userData.revision}}));
 
   return {
@@ -1204,6 +1561,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
     get mesh() { return mesh; },
     get model() { return { ...geometry?.userData }; },
     get look() { return { ...L }; },
+    uniforms: U,
     setLook(next) {
       if (disposed || !next) return;
       const before = geoKeyOf();
@@ -1231,7 +1589,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
       window.removeEventListener('finnovation:logo-preview',onPreviewModel);
       ++previewToken;previewModel?.geometry.dispose();previewModel=null;
       group.removeFromParent();
-      geometry?.dispose(); material.dispose(); castNormal.dispose(); fallbackEnv?.dispose();
+      geometry?.dispose(); material.dispose(); castNormal.dispose(); fallbackEnv?.dispose(); fieldTex?.dispose(); fieldTex = null;
       geometry = null; fallbackEnv = null; mesh = null; givenEnv = null;
     }
   };

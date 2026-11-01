@@ -30,18 +30,18 @@
    · look.small (not a dial; default = automatic: screen under 700 px or under 4 GB) caps the mesh (about 27k triangles) and drops dispersion /
      double-sided refraction for phones. The caller can force it either way with look.small = true / false. */
 
-import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mvxv94ut';
+import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mvxxnb7w';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { runSliced } from './perf-firstpass.js?v=i15-mvxv94ut';
+import { runSliced } from './perf-firstpass.js?v=i15-mvxxnb7w';
 
 /* 2026-11-01: the client chose the look of 2026-10-27 from the saved versions, with a little more water on it (waterRim .55, shimmer, caustic, roughness); particle mark: beads 1. docs/logo-seal/water-rim-20261101.md. */
-export { createLogoBeads } from './world-logo-beads.js?v=i15-mvxv94ut';
-import { EMBER_GLSL } from './world-logo-ember.js?v=i15-mvxv94ut';
-export { createLogoEmber } from './world-logo-ember.js?v=i15-mvxv94ut';
+export { createLogoBeads } from './world-logo-beads.js?v=i15-mvxxnb7w';
+import { EMBER_GLSL } from './world-logo-ember.js?v=i15-mvxxnb7w';
+export { createLogoEmber } from './world-logo-ember.js?v=i15-mvxxnb7w';
 export const MARK_DEFAULTS = {
-  glowSpeed: 0.6,
-  glowPulse: 0.55,
+  glowSpeed: 1.9,
+  glowPulse: 1,
   variant: 1,                // 1 = logo.svg; 3 = the 1010 backup's complete text_logo3.svg
   castRelief: 0,
   /* —— 外觀（0＝平板鑄造玻璃 cast slab，1＝圓潤水玻璃；1 時，還停在「鑄造預設值」的旋鈕改用水玻璃的值，動過的旋鈕照你調的）—— */
@@ -89,8 +89,8 @@ export const MARK_DEFAULTS = {
   /* —— 水（內部）—— */
   glow: 0.04,                // 內部散射光（厚處發亮）
   glowColor: "#dfe9f6",
-  caustic: 0.22,                // 內部水紋焦散
-  causticScale: 3.5,           // 焦散細緻度
+  caustic: 0.4,                // 內部水紋焦散
+  causticScale: 4.3,           // 焦散細緻度
   causticSpeed: 0.45,         // 焦散流速
   shimmer: 0.5,                // 折射流動（法線微擾）
   shimmerScale: 5,           // 流動的波長（越大越細碎）
@@ -101,24 +101,24 @@ export const MARK_DEFAULTS = {
   brandBlueGlow: 0.07,       // 內部藍光
   brandBlueAbsorb: 2.03,      // 吸收距離（小＝越深越藍）
   /* —— 導角水感（只在外框導角與側壁；正面維持平靜清透。0＝舊畫面）—— */
-  waterRim: 0.55,               // 導角水感的量（遮罩強度）
+  waterRim: 0.83,               // 導角水感的量（遮罩強度）
   waterRimZ0: 0.9,           // 遮罩：法線 |z| 低於這個＝完全是導角
   waterRimZ1: 0.995,         // 遮罩：法線 |z| 高於這個＝平面正面（不受影響）
-  waterRimWiden: 0,      // 水的彎月面往正面多延伸多寬（÷高度；0＝只在烘焙導角上，手機一律 0）
+  waterRimWiden: 0.08,      // 水的彎月面往正面多延伸多寬（÷高度；0＝只在烘焙導角上，手機一律 0）
   waterBevel: 0.02,          // 烘焙導角的寬度（logo3d-current.json 的 radius）
-  waterWobble: 0.3,          // 水邊寬度的緩慢起伏（0＝機械般均勻；大＝像液體爬在邊上）
-  waterWall: 0.15,           // 側壁的透鏡量（0＝側壁清澈看穿；1＝側壁全是折射影像，容易像金屬）
-  waterCurve: 1.5,           // 透鏡彎折量（大＝天空與地平線翻得更快）
-  waterIor: 1.33,            // 水的折射率
-  waterGain: 1.2,            // 折射影像亮度
-  waterContrast: 1.3,        // 折射影像對比
-  waterDeep: 0.35,           // 倒影裡湖水段的清澈藍（0＝湖的暗色）
-  waterSky: 0.6,             // 導角下緣收進來的天光
-  waterEdge: 0.6,            // 暗折射線
-  waterMeniscus: 1.4,          // 亮彎液面線
-  waterGloss: 1.4,           // 濕亮高光（細、轉動時滑過）
-  waterFlow: 0.04,           // 水面緩動（影像輕輕呼吸）
-  waterFlowSpeed: 0.45,      // 緩動速度
+  waterWobble: 1,          // 水邊寬度的緩慢起伏（0＝機械般均勻；大＝像液體爬在邊上）
+  waterWall: 1,           // 側壁的透鏡量（0＝側壁清澈看穿；1＝側壁全是折射影像，容易像金屬）
+  waterCurve: 5,           // 透鏡彎折量（大＝天空與地平線翻得更快）
+  waterIor: 1.8,            // 水的折射率
+  waterGain: 3,            // 折射影像亮度
+  waterContrast: 2.5,        // 折射影像對比
+  waterDeep: 2,           // 倒影裡湖水段的清澈藍（0＝湖的暗色）
+  waterSky: 1.42,             // 導角下緣收進來的天光
+  waterEdge: 0.41,            // 暗折射線
+  waterMeniscus: 0,          // 亮彎液面線
+  waterGloss: 1.53,           // 濕亮高光（細、轉動時滑過）
+  waterFlow: 0.2,           // 水面緩動（影像輕輕呼吸）
+  waterFlowSpeed: 0.44,      // 緩動速度
   /* —— 水珠粒子（igloo 式，滑鼠可推動；world-logo-beads.js；0＝回到玻璃）—— */
   /* —— 點擊發光（threejs-burning-skull 的做法；world-logo-ember.js）—— */
   emberOn: 1,                // 1 可以點擊發光／0 關

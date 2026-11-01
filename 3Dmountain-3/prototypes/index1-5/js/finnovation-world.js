@@ -27,18 +27,18 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { uploadSoon } from './perf-firstpass.js?v=i15-mvxv94ut';   /* FIRSTPASS_VIDEO */
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mvxv94ut'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mvxv94ut';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mvxv94ut';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvxv94ut';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mvxxnb7w';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mvxxnb7w'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mvxxnb7w';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mvxxnb7w';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvxxnb7w';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mvxv94ut';
-import { createWorldOcean } from './world-ocean.js?v=i15-mvxv94ut';
-import { createWorldLogo } from './world-logo.js?v=i15-mvxv94ut';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mvxxnb7w';
+import { createWorldOcean } from './world-ocean.js?v=i15-mvxxnb7w';
+import { createWorldLogo } from './world-logo.js?v=i15-mvxxnb7w';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mvxv94ut';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvxv94ut';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mvxxnb7w';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvxxnb7w';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';

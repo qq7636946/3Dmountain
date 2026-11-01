@@ -24,10 +24,10 @@
    Dials: CONFIG.worldOcean (tuner 「海洋章節 Ocean」).
    ===================================================================== */
 import * as THREE from 'three';
-import { createOceanIslands } from './world-ocean-islands.js?v=i15-mvxv94ut';
-import { createOceanPhotos } from './world-ocean-photos.js?v=i15-mvxv94ut';
-import { oceanProgress, oceanPanelState } from './world-ocean-scroll.js?v=i15-mvxv94ut';
-import { getSceneDaylight } from './scene-daylight.js?v=i15-mvxv94ut';
+import { createOceanIslands } from './world-ocean-islands.js?v=i15-mvxxnb7w';
+import { createOceanPhotos } from './world-ocean-photos.js?v=i15-mvxxnb7w';
+import { oceanProgress, oceanPanelState } from './world-ocean-scroll.js?v=i15-mvxxnb7w';
+import { getSceneDaylight } from './scene-daylight.js?v=i15-mvxxnb7w';
 
 /* The defaults. Strict JSON: world-ocean-build.cjs copies it into main.js's CONFIG.worldOcean. */
 const DEFAULTS = /*OCEAN-DEFAULTS*/{

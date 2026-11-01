@@ -69,7 +69,7 @@ export const LAKE_DEFAULTS = {
   vignette: 0.23, exposure: 0.96, outputDisplay: 1,
   /* ---- camera and composition ---- */
   camHeight: 0.85, fov: 36, horizon: 0.7, drift: 0.018, sway: 0.06, qLight: 0,
-  markY: 0.5, markSize: 0.3, markWidth: 0.92, shortFrom: 860, shortTo: 560, shortSize: 0.82,
+  markY: 0.5, markSize: 0.37, markWidth: 0.92, shortFrom: 860, shortTo: 560, shortSize: 0.82,
   fovPortrait: 56, portraitHorizon: 0.61, portraitMarkY: 0.375, portraitMarkSize: 0.255, portraitSunShift: 0.55,
   /* ---- the mark climbs out of the lake (update({ rise })); rise = 1 is the end pose, nothing below changes it ---- */
   riseSink: 1.12, riseCurve: 0.75, riseTrueFoot: 1,

@@ -147,8 +147,12 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
       // The bridge follows the wheel with a softer spring than the chapters (FOLLOW per second): notches given in
       // a row run into one glide instead of a step each, and it still comes to rest without overshoot.
       const follow = +mist?.()?.follow, omega = bridge ? (Number.isFinite(follow) && follow > 1 ? follow : 5.5) : 8;
+      /* BRIDGE_FLOW: the bridge moves from its first frame (exponential follow, as the journey does); the cards' own open/close keeps its spring */
+      if (bridge) { const before = amount; amount = Math.max(0, Math.min(1, amount + (target - amount) * (1 - Math.exp(-omega * 7.2 / 11.5 * dt)))); velocity = dt > 0 ? (amount - before) / dt : 0; }
+      else {
       const offset = amount - target, j = (velocity + omega * offset) * dt, decay = Math.exp(-omega * dt);
       amount = Math.max(0, Math.min(1, target + (offset + j) * decay)); velocity = (velocity - omega * j) * decay;
+      }
       if (Math.abs(amount - target) < .001 && Math.abs(velocity) < .01) { amount = target; velocity = 0; }
     }
     if (slider?.setGrade) {
@@ -175,6 +179,8 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
       if (performance.now() < quiet && delta < 0) return true;
       // From the moment the journey's target sits at its end and its camera is nearly there: no dead stretch of wheel.
       const s = state(), atEnd = s.progress > s.max - .45 && s.target > s.max - .001;
+      /* BRIDGE_FLOW: the notch that carries the journey over its end starts the bridge with what is left of it (the journey takes its own part: false) */
+      if (!atEnd && delta > 0 && prepared && s.progress > s.max - .45 && s.target + delta > s.max + .001) { beginBridge(); bt = Math.min(1, (s.target + delta - s.max) / span()); run(); return false; }
       if (!atEnd || delta <= 0) return false;
       // The strip preloads three chapters early; if it is still on its way, hold the page at the end until it is.
       if (!prepared) { load(); return true; }

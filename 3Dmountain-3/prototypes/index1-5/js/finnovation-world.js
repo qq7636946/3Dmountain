@@ -27,20 +27,20 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { uploadSoon } from './perf-firstpass.js?v=i15-mw0qseka';   /* FIRSTPASS_VIDEO */
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw0qseka'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mw0qseka';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { stepWorldFollow } from './motion-response.js?v=i15-mw0qseka';   /* SILK_SCROLL */
-import { createQualityGovernor } from './quality-governor.js?v=i15-mw0qseka';   /* QUALITY_GOVERNOR */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw0qseka';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw0qseka';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mw0vh3su';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw0vh3su'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mw0vh3su';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { stepWorldFollow } from './motion-response.js?v=i15-mw0vh3su';   /* SILK_SCROLL */
+import { createQualityGovernor } from './quality-governor.js?v=i15-mw0vh3su';   /* QUALITY_GOVERNOR */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw0vh3su';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw0vh3su';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mw0qseka';
-import { createWorldOcean } from './world-ocean.js?v=i15-mw0qseka';
-import { createWorldLogo } from './world-logo.js?v=i15-mw0qseka';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mw0vh3su';
+import { createWorldOcean } from './world-ocean.js?v=i15-mw0vh3su';
+import { createWorldLogo } from './world-logo.js?v=i15-mw0vh3su';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mw0qseka';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw0qseka';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mw0vh3su';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw0vh3su';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';

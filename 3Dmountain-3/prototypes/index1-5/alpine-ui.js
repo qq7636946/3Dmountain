@@ -247,10 +247,12 @@ const SHIFT = { up: 'translate(-50%, -100%)', right: 'translate(0, -50%)', left:
 function updateLabels(S, v, now) {
   const W = S.canyon.watershed, cam = S.canyon.camera, Wd = innerWidth, Ht = innerHeight;
   const aerial = smooth(260, 620, cam.position.y);
-  const blocked = document.body.classList.contains('is-world') || document.body.classList.contains('is-portfolio');
+  const blocked = document.body.classList.contains('is-world') || document.body.classList.contains('is-portfolio') || !!S.portfolio?.open;
   if (aerial < .5 || blocked || !W) { for (const pin of pins) show(pin, false); return; }
   placeSummit(W);
-  if (now - lastRects > 250) { lastRects = now; refreshRects(); }
+  /* not while the visitor pushes past the journey's end: the cards' bridge restyles the page in that frame, and measuring then forced the whole
+     layout (131 ms on a phone at CPU ×4, 2026-11-03 「山要切換到卡牌時候會卡住」). The labels hide as the bridge opens. */
+  if (now - lastRects > 250 && !(S.journey.target >= S.journey.max - .001)) { lastRects = now; refreshRects(); }
   const id = root.dataset.chapter || '', placed = [], eye = cam.position;
   const project = (x, y, z) => { v.set(x, y, z).project(cam); return v.z < 1 && v.z > -1 ? [(v.x + 1) * .5 * Wd, (1 - v.y) * .5 * Ht] : null; };
   const fits = box => box.l > 12 && box.r < Wd - 12 && box.t > 12 && box.b < Ht - 12 && obstacles.every(o => !overlaps(box, o)) && placed.every(o => !overlaps(box, o));

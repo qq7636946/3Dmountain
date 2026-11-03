@@ -35,7 +35,7 @@ const perfOn=n=>!PERF_DEFAULT_OFF.some(k=>n.includes(k))||(process.env.PERF_ON||
 html=require('./perf-reverse.cjs').strip(html);require('./perf-reverse.cjs').stripHandKept(OUT);
 // 2026-10-25 optimisation team: one helper file per work stream, run last. PERF_ONLY=<stream> builds with just that stream (e.g. boot), PERF_OFF=a,b leaves streams out;
 // a helper that throws is skipped with a warning (the snapshot is restored), so one unfinished file cannot break another's build.
-for(const n of ['perf-boot-build.cjs','perf-firstpass-build.cjs','perf-cover-build.cjs','perf-phone-build.cjs','perf-cpu-build.cjs','perf-gpu-build.cjs','perf-terrain-build.cjs','perf-net-build.cjs']){
+for(const n of ['perf-boot-build.cjs','perf-firstpass-build.cjs','perf-cover-build.cjs','perf-phone-build.cjs','perf-cpu-build.cjs','perf-gpu-build.cjs','perf-terrain-build.cjs','perf-net-build.cjs','terrain-worker-build.cjs']){
  if(!fs.existsSync(path.join(__dirname,n)))continue;
  if(!perfOn(n))continue;
  if(process.env.PERF_ONLY&&!n.includes(process.env.PERF_ONLY))continue;

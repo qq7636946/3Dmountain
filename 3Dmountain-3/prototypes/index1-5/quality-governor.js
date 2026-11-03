@@ -8,11 +8,16 @@
    - Smooth for 8 seconds (median ≤ 18.5 ms, which a 60 Hz screen reaches): one step up (+ .1). If a step up is followed by a step down
      within 5 seconds, the scale it left is the ceiling for a minute, so it does not see-saw.
    ?governor=0 switches it off; ?governorScale=.7 holds a scale (to look at the picture a weak device will get).
-   window.__MONTIS_GOVERNOR__ holds the live instances (QA): .state, and .debugExtraMs = scale => ms to simulate a GPU-bound device. */
+   window.__MONTIS_GOVERNOR__ holds the live instances (QA): .state, and .debugExtraMs = scale => ms to simulate a GPU-bound device.
+   2026-11-03 (客戶：「每到一段就會卡住」): it misread the browser's own throttling as a slow device. In a window behind others Chrome runs
+   the page at about 1 frame a second, and the governor stepped down, found "no gain" and stepped back: two resizes, each a visible hitch,
+   and again a minute later. A capped screen (power saving at 30 fps) did the same. Now it only judges a second with enough frames in it
+   (a throttled tab is not a slow device), leaves out frames over 200 ms (a stall, a wake-up), does not step on a steady cadence (a cap: the
+   frames come at the same interval whatever the work, so fewer pixels cannot help), and a step that did not pay is not tried again. */
 const q = new URLSearchParams(location.search);
 const OFF = q.get('governor') === '0', HOLD = parseFloat(q.get('governorScale'));
 
-export function createQualityGovernor(name, { min = .6, down = .15, up = .1, slowMs = 24, fastMs = 18.5, slowFor = 2, fastFor = 8, cooldown = 1.5, judge = 2, gain = .92, lockFor = 60 } = {}) {
+export function createQualityGovernor(name, { min = .6, down = .15, up = .1, slowMs = 24, fastMs = 18.5, slowFor = 2, fastFor = 8, cooldown = 1.5, judge = 2, gain = .92, lockFor = Infinity, minFrames = 12, longMs = 200, capSpread = 1.5 } = {}) {
   let scale = Number.isFinite(HOLD) ? Math.min(1, Math.max(min, HOLD)) : 1;
   const frames = [];
   let windowStart = -1, slowRun = 0, fastRun = 0, lastChange = -1e9, pending = null, floorLock = 0, floorUntil = 0, ceiling = 1, ceilingUntil = 0, lastUp = -1e9, upFrom = 1;
@@ -24,15 +29,23 @@ export function createQualityGovernor(name, { min = .6, down = .15, up = .1, slo
     debugExtraMs: null,
     /* dt in seconds, now in seconds. Returns true when the scale changed (the caller resizes). */
     sample(dt, now) {
-      if (OFF || Number.isFinite(HOLD) || !(dt > 0) || dt > 1) return false;
+      if (OFF || Number.isFinite(HOLD) || !(dt > 0)) return false;
+      /* a page that is not on screen: whatever its frames say is the browser's, not the device's */
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') { frames.length = 0; windowStart = -1; slowRun = fastRun = 0; return false; }
       let ms = dt * 1000;
       if (api.debugExtraMs) ms += api.debugExtraMs(scale) || 0;
       if (windowStart < 0) windowStart = now;
-      frames.push(ms);
+      if (ms <= longMs) frames.push(ms);
       if (now - windowStart < 1) return false;
-      const sorted = frames.slice().sort((a, b) => a - b), median = sorted[sorted.length >> 1];
+      const count = frames.length, sorted = frames.slice().sort((a, b) => a - b), median = sorted[sorted.length >> 1];
       frames.length = 0; windowStart = now;
+      /* too few frames to judge: the browser is throttling the page (a window behind others), or it was waking up */
+      if (count < minFrames) { slowRun = fastRun = 0; api.lastMedian = null; return false; }
       api.lastMedian = median;
+      /* a cap: the frames all come at one interval (a screen or power saving at 30 fps). A device that is short of time comes at uneven ones */
+      const spread = sorted[Math.floor(count * .9)] - sorted[Math.floor(count * .1)];
+      api.capped = median > slowMs && spread < capSpread;
+      if (api.capped && !pending) { slowRun = 0; return false; }
       if (floorUntil && now > floorUntil) { floorLock = 0; floorUntil = 0; }
       if (ceilingUntil && now > ceilingUntil) { ceiling = 1; ceilingUntil = 0; }
       // a step down waiting to be judged

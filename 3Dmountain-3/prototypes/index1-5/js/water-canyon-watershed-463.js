@@ -4,8 +4,8 @@
 import { createConfluenceEffects } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 export { WATERSHED_FLOW_DEFAULTS } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 // ALPINE-TERRAIN (index1-5-alpine 2026-10-23): load-time drainage erosion and the alpine dials.
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mw0f5pfz';
-import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mw0f5pfz';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mw0qseka';
+import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mw0qseka';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
@@ -775,9 +775,23 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   }
   let macroGrid=null;
   const logoInkW=LG?new Float32Array(xs.length*zs.length):null;
-  if(R){
+  /* TERRAIN_WORKER (terrain-worker-build.cjs): the grid's rows from the page's terrain workers; inside a worker, only that worker's rows */
+  const TB=globalThis.__TERRAIN_BAKE__||null,TB_N=xs.length*zs.length,TB_S=heightSamples?stride:0;
+  const TB_ROWS=TB&&TB.mode==='rows'?[Math.floor(TB.split[0]*zs.length/TB.split[1]),Math.floor((TB.split[0]+1)*zs.length/TB.split[1])]:null;
+  let TB_TOOK=false;
+  TB?.mark?.('grid');
+  if(TB&&TB.mode==='import'){
+    while(TB.state==='pending')yield TB.promise;
+    const parts=TB.state==='ready'?TB.parts:null,W=xs.length;
+    if(parts&&parts.length&&parts[0].r0===0&&parts.at(-1).r1===zs.length&&parts.every((p,i)=>p.N===TB_N&&p.stride===TB_S&&(i===0||p.r0===parts[i-1].r1)&&p.positions.length===(p.r1-p.r0)*W*3)){
+      for(const p of parts){positions.set(p.positions,p.r0*W*3);colors.set(p.colors,p.r0*W*3);if(heightSamples)heightSamples.set(p.heightSamples,p.r0*W*stride);if(logoInkW)logoInkW.set(p.logoInkW,p.r0*W);maxHeight=Math.max(maxHeight,p.maxHeight);}
+      TB_TOOK=true;
+    }else if(TB.state==='ready')TB.why='the rows did not fit this grid';
+    TB.used=TB_TOOK;TB.parts=[];
+  }
+  if(R&&!TB_TOOK){
     macroGrid=new Array(xs.length*zs.length);
-    for(let i=0;i<zs.length;i++){
+    for(let i=TB_ROWS?Math.max(0,TB_ROWS[0]-1):0,iEnd=TB_ROWS?Math.min(zs.length,TB_ROWS[1]+1):zs.length;i<iEnd;i++){
       for(let j=0;j<xs.length;j++)macroGrid[i*xs.length+j]=reliefMacro(xs[j],zs[i]);
       if(sliceExpired()){yield;sliceStart=performance.now();}
     }
@@ -787,10 +801,11 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
     const W=xs.length,jw=Math.max(0,j-1),je=Math.min(W-1,j+1),iN=Math.max(0,i-1),iS=Math.min(zs.length-1,i+1);
     return {m:macroGrid[i*W+j],hx:(macroGrid[i*W+je].h-macroGrid[i*W+jw].h)/(xs[je]-xs[jw]),hz:(macroGrid[iS*W+j].h-macroGrid[iN*W+j].h)/(zs[iS]-zs[iN])};
   };
-  for(let i=0;i<zs.length;i++){const z=zs[i],channels=channelsAt(z);for(let j=0;j<xs.length;j++){const x=xs[j],sample=makeHeightSample(x,z,channels,preAt(i,j)),y=heightFromSample(sample),n=fbm(x*.009+51,z*.009),o=(i*xs.length+j)*3;positions.set([x,y,z],o);if(heightSamples)heightSamples.set(sample,(i*xs.length+j)*stride);maxHeight=Math.max(maxHeight,y);
+  if(!TB_TOOK)for(let i=TB_ROWS?TB_ROWS[0]:0,iEnd=TB_ROWS?TB_ROWS[1]:zs.length;i<iEnd;i++){const z=zs[i],channels=channelsAt(z);for(let j=0;j<xs.length;j++){const x=xs[j],sample=makeHeightSample(x,z,channels,preAt(i,j)),y=heightFromSample(sample),n=fbm(x*.009+51,z*.009),o=(i*xs.length+j)*3;positions.set([x,y,z],o);if(heightSamples)heightSamples.set(sample,(i*xs.length+j)*stride);maxHeight=Math.max(maxHeight,y);
     color.copy(dark).multiplyScalar(.73).lerp(pale,.16+n*.39+smooth(190,1200,y)*.10);color.lerp(summit,smooth(1000,2300,y)*(.07+n*.12));
     const wet=1-smooth(.3,18,y);color.multiplyScalar(1-wet*.27);if(LG)logoInkW[i*xs.length+j]=logoTint(x,z,color);colors.set([color.r,color.g,color.b],o);
   }if(sliceExpired()){yield;sliceStart=performance.now();}}
+  if(TB_ROWS){const W=xs.length,[r0,r1]=TB_ROWS;TB.post({N:TB_N,stride:TB_S,r0,r1,maxHeight,positions:positions.slice(r0*W*3,r1*W*3),colors:colors.slice(r0*W*3,r1*W*3),heightSamples:heightSamples?heightSamples.slice(r0*W*stride,r1*W*stride):null,logoInkW:logoInkW?logoInkW.slice(r0*W,r1*W):null});throw TB.STOP;}   /* TERRAIN_WORKER: a worker's share ends here */
   // ALPINE-TERRAIN: drainage erosion on the baked grid (alpine-erosion.js). A node is eroded as far as its
   // height is mountain mass (d height / d mass: 0 on river beds, banks and the canyon's support), so
   // the beds, banks and the camera route stay exactly where they were; the rivers are the base level.

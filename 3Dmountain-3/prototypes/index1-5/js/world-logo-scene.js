@@ -38,8 +38,8 @@
    colour-managed pipeline. No tone mapping is used or needed (the picture is soft-clipped in the shader).
    ===================================================================== */
 
-import { getSceneDaylight } from './scene-daylight.js?v=i15-mw0f5pfz';
-import { createLightSpecks } from './light-specks.js?v=i15-mw0f5pfz';
+import { getSceneDaylight } from './scene-daylight.js?v=i15-mw0qseka';
+import { createLightSpecks } from './light-specks.js?v=i15-mw0qseka';
 
 export const LAKE_DEFAULTS = {
   matchOpening: 0,

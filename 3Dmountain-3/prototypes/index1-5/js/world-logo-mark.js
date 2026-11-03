@@ -30,15 +30,15 @@
    · look.small (not a dial; default = automatic: screen under 700 px or under 4 GB) caps the mesh (about 27k triangles) and drops dispersion /
      double-sided refraction for phones. The caller can force it either way with look.small = true / false. */
 
-import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mw0f5pfz';
+import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mw0qseka';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { runSliced } from './perf-firstpass.js?v=i15-mw0f5pfz';
+import { runSliced } from './perf-firstpass.js?v=i15-mw0qseka';
 
 /* 2026-11-01: the client chose the look of 2026-10-27 from the saved versions, with a little more water on it (waterRim .55, shimmer, caustic, roughness); particle mark: beads 1. docs/logo-seal/water-rim-20261101.md. */
-export { createLogoBeads } from './world-logo-beads.js?v=i15-mw0f5pfz';
-import { EMBER_GLSL } from './world-logo-ember.js?v=i15-mw0f5pfz';
-export { createLogoEmber } from './world-logo-ember.js?v=i15-mw0f5pfz';
+export { createLogoBeads } from './world-logo-beads.js?v=i15-mw0qseka';
+import { EMBER_GLSL } from './world-logo-ember.js?v=i15-mw0qseka';
+export { createLogoEmber } from './world-logo-ember.js?v=i15-mw0qseka';
 export const MARK_DEFAULTS = {
   glowSpeed: 1.9,
   glowPulse: 1,

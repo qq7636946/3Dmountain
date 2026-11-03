@@ -1,6 +1,6 @@
 /* Local to index1-5 (2026-11-01). Ships light-shafts.js and puts it on the journey's two flashes: two passes in the composer round the bloom (the source before it, so it is the flash itself and not its
    halo; the shafts after it, so they are not bloomed into a haze), switched on only for the length of a pulse. Centre and source window follow the object every frame, in screen space, read from where it stands in this frame's camera.
-   Runs right after flash-glow-build.cjs: it needs flashPulse and flashEnvelope. Dials: CONFIG.lightShafts (LOGO panel). */
+   Runs right after flash-glow-build.cjs: it needs flashPulse (its heroLevel and wordLevel, the flashes as lit this frame). Dials: CONFIG.lightShafts (LOGO panel). */
 const fs = require('fs'), path = require('path');
 const once = (source, anchor, replacement, label) => {
   if (source.split(anchor).length !== 2) throw Error('light-shafts anchor (' + label + '): ' + (source.split(anchor).length - 1));
@@ -20,8 +20,9 @@ function patchMain(main) {
   main = once(main, '      function frame(manual, fixedDelta) {', `      /* where the shafts come from, this frame: nothing here runs past the first line unless a pulse is lit */
       const shaftAim = { center: new THREE.Vector2(), object: new THREE.Vector2(), win: new THREE.Vector2(), at: new THREE.Vector3(), box: new THREE.Box3(), min: new THREE.Vector2(), max: new THREE.Vector2(), dim: 0, last: 0 };
       function updateLightShafts() {
-        const S = CONFIG.lightShafts, F = CONFIG.flashGlow;
-        const heroUp = flashPulse.hero.t >= 0 && dropRoot.visible ? flashEnvelope(F, flashPulse.hero.t) : 0, wordUp = flashPulse.word.t >= 0 && logoRoot.visible ? flashEnvelope(F, flashPulse.word.t) : 0, hero = heroUp * S.hero, word = wordUp * S.word;
+        const S = CONFIG.lightShafts;
+        /* the flashes as they are lit this frame, ways in and out included (flash-glow-build.cjs), so the shafts fade with the drop instead of going out with it */
+        const heroUp = flashPulse.heroLevel, wordUp = flashPulse.wordLevel, hero = heroUp * S.hero, word = wordUp * S.word;
         const amount = S.on > .5 && !reduceMotion && (!mobileRenderBudget.mobile || S.phone > .5) ? Math.max(hero, word) : 0;
         /* the dip follows the pulse, but is never let go faster than dimOut: what it asks for now, or what is left of it. A few multiplications at rest */
         const now = performance.now() / 1000, A = shaftAim, dipAsked = amount > .002 ? (hero >= word ? heroUp * S.heroDim : wordUp * S.wordDim) : 0;

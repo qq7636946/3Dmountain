@@ -1,0 +1,42 @@
+/* The terrain grid, off the page's thread (2026-11-03, 客戶：「Web Worker 那個也幫我做」). Module worker, started by terrain-workers.js.
+   Runs the page's own scene builder (water-journey-scene-463.js → water-canyon-watershed-463.js) with the page's own settings, so every
+   number comes out of the same code with the same inputs; the builder computes only this worker's share of the grid's rows (split [j, k]),
+   hands them over and stops (terrain-worker-build.cjs patches the builder for that). The erosion that follows needs the whole grid and
+   stays on the page.
+   A worker has no DOM and no import map: three comes by its full URL (the same file as the page's import map), and a stand-in `document`
+   answers the few calls the builder makes on its way (three's ImageLoader asks for an <img> for textures nothing here draws). The one
+   setting the page reads from its DOM (alpine-terrain-params.js: the index1-5 grass) arrives as the page's own ALPINE_TERRAIN values, and
+   the window's size (camera and shadow map only) as the page's. */
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
+
+self.onmessage = async ({ data }) => {
+  const { options, alpine, split, view } = data;
+  const t0 = performance.now(), timing = {};
+  try {
+    // the builder reads the window's size for its camera and shadow map (not for the terrain): the page's own
+    for (const k of ['innerWidth', 'innerHeight', 'devicePixelRatio']) if (!(k in self)) self[k] = view?.[k];
+    if (typeof document === 'undefined') {
+      const inert = () => ({ style: {}, addEventListener() { }, removeEventListener() { }, setAttribute() { }, getContext: () => null });
+      self.document = { createElementNS: inert, createElement: tag => tag === 'canvas' && typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(1, 1) : inert(), documentElement: { matches: () => false, dataset: {} } };
+    }
+    const [params, scene, river] = await Promise.all([
+      import('./alpine-terrain-params.js'), import('./water-journey-scene-463.js'),
+      import('../../../js/water-journey-river.js?v=index463-scroll-20261004-78fa788ddc')
+    ]);
+    timing.modules = Math.round(performance.now() - t0);
+    Object.assign(params.ALPINE_TERRAIN, alpine);
+    // Not the erosion detail map (loadAlpineDetail): only the erosion reads it, and the erosion runs on the page.
+    const STOP = { stop: true };
+    let part = null;
+    self.__TERRAIN_BAKE__ = { mode: 'rows', split, STOP, post: p => { part = p; }, mark: name => { timing[name] = Math.round(performance.now() - t0); } };
+    try {
+      scene.createJourneyScene(THREE, { ...options, createRiver: (T, curve, widthAt, o = {}) => river.createJourneyRiver(T, curve, widthAt, { material: new T.MeshBasicMaterial(), lite: options.lite, ...o }) });
+    } catch (e) { if (e !== STOP) throw e; }
+    if (!part) throw new Error('the builder finished without reaching the terrain grid');
+    timing.done = Math.round(performance.now() - t0); part.timing = timing;
+    const transfer = [part.positions.buffer, part.colors.buffer, part.heightSamples?.buffer, part.logoInkW?.buffer].filter(Boolean);
+    postMessage({ ok: true, part }, transfer);
+  } catch (e) {
+    postMessage({ ok: false, error: String(e?.stack || e) });
+  }
+};

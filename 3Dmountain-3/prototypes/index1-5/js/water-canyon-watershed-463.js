@@ -4,8 +4,8 @@
 import { createConfluenceEffects } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 export { WATERSHED_FLOW_DEFAULTS } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 // ALPINE-TERRAIN (index1-5-alpine 2026-10-23): load-time drainage erosion and the alpine dials.
-import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mvxxnb7w';
-import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mvxxnb7w';
+import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mw0f5pfz';
+import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mw0f5pfz';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
@@ -380,10 +380,18 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   // Elongated, offset shoulders carry the skyline. A bounded smooth maximum
   // joins neighbouring mountain bodies without either cone cusps or needles.
   const smoothMax=(a,b,k)=>{const h=Math.max(0,k-Math.abs(a-b))/k;return Math.max(a,b)+h*h*k*.25;};
+  /* PERF_TERRAIN massif-bins (perf-terrain-build.cjs): the massifs that can pass the 4.3-radius box test at (wx,wz), in their own order */
+  const MASSIF_BIN=480,NO_MASSIFS=[];let massifBins=null,massifBinsFor=-1;
+  const massifsNear=(wx,wz)=>{
+    if(massifBinsFor!==massifs.length){massifBins=new Map();massifBinsFor=massifs.length;
+      for(const p of massifs){const r=4.3*p.radius+1,x0=Math.floor((p.x-r)/MASSIF_BIN),x1=Math.floor((p.x+r)/MASSIF_BIN),z0=Math.floor((p.z-r)/MASSIF_BIN),z1=Math.floor((p.z+r)/MASSIF_BIN);
+        for(let a=x0;a<=x1;a++)for(let b=z0;b<=z1;b++){const k=a*65536+b;let l=massifBins.get(k);if(!l)massifBins.set(k,l=[]);l.push(p);}}}
+    return massifBins.get(Math.floor(wx/MASSIF_BIN)*65536+Math.floor(wz/MASSIF_BIN))||NO_MASSIFS;
+  };
   function massifSample(x,z){
     const wx=x+(noise(x*.0009,z*.0008)-.5)*170,wz=z+(noise(x*.0009+71,z*.0008)-.5)*145;
     let mass=48;
-    for(const p of massifs){
+    for(const p of massifsNear(wx,wz)){
       const dx=(wx-p.x)/p.radius,dz=(wz-p.z)/p.radius;
       if(Math.abs(dx)>4.3||Math.abs(dz)>4.3)continue;
       const along=dx*p.c+dz*p.s,across=-dx*p.s+dz*p.c;
@@ -455,7 +463,7 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
     // the same steep flanks, so tall massifs read as massive mountains, not needles.
     const tent=Math.max(lerp(1.1,2,peakRound),1.1+.55*smooth(40,135,spacing));
     let mass=48;
-    for(const p of massifs){
+    for(const p of massifsNear(wx,wz)){
       const dx=(wx-p.x)/p.radius,dz=(wz-p.z)/p.radius;
       if(Math.abs(dx)>4.3||Math.abs(dz)>4.3)continue;
       const along=dx*p.c+dz*p.s,across=-dx*p.s+dz*p.c;

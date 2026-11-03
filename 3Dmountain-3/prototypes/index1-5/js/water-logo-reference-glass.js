@@ -252,7 +252,7 @@ function studioScene() {
   target.texture.name='Logo refraction backdrop';
   const floatKeys={uIorA:'iorA',uIorDelta:'iorDelta',uIrid:'iridescence',uSceneDepth:'sceneDepth',uNormalScale:'normalScale',uUvScale:'uvScale',uSceneMix:'sceneMix',uReflStr:'reflectionStrength',uFresnelPow:'fresnelPower',uReflFloor:'reflectFloor',uEnvRough:'envRoughness',uEnvSky:'envSky',uEnvStudio:'envStudio',uSunSpec:'sunSpec',uSunPow:'sunPow',uSunDisc:'sunDisc',uFrostBlur:'frostBlur',uIridPatch:'iridPatch',uBubble:'bubble',uBubbleScale:'bubbleScale',uBubbleSize:'bubbleSize',uCloud:'cloud',uFrost:'frost',uFrostFine:'frostFine',uFrostScale:'frostScale',uRim:'rim',uRimPow:'rimPow',uRough:'rough',uShade:'shade',uSSS:'sss',uGraze:'graze',uSpecCap:'specCap',uGlOn:'glOn',uGlDepth:'glDepth',uGlThick:'glThick',uGlLens:'glLens',uGlBand:'glBand',uGlBandY:'glBandY',uGlRim:'glRim',uGlInk:'glInk',uGlFill:'glFill',uGlBounce:'glBounce',uGlEdge:'glEdge',uGlGlint:'glGlint',uGlGlintPow:'glGlintPow',uGlInner:'glInner',uGlCaustic:'glCaustic'};
   const uniforms={
-    /* FLASH_GLOW */uFlash:{value:new THREE.Vector4()},uFlashColor:{value:new THREE.Color('#6fbcff')},
+    /* FLASH_GLOW */uFlash:{value:new THREE.Vector4()},uFlashColor:{value:new THREE.Color('#6fbcff')},uFlashSoft:{value:new THREE.Vector4(.1,0,1,.07)},uFlashWater:{value:new THREE.Vector2(1,1)},uFlashRim:{value:0},
     uLiquidTime:{value:0},uLiquidAmount:{value:1},
     uBackdrop:{value:target.texture},uSpectrum:{value:spectrum},uNormalMap:{value:normalMap},uEnv:{value:cube.texture},
     uProjView:{value:new THREE.Matrix4()},uCam:{value:new THREE.Vector3()},uOpacity:{value:1},
@@ -300,17 +300,34 @@ function studioScene() {
       uniform float uLiquidTime,uLiquidAmount;
 
 uniform vec4 uFlash; uniform vec3 uFlashColor;   // edge line, noise scale, its clock, gain
-float flashTri(float x) { return abs(fract(x) - .5); }
+uniform vec4 uFlashSoft;   // line width, rounded creases, fine layers, light in the body (.1, 0, 1, .07 is the first, crisp version)
+uniform vec2 uFlashWater;   // x 0 the folded lines, 1 flowing water; y how far the swells bend each other
+uniform float uFlashRim;    // light on the edges, as the closing LOGO's bevels
+/* no folds: long swells drifting one way, each bending the next. The same field as the closing LOGO's (emberFlow in world-logo-ember.js), same range as flashNoise */
+float flashFlow(vec3 p, float t) {
+  vec2 q = p.xy + p.z * vec2(.35, -.25);
+  float s = t * 3.;
+  q += .55 * uFlashWater.y * vec2(sin(q.y * 1.25 + s * .9), cos(q.x * 1.1 - s * .7));
+  q += .24 * uFlashWater.y * vec2(sin(q.y * 2.7 - s * 1.1 + 1.7), cos(q.x * 2.4 + s * .95 + .6));
+  return .285 + .285 * (.68 * sin(q.x * 1.9 + q.y * 1.1 - s) + .32 * sin(q.y * 3.1 - q.x * 1.4 + s * .7 + 2.1));
+}
+float flashTri(float x) { float t = abs(fract(x) - .5) * 2.; return mix(t, t * t * (3. - 2. * t), uFlashSoft.y) * .5; }
 vec3 flashTri3(vec3 p) { return vec3(flashTri(p.z + flashTri(p.y)), flashTri(p.z + flashTri(p.x)), flashTri(p.y + flashTri(p.x))); }
 float flashNoise(vec3 p, float t) {
   float z = 1.4, rz = 0.; vec3 bp = p;
-  for (int i = 0; i < 4; i++) { vec3 dg = flashTri3(bp * 2.); p += dg + t; bp *= 1.8; z *= 1.5; p *= 1.2; rz += flashTri(p.z + flashTri(p.x + flashTri(p.y))) / z; bp += .14; }
+  for (int i = 0; i < 4; i++) { vec3 dg = flashTri3(bp * 2.); p += dg + t; bp *= 1.8; z *= 1.5; p *= 1.2; float layer = flashTri(p.z + flashTri(p.x + flashTri(p.y))); rz += (i < 2 ? layer : mix(.25, layer, uFlashSoft.z)) / z; bp += .14; }
   return rz;
 }
 vec3 flashLight(vec3 p) {
-  float n = flashNoise(p * uFlash.y, uFlash.z);
-  float edge = 1. - smoothstep(0., .1, abs(n - uFlash.x));
-  return uFlashColor * (edge * uFlash.w + uFlash.w * .07);
+  float n = uFlashWater.x > .999 ? flashFlow(p * uFlash.y, uFlash.z) : mix(flashNoise(p * uFlash.y, uFlash.z), flashFlow(p * uFlash.y, uFlash.z), uFlashWater.x);
+  float edge = (1. - smoothstep(0., uFlashSoft.x, abs(n - uFlash.x))) * mix(min(1., .1 / uFlashSoft.x), 1., uFlashWater.x);   // old lines: a wider line spreads the same light, it does not add any
+  /* water: the closing LOGO reads as light because it stands in the dark; the drop stands in a bright room, where an even blue wash only flattens the glass into ice. So the light gathers in
+     pockets that travel along the bands (a second, slower field), white at their hearts, and the glass between them stays clear. */
+  if (uFlashWater.x > .001) {
+    edge *= mix(1., smoothstep(.1, .47, flashFlow(p.zxy * uFlash.y * .62 + 3.1, uFlash.z * .8)), uFlashWater.x);
+    return mix(uFlashColor, vec3(1.), edge * edge * .85 * uFlashWater.x) * (edge + uFlashSoft.w) * uFlash.w;
+  }
+  return uFlashColor * (edge + uFlashSoft.w) * uFlash.w;
 }
       uniform sampler2D uBackdrop,uSpectrum,uNormalMap;
       uniform samplerCube uEnv;
@@ -400,7 +417,7 @@ vec3 flashLight(vec3 p) {
         color=glacierSurface(color,N,V,NdV,R,vObj,glInner,glFace,glOutW);
         color*=exp(-vec3(.085,.027,.012)*pow(1.-NdV,1.6));
         color+=min(spec,vec3(uSpecCap));
-        if(uFlash.w>.001)color+=flashLight(vObj);
+        if(uFlash.w>.001){color+=flashLight(vObj);float flashR=1.-clamp(NdV,0.,1.);color+=mix(uFlashColor,vec3(1.),.45)*flashR*flashR*flashR*uFlashRim*uFlash.w;}
         gl_FragColor=vec4(color,uOpacity);
       }
     `

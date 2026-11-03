@@ -27,18 +27,20 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { uploadSoon } from './perf-firstpass.js?v=i15-mvxxnb7w';   /* FIRSTPASS_VIDEO */
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mvxxnb7w'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mvxxnb7w';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mvxxnb7w';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mvxxnb7w';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mw0f5pfz';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw0f5pfz'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mw0f5pfz';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { stepWorldFollow } from './motion-response.js?v=i15-mw0f5pfz';   /* SILK_SCROLL */
+import { createQualityGovernor } from './quality-governor.js?v=i15-mw0f5pfz';   /* QUALITY_GOVERNOR */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw0f5pfz';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw0f5pfz';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mvxxnb7w';
-import { createWorldOcean } from './world-ocean.js?v=i15-mvxxnb7w';
-import { createWorldLogo } from './world-logo.js?v=i15-mvxxnb7w';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mw0f5pfz';
+import { createWorldOcean } from './world-ocean.js?v=i15-mw0f5pfz';
+import { createWorldLogo } from './world-logo.js?v=i15-mw0f5pfz';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mvxxnb7w';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mvxxnb7w';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mw0f5pfz';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw0f5pfz';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
@@ -318,6 +320,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   const small = Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4);
   const maxDpr = Math.min(window.devicePixelRatio || 1, mobilePerformance ? 1.25 : small ? 1.75 : 2);
   let dpr = maxDpr;
+  const worldGovernor = createQualityGovernor('world', { min: Math.min(.6, 1 / maxDpr) });   /* QUALITY_GOVERNOR: down to DPR 1 on a retina screen as before, .6 of 1 on a plain one */
   const colorParsed = new Map();
   const color = hex => { let c = colorParsed.get(hex); if (!c) { c = new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace); colorParsed.set(hex, c); } return new THREE.Color().copy(c); };   // shaders work in sRGB values as written
   const camera = new THREE.PerspectiveCamera(30, W / H, .05, 20);
@@ -695,26 +698,22 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     lakeCut = s.l?.pc ?? 0;
     if (!logoDrawn) drawBeforeSeal();
     diveFx.render(s, time, renderer);
-    // Adaptive resolution: if frames come slower than ~40/s, draw fewer pixels; climb back when there is room.
-    if (++frames % 45 === 0 && clock) {
-      if (clock.avgMs > 24 && dpr > 1) setDpr(dpr - .25);
-      else if (clock.avgMs < 14 && dpr < maxDpr) setDpr(dpr + .25);
-    }
+    /* QUALITY_GOVERNOR: adaptive resolution by the device's own frame times (quality-governor.js); before: −.25 DPR at > 24 ms, back only under 14 ms (never, at 60 Hz), floor 1 */
+    if (clock && worldGovernor.sample(clock.raw, time)) setDpr(maxDpr * worldGovernor.scale);
   }
-  function setDpr(value) { dpr = clamp(value, 1, maxDpr); renderer?.setPixelRatio(dpr); renderer?.setSize(W, H, false); }
+  function setDpr(value) { dpr = clamp(value, .5, maxDpr); renderer?.setPixelRatio(dpr); renderer?.setSize(W, H, false); }
 
   function frame(now) {
     raf = 0; if (!open || disposed || document.hidden) return;
     ownScrollWrite = false;
-    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+    const rawDt = Math.max(0, (now - last) / 1000), dt = Math.min(.05, rawDt); last = now;
     clock = clock || { avgMs: 16, lastDt: dt };
-    clock.avgMs = mix(clock.avgMs, dt * 1000, .08); clock.lastDt = dt;
+    clock.avgMs = mix(clock.avgMs, dt * 1000, .08); clock.lastDt = dt; clock.raw = rawDt;
     // The journey's spring (critically damped, ~10/s): wheel steps glide, a fling carries.
     if (reducedMotion) { y = yt; vy = 0; }
     else {
       /* STUDIO_MOTION_WORLD: one response, even across globe/reading/footer. */
-      const omega = ocean ? ocean.omega(y) : 11.5, x = y - yt, decay = Math.exp(-omega * dt), temp = (vy + omega * x) * dt;
-      y = yt + (x + temp) * decay; vy = (vy - omega * temp) * decay;
+      [y, vy] = stepWorldFollow(y, yt, vy, ocean ? ocean.omega(y) : 11.5, dt);   /* SILK_SCROLL: the exponential follow (motion-response.js); ?silk=0 = the spring */
       if (Math.abs(y - yt) < .05 && Math.abs(vy) < .5) { y = yt; vy = 0; }
     }
     if (Math.abs(viewport.scrollTop - y) > .35) { written = y; ownScrollWrite = true; viewport.scrollTop = y; }
@@ -804,7 +803,8 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   // ---------- GSAP: reveals on the real scroll container ----------
   let gsapCtx = null, ScrollTriggerRef = null;
   function refreshTriggers() { ScrollTriggerRef?.refresh(); }
-  const motion = reducedMotion ? Promise.resolve() : Promise.all([import(GSAP_URL), import(SCROLL_TRIGGER_URL), import(SPLIT_TEXT_URL), styled])
+  /* PERF_NET gsap-unused: section-motion.js always exists here, so the GSAP branch below never ran past its fonts wait */
+  const motion = reducedMotion || sectionMotion ? Promise.resolve() : Promise.all([import(GSAP_URL), import(SCROLL_TRIGGER_URL), import(SPLIT_TEXT_URL), styled])
     .then(async ([g, st, sp]) => {
       if (disposed) return;
       const gsap = g.gsap || g.default, ScrollTrigger = st.ScrollTrigger || st.default, SplitText = sp.SplitText || sp.default;

@@ -9,9 +9,22 @@ import { createLightShafts } from './light-shafts.js';
 
 export const EMBER_GLSL = /* glsl */ `
 uniform vec4 uEmberSoft;   // line width, rounded creases, fine layers, holes (「紋路再柔和一點」: .1, 0, 1, 1 is the first, crisp version)
+uniform vec2 uEmberWater;   // x 0 the first version's folded lines, 1 flowing water (emberFlow); y how far the swells bend each other
 float emberTri(float x) { float t = abs(fract(x) - .5) * 2.; return mix(t, t * t * (3. - 2. * t), uEmberSoft.y) * .5; }
 vec3 emberTri3(vec3 p) { return vec3(emberTri(p.z + emberTri(p.y)), emberTri(p.z + emberTri(p.x)), emberTri(p.y + emberTri(p.x))); }
+/* 客戶 2026-11-02：點下去發光的部分流動再更柔和更像水. The triangle waves below fold space along straight creases: however soft the line is drawn, that reads as
+   crystal facets. This field has no folds: long swells drifting one way, each bending the next, so the light runs in rounded, slowly changing bands. Same range as
+   emberNoise (0 to ~.57), so the line, its width and the burn dial mean the same thing. */
+float emberFlow(vec3 p, float t) {
+  vec2 q = p.xy + p.z * vec2(.35, -.25);
+  float s = t * 3.;
+  q += .55 * uEmberWater.y * vec2(sin(q.y * 1.25 + s * .9), cos(q.x * 1.1 - s * .7));
+  q += .24 * uEmberWater.y * vec2(sin(q.y * 2.7 - s * 1.1 + 1.7), cos(q.x * 2.4 + s * .95 + .6));
+  return .285 + .285 * (.68 * sin(q.x * 1.9 + q.y * 1.1 - s) + .32 * sin(q.y * 3.1 - q.x * 1.4 + s * .7 + 2.1));
+}
 float emberNoise(vec3 p, float t) {
+  if (uEmberWater.x > .999) return emberFlow(p, t);
+  vec3 p0 = p;
   float z = 1.4, rz = 0.; vec3 bp = p;
   for (int i = 0; i < 4; i++) {
     vec3 dg = emberTri3(bp * 2.);
@@ -20,7 +33,7 @@ float emberNoise(vec3 p, float t) {
     rz += (i < 2 ? layer : mix(.25, layer, uEmberSoft.z)) / z;   // the fine layers fade to their mean, so the line stays where it was
     bp += .14;
   }
-  return rz;
+  return uEmberWater.x > .001 ? mix(rz, emberFlow(p0, t), uEmberWater.x) : rz;
 }
 float emberLine(float n, float burn) { return (1. - smoothstep(0., uEmberSoft.x, abs(n - burn))) * min(1., .1 / uEmberSoft.x); }   // a wider line spreads the same light, it does not add any`;
 
@@ -56,7 +69,7 @@ export function createLogoEmber({ THREE, mark, host, holder, renderer, small = f
     rtB = new THREE.WebGLRenderTarget(4, 4, { ...opts, depthBuffer: false });
     rtC = new THREE.WebGLRenderTarget(4, 4, { ...opts, depthBuffer: false });
     glowMat = new THREE.ShaderMaterial({
-      uniforms: { uEmber: U.uEmber, uEmberSoft: U.uEmberSoft, uColor: { value: new THREE.Color() }, uBody: { value: 0 } },
+      uniforms: { uEmber: U.uEmber, uEmberSoft: U.uEmberSoft, uEmberWater: U.uEmberWater, uColor: { value: new THREE.Color() }, uBody: { value: 0 } },
       vertexShader: /* glsl */ `varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
       fragmentShader: /* glsl */ `precision highp float; ${EMBER_GLSL}
         uniform vec4 uEmber; uniform vec3 uColor; uniform float uBody; varying vec3 vP;
@@ -99,12 +112,14 @@ export function createLogoEmber({ THREE, mark, host, holder, renderer, small = f
     const L = look();
     if (want && num(L.emberOn, 1) < .5) return;
     on = want;
+    document.documentElement.dataset.wlEmber = on ? 'on' : 'off';   // the glass of the page's interface catches it (water-light.css)
     if (!ready) build();
     shake.steps = reducedMotion ? 0 : on ? 5 : 2; shake.step = 0; shake.t = 1; shake.dur = 0;
   }
 
   function update({ time = 0, zone = true } = {}) {
     if (on && !zone) toggle(false);
+    if (!on && time - last > .5) { k = 0; shake.steps = 0; }   // it went out while the lake was not drawing: nothing left to fade or shake on the way back
     const dt = last < 0 ? 1 / 60 : clamp(time - last, 0, .1); last = time;
     if (!on && k <= 0) { if (U.uEmber.value.x !== 0 || U.uEmber.value.w !== 0) U.uEmber.value.set(0, 0, U.uEmber.value.z, 0); if (holder.position.z !== 0 || holder.rotation.x !== 0 || holder.rotation.y !== 0) { holder.position.z = 0; holder.rotation.set(0, 0, 0); } return; }
     const L = look();
@@ -113,6 +128,7 @@ export function createLogoEmber({ THREE, mark, host, holder, renderer, small = f
     flame += dt * speed;
     U.uEmber.value.set(e * num(L.emberBurn, .105), num(L.emberScale, 2.4), flame * .2, e * num(L.emberGain, 2.6));
     U.uEmberSoft.value.set(Math.max(.005, num(L.emberSoft, .18)), clamp(num(L.emberSmooth, .8)), clamp(num(L.emberDetail, .45)), clamp(num(L.emberHole, 0)));
+    U.uEmberWater.value.set(clamp(num(L.emberWater, 1)), num(L.emberBend, 1));
     U.uEmberBody.value = e * num(L.emberBody, .1);
     U.uEmberColor.value.set(typeof L.emberColor === 'string' ? L.emberColor : '#6fbcff');
     /* the start */
@@ -206,6 +222,7 @@ export function createLogoEmber({ THREE, mark, host, holder, renderer, small = f
     get lit() { return on; },
     get state() { return { on, k, ready, shafts: !!shafts }; },
     dispose() {
+      document.documentElement.dataset.wlEmber = 'off';
       if (!ready) return;
       for (const r of [rtA, rtB, rtC]) r.dispose();
       glowMat.dispose(); blurMat.dispose(); addMat.dispose(); quad.geometry.dispose(); shafts?.dispose();

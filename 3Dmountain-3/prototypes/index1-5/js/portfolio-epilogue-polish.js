@@ -53,7 +53,7 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
       if (disposed) return null;
       const displacement = await module.prepareSlider();
       if (disposed) return null;
-      slider = module.createSlider(canvas, { images, base, lift, dpr: 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
+      slider = module.createSlider(canvas, { images, base, lift, dpr: document.documentElement.hasAttribute('data-perf-phone') ? 1.25 : 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
       await slider.ready;
       if (disposed) return null;
       // Upload the first visible photographs and compile all passes off-screen.

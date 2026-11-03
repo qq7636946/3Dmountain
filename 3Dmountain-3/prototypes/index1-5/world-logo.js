@@ -79,6 +79,7 @@ const DEFAULTS = /*LOGOSEAL-DEFAULTS*/{
   "hold": 1.65,
   "followDaylight": 0,
   "prepare": 0.1,
+  "prepareEarly": 1,
   "textIn": 0.84,
   "textY": 0.735,
   "textSize": 1,
@@ -386,8 +387,10 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
       textP: smooth(num('textIn', 0, 1), Math.min(1, num('textIn', 0, 1) + .3), tText) * (1 - smooth(a.end, a.end + H1 * .38, y)),
       engaged: qWave > 0,                                   // the wave has begun: the lake takes over the drawing
       active: y > a.logo - H1 * .9 && y < a.end + H1 * 1.05, // the page's chrome (chapter rail, the ocean's focus) knows about us
-      // build the lake (in free moments) once the visitor is in the ocean section, and keep it while the world is open: see release
-      near: y > (at.resp > 0 ? at.resp : a.logo - H1 * 4.7) + H1 * num('prepare', 0, 6)
+      // build the lake (in free moments) and keep it while the world is open: see release. prepareEarly 1 (2026-11-03, 客戶：「進入地球段就開始」):
+      // from the world's first frame, the globe. The first build of a page load compiles ~16 programs, 8–9 s; begun at the ocean (prepareEarly 0,
+      // then `prepare` screens into it) a brisk visitor reached the wave 1.4 s before it was ready and the mark popped in over an empty sea.
+      near: num('prepareEarly', 0, 1) > .5 || y > (at.resp > 0 ? at.resp : a.logo - H1 * 4.7) + H1 * num('prepare', 0, 6)
     };
     last = l;
     return l;
@@ -766,7 +769,8 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   const painted = { active: null, gone: null, p: -1, y: '', k: '' };
   function paint(s) {
     const l = s.l; if (!l) return;
-    const clickable = !!R?.ember && l.qWave >= 1 && l.y < abs().end && +(cfg().logoMark || {}).emberOn !== 0;
+    const zone = l.qWave >= 1 && l.y < abs().end, clickable = !!R?.ember && zone && +(cfg().logoMark || {}).emberOn !== 0;
+    if (!zone) R?.ember?.toggle(false);   // left while it was lit (menu, a long jump): the world does not draw the footer or the top, so the frame that would have put it out is not running
     if (clickable !== painted.clickable) { painted.clickable = clickable; root.style.cursor = clickable ? 'pointer' : ''; }
     if (l.active !== painted.active) { painted.active = l.active; root.classList.toggle('is-logoseal', l.active); }
     // the ocean's chapters are off the top of the screen from here on: nothing in them may take the keyboard focus (and scroll us back)

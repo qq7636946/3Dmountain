@@ -30,15 +30,15 @@
    · look.small (not a dial; default = automatic: screen under 700 px or under 4 GB) caps the mesh (about 27k triangles) and drops dispersion /
      double-sided refraction for phones. The caller can force it either way with look.small = true / false. */
 
-import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mvxxnb7w';
+import { createCastGeometry, createCastNormal } from './world-logo-cast.js?v=i15-mw0f5pfz';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { runSliced } from './perf-firstpass.js?v=i15-mvxxnb7w';
+import { runSliced } from './perf-firstpass.js?v=i15-mw0f5pfz';
 
 /* 2026-11-01: the client chose the look of 2026-10-27 from the saved versions, with a little more water on it (waterRim .55, shimmer, caustic, roughness); particle mark: beads 1. docs/logo-seal/water-rim-20261101.md. */
-export { createLogoBeads } from './world-logo-beads.js?v=i15-mvxxnb7w';
-import { EMBER_GLSL } from './world-logo-ember.js?v=i15-mvxxnb7w';
-export { createLogoEmber } from './world-logo-ember.js?v=i15-mvxxnb7w';
+export { createLogoBeads } from './world-logo-beads.js?v=i15-mw0f5pfz';
+import { EMBER_GLSL } from './world-logo-ember.js?v=i15-mw0f5pfz';
+export { createLogoEmber } from './world-logo-ember.js?v=i15-mw0f5pfz';
 export const MARK_DEFAULTS = {
   glowSpeed: 1.9,
   glowPulse: 1,
@@ -122,18 +122,21 @@ export const MARK_DEFAULTS = {
   /* —— 水珠粒子（igloo 式，滑鼠可推動；world-logo-beads.js；0＝回到玻璃）—— */
   /* —— 點擊發光（threejs-burning-skull 的做法；world-logo-ember.js）—— */
   emberOn: 1,                // 1 可以點擊發光／0 關
+  emberWater: 1,             // 水流感（1 圓潤流動的水光／0 原本的結晶紋路）
+  emberBend: 1,              // 水流彎曲（0 直／大＝更蜿蜒）
   emberColor: "#6fbcff",     // 光的顏色（高亮處會近白，身體與光暈帶這個色）
-  emberSoft: 0.18,           // 紋路柔和（線條寬度：.1 細而銳利，大＝柔開；原本的銳利版：.1、0、1、1，多寡 .15、亮度 6）
+  /* 2026-11-02 水光（客戶：點下去發光的部分流動再更柔和更像水）。回到結晶紋路：emberWater 0、emberSoft .18、emberBurn .105、emberScale 2.4、emberGain 2.6、emberBloom 1。11-02「發光波型再密一點」：emberScale 3.6 → 6 */
+  emberSoft: 0.1,            // 紋路柔和（線條寬度：.1 細而銳利，大＝柔開；原本的銳利版：.1、0、1、1，多寡 .15、亮度 6）
   emberSmooth: 0.8,          // 紋路圓滑（0 尖角／1 圓潤）
   emberDetail: 0.45,         // 細碎紋理（0 只留大紋路／1 全部）
   emberHole: 0,              // 吃出小洞（0 無洞／1 洞吃到線上）
-  emberBurn: 0.105,          // 紋路多寡（線落在哪個高度）
-  emberScale: 2.4,           // 紋路尺度（大＝細碎）
+  emberBurn: 0.25,           // 紋路多寡（線落在哪個高度）
+  emberScale: 6,             // 紋路尺度（大＝細碎）
   emberSpeed: 1,             // 點亮時紋路速度
   emberIdleSpeed: 0.21,      // 熄滅途中紋路速度
-  emberGain: 2.6,            // 紋路亮度
+  emberGain: 1.9,            // 紋路亮度
   emberBody: 0.1,            // 整體微光
-  emberBloom: 1,             // 光暈強度
+  emberBloom: 0.55,          // 光暈強度
   emberBloomRadius: 1,       // 光暈範圍
   emberShake: 1,             // 點下時的抖動
   emberLift: 0.35,           // 往前彈出
@@ -264,7 +267,7 @@ export const MARK_ROWS = [
   ['品牌藍・深端色', 'brandBlueDeep'],
   ['品牌藍・內部藍光', 'brandBlueGlow', 0, 3, 0.01],
   ['品牌藍・吸收距離（小＝越深）', 'brandBlueAbsorb', 0.02, 4, 0.01],
-  ['點擊發光（1 開／0 關）', 'emberOn', 0, 1, 1], ['點擊發光｜顏色', 'emberColor'], ['點擊發光｜紋路柔和（線條寬度）', 'emberSoft', .02, .6, .005], ['點擊發光｜紋路圓滑（0 尖角／1 圓潤）', 'emberSmooth', 0, 1, .01], ['點擊發光｜細碎紋理（0 只留大紋路／1 全部）', 'emberDetail', 0, 1, .01], ['點擊發光｜吃出小洞（0 無洞／1 洞吃到線上）', 'emberHole', 0, 1, .01], ['點擊發光｜紋路多寡', 'emberBurn', 0, .6, .005], ['點擊發光｜紋路尺度（大＝細碎）', 'emberScale', .5, 8, .05],
+  ['點擊發光（1 開／0 關）', 'emberOn', 0, 1, 1], ['點擊發光｜水流感（0 結晶紋／1 水）', 'emberWater', 0, 1, .01], ['點擊發光｜水流彎曲（0 直／大＝更蜿蜒）', 'emberBend', 0, 2.5, .01], ['點擊發光｜顏色', 'emberColor'], ['點擊發光｜紋路柔和（線條寬度）', 'emberSoft', .02, .6, .005], ['點擊發光｜紋路圓滑（只影響結晶紋）', 'emberSmooth', 0, 1, .01], ['點擊發光｜細碎紋理（只影響結晶紋）', 'emberDetail', 0, 1, .01], ['點擊發光｜吃出小洞（0 無洞／1 洞吃到線上）', 'emberHole', 0, 1, .01], ['點擊發光｜紋路多寡', 'emberBurn', 0, .6, .005], ['點擊發光｜紋路尺度（大＝細碎）', 'emberScale', .5, 8, .05],
   ['點擊發光｜紋路速度', 'emberSpeed', 0, 3, .01], ['點擊發光｜熄滅途中速度', 'emberIdleSpeed', 0, 2, .01], ['點擊發光｜紋路亮度', 'emberGain', 0, 12, .05], ['點擊發光｜整體微光', 'emberBody', 0, 1, .005],
   ['點擊發光｜光暈強度', 'emberBloom', 0, 3, .01], ['點擊發光｜光暈範圍', 'emberBloomRadius', .2, 4, .01], ['點擊發光｜抖動', 'emberShake', 0, 2, .01], ['點擊發光｜往前彈出', 'emberLift', 0, 2, .01],
   ['光芒｜LOGO 強度（0 關）', 'emberShafts', 0, 40, .1], ['光芒｜LOGO 亮度壓縮（大＝每條亮度較平均）', 'emberShaftKnee', 0, 12, .05], ['光芒｜LOGO 明暗緩衝（秒，大＝不閃、變化較慢）', 'emberShaftSettle', 0, 1, .01], ['光芒｜LOGO 長度（螢幕高）', 'emberShaftLength', .05, 2, .01], ['光芒｜LOGO 衰減（越小越快淡出）', 'emberShaftFall', .002, 1, .001], ['光芒｜蓋在 LOGO 上的比例', 'emberShaftCore', 0, 1, .01], ['光芒｜LOGO 轉到側面時減弱（0 不減）', 'emberShaftTurnDim', 0, 1, .01], ['光芒｜算 LOGO 本體的邊：開始', 'emberShaftEdgeFrom', 0, 1, .01], ['光芒｜算 LOGO 本體的邊：滿', 'emberShaftEdgeTo', .01, 1, .01],
@@ -1406,7 +1409,7 @@ export async function createLogoMark({ THREE, SVGLoader, svgUrl, renderer, look,
 
   const U = {
     uTime: { value: 0 }, uYaw: { value: 0 }, uSettle: { value: 1 },
-    uEmber: { value: new THREE.Vector4() }, uEmberSoft: { value: new THREE.Vector4(.1, 0, 1, 1) }, uEmberColor: { value: new THREE.Color() }, uEmberBody: { value: 0 },
+    uEmber: { value: new THREE.Vector4() }, uEmberSoft: { value: new THREE.Vector4(.1, 0, 1, 1) }, uEmberWater: { value: new THREE.Vector2(1, 1) }, uEmberColor: { value: new THREE.Color() }, uEmberBody: { value: 0 },
     uRimStrength: { value: 0 }, uRimPow: { value: 3 }, uRimLine: { value: 0 }, uRimColor: { value: new THREE.Color() },
     uGlow: { value: 0 }, uGlowPulse: { value: 0 }, uGlowSpeed: { value: .6 }, uGlowColor: { value: new THREE.Color() },
     uCaustic: { value: 0 }, uCausticScale: { value: 5 }, uCausticSpeed: { value: 0.5 },

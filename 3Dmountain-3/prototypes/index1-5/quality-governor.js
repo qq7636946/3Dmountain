@@ -1,0 +1,67 @@
+/* Frame-time governor (2026-11-03, 客戶：「整個網站幫我進行優化，我怕到手機或是比較低階的電腦跑不起來」).
+   Scales the drawing resolution when the device cannot keep up, judged on the device's own frame times rather than on a guess at
+   what it is. A capable machine never leaves 1 (its picture does not change at all).
+   - Every second, the median frame time of that second. Median, not mean: a shader compile or a texture upload is one long frame.
+   - Slower than ~41 fps (median > 24 ms) for 2 seconds running: one step down (scale − .15), at most every 1.5 s, not below `min`.
+   - A step must pay: if the next 2 seconds are not at least 8% faster, the time is going somewhere pixels do not decide (CPU, layout),
+     so the step is taken back and no step down is tried below that scale for a minute: no blur for nothing.
+   - Smooth for 8 seconds (median ≤ 18.5 ms, which a 60 Hz screen reaches): one step up (+ .1). If a step up is followed by a step down
+     within 5 seconds, the scale it left is the ceiling for a minute, so it does not see-saw.
+   ?governor=0 switches it off; ?governorScale=.7 holds a scale (to look at the picture a weak device will get).
+   window.__MONTIS_GOVERNOR__ holds the live instances (QA): .state, and .debugExtraMs = scale => ms to simulate a GPU-bound device. */
+const q = new URLSearchParams(location.search);
+const OFF = q.get('governor') === '0', HOLD = parseFloat(q.get('governorScale'));
+
+export function createQualityGovernor(name, { min = .6, down = .15, up = .1, slowMs = 24, fastMs = 18.5, slowFor = 2, fastFor = 8, cooldown = 1.5, judge = 2, gain = .92, lockFor = 60 } = {}) {
+  let scale = Number.isFinite(HOLD) ? Math.min(1, Math.max(min, HOLD)) : 1;
+  const frames = [];
+  let windowStart = -1, slowRun = 0, fastRun = 0, lastChange = -1e9, pending = null, floorLock = 0, floorUntil = 0, ceiling = 1, ceilingUntil = 0, lastUp = -1e9, upFrom = 1;
+  const log = [];
+  const set = (to, now, why) => { const from = scale; scale = Math.round(to * 100) / 100; lastChange = now; log.push([Math.round(now * 10) / 10, from, scale, why]); if (log.length > 40) log.shift(); return true; };
+  const api = {
+    name,
+    get scale() { return scale; },
+    debugExtraMs: null,
+    /* dt in seconds, now in seconds. Returns true when the scale changed (the caller resizes). */
+    sample(dt, now) {
+      if (OFF || Number.isFinite(HOLD) || !(dt > 0) || dt > 1) return false;
+      let ms = dt * 1000;
+      if (api.debugExtraMs) ms += api.debugExtraMs(scale) || 0;
+      if (windowStart < 0) windowStart = now;
+      frames.push(ms);
+      if (now - windowStart < 1) return false;
+      const sorted = frames.slice().sort((a, b) => a - b), median = sorted[sorted.length >> 1];
+      frames.length = 0; windowStart = now;
+      api.lastMedian = median;
+      if (floorUntil && now > floorUntil) { floorLock = 0; floorUntil = 0; }
+      if (ceilingUntil && now > ceilingUntil) { ceiling = 1; ceilingUntil = 0; }
+      // a step down waiting to be judged
+      if (pending) {
+        pending.after.push(median);
+        if (pending.after.length < judge) return false;
+        const after = pending.after.slice().sort((a, b) => a - b)[pending.after.length >> 1], p = pending; pending = null;
+        if (after > p.before * gain) { floorLock = p.from; floorUntil = now + lockFor; slowRun = 0; return set(p.from, now, 'no gain ' + p.before.toFixed(1) + '→' + after.toFixed(1) + ' ms'); }
+        slowRun = 0; fastRun = 0;
+        return false;
+      }
+      slowRun = median > slowMs ? slowRun + 1 : 0;
+      fastRun = median <= fastMs ? fastRun + 1 : 0;
+      if (slowRun >= slowFor && now - lastChange >= cooldown) {
+        const to = Math.max(min, floorLock || 0, scale - down);
+        if (to < scale - .001) {
+          if (now - lastUp < 5) { ceiling = upFrom; ceilingUntil = now + lockFor; }
+          pending = { from: scale, before: median, after: [] }; slowRun = 0;
+          return set(to, now, 'slow ' + median.toFixed(1) + ' ms');
+        }
+      }
+      if (fastRun >= fastFor && scale < Math.min(1, ceiling) - .001 && now - lastChange >= cooldown) {
+        fastRun = 0; lastUp = now; upFrom = scale;
+        return set(Math.min(1, ceiling, scale + up), now, 'smooth ' + median.toFixed(1) + ' ms');
+      }
+      return false;
+    },
+    get state() { return { name, scale, off: OFF, held: Number.isFinite(HOLD), median: api.lastMedian ?? null, floorLock, ceiling, judging: !!pending, log: log.slice() }; }
+  };
+  (window.__MONTIS_GOVERNOR__ ||= {})[name] = api;
+  return api;
+}

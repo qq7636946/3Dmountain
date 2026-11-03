@@ -99,7 +99,11 @@ export function* erodeAlpineGrid({ xs, zs, height, weight, lite = false, erosion
   for (let i = 0; i < H; i++) cdz[i] = Math.abs(zs[Math.min(H - 1, i + 1)] - zs[Math.max(0, i - 1)]) / ((i === 0 || i === H - 1) ? 1 : 2);
   for (let i = 0; i < H; i++) for (let j = 0; j < W; j++) cellA[i * W + j] = cdx[j] * cdz[i];
   const DI = [-1, -1, -1, 0, 0, 1, 1, 1], DJ = [-1, 0, 1, -1, 1, -1, 0, 1];
-  const distTo = (i, j, n) => Math.hypot(xs[j + DJ[n]] - xs[j], zs[i + DI[n]] - zs[i]);
+  /* PERF_TERRAIN hypot-table (perf-terrain-build.cjs): the same Math.hypot values, looked up (a step only depends on the column's and the row's spacing) */
+  const stepIds = (vals, len, D) => { const ids = new Int32Array(len * 8), seen = new Map(), list = []; for (let a = 0; a < len; a++) for (let n = 0; n < 8; n++) { const v = vals[a + D[n]] - vals[a]; let id = seen.get(v); if (id === undefined) { id = list.length; seen.set(v, id); list.push(v); } ids[a * 8 + n] = id; } return { ids, list }; };
+  const SX = stepIds(xs, W, DJ), SZ = stepIds(zs, H, DI), NZ = SZ.list.length, HYP = new Float64Array(SX.list.length * NZ);
+  for (let a = 0; a < SX.list.length; a++) for (let b = 0; b < NZ; b++) HYP[a * NZ + b] = Math.hypot(SX.list[a], SZ.list[b]);
+  const distTo = (i, j, n) => HYP[SX.ids[j * 8 + n] * NZ + SZ.ids[i * 8 + n]];
 
   // ---- 1. spurs and gullies: the real eroded terrain's detail layered on the mass (taller ground
   //         carries more), or warped ridged noise when the tile is not there ----

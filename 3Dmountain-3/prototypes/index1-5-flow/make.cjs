@@ -38,6 +38,10 @@ const rewire = s => s
 const leftover = (name, s) => { const m = s.match(/(?:from\s+|import\(\s*)'\.\/(?![\w.-]+\.js\?v=flow-)[^']+'/); if (m) throw Error(`${name}: unrewired ${m[0]}`); };
 const part = name => read(path.join(__dirname, name));
 
+/* Projected strategy labels keep their existing placement algorithm. */
+let alpineUI = part('../index1-5/alpine-ui.js');
+alpineUI = once(alpineUI, "  makePin('peak', { id: 'confluence', name: 'CONFLUENCE', num: '恒灝創新', at: { x: main.x, y: 0, z: zc }, maxLead: 54, phone: true });", '', 'remove central confluence annotation');
+
 /* ============================================================== main.js */
 let main = read(path.join(LIVE, 'main.js'));
 main = "import { paintJourneyTransition } from './transition-details.js';\n" + main;
@@ -52,8 +56,21 @@ main = once(main, '      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG
         return light;
       }
       const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));`, 'flow palette clock');
-const lookCode = Object.entries(lookPreset).map(([group, values]) => '      Object.assign(CONFIG.' + group + ', ' + JSON.stringify(values) + ');').join('\n');
-main = once(main, '      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));', '      /* FLOW_LOOK_PRESET: client colour swatches and light frequencies. */\n' + lookCode + '\n      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));', 'flow look preset');
+const lookCode = Object.entries(lookPreset).map(([group, values]) => '      Object.assign(CONFIG[' + JSON.stringify(group) + '] ||= {}, ' + JSON.stringify(values) + ');').join('\n');
+main = once(main, '      configureSceneDaylight(CONFIG);', '      /* FLOW: capture the daylight reset palette after the complete client preset. */', 'flow daylight defaults');
+main = once(main, '      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));', `      /* FLOW_LOOK_PRESET: complete client-exported initial settings. */
+${lookCode}
+      /* Keep the supplied desktop framing and the existing portrait adaptation. */
+      Object.assign(FRAME_TIERS.wide, { fov: CONFIG.camera.fov, ty: CONFIG.camera.ty, dropY: CONFIG.drop.y });
+      if (frameTier() !== 'wide') applyFrameTier(true);
+      configureSceneDaylight(CONFIG);
+      const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));`, 'flow look preset');
+/* The model workshop is mounted later; its reset must use this page's preset too. */
+if (lookPreset.logoModel) {
+  const modelDefaults = main.match(/^      DEFAULT_CONFIG\.logoModel = .*;$/m)?.[0];
+  if (!modelDefaults) throw Error('flow anchor (model defaults): missing');
+  main = once(main, modelDefaults, '      DEFAULT_CONFIG.logoModel = JSON.parse(JSON.stringify(CONFIG.logoModel));', 'flow model reset');
+}
 main = once(main, '        const time = sceneTime;\n', '        const time = sceneTime;\n        paintJourneyTransition({ reduced: reduceMotion, worldOpen: !!world?.open, drop: dropTransition.progress, flight: logoFlight.t, mix: journey.mix });\n', 'flow journey optics');
 main = once(main, '      let portfolioNavPending = false;\n', part('main-flow.part.js') + '      let portfolioNavPending = false;\n', 'main seaFlow');
 /* the wheel: the world, then the 06 → 07 bridge, then the cards — and the cards only come up out of the sea once the bridge is over (or are already up) */
@@ -391,6 +408,10 @@ html = html.replace(mainRef, `prototypes/index1-5-flow/js/main.js?v=${version}`)
 html = html.replace(/<title>/, '<title>［區塊順序測試］');
 html = once(html, '<head>', '<head>\n  <meta name="robots" content="noindex">', 'html head');
 html = once(html, '</head>', `  <link rel="stylesheet" href="prototypes/index1-5-flow/flow.css?v=${version}">\n  <link rel="stylesheet" href="prototypes/index1-5-flow/visual-polish.css?v=${version}">\n  <link rel="stylesheet" href="prototypes/index1-5-flow/transition-details.css?v=${version}">\n</head>`, 'html css');
+html = once(html, '</head>', `  <link rel="stylesheet" href="prototypes/index1-5-flow/title-polish.css?v=${version}">\n  <link rel="stylesheet" href="prototypes/index1-5-flow/title-motion.css?v=${version}">\n  <link rel="stylesheet" href="prototypes/index1-5-flow/strategy-labels.css?v=${version}">\n  <script defer src="prototypes/index1-5-flow/title-motion.js?v=${version}"></script>\n</head>`, 'flow titles and labels');
+const alpineScript = html.match(/prototypes\/index1-5\/alpine-ui\.js\?v=[\w-]+/)?.[0];
+if (!alpineScript) throw Error('flow anchor (alpine script): missing');
+html = once(html, alpineScript, `prototypes/index1-5-flow/js/alpine-ui.js?v=${version}`, 'flow alpine script');
 html = html.replace(/prototypes\/index1-5\/button-glass\.js\?v=[\w-]+/g, `prototypes/index1-5-flow/js/button-glass.js?v=${version}`);
 html = once(html, '<button type="button" class="fiwo-pill" data-world-go="contact"><span>CONTACT</span>', '<button type="button" class="fiwo-pill" data-flow-go="7"><span>VIEW PORTFOLIO</span>', 'html last pill');
 /* the footer's (and the hidden world nav's) links to the strategies: they are chapter 07 on the sea now, not a place on the planet's side */
@@ -398,6 +419,7 @@ html = all(html, 'data-world-go="responsibility"', 'data-flow-go="6"', 3, 'html 
 
 /* ============================================================== write */
 fs.mkdirSync(OUT, { recursive: true });
+fs.writeFileSync(path.join(OUT, 'alpine-ui.js'), alpineUI);
 fs.writeFileSync(path.join(OUT, 'transition-details.js'), part('transition-details.js'));
 fs.writeFileSync(path.join(OUT, 'button-glass.js'), patchButtons(read(path.join(ROOT, 'prototypes/index1-5/button-glass.js'))));
 const banner = '/* index1-5 FLOW test, generated by prototypes/index1-5-flow/make.cjs from the live build. Do not edit. */\n';

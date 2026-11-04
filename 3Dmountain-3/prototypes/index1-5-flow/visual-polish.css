@@ -116,27 +116,4 @@ html[data-look="index1-5"] #fiWorld .fiwo-progress-line { display: none; }
   html[data-gate] .gate-sea::after { animation: none; }
 }
 
-/* Opening copy: client's white, slightly larger title. The reveal wraps
-   characters, so their inline water images must also give way to solid ink. */
-html[data-look="index1-5"] .finnovation-ui #chapter-knowledge > h1,
-html[data-look="index1-5"] .finnovation-ui #chapter-knowledge > h1 .cl-ch {
-  color: #fff;
-  -webkit-text-fill-color: #fff;
-  background-image: none !important;
-  -webkit-background-clip: border-box;
-  background-clip: border-box;
-  text-shadow: 0 1px 12px #10243a30, 0 0 .12em #ffffff26;
-}
-html[data-look="index1-5"] .finnovation-ui #chapter-knowledge > h1 {
-  font-size: clamp(30px, calc(4.8vw * var(--ttl-short, 1)), 70px);
-}
-html[data-look="index1-5"] .finnovation-ui #chapter-knowledge > h1::before { display: none; }
-html[data-look="index1-5"] .finnovation-ui #chapter-knowledge > .fi-copy-kicker {
-  color: #fff;
-  font-size: 13px;
-}
-@media (max-width: 680px) {
-  html[data-look="index1-5"] .finnovation-ui #chapter-knowledge > h1 {
-    font-size: clamp(24px, 8vw, 36px);
-  }
-}
+/* White display type and its responsive scale now live in title-polish.css. */

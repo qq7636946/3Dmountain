@@ -1,0 +1,29 @@
+{
+  "family": "Instrument Serif",
+  "css": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap",
+  "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentserif/OFL.txt",
+  "downloaded": "2026-11-04",
+  "note": "one weight (400), roman and italic",
+  "files": [
+    {
+      "name": "latin.woff2",
+      "url": "https://fonts.gstatic.com/s/instrumentserif/v5/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2",
+      "bytes": 21032
+    },
+    {
+      "name": "latin-ext.woff2",
+      "url": "https://fonts.gstatic.com/s/instrumentserif/v5/jizBRFtNs2ka5fXjeivQ4LroWlx-6zsTjmbI.woff2",
+      "bytes": 11604
+    },
+    {
+      "name": "latin-italic.woff2",
+      "url": "https://fonts.gstatic.com/s/instrumentserif/v5/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2",
+      "bytes": 22128
+    },
+    {
+      "name": "latin-ext-italic.woff2",
+      "url": "https://fonts.gstatic.com/s/instrumentserif/v5/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjgn7MsNo.woff2",
+      "bytes": 12384
+    }
+  ]
+}

@@ -21,7 +21,7 @@ self.onmessage = async ({ data }) => {
       self.document = { createElementNS: inert, createElement: tag => tag === 'canvas' && typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(1, 1) : inert(), documentElement: { matches: () => false, dataset: {} } };
     }
     const [params, scene, river] = await Promise.all([
-      import('./alpine-terrain-params.js?v=i15-mw0vh3su'), import('./water-journey-scene-463.js?v=i15-mw0vh3su'),
+      import('./alpine-terrain-params.js?v=i15-mw1srj3w'), import('./water-journey-scene-463.js?v=i15-mw1srj3w'),
       import('../../../js/water-journey-river.js?v=index463-scroll-20261004-78fa788ddc')
     ]);
     timing.modules = Math.round(performance.now() - t0);

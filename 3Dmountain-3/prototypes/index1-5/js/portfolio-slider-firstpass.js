@@ -29,7 +29,7 @@ import {
   Camera, Texture, Post, RenderTarget
 } from 'https://cdn.jsdelivr.net/npm/ogl@0.0.93/+esm';
 import { GRADE_GLSL, gradeVector, gradeRGB } from '../../../js/finnovation-grade.js?v=eb26a41a84';
-import { idleSlot } from './perf-firstpass.js?v=i15-mw0vh3su';
+import { idleSlot } from './perf-firstpass.js?v=i15-mw1srj3w';
 
 // An exact damped spring, measured in seconds: the same feel at 60/120 Hz.
 function createSpring(from = 0) {

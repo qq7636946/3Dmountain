@@ -64,7 +64,7 @@ function patch({ html }) {
   html = html.replace(/https:\/\/fonts\.googleapis\.com\/css2\?family=Montserrat[^"']*/g,
     'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap');
   const links = [
-    '  <link rel="preload" href="prototypes/index1-5/assets/fonts/dm-sans/latin.woff2" as="font" type="font/woff2" crossorigin data-i15-font>',
+    '  <link rel="preload" href="prototypes/index1-5/assets/fonts/oswald/latin.woff2" as="font" type="font/woff2" crossorigin data-i15-font>',
     `  <link rel="stylesheet" href="prototypes/index1-5/site-layout.css?v=${layoutHash}" data-i15-layout>`,
     `  <link rel="stylesheet" href="prototypes/index1-5/typography.css?v=${typeHash}" data-i15-typography>`,
   ].join('\n');

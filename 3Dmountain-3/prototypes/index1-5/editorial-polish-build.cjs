@@ -28,5 +28,5 @@ if (require.main === module) {
     if ((html.match(new RegExp(marker, 'g')) || []).length !== 1) throw new Error('Duplicate/missing ' + marker);
   }
   fs.writeFileSync(file, html);
-  console.log('index1-5: one layout bundle, one typography source, one DM Sans preload.');
+  console.log('index1-5: one layout bundle, one typography source, one font preload (Oswald).');
 }

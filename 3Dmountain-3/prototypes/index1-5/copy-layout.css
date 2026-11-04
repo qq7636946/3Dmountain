@@ -1,0 +1,109 @@
+/* index1-5 copy reveal and, on request, the copy layout (2026-11-04). Default (data-copy-layout="original"): the page's own layout and colours,
+   only the letters' reveal added (client: 「文字排版跟顏色樣式要照我原本的」). ?copylayout=next: the layout after the client's "NEXT" sample (「文案版面：照 NEXT 範例改，並加上逐字浮現」):
+   a big condensed serif title, a heavier Chinese lead under it, the second sentence as a line with a short dash, a small meta line
+   (chapter number and kicker), the button as before; all of it left-aligned at the lower left. The letters of the title come up one by
+   one out of a blur (copy-layout.js wraps them), after ysuriadesign.co. No words change.
+   Its own sheet, linked after title-water.css (it re-sets the titles' look, so it must come after it): the one other place besides
+   typography.css that sets type, like title-water.css. Everything sits under html[data-copy-layout="next"]: ?copylayout=0 is the old layout. */
+html[data-copy-layout="next"] {
+  --cl-ink: #f3efe8;
+  --cl-lead: #f0f4f7;
+  --cl-muted: #cdd8e1;
+  --cl-dash: var(--alp-gold, #e2c28a);
+  --cl-left: clamp(300px, 21vw, 400px);
+  --cl-ease: cubic-bezier(.16, 1, .3, 1);
+}
+/* the block: lower left, clear of the rail */
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy {
+  left: var(--cl-left); right: auto; transform: none; translate: none;
+  width: min(860px, calc(100vw - var(--cl-left) - 64px));
+  bottom: calc(var(--ui-footer) + clamp(24px, 5vh, 64px));
+  text-align: left;
+}
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel {
+  flex-direction: column; flex-wrap: nowrap; justify-content: flex-end; align-items: flex-start; gap: 0; text-align: left;
+}
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel > * { flex: 0 0 auto; margin-left: 0; margin-right: 0; }
+/* the shade that keeps the words readable follows them to the left */
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel::before {
+  left: -16vw; right: -12%; top: -30%; bottom: -24%;
+  background: radial-gradient(62% 68% at 30% 62%, #06111f80, #06111f4d 52%, #06111f00 86%);
+}
+
+/* the title: big, condensed, warm white, no longer the water picture */
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel :is(h1, h2),
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-motion-node:is(h1, h2) {
+  order: 1;
+  width: auto; max-width: 100%;
+  margin: 0 0 clamp(16px, 2.4vh, 26px); padding: 0;
+  font-family: var(--site-font, 'Oswald', sans-serif);
+  font-weight: 400;
+  font-size: clamp(54px, 6.6vw, 124px);
+  line-height: .92;
+  letter-spacing: -.012em;
+  word-spacing: .04em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--cl-ink);
+  -webkit-text-fill-color: var(--cl-ink);
+  background: none;
+  -webkit-background-clip: border-box; background-clip: border-box;
+  text-shadow: 0 2px 34px #040c1866, 0 0 2px #040c1840;
+}
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel :is(h1, h2) > span { display: block; }
+
+/* the lead: the first Chinese sentence, heavier; the rest as lines with a short dash */
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-zh,
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui #chapter-knowledge .fi-copy-zh {
+  order: 2;
+  margin: 0; max-width: 36em; text-align: left;
+  font-family: "Noto Sans TC", var(--site-font), sans-serif;
+  font-size: clamp(16px, 1.25vw, 20px); font-weight: 500; line-height: 1.8; letter-spacing: .05em;
+  color: var(--cl-lead);
+}
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-zh .fi-zh-head { display: block; color: var(--cl-lead); font-weight: 500; }
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-zh :is(.fi-zh-mid, .fi-zh-body) {
+  display: block; position: relative; margin: 12px 0 0; padding-left: 1.5em; max-width: 40em; text-indent: 0;
+  font-size: clamp(14px, 1vw, 15.5px); font-weight: 400; line-height: 1.85; letter-spacing: .04em; color: var(--cl-muted);
+}
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-zh :is(.fi-zh-mid, .fi-zh-body)::before {
+  content: ""; position: absolute; left: 0; top: .95em; width: .8em; height: 1px; background: var(--cl-dash); box-shadow: 0 0 6px #e2c28a66;
+}
+
+/* the meta line: the chapter's number, then its kicker */
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-kicker {
+  order: 3;
+  display: flex; align-items: baseline; gap: 1.3em;
+  margin: clamp(16px, 2.2vh, 24px) 0 0; padding: 0;
+  font-family: var(--site-font, 'Oswald', sans-serif); font-size: 14px; font-weight: 400; letter-spacing: .16em;
+  color: var(--cl-muted);
+}
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-kicker[data-cl-num]::before { content: attr(data-cl-num); color: var(--cl-ink); letter-spacing: .08em; }
+html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-action { order: 4; margin-top: clamp(14px, 2vh, 22px); align-self: flex-start; }
+
+/* letters out of a blur, one by one (28 ms apart); the lines after them a moment later. Leaving, all go at once and quickly.
+   The letters are in both layouts: data-copy-layout="original" (the default, the page's own layout and colours) and "next"; the lines'
+   blur-in only in "next" (in the original the lines keep their own motion, section-motion.js). */
+html[data-copy-layout] .cl-ch { display: inline-block; white-space: pre; opacity: 0; filter: blur(10px); transform: translateY(.22em);
+  transition: opacity .38s ease, filter .38s ease, transform .38s ease; }
+/* a water title: every letter shows its own piece of the title's picture (copy-layout.js places it) */
+html[data-copy-layout] [data-cl-water="on"] .cl-ch { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+html[data-copy-layout] .cl-on .cl-ch { opacity: 1; filter: blur(0); transform: none;
+  transition: opacity .95s var(--cl-ease), filter .95s var(--cl-ease), transform 1s var(--cl-ease); transition-delay: calc(var(--i, 0) * 28ms + .05s); }
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel > :is(.fi-copy-zh, .fi-copy-kicker, .fi-copy-action) { filter: blur(8px); transform: translateY(10px); transition: filter .35s ease, transform .35s ease; }
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel.cl-on > :is(.fi-copy-zh, .fi-copy-kicker, .fi-copy-action) { filter: blur(0); transform: none; transition: filter 1s var(--cl-ease), transform 1.1s var(--cl-ease); }
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel.cl-on > .fi-copy-zh { transition-delay: .32s; }
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel.cl-on > .fi-copy-kicker { transition-delay: .46s; }
+html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel.cl-on > .fi-copy-action { transition-delay: .58s; }
+
+@media (max-width: 760px) {
+  html[data-copy-layout="next"] { --cl-left: 22px; }
+  html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy { width: calc(100vw - 44px); bottom: calc(var(--ui-footer) + 22px); }
+  html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel :is(h1, h2),
+  html[data-copy-layout="next"][data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-motion-node:is(h1, h2) { font-size: clamp(44px, 13vw, 64px); }
+  html[data-copy-layout="next"] body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-kicker { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-copy-layout] :is(.cl-ch, .cl-on .cl-ch) { transition-duration: .01s !important; transition-delay: 0s !important; }
+  html[data-copy-layout] body.is-ready .finnovation-ui .fi-copy-panel > * { filter: none !important; transform: none !important; }
+}

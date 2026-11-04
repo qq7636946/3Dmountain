@@ -7,8 +7,9 @@ module.exports = state => {
   let html = state.html;
   if (html.includes('data-title-water')) html = html.replace(/<link[^>]*data-title-water[^>]*>/, () => link);
   else html = html.replace('</head>', () => '  ' + link + '\n</head>');
-  /* Montserrat for the titles, from Google like the page's Noto Sans TC. A link, not an @import in the stylesheet: an @import would hold up the stylesheet. If it fails, the titles fall back to DM Sans and still fit. */
-  const font = '<link rel="stylesheet" data-title-font href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap">';
+  /* The link that used to bring Montserrat 600 for the titles (11-01). site-styles-build.cjs rewrites a Montserrat URL into Noto Sans TC, so this tag is the
+     page's only Noto Sans TC: it must stay. 2026-11-04: the titles are in the page's own font (Instrument Serif, typography.css), so it asks for Noto Sans TC directly. */
+  const font = '<link rel="stylesheet" data-title-font href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap">';
   if (html.includes('data-title-font')) html = html.replace(/<link[^>]*data-title-font[^>]*>/, () => font);
   else html = html.replace(/(\s*)<link[^>]*data-title-water[^>]*>/, (m, gap) => gap + font + m);
   return { ...state, html };

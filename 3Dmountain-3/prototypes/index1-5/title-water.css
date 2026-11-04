@@ -10,14 +10,14 @@
 :root {
   --ttl-run: linear-gradient(90deg, #c0faf1 0%, #98f0f3 30%, #86e5fb 58%, #a6d5ff 80%, #bdcaff 100%);
   --ttl-water: url(../../images/world/title-sea.webp);
-  --ttl-font: 'Montserrat', var(--site-font, 'DM Sans'), 'Noto Sans TC', sans-serif;
+  --ttl-font: var(--site-font, 'Oswald'), 'Noto Sans TC', sans-serif;   /* Montserrat 600 before 2026-11-04, then Instrument Serif, then Oswald */
   /* three rings of light: a tight one that lifts the letter off the picture, a soft one, a wide one that lights the air */
   --ttl-bloom: 0 0 .09em rgba(214, 243, 255, .55), 0 0 .36em rgba(136, 208, 255, .44), 0 0 1.05em rgba(92, 168, 255, .36);
 }
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   html[data-look="index1-5"]:not([data-render-mode="text"]) body :is(.fi-copy-panel .fi-motion-node:is(h1, h2), .fiw-statement, .fiwo-strategy-title, .fiwp-title, .fiw-outro-title, .fi-menu-intro h2) {
     font-family: var(--ttl-font);
-    font-weight: var(--ttl-weight, 600);
+    font-weight: var(--ttl-weight, 400);
     font-style: normal;
     letter-spacing: var(--ttl-track, 5px);
     word-spacing: var(--ttl-words, .1em);

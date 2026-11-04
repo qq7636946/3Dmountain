@@ -27,20 +27,20 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { uploadSoon } from './perf-firstpass.js?v=i15-mw0vh3su';   /* FIRSTPASS_VIDEO */
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw0vh3su'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mw0vh3su';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { stepWorldFollow } from './motion-response.js?v=i15-mw0vh3su';   /* SILK_SCROLL */
-import { createQualityGovernor } from './quality-governor.js?v=i15-mw0vh3su';   /* QUALITY_GOVERNOR */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw0vh3su';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw0vh3su';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mw1srj3w';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw1srj3w'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mw1srj3w';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { stepWorldFollow } from './motion-response.js?v=i15-mw1srj3w';   /* SILK_SCROLL */
+import { createQualityGovernor } from './quality-governor.js?v=i15-mw1srj3w';   /* QUALITY_GOVERNOR */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw1srj3w';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw1srj3w';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mw0vh3su';
-import { createWorldOcean } from './world-ocean.js?v=i15-mw0vh3su';
-import { createWorldLogo } from './world-logo.js?v=i15-mw0vh3su';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mw1srj3w';
+import { createWorldOcean } from './world-ocean.js?v=i15-mw1srj3w';
+import { createWorldLogo } from './world-logo.js?v=i15-mw1srj3w';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mw0vh3su';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw0vh3su';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mw1srj3w';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw1srj3w';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
@@ -895,6 +895,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
       const pixels = consumeMobileScroll(target, toPixels(delta, source));
       return pixels ? scrollPx(pixels, source) : true;
     },
+    /* CHAPTER_FLOW */ targetOf: name => clamp(target(name), 0, maxY), get at() { return at; }, get y() { return y; },
     scrollTo(value) { if (!open) return; yt = clamp(value === Infinity ? maxY : value, 0, maxY); run(); },
     next() { if (!open) return false; const stops = [at.global + H * .2, ...(ocean ? Array.from({ length: ocean.N }, (_, k) => ocean.stopY(k)) : [at.resp + H * .3]), ...(principles ? [principles.stopY()] : []), ...(logo ? [logo.stopY()] : []), maxY].sort((a, b) => a - b); const t = stops.find(v => v > Math.max(y, yt) + 40); if (t === undefined) return false; yt = clamp(t, 0, maxY); run(); return true; },
     /* diagnostics (window.__MONTIS_STUDY__.world) */

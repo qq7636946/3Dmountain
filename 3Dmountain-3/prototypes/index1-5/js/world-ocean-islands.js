@@ -2,7 +2,7 @@
 /* Ocean islands: diffuse colour + normal/height atlases baked from the actual alpine valley.
    A single instanced draw. The coast shares the sea's wave field, light, clouds and frame grading. */
 import * as THREE from 'three';
-import { decodedFirst } from './perf-firstpass.js?v=i15-mw0vh3su';
+import { decodedFirst } from './perf-firstpass.js?v=i15-mw1srj3w';
 const ROWS = [
   [-.65, .29, .42, -.20, 0], [.98, -.48, .54, .22, 1],
   [2.16, .28, .52, -.15, 0], [3.32, -.48, .60, .32, 1],

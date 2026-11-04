@@ -6,7 +6,7 @@
    The same draw feeds the shafts (light-shafts.js, 2026-11-01: 「這三處發光時候都加上類似這種光芒」): they fan out of the ring and the leaf, centred on the mark as this camera sees it in this frame, whichever
    way it is turned, and the water mirrors them. Phones: the module's cheap version, emberShaftPhone = 0 turns them off there; reduced motion: none.
    Dials: ember* in MARK_DEFAULTS. */
-import { createLightShafts } from './light-shafts.js?v=i15-mw0vh3su';
+import { createLightShafts } from './light-shafts.js?v=i15-mw1srj3w';
 
 export const EMBER_GLSL = /* glsl */ `
 uniform vec4 uEmberSoft;   // line width, rounded creases, fine layers, holes (「紋路再柔和一點」: .1, 0, 1, 1 is the first, crisp version)

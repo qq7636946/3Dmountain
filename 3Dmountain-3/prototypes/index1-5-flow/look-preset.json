@@ -4,9 +4,9 @@
     "horizon": "#f5f5f5",
     "zenith": "#7588a3",
     "upper": "#a7bdd7",
-    "lower": "#6a86a4",
-    "floor": "#08192a",
-    "ink": "#050d18"
+    "lower": "#97aabe",
+    "floor": "#527598",
+    "ink": "#3c5880"
   },
   "worldOcean": {
     "seaBase": "#82a1f7",

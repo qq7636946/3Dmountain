@@ -1,0 +1,80 @@
+/* Single-owner text choreography. Geometry and all editorial sizing stay
+   with the established layout; each word resolves at its original baseline. */
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-panel {
+  opacity: 1 !important;
+  transform: none !important;
+  translate: none !important;
+  transition: none !important;
+}
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-panel::before {
+  opacity: 0 !important;
+  transition: none !important;
+}
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-title,
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .flow-copy-title {
+  opacity: 1 !important;
+  transform: none !important;
+  translate: none !important;
+  filter: none !important;
+  transition: none !important;
+  animation: none !important;
+  visibility: var(--copy-title-visible, visible);
+}
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-title .flow-copy-word,
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .flow-copy-title .flow-copy-word {
+  display: inline-block !important;
+  white-space: nowrap;
+  clip-path: inset(var(--copy-mask-top, -12%) -.08em var(--copy-mask-bottom, -12%) -.08em);
+  vertical-align: baseline;
+  transition: none !important;
+  animation: none !important;
+}
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-title .flow-copy-ink,
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .flow-copy-title .flow-copy-ink {
+  display: inline-block !important;
+  opacity: 1 !important;
+  transform: translate3d(0, var(--copy-ink-y, 0em), 0) !important;
+  translate: none !important;
+  filter: blur(var(--copy-ink-blur, 0px));
+  transition: none !important;
+  animation: none !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  background: none !important;
+}
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-node,
+html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .flow-copy-node {
+  opacity: var(--copy-alpha, 1) !important;
+  transform: none !important;
+  translate: 0 var(--copy-y, 0px) !important;
+  filter: blur(var(--copy-body-blur, 0px));
+  transition: none !important;
+  animation: none !important;
+}
+/* Kill only obsolete entrance owners, not the WebGL gallery's canvas or
+   horizontal card transforms. Its dynamic title is now part of this system. */
+html[data-flow-copy-motion="on"] .site-card-intro,
+html[data-flow-copy-motion="on"] .site-card-detail {
+  transition: none !important;
+  animation: none !important;
+}
+html[data-flow-copy-motion="on"] .site-cards-copy .site-card-title {
+  text-wrap: balance;
+}
+/* Reading/fallback modes are complete content, never half-resolved text. */
+html[data-render-mode="text"] .flow-copy-word,
+html[data-render-mode="text"] .flow-copy-ink {
+  clip-path: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-flow-copy-motion="on"] body .flow-copy-word,
+  html[data-flow-copy-motion="on"] body .flow-copy-ink,
+  html[data-flow-copy-motion="on"] body .flow-copy-node {
+    clip-path: none !important;
+    transform: none !important;
+    translate: none !important;
+    filter: none !important;
+  }
+}

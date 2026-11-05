@@ -1,11 +1,25 @@
-/* A restrained reflection passing across the original transition, not a
-   replacement wipe. Neutral light preserves the client's colour palette. */
-.flow-optics { position: fixed; inset: 0; z-index: 8; overflow: hidden; pointer-events: none; opacity: 0; visibility: hidden; contain: strict; }
-.flow-optics::before { content: ''; position: absolute; inset: -20% -30%; background: linear-gradient(112deg, transparent 39%, #ffffff06 44%, #ffffff44 49.6%, #ffffff80 50%, #ffffff18 51.8%, transparent 59%); transform: translate3d(var(--flow-sheen-x,0vw), var(--flow-sheen-y,0vh), 0); }
-.flow-optics::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 90% 30% at 45% 110%, transparent 60%, #ffffff44 61%, #ffffff08 66%, transparent 74%); }
-.flow-optics[data-phase='clouds']::before { background: radial-gradient(ellipse at 50% 38%, #ffffff88, #ffffff15 30%, transparent 62%); }
-.flow-optics[data-phase='strategy']::after { background: none; }
-.flow-optics[data-phase='logo']::after { transform: translateY(-20%); }
-.flow-optics.is-active::before { will-change: transform; }
-html[data-render-mode='text'] .flow-optics { display: none; }
-@media (prefers-reduced-motion: reduce) { .flow-optics { display: none; } }
+/* One optical language, with a distinct profile at each existing cut. */
+.flow-optics { position:fixed; inset:0; z-index:8; overflow:hidden; pointer-events:none; opacity:0; visibility:hidden; contain:strict; }
+.flow-optics::before { content:''; position:absolute; inset:-25% -35%; background:linear-gradient(112deg,transparent 34%,#ffffff0a 43%,#ffffff66 49.6%,#ffffffc7 50%,#ffffff28 52%,transparent 63%); transform:translate3d(var(--flow-sheen-x,0vw),var(--flow-sheen-y,0vh),0); }
+.flow-optics::after { content:''; position:absolute; left:-15%; top:50%; width:130%; height:44%; border-top:1px solid #ffffffb3; border-radius:50%; box-shadow:0 -2px 12px #d9f5ff40,inset 0 2px 1px #ffffff3d; transform:translate3d(0,var(--flow-ring-y,0vh),0) scale(var(--flow-ring-scale,1)); }
+.flow-optics-haze { position:absolute; inset:0; background:radial-gradient(ellipse 80% 46% at 48% 53%,#edfaff55,transparent 75%); }
+.flow-optics-contour { position:absolute; left:-24%; top:52%; width:140%; height:58%; border-top:1px solid #e1f6ff80; border-radius:50%; transform:translate3d(0,calc(var(--flow-ring-y,0vh) + 8vh),0) scale(var(--flow-ring-scale,1)); }
+.flow-optics[data-phase='drop']::after { left:22%; top:12%; width:56%; height:76%; border:1px solid #ffffffa3; box-shadow:inset 3px 0 18px #c1f0ff47,-2px 0 8px #ffffff4d; }
+.flow-optics[data-phase='drop'] .flow-optics-contour { left:25%; top:15%; width:50%; height:70%; border:1px solid #d9f3ff66; }
+.flow-optics[data-phase='word']::after { top:18%; left:8%; width:84%; height:64%; transform:translate3d(0,var(--flow-ring-y,0vh),0) scale(var(--flow-ring-scale,1)) rotate(-18deg); }
+.flow-optics[data-phase='word'] .flow-optics-contour { top:27%; height:60%; transform:translate3d(0,var(--flow-ring-y,0vh),0) rotate(-12deg); }
+.flow-optics:is([data-phase='valley'],[data-phase='sea'])::after { top:40%; height:58%; transform:translate3d(0,var(--flow-ring-y,0vh),0) scale(var(--flow-ring-scale,1)) rotate(-9deg); }
+.flow-optics:is([data-phase='cards'],[data-phase='strategy'])::after { top:32%; height:84%; border-radius:12% 50%; transform:translate3d(var(--flow-sheen-x,0vw),0,0) rotate(-20deg); }
+.flow-optics[data-phase='strategy'] .flow-optics-haze { display:none; }
+.flow-optics[data-phase='clouds']::before { background:radial-gradient(ellipse at 48% 40%,#ffffffcc,#ecf8ff28 34%,transparent 68%); }
+.flow-optics[data-phase='clouds']::after { top:23%; height:90%; border-radius:50%; }
+.flow-optics[data-phase='footer']::before { background:linear-gradient(180deg,#ebf8ff66,transparent 58%); }
+.flow-optics[data-phase='footer']::after { top:12%; height:28%; }
+.flow-optics[data-phase='footer'] .flow-optics-contour { display:none; }
+.flow-optics.is-active::before,.flow-optics.is-active::after { will-change:transform; }
+html[data-flow-copy-motion] .site-section-veil { background:radial-gradient(ellipse at 42% 40%,#f4fafff5,#dceaf0f5 75%); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); transition:opacity .3s cubic-bezier(.22,.61,.36,1),visibility .3s; }
+html[data-flow-copy-motion] .site-section-veil::after { content:''; position:absolute; left:-15%; top:40%; width:130%; height:65%; border-top:1px solid #fff9; border-radius:50%; transform:translateY(8vh); transition:transform .55s cubic-bezier(.22,.61,.36,1); }
+html[data-flow-copy-motion] .site-section-veil.is-on::after { transform:translateY(-4vh); }
+html[data-render-mode='text'] .flow-optics { display:none; }
+@media (max-width:760px) { html[data-flow-copy-motion] .site-section-veil { -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); } }
+@media (prefers-reduced-motion:reduce) { .flow-optics { display:none; } html[data-flow-copy-motion] .site-section-veil { -webkit-backdrop-filter:none; backdrop-filter:none; transition:none; } html[data-flow-copy-motion] .site-section-veil::after { display:none; } }

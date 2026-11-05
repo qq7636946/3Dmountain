@@ -16,3 +16,8 @@ html[data-alpine-ui] body.is-sea-flow .alp-labels { opacity: calc(1 - var(--sea-
 }
 /* leaving the sea for the cards: the strategy's words go first, as 06's do on the way in */
 .fi-world.is-sea-leg .fiwo-pin { opacity: calc(1 - var(--sea-haze-out, 0)); }
+
+/* The globe continues into its original closing logo before contact.
+   The separate ocean leg never opens or draws the closing lake. */
+html[data-flow-ocean-sections="separate"] #principles,
+html[data-flow-ocean-sections="separate"] #fiWorld.is-sea-leg #logo-seal { display: none !important; }

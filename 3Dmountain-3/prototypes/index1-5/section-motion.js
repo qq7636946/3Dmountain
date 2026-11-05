@@ -16,13 +16,6 @@ function style(el,key,value,priority=''){
  previous[key]=value;el.style.setProperty(key,value,priority);
 }
 function apply(el,enter,exit,i,reduced){
- if(el.hasAttribute('data-flow-morph-source')&&document.documentElement.dataset.flowTitleEffect==='water'){
-  if(paintedStyles.get(el)?.waterTitle!==true){
-   el.style.removeProperty('--motion-opacity');el.style.removeProperty('--motion-y');el.inert=false;
-   paintedStyles.set(el,{waterTitle:true});
-  }
-  return 1;
- }
  const p=motionPose(enter,exit,i,reduced),key=p.alpha.toFixed(3)+'|'+p.y.toFixed(2);
  if(el.dataset.motionPose===key)return p.alpha;
  el.dataset.motionPose=key;el.classList.add('fi-motion-node');
@@ -57,7 +50,6 @@ export function createJourneyCopyMotion({root,reducedMotion=false}){
    if(nodes[i].length!==el.children.length)nodes[i]=children(el);
    nodes[i].forEach((n,j)=>apply(n,enter,exit,j,reducedMotion));
   });
-  window.__FLOW_TITLE_MOTION__?.setJourney?.(state,ranges);
  }};
 }
 
@@ -132,7 +124,6 @@ export function createWorldSectionMotion({root,reducedMotion=false}){
    lastSpin=movePin(spin,Math.max(0,y-a.end),lastSpin);
    sn.forEach((el,i)=>apply(el,enter,exit,i,reducedMotion));
   }
-  window.__FLOW_TITLE_MOTION__?.setWorld?.(s,y,metrics);
  }
  function close(){root.classList.remove('has-section-motion','is-footer-reading');for(const el of [pin,ppin,spin])if(el){el.style.transform='';el.style.visibility='';paintedStyles.delete(el);}lastPin=lastPpin=lastSpin='';}
  return {measure,paint,close};

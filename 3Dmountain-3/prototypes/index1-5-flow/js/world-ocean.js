@@ -401,10 +401,10 @@ function prepareDom(root) {
   if(articles.length!==4)throw Error('Expected four ocean strategy chapters.');
   resp.querySelector(':scope > .fiwo-source-intro')?.remove();
   articles.forEach((article,k)=>{article.classList.add('fiwo-panel');article.dataset.stop=String(k);track.append(article);});
-  const N=articles.length,progress=make('nav','fiwo-progress');progress.setAttribute('aria-label','四大投資策略');
-  const label=make('span','fiwo-progress-label','INVESTMENT STRATEGIES');label.setAttribute('aria-hidden','true');
+  const N=articles.length,progress=make('nav','fiwo-progress');progress.setAttribute('aria-label','為何選擇我們');
+  const label=make('span','fiwo-progress-label','WHY FINNOVATION');label.setAttribute('aria-hidden','true');
   const list=make('ol'),line=make('span','fiwo-progress-line');line.append(make('i'));line.setAttribute('aria-hidden','true');
-  articles.forEach((article,k)=>{const li=make('li'),b=make('button','',String(k+1).padStart(2,'0'));b.type='button';b.dataset.oceanGo=String(k);b.setAttribute('aria-label',article.querySelector('.fiwo-sub').textContent);li.append(b);list.append(li);});
+  articles.forEach((article,k)=>{const li=make('li'),b=make('button','',String(k+1).padStart(2,'0'));b.type='button';b.dataset.oceanGo=String(k);b.setAttribute('aria-label',article.querySelector('.fiwo-strategy-tagline').textContent);li.append(b);list.append(li);});
   progress.append(label,line,list);pin.append(progress);resp.append(pin);
   return {resp,dive,pin,track,progress,ticks:[...list.querySelectorAll('button')],panels:articles,N};
 }
@@ -425,20 +425,32 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
 
   // ---------- layout & clocks ----------
   let W = innerWidth, H = innerHeight;
+  let panelStride = W;   /* FLOW_HALF_OCEAN_GAP */
+  const stopDistance = () => Math.max(1, Math.round(num('stop', .5, 4) * H * panelStride / Math.max(1, W)));
+  function measurePanelStride() {
+    const copy = panels[0]?.querySelector('.fiwo-strategy-copy');
+    const visual = panels[0]?.querySelector('.fiwo-strategy-visual');
+    if (!copy || !visual) { panelStride = W; return; }
+    const left = Math.min(copy.offsetLeft, visual.offsetLeft);
+    const right = Math.max(copy.offsetLeft + copy.offsetWidth, visual.offsetLeft + visual.offsetWidth);
+    const contentWidth = clamp(right - left, 1, W);
+    panelStride = (W + contentWidth) * .5;
+  }
   const at = { global: 0, globalH: 1, dive: 0, diveH: 1, resp: 0, stop: 1, tail: 0 };
   let layoutKey = '';
   function layout(w, h) {
     W = w; H = h;
-    const diveH = Math.round(num('dive', .8, 6) * H), stop = Math.round(num('stop', .5, 4) * H), tail = Math.round(H * .3);
+    root.style.setProperty('--fiwo-w', W + 'px'); root.style.setProperty('--fiwo-h', H + 'px');
+    measurePanelStride();
+    const diveH = Math.round(num('dive', .8, 6) * H), stop = stopDistance(), tail = Math.round(H * .3);
     dive.style.height = diveH + 'px';
     resp.style.height = (H + (N - 1) * stop + tail) + 'px';
-    root.style.setProperty('--fiwo-w', W + 'px'); root.style.setProperty('--fiwo-h', H + 'px');
     layoutKey = num('dive', .8, 6) + '|' + num('stop', .5, 4);
   }
   function measure(worldAt, top) {
     at.global = worldAt.global; at.globalH = worldAt.globalH;
     at.dive = top(dive); at.diveH = Math.max(1, dive.offsetHeight);
-    at.resp = top(resp); at.stop = Math.round(num('stop', .5, 4) * H); at.tail = Math.round(H * .3);
+    at.resp = top(resp); at.stop = stopDistance(); at.tail = Math.round(H * .3);
     worldAt.block = at.dive;           // the film starts loading two screens before the dive
     worldAt.dive = at.dive; worldAt.diveH = at.diveH;
   }
@@ -451,6 +463,8 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
 
   let cur = null;
   function sample(y) {
+    /* SEA_FLOW: on the world's 'sky' leg (after the cards) the sea is folded away: nothing of it shows */
+    if (root.classList.contains('is-sky-leg')) { cur = { t: -9, h: 0, cam: 1, zoom: 1, reframe: 0, w: 0, push: 0, covered: false, alpha: 0, show: 0, deep: 0, panel0: 0, birds: 0, active: false, u: 0 }; return cur; }
     const t = (y - at.dive) / at.diveH;
     const depth = num('depth', 1.5, 14);
     const o = { t, h: 0, cam: 1, zoom: 1, reframe: 0, w: 0, push: 0, covered: false, alpha: 1, show: 0, deep: 0, panel0: 0, birds: 0, active: false, u: 0 };
@@ -469,6 +483,18 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
       o.covered = o.w >= 1;
       o.panel0 = smooth(.82, 1, t);
       o.birds = smooth(.75, 1, t);
+    }
+    /* SEA_FLOW: on the 'sea' leg it comes straight from the valley (the 06 → 07 bridge): no planet, no wave, the sea already in place */
+    if (root.classList.contains('is-sea-leg')) {
+      o.w = 1; o.covered = true; o.show = 1; o.push = 0; o.reframe = 1; o.alpha = 1;
+      /* the first strategy's words (and the reading scrim) come in as the cards' words did in the original bridge: .66 → .92 of it (section-motion plays its own entrance on panel0) */
+      const F = window.__SEA_FLOW__;
+      if (F && F.open) o.panel0 = smooth(.66, .92, F.amount);
+      if (F && F.open && !reducedMotion) {
+        /* the sea zooms in as it comes in (client: 「網格轉場後橫移進場背景的俯視要zoom in進場」): the ocean's own entrance, the camera settling from DEPTH
+           onto the water (the dive's mix(depth, 1, smooth)), on the bridge's clock from the moment the sea starts to show (.34) to its end */
+        const depth = num('depth', 1.5, 14); o.cam = mix(depth, 1, smooth(.34, 1, F.amount)); o.zoom = depth / o.cam;
+      }
     }
     // the sideways travel eases in over the end of the dive (the camera swoops down and on, no corner), then is 1:1
     const u = (y - at.resp) / Math.max(1, at.stop);
@@ -638,6 +664,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
         renderer.setRenderTarget(sceneRT);renderer.clear();
       } finally {renderer.setRenderTarget(previous);}
       baked=true;
+      (window.requestIdleCallback || (fn => setTimeout(fn, 200)))(() => { if (!oceanDisposed) { islands?.load(); loadPhotos(); } }, { timeout: 3000 });   /* SEA_FLOW */
     })().catch(error=>{if(!oceanDisposed){console.warn('Ocean prewarm unavailable; keeping the planet visible.',error);}})
       .finally(()=>{bakePending=false;bakeTiming.total=Math.round(performance.now()-started);if(releaseAfterBake)disposeGL();});
     return bakeTask;
@@ -742,7 +769,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     pal.far.copy(pal.deep).lerp(fog, .4);
     pal.crest.copy(sun).lerp(white, .5);
     const light = getSceneDaylight();
-    if (light.enabled) {
+    if (light.enabled && !root.classList.contains('is-sea-leg')) {   /* SEA_FLOW: the sea keeps its own look while the valley under it still has the sun */
       // These full-screen shaders use display RGB. The shared scene palette is linear, as are Three's real lights.
       const day = clamp(light.daylight), night = clamp(light.night);
       eveningBlue.copy(light.skyMid).convertLinearToSRGB();
@@ -788,7 +815,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     photoFx.update(o, time, W, H, visible);
     if (!visible) { gullMesh.visible = false; if (islands) islands.mesh.visible = false; return; }
     const light = getSceneDaylight();
-    if (light.enabled) {
+    if (light.enabled && !root.classList.contains('is-sea-leg')) {   /* SEA_FLOW: the sea keeps its own look while the valley under it still has the sun */
       // Alpine world: Y up / forward -Z. The top-down sea: XY ground / Z up.
       // Preserve the shared azimuth; below the horizon only the blue ambient remains.
       const d = light.sunDirection;
@@ -884,7 +911,8 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
     if (ty !== painted.ty) { painted.ty = ty; root.style.setProperty('--fiwo-y', ty); }
     const h=o.h;
     panels.forEach((panel,k)=>{
-      const next=oceanPanelState({index:k,progress:h,width:W,reducedMotion,count:N}),st=panelState[k];
+      const next=oceanPanelState({index:k,progress:h,width:panelStride,reducedMotion,count:N}),st=panelState[k];
+      if (!reducedMotion) next.visible = next.x <= W + 1 && next.x + W >= -1;
       if(next.visible!==st.vis){st.vis=next.visible;panel.style.visibility=next.visible?'visible':'hidden';panel.inert=!next.visible;}
       if(st.op!==1){st.op=1;panel.style.opacity='1';panel.style.setProperty('--p','1');panel.style.setProperty('--op2','1');}
       if(next.x!==st.x){st.x=next.x;panel.style.transform='translate3d('+next.x+'px,0,0)';}
@@ -900,7 +928,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
 
   // ---------- input ----------
   /* a sideways swipe across the section moves it as far as the finger went */
-  const swipe = () => at.stop / Math.max(1,W);
+  const swipe = () => at.stop / Math.max(1,panelStride);
 
   root.addEventListener('click', event => {
     const b = event.target.closest('[data-ocean-go]');

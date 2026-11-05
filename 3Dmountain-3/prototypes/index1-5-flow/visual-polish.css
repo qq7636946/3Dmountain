@@ -63,10 +63,10 @@ html[data-gate]:not([data-render-mode="text"]) .gate-sea::after {
 /* Entry choices share the page's existing glass highlight. They never move
    towards the pointer, and the count/choice timing stays in entry-gate.js. */
 .gate-btn {
-  box-shadow: inset 0 1px 0 #ffffff40, inset 0 -1px 0 #ffffff0d, 0 8px 24px #040d1826;
+  box-shadow: inset 0 1px 0 #ffffff40, inset 0 -1px 0 #ffffff0d;
 }
 .gate-btn--sound {
-  box-shadow: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #0f203614, 0 8px 24px #040d1826;
+  box-shadow: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #0f203614;
 }
 .gate-btn:focus-visible {
   outline: 2px solid var(--gate-ink);
@@ -118,11 +118,16 @@ html[data-look="index1-5"] #fiWorld .fiwo-progress-line { display: none; }
 
 /* White display type and its responsive scale now live in title-polish.css. */
 
-/* Flow sound label cleanup · 2026-11-05. Both sound states share clean type. */
-html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body .finnovation-ui .fi-footer button.fi-sound,
-html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body .finnovation-ui .fi-footer button.fi-sound *,
-html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body.is-world #fiWorld.is-light ~ .finnovation-ui .fi-footer button.fi-sound,
-html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body.is-world #fiWorld.is-light ~ .finnovation-ui .fi-footer button.fi-sound * {
-  text-shadow: none !important;
+/* Entry sound choices · 2026-11-05. A single short shadow keeps small white type readable. */
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] { --flow-small-text-shadow: 0 1px 2px rgb(15 32 54 / 24%); }
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-choice::before {
+  content: none;
+  display: none;
 }
-/* End Flow sound label cleanup. */
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-choice :is(.gate-hint,.gate-btn),
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-choice :is(.gate-hint,.gate-btn) *,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body.is-ready .finnovation-ui .fi-rail button,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body.is-ready .finnovation-ui .fi-rail button * {
+  text-shadow: var(--flow-small-text-shadow) !important;
+}
+/* End Entry sound choices. */

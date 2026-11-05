@@ -131,3 +131,12 @@ html[data-look="index1-5"][data-flow-ocean-sections="separate"] body.is-ready .f
   text-shadow: var(--flow-small-text-shadow) !important;
 }
 /* End Entry sound choices. */
+
+/* Entry prompt type · 2026-11-05. The smallest prompt text remains at least 12px. */
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-hint { font-size: 16px; }
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-hint [lang="zh-Hant"] { font-size: 13px; }
+@media (max-width: 700px) {
+  html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-hint { font-size: 14px; letter-spacing: .18em; text-indent: .18em; }
+  html[data-look="index1-5"][data-flow-ocean-sections="separate"] .gate-hint [lang="zh-Hant"] { font-size: 12px; }
+}
+/* End Entry prompt type. */

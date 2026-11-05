@@ -847,7 +847,7 @@ import { paintJourneyTransition } from './transition-details.js?v=flow-mw35buwe'
       }
       Object.assign(CONFIG["camera"] ||= {}, {"x":0,"y":1.26,"z":10,"tx":0,"ty":2.72,"tz":-7,"fov":30});
       Object.assign(CONFIG["water"] ||= {}, {"x":0,"y":0.03,"z":-12.5,"rx":0,"ry":0,"rz":0,"sx":1.62,"sy":0.08,"sz":1.72,"opacity":0.34,"waveHeight":0.085,"waveSpeed":0.52});
-      Object.assign(CONFIG["field"] ||= {}, {"zenith":"#7588a3","upper":"#a7bdd7","top":"#9bc6ed","horizon":"#f5f5f5","lower":"#97aabe","floor":"#527598","ink":"#3c5880","core":0.5,"coreSpread":0.6,"bandGain":0.035,"dither":0.006});
+      Object.assign(CONFIG["field"] ||= {}, {"zenith":"#7588a3","upper":"#a7bdd7","top":"#93c1ec","horizon":"#d6e6f5","lower":"#97aabe","floor":"#527598","ink":"#3c5880","core":0.5,"coreSpread":0.6,"bandGain":0.035,"dither":0.006});
       Object.assign(CONFIG["sea"] ||= {}, {"screenDown":60,"swell":3.5,"scale":0.7,"chop":0,"tilt":1.03,"calm":0.42,"heading":-105,"spread":1,"current":0.3,"drift":0.22,"timeScale":0.85,"river":1,"crest":1.7,"round":0.55,"foam":0.75,"foamEdge":0.68,"spray":0.9,"sprayScale":2,"wave1Angle":0,"wave1Height":1,"wave2Angle":0,"wave2Height":1,"wave3Angle":0,"wave3Height":1,"wave4Angle":0,"wave4Height":1,"wave5Angle":0,"wave5Height":1,"detail":1.8,"texture":2,"filament":0.6,"lift":1.9,"haze":52,"hazeFar":150,"edge":0.22});
       Object.assign(CONFIG["chrome"] ||= {}, {"bands":1.5,"bandPhase":0.145,"bandLight":1.2,"bandInk":1.35,"rail":2.1,"railY":0.48,"f0":0.88,"rough":0.024,"aniso":0.55,"streak":1.15,"contour":0,"iris":0.045,"irisPhase":2.4,"irisEdge":3.5,"occlude":0.11});
       Object.assign(CONFIG["air"] ||= {}, {"sparkle":0.85,"size":0.55,"speed":0.5});

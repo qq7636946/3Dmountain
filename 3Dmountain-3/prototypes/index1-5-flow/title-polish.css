@@ -4,7 +4,7 @@
    Loaded after title-water.css, typography.css and visual-polish.css. */
 
 html[data-look="index1-5"]:not([data-render-mode="text"]) {
-  --flow-title-shadow: 0 1px 2px #09132138, 0 3px 18px #09132138;
+  --flow-title-shadow: none;
   --flow-title-ease: cubic-bezier(.16, 1, .3, 1);
 }
 
@@ -162,3 +162,24 @@ html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on 
 
 /* title-motion.css owns word grouping and character animation. This sheet
    deliberately leaves those transforms/opacities to that one controller. */
+
+/* Flow title cleanup · 2026-11-05. Keep the existing type scale and reveal. */
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body :is(.finnovation-ui,#fiWorld,#gate) :is(h1,h2,h3,h4,h5,h6,.fi-copy-kicker,.fi-zh-head,.fiw-statement,.fiwo-strategy-title,.fiwp-title,.fisl-title,.fiw-outro-title,.fiw-kicker,.fiwo-kicker,.fiwp-kicker,.fisl-kicker,.flow-why-eyebrow,.flow-global-title-zh,.site-section-eyebrow,.site-card-subtitle,.fiwo-strategy-tagline,.fisl-zh,.alp-tag),
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body :is(.finnovation-ui,#fiWorld,#gate) :is(h1,h2,h3,h4,h5,h6,.fi-copy-kicker,.fi-zh-head,.fiw-statement,.fiwo-strategy-title,.fiwp-title,.fisl-title,.fiw-outro-title,.fiw-kicker,.fiwo-kicker,.fiwp-kicker,.fisl-kicker,.flow-why-eyebrow,.flow-global-title-zh,.site-section-eyebrow,.site-card-subtitle,.fiwo-strategy-tagline,.fisl-zh,.alp-tag) * {
+  text-shadow: none !important;
+}
+html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body.is-ready .finnovation-ui .fi-copy-panel > .fi-copy-kicker,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body #fiWorld :is(.fiwo-kicker,.fiwp-kicker,.fisl-kicker,.flow-why-eyebrow),
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"] body .finnovation-ui .site-section-eyebrow {
+  margin-bottom: 8px !important;
+}
+@media (max-width: 680px) {
+  html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body.is-ready .finnovation-ui .fi-copy-panel > .fi-copy-kicker,
+  html[data-look="index1-5"][data-flow-ocean-sections="separate"] body #fiWorld :is(.fiwo-kicker,.fiwp-kicker,.fisl-kicker,.flow-why-eyebrow),
+  html[data-look="index1-5"][data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker,
+  html[data-look="index1-5"][data-flow-ocean-sections="separate"] body .finnovation-ui .site-section-eyebrow {
+    margin-bottom: 6px !important;
+  }
+}
+/* End Flow title cleanup. */

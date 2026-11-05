@@ -117,3 +117,12 @@ html[data-look="index1-5"] #fiWorld .fiwo-progress-line { display: none; }
 }
 
 /* White display type and its responsive scale now live in title-polish.css. */
+
+/* Flow sound label cleanup · 2026-11-05. Both sound states share clean type. */
+html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body .finnovation-ui .fi-footer button.fi-sound,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body .finnovation-ui .fi-footer button.fi-sound *,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body.is-world #fiWorld.is-light ~ .finnovation-ui .fi-footer button.fi-sound,
+html[data-look="index1-5"][data-flow-ocean-sections="separate"][data-alpine-ui] body.is-world #fiWorld.is-light ~ .finnovation-ui .fi-footer button.fi-sound * {
+  text-shadow: none !important;
+}
+/* End Flow sound label cleanup. */

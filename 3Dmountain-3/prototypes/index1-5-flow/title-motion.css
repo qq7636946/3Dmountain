@@ -1,40 +1,71 @@
-/* Child-level choreography, separate from each heading's existing scroll pose.
-   Readable at rest. A full title resolves in .96s, independent of its length. */
+/* FLOW text morph. Typography and the section scroll poses stay in their
+   existing sheets; only the temporary pair of title silhouettes is filtered. */
 .flow-title-word { display: inline-block !important; white-space: nowrap !important; }
-/* Legacy principles/outro styles use `title span { display:block }`.
-   Only their original line spans should remain blocks after word splitting. */
 html[data-flow-titles="on"] #fiWorld [data-flow-title="ready"] :is(.flow-title-word, .flow-title-char) {
   display: inline-block;
 }
-html[data-flow-titles="on"] [data-flow-title="ready"] .flow-title-char {
+/* Replace the earlier staggered character entrance. Keeping the real glyphs
+   still avoids a second animation when the morph hands back to the heading. */
+html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-title="ready"] :is(.flow-title-char, .cl-ch) {
   display: inline-block !important;
-  transform-origin: 50% 90%;
-  opacity: 0;
-  filter: blur(3px);
-  transform: perspective(400px) translate3d(0, calc(.34em * var(--ft-direction, 1)), 0) rotateX(calc(-26deg * var(--ft-direction, 1)));
-  transition: opacity .20s ease, filter .20s ease, transform .24s cubic-bezier(.4, 0, .8, 1);
-  transition-delay: 0s;
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
 }
-html[data-flow-titles="on"] [data-flow-title="ready"].flow-title-on .flow-title-char {
-  opacity: 1;
-  filter: blur(0);
-  transform: none;
-  transition: opacity .46s ease, filter .60s cubic-bezier(.2, .7, .2, 1), transform .68s cubic-bezier(.16, 1, .3, 1);
-  transition-delay: var(--ft-delay-forward, 0ms);
+html[data-flow-title-effect="morph"] [data-flow-title="ready"] { animation: none; }
+html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-title="ready"]:not(.flow-title-on) :is(.flow-title-char, .cl-ch) {
+  opacity: 0 !important;
 }
-html[data-flow-titles="on"] [data-flow-title="ready"][data-flow-title-direction="backward"].flow-title-on .flow-title-char {
-  transition-delay: var(--ft-delay-backward, 0ms);
+/* Hide only paint, keeping the real heading and its accessible name present. */
+html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-morph-hidden] :is(.flow-title-char, .cl-ch) {
+  opacity: 0 !important;
 }
-/* Prevent the legacy water sweep from repainting the now solid-white text. */
-html[data-flow-titles="on"] [data-flow-title="ready"] { animation: none; }
-/* No compositor promotion stays behind after settling. The motion engine's
-   own opacity/translate remains responsible for leaving the chapter. */
-html[data-render-mode="text"] [data-flow-title="ready"] .flow-title-char,
-html:not([data-flow-titles="on"]) [data-flow-title="ready"] .flow-title-char {
-  opacity: 1; filter: none; transform: none; transition: none;
+
+.flow-morph-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.flow-title-morph {
+  position: fixed;
+  z-index: 70;
+  overflow: visible;
+  isolation: isolate;
+  pointer-events: none;
+  user-select: none;
+  filter: url(#flow-title-morph-threshold) blur(.35px) drop-shadow(0 2px 12px #09132138);
+}
+.flow-title-morph[hidden] { display: none !important; }
+.flow-morph-layer {
+  position: absolute;
+  width: max-content;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: filter, opacity;
+}
+.flow-morph-layer > :is(h1, h2, h3, div) {
+  position: static !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+.flow-morph-layer :is(h1, h2, h3, div, span)::before,
+.flow-morph-layer :is(h1, h2, h3, div, span)::after { content: none !important; }
+
+/* Reduced motion, a readable-text fallback or disposal always exposes the
+   original accessible heading. No overlay survives those state changes. */
+html[data-render-mode="text"] .flow-title-morph { display: none !important; }
+html[data-flow-title-effect="morph"][data-render-mode="text"] [data-flow-morph-hidden] :is(.flow-title-char, .cl-ch) {
+  opacity: 1 !important;
+}
+html[data-render-mode="text"] [data-flow-title="ready"] :is(.flow-title-char, .cl-ch),
+html:not([data-flow-titles="on"]) [data-flow-title="ready"] :is(.flow-title-char, .cl-ch) {
+  opacity: 1 !important; filter: none !important; transform: none !important; transition: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  html[data-flow-titles="on"] [data-flow-title="ready"] .flow-title-char {
-    opacity: 1; filter: none; transform: none; transition: none !important;
-  }
+  .flow-title-morph { display: none !important; }
+  html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-morph-hidden] :is(.flow-title-char, .cl-ch) { opacity: 1 !important; }
 }

@@ -24,10 +24,10 @@
    Dials: CONFIG.worldOcean (tuner 「海洋章節 Ocean」).
    ===================================================================== */
 import * as THREE from 'three';
-import { createOceanIslands } from '../../index1-5/js/world-ocean-islands.js?v=i15-mw1srj3w';
-import { createOceanPhotos } from '../../index1-5/js/world-ocean-photos.js?v=i15-mw1srj3w';
-import { oceanProgress, oceanPanelState } from '../../index1-5/js/world-ocean-scroll.js?v=i15-mw1srj3w';
-import { getSceneDaylight } from '../../index1-5/js/scene-daylight.js?v=i15-mw1srj3w';
+import { createOceanIslands } from '../../index1-5/js/world-ocean-islands.js?v=i15-mw2x9gw6';
+import { createOceanPhotos } from '../../index1-5/js/world-ocean-photos.js?v=i15-mw2x9gw6';
+import { oceanProgress, oceanPanelState } from '../../index1-5/js/world-ocean-scroll.js?v=i15-mw2x9gw6';
+import { getSceneDaylight } from '../../index1-5/js/scene-daylight.js?v=i15-mw2x9gw6';
 
 /* The defaults. Strict JSON: world-ocean-build.cjs copies it into main.js's CONFIG.worldOcean. */
 const DEFAULTS = /*OCEAN-DEFAULTS*/{
@@ -510,7 +510,7 @@ export function createWorldOcean({ root, reducedMotion = false, config = () => n
   let oceanMesh = null, skyMesh = null, gullMesh = null, bakeScene = null, bakeCam = null, bakeMesh = null;
   let waveRT = null, noiseRT = null, waveMat = null, noiseMat = null, oceanMat = null, skyMat = null, gullMat = null;
   let gullGeo = null, aA = null, aB = null, aL = null, islands = null;
-  const MAXG = 16;
+  const MAXG = 24;
   const blank = new THREE.DataTexture(new Uint8Array([24, 40, 64, 255]), 1, 1); blank.needsUpdate = true;
   const colours = new Map();
   const colour = hex => { let c = colours.get(hex); if (!c) { c = new THREE.Color().setStyle(hex, THREE.LinearSRGBColorSpace); colours.set(hex, c); } return c; };

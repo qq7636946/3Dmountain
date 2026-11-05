@@ -118,9 +118,9 @@ function patchWorld(src) {
   // Keep this page's orbit/cloud handoff in the same silver-blue water family.
   // The shared world module and all other page versions retain their own palette.
   p("  skyTop: '#5f6f80', skyBottom: '#425163', deepTop: '#0f1f2a', deepBottom: '#07131b',",
-    "  skyTop: '#526d88', skyBottom: '#3a536f', deepTop: '#10243a', deepBottom: '#081624',", 'orbit sky palette');
+    "  skyTop: '#4f6d8f', skyBottom: '#365477', deepTop: '#0e243d', deepBottom: '#071628',", 'orbit sky palette');   // 2026-11-04 「圖二在藍色一點點」: a little bluer; before '#526d88', '#3a536f', '#10243a', '#081624'
   p("  ocean: '#1b2e42', oceanHi: '#2d4862', land: '#5a7590', landHi: '#a4bacd', ice: '#e3ebf2',",
-    "  ocean: '#203b55', oceanHi: '#4d718e', land: '#6888a4', landHi: '#a9c2d7', ice: '#e4edf5',", 'orbit surface palette');
+    "  ocean: '#1d3d61', oceanHi: '#4874a0', land: '#6588ac', landHi: '#a7c3de', ice: '#e4edf5',", 'orbit surface palette');   // 2026-11-04 a little bluer; before '#203b55', '#4d718e', '#6888a4', '#a9c2d7'
   p("  cloud: '#e8eef4', rim: '#bcd2e6', halo: '#c9dcec', deck: '#eef2f6', deckShade: '#b7c2cd',",
     "  cloud: '#e4edf5', rim: '#bcd2e6', halo: '#c9dcec', deck: '#e4edf5', deckShade: '#afc4d6',", 'orbit cloud palette');
   src = '/* index1-5 LOCAL COPY of js/finnovation-world.js (prototypes/index1-5/world-ocean-build.cjs): asset URLs re-pointed,\n' +

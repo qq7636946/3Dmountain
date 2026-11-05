@@ -24,6 +24,7 @@
   const hudFiles = $('.gate-files'), hudMb = $('.gate-mb'), hudStage = $('.gate-stage-en'), hudStageZh = $('.gate-stage-zh');
   const buttons = [...gate.querySelectorAll('.gate-btn')];
   const G = window.__GATE__ = { state: 'boot', target: 0, shown: 0, marks: {}, enter: sound => enter(!!sound) };
+  const boot = window.__FINNOVATION_BOOT__ = { stage: 'modules', progress: 0, marks: {} };
   const mark = key => { G.marks[key] ??= Math.round(performance.now()); };
 
   /* letters out of a blur: every [data-split] gets its characters wrapped, each with its place in the line */
@@ -159,6 +160,13 @@
       get text() { return text; },
       ready() { typed = true; set(text || '0'); },
       set(next) { if (typed && next !== text) set(next); },
+      complete() {
+        // Readiness may finish between two digit changes. End on the actual
+        // completion value without adding an artificial loading delay.
+        if (!typed) typed = true;
+        set('100', false);
+        for (let i = 0; i < N; i++) { x[i] = tx[i]; y[i] = ty[i]; vx[i] = vy[i] = 0; }
+      },
       /* 100: the points are thrown out, wide more than high, slow down in the water and fade */
       burst() {
         burstAt = performance.now();
@@ -197,17 +205,17 @@
   function aim(now) {
     const S = window.__MONTIS_STUDY__;
     if (G.state !== 'boot') {
-      warm();
       /* a slow device: the journey still not ready 20 s after the drop came up. Let the count end; the page goes on preparing */
       if (now - G.marks.hero > 20000 || S?.chapterReady?.journey) return 1;
-      return Math.max(S?.chapterReady?.logo ? .8 : 0, .62 + .3 * (1 - Math.exp(-(now - G.marks.hero) / 1500)));
+      return Math.max(.72, Math.min(.97, boot.progress || 0), S?.chapterReady?.logo ? .88 : 0);
     }
+    /* CPU preparation has no HTTP events. Use explicit milestones and completed
+       worker rows rather than leaving the counter at "20" during that work. */
     const net = Math.min(1, requests / EXPECT);
-    let p = .4 * net;
-    if (assets > 0) p = Math.max(p, .4 + .12 * assets);
-    /* then the scene is built on the CPU (terrain, shaders), with nothing to count: the counter keeps creeping towards .59, so it never stands still */
-    if (net > .9 || assets >= 1) { G.creepFrom ??= now; p = Math.max(p, .52 + .07 * (1 - Math.exp(-(now - G.creepFrom) / 2600))); }
-    return Math.min(.59, p);
+    let p = Math.max(.20 * net, Math.min(.70, boot.progress || 0));
+    const terrain = window.__TERRAIN_BAKE__;
+    if (terrain?.state === 'ready') p = Math.max(p, .58);
+    return Math.min(.70, p);
   }
   const STAGES = [[.4, 'GATHERING WATER', '匯聚水氣'], [.6, 'SHAPING THE DROP', '凝成水滴'], [1, 'OPENING THE CURRENT', '打開水流'], [Infinity, 'READY', '準備完成']];
   let stageAt = -1;
@@ -299,6 +307,7 @@
   }
   function reveal() {   /* 100: the count scatters, the cover goes, the live drop comes into focus, the header comes down, then the choice */
     G.state = 'reveal'; mark('reveal');
+    count?.complete(); G.text = '100';
     count?.burst();
     /* the focus pull: the scene is blurred only now, under the cover, and sharpens as the cover goes (no blur while it is covered: nothing to see, all cost) */
     if (!reduce) {
@@ -324,12 +333,12 @@
   function frame(now) {
     if (G.state !== 'boot' && G.state !== 'live') return;
     if (root.dataset.renderMode === 'text') return dismiss();
-    const dt = Math.min(.1, (now - last) / 1000); last = now;
+    const dt = Math.max(0, (now - last) / 1000); last = now;
     if (G.state === 'boot' && document.body.classList.contains('is-ready')) { G.state = 'live'; mark('hero'); }
     G.target = Math.max(G.target, aim(now));
     /* the number follows what has arrived, a little behind and never faster than 0.9 a second (1.8 for the last stretch), so it reads as flow, not as jumps */
     const step = Math.min((G.target - G.shown) * (1 - Math.exp(-dt / .45)), (G.target >= 1 ? 1.8 : .9) * dt);
-    G.shown = G.target >= 1 && G.target - G.shown < .004 ? 1 : G.shown + Math.max(0, step);
+    G.shown = G.target >= 1 ? 1 : G.shown + Math.max(0, step);
     const text = String(Math.min(99, Math.floor(G.shown * 100)));
     /* the number jumps rather than ticks: the points need about half a second to gather, and the number should be read for a moment after */
     if (count && text !== count.text && now - (G.textAt || 0) > 850) { G.textAt = now; count.set(text); G.text = count.text; }

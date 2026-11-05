@@ -486,10 +486,10 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   }
   async function build(R0, renderer) {
     /* index1-5 firstpass: the GLB starts to download now; its parse and preparation run in idle slices later */
-    import('./world-logo-mark.js?v=i15-mw1srj3w').then(m => m.prefetchLogoModel && m.prefetchLogoModel()).catch(() => { });
-    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mw1srj3w'), import('./world-logo-scene.js?v=i15-mw1srj3w'), import('three/addons/loaders/SVGLoader.js')]);
+    import('./world-logo-mark.js?v=i15-mw2x9gw6').then(m => m.prefetchLogoModel && m.prefetchLogoModel()).catch(() => { });
+    const [markMod, sceneMod, svgMod] = await Promise.all([import('./world-logo-mark.js?v=i15-mw2x9gw6'), import('./world-logo-scene.js?v=i15-mw2x9gw6'), import('three/addons/loaders/SVGLoader.js')]);
     if (dead(R0)) return;
-    R0.daylight = await import('./scene-daylight.js?v=i15-mw1srj3w').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
+    R0.daylight = await import('./scene-daylight.js?v=i15-mw2x9gw6').then(m => m.getSceneDaylight).catch(() => null);   // the site's one sun (the lake reads it every frame)
     renderer.getDrawingBufferSize(_size);
     R0.lake = await step(R0, 'lake', () => sceneMod.createLakeScene({ THREE, renderer, width: Math.round(_size.x), height: Math.round(_size.y), palette: paletteHex(), assetBase, small, mobilePerformance, reducedMotion }), true);
     if (dead(R0)) return;

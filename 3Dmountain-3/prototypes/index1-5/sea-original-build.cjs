@@ -2,7 +2,8 @@
    The 2026-10-28 tone pass (water-tone-build.cjs) moved the valley's water and light to silver-blue. The ocean derives its palette from those
    (worldOcean.valley), so it went grey with them. It now reads its own copy of the values it had before that pass (read off the running page of
    _archive/backups/index1-5-before-tone-unification-20261028); the river and everything else keep the tone pass. Dials: 「海洋章節 Ocean」. */
-const SEA = { seaBase: '#699fce', seaHighlight: '#b4bec5', seaSun: '#ffeacc', seaFog: '#b7c9d6', seaCloudLit: '#f0f0eb', seaCloudShade: '#7e96b1' };
+/* 2026-11-04: the client's panel values (「初始改圖一」); before: seaBase '#699fce', seaHighlight '#b4bec5', seaSun '#ffeacc', seaFog '#b7c9d6', seaCloudLit '#f0f0eb', seaCloudShade '#7e96b1' */
+const SEA = { seaBase: '#4fa3e3', seaHighlight: '#a5c4d9', seaSun: '#fefdf0', seaFog: '#97b7ce', seaCloudLit: '#f0f0eb', seaCloudShade: '#ffffff' };
 const ROWS = [['海 原色｜水', 'seaBase'], ['海 原色｜水面亮處', 'seaHighlight'], ['海 原色｜太陽（亮點）', 'seaSun'], ['海 原色｜遠處霧', 'seaFog'], ['海 原色｜雲 受光', 'seaCloudLit'], ['海 原色｜雲 背光', 'seaCloudShade']]
   .map(([label, key]) => [label, 'worldOcean', key]);
 function once(source, anchor, replacement, label) {

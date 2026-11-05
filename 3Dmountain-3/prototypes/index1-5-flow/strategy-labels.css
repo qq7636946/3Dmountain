@@ -1,112 +1,75 @@
-/* FLOW: four quiet glass annotations. Keep every visible element inside the
-   measured card so the existing projection and collision rules stay accurate. */
-html[data-alpine-ui] .alp-labels { counter-reset: river-strategy; }
-html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] { counter-increment: river-strategy; }
-
+/* FLOW only: summit-style annotations from the supplied Everest reference.
+   Keep strategy copy and projected river anchors. Vertical placement is
+   handled by strategy-labels-build.cjs with the original collision checks. */
 html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag {
   box-sizing: border-box;
-  width: 242px;
-  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 13px;
-  padding: 13px 15px 13px 14px;
-  border: 1px solid #edf6ff26;
-  border-radius: 4px;
-  background: linear-gradient(130deg, #f1f8ff1c, #eff7ff05 68%), #142a3a66;
-  -webkit-backdrop-filter: blur(12px) saturate(.92);
-  backdrop-filter: blur(12px) saturate(.92);
-  box-shadow: inset 0 1px 0 #ffffff12, 0 4px 12px #06131c1a;
-  color: #f6f8fa;
-  white-space: normal;
-  text-shadow: none;
-  transition: border-color .4s, background-color .4s, box-shadow .4s;
-}
-
-/* A translucent solid folio replaces both the old left rule and outline type. */
-html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before {
-  content: counter(river-strategy, decimal-leading-zero);
-  display: block;
-  flex: 0 0 57px;
-  align-self: center;
-  width: 57px;
-  height: auto;
-  min-height: 0;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  gap: 0;
+  padding: 0 3px 7px;
+  border: 0;
+  border-radius: 0;
   background: none;
-  color: #f1f7ff8c;
-  font: 300 50px/.96 Inter, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
-  font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -.065em;
-  text-align: left;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  color: #f3f6fa;
+  white-space: normal;
+  text-align: center;
   text-shadow: none;
-  -webkit-text-stroke: 0;
-  -webkit-text-fill-color: currentColor;
+  transition: none;
+}
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before { content: none; }
+/* The outline belongs to the measured label, with no extra canvas or effect. */
+html[data-alpine-ui] .alp-labels .alp-tag-index {
+  display: block;
+  margin-bottom: 12px;
+  font-family: var(--site-font, "Oswald"), "Arial Narrow", sans-serif;
+  font-size: clamp(44px, 4.5vw, 72px);
+  font-weight: 300;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1;
+  letter-spacing: -.025em;
+  color: transparent;
+  -webkit-text-stroke: .4px rgba(243, 246, 250, .82);
+  text-shadow: none;
 }
 html[data-alpine-ui] .alp-labels .alp-tag-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: none;
-  gap: 6px;
-}
-html[data-alpine-ui] .alp-labels .alp-tag-zh {
-  color: #f7f9fb;
-  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.45;
-  letter-spacing: .045em;
-  text-wrap: balance;
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 0; gap: 6px;
+  font-kerning: normal;
 }
 html[data-alpine-ui] .alp-labels .alp-tag-en {
-  color: #e4edf3bf;
-  opacity: 1;
-  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
-  font-size: 9.5px;
-  font-weight: 400;
-  line-height: 1.55;
-  letter-spacing: .13em;
-  overflow-wrap: normal;
-  word-break: normal;
-  text-wrap: balance;
+  order: 0; color: #f3f6fa; opacity: 1;
+  font-family: var(--ttl-font, var(--site-font, "Oswald"));
+  font-size: 18px; font-weight: 400; line-height: 1.3; letter-spacing: .10em;
+  text-wrap: balance; text-shadow: none;
+}
+html[data-alpine-ui] .alp-labels .alp-tag-zh {
+  order: 1; color: #e2c28a;
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 13px; font-weight: 500; line-height: 1.5; letter-spacing: .12em;
+  text-wrap: balance; text-shadow: none;
 }
 html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"].is-current .alp-tag {
-  border-color: #f2f8ff4d;
-  background: linear-gradient(130deg, #f1f8ff24, #eff7ff08 68%), #1933477a;
-  box-shadow: inset 0 1px 0 #ffffff1f, 0 4px 12px #06131c1f;
+  border: 0; background: none; box-shadow: none;
 }
-html[data-alpine-ui] .alp-labels.has-current .alp-pin[data-kind="tag"]:not(.is-current) .alp-tag { opacity: .86; }
-
-/* The four small surfaces use a readable tint when backdrop blur is absent. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag { background-color: #203747e6; }
+html[data-alpine-ui] .alp-labels.has-current .alp-pin[data-kind="tag"]:not(.is-current) .alp-tag { opacity: .84; }
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-pin-line {
+  width: 1px; height: var(--lead, 22px);
+  background: linear-gradient(180deg, #e2c28a8c, #e2c28a33);
+  box-shadow: none;
 }
-
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-pin-line::after { content: none; }
 @media (max-width: 760px) {
+  html[data-alpine-ui] .alp-labels .alp-tag-index { font-size: 38px; margin-bottom: 9px; }
   html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] { display: flex; }
   html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag {
-    width: 194px;
-    gap: 10px;
-    padding: 10px 11px 10px 10px;
-    border-radius: 3px;
-    -webkit-backdrop-filter: blur(8px) saturate(.92);
-    backdrop-filter: blur(8px) saturate(.92);
+    max-width: min(210px, calc(100vw - 32px)); padding-bottom: 6px;
   }
-  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before {
-    flex-basis: 43px;
-    width: 43px;
-    font-size: 40px;
-  }
-  html[data-alpine-ui] .alp-labels .alp-tag-text { gap: 5px; }
-  html[data-alpine-ui] .alp-labels .alp-tag-zh {
-    font-size: 12.5px;
-    line-height: 1.4;
-    letter-spacing: .025em;
-  }
-  html[data-alpine-ui] .alp-labels .alp-tag-en {
-    font-size: 9px;
-    line-height: 1.5;
-    letter-spacing: .105em;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag { transition: none; }
+  html[data-alpine-ui] .alp-labels .alp-tag-en { font-size: 14px; letter-spacing: .09em; }
+  html[data-alpine-ui] .alp-labels .alp-tag-zh { font-size: 12px; letter-spacing: .08em; }
 }

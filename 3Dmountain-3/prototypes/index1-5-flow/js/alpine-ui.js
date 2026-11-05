@@ -159,7 +159,10 @@ function makePin(kind, opts) {
     const line = el('span', 'alp-tag-text');
     if (opts.zh) line.append(el('span', 'alp-tag-zh', opts.zh));
     line.append(el('span', 'alp-tag-en', opts.text));
-    tag.append(line);
+    /* FLOW_STRATEGY_NUMBERS: measured with the label so collision checks include the outlined number. */
+    const number = el('span', 'alp-tag-index', String(PATHS.indexOf(opts.id) + 1).padStart(2, '0'));
+    number.setAttribute('aria-hidden', 'true');
+    tag.append(number, line);
     node.append(tag, el('i', 'alp-pin-line'));
   }
   if (opts.phone) node.dataset.phone = '';
@@ -270,7 +273,7 @@ function updateLabels(S, v, now) {
     } else {
       // keep the last good spot if it still works; otherwise walk along the river (and try either side of it)
       // until the tag is in sight and clear of the copy, the other labels and the interface
-      const sides = pin.side === 'up' ? ['up', 'right', 'left'] : [pin.side, 'up', pin.side === 'right' ? 'left' : 'right'];
+      const sides = ['up'];   /* FLOW_SUMMIT_LABELS: vertical leaders; same river search and occlusion rules. */
       search: for (const t of [pin.t, .74, .7, .78, .66, .82, .62, .58, .86]) {
         const q = pin.curve.getPointAt(t), cand = project(q.x, 0, q.z);
         if (!cand || occluded(W, eye, q.x, 4, q.z)) continue;

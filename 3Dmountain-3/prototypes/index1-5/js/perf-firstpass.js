@@ -8,6 +8,16 @@
    uploadSoon(r, t) uploads one texture in a free moment, after it has been decoded, and only while `live()` is still true. If the frame
                     needs it before that, three uploads it there, exactly as before. */
 export function idleSlot(timeout = 200) {
+  // Preparation behind the entry gate is requested work. Waiting for an idle
+  // animation frame here can postpone each slice in a background/busy tab.
+  if (typeof window !== 'undefined' && /^(boot|live|reveal|ready|finishing)$/.test(window.__GATE__?.state || '')) {
+    if (globalThis.scheduler?.yield) return globalThis.scheduler.yield();
+    return new Promise(resolve => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(); };
+      channel.port2.postMessage(null);
+    });
+  }
   return new Promise(resolve => {
     if (typeof requestIdleCallback === 'function') requestIdleCallback(() => resolve(), { timeout });
     else setTimeout(resolve, 16);

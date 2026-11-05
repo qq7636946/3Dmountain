@@ -27,20 +27,20 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { uploadSoon } from './perf-firstpass.js?v=i15-mw1srj3w';   /* FIRSTPASS_VIDEO */
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw1srj3w'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mw1srj3w';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { stepWorldFollow } from './motion-response.js?v=i15-mw1srj3w';   /* SILK_SCROLL */
-import { createQualityGovernor } from './quality-governor.js?v=i15-mw1srj3w';   /* QUALITY_GOVERNOR */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw1srj3w';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw1srj3w';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mw2x9gw6';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw2x9gw6'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mw2x9gw6';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { stepWorldFollow } from './motion-response.js?v=i15-mw2x9gw6';   /* SILK_SCROLL */
+import { createQualityGovernor } from './quality-governor.js?v=i15-mw2x9gw6';   /* QUALITY_GOVERNOR */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw2x9gw6';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw2x9gw6';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mw1srj3w';
-import { createWorldOcean } from './world-ocean.js?v=i15-mw1srj3w';
-import { createWorldLogo } from './world-logo.js?v=i15-mw1srj3w';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mw2x9gw6';
+import { createWorldOcean } from './world-ocean.js?v=i15-mw2x9gw6';
+import { createWorldLogo } from './world-logo.js?v=i15-mw2x9gw6';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mw1srj3w';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw1srj3w';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mw2x9gw6';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw2x9gw6';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
@@ -64,8 +64,8 @@ const EARTH_ROI = { lon0: 40, lon1: 180, lat0: -50, lat1: 62 };
 
 /* Colours, sRGB. SKY is the slate behind the planet, DEEP the dark it recedes into. */
 const LOOK = {
-  skyTop: '#526d88', skyBottom: '#3a536f', deepTop: '#10243a', deepBottom: '#081624',
-  ocean: '#203b55', oceanHi: '#4d718e', land: '#6888a4', landHi: '#a9c2d7', ice: '#e4edf5',
+  skyTop: '#4f6d8f', skyBottom: '#365477', deepTop: '#0e243d', deepBottom: '#071628',
+  ocean: '#1d3d61', oceanHi: '#4874a0', land: '#6588ac', landHi: '#a7c3de', ice: '#e4edf5',
   cloud: '#e4edf5', rim: '#bcd2e6', halo: '#c9dcec', deck: '#e4edf5', deckShade: '#afc4d6',
   photoLow: '#03111a', photoHigh: '#6e98a3'
 };
@@ -77,10 +77,22 @@ const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
    moment after it, however long, instead of being forced in by the time-out. */
 /* MOBILE_WORLD_QUEUE_RECOVERY */
 const idle = (fn, busy) => new Promise((resolve, reject) => {
-  const go = () => (window.requestIdleCallback || (f => setTimeout(f, 40)))(() => {
-    if (busy?.()) { setTimeout(go, 120); return; }
-    try { resolve(fn()); } catch (error) { reject(error); }
-  }, { timeout: 1500 });
+  const go = () => {
+    const run = () => {
+      if (busy?.()) { setTimeout(go, 120); return; }
+      try { resolve(fn()); } catch (error) { reject(error); }
+    };
+    /* Keep the normal idle queue during scrolling; behind the entry gate,
+       progress through one preparation task per browser turn. */
+    if (/^(boot|live|reveal|ready|finishing)$/.test(window.__GATE__?.state || '')) {
+      if (globalThis.scheduler?.yield) globalThis.scheduler.yield().then(run, reject);
+      else {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); run(); };
+        channel.port2.postMessage(null);
+      }
+    } else (window.requestIdleCallback || (f => setTimeout(f, 40)))(run, { timeout: 1500 });
+  };
   go();
 });
 /* Preparation steps run one per free moment, in order, so they never pile into one long frame even while the

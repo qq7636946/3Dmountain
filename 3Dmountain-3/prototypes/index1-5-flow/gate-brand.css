@@ -1,0 +1,10 @@
+/* The same approved artwork as the site header, centred above the count. */
+#gate .gate-brand {
+  top:clamp(28px,4.8vh,50px); width:238px; max-width:calc(100vw - 64px);
+  display:flex; align-items:center; justify-content:center; gap:0;
+  color:#f5f9fc; font-size:0; letter-spacing:0; text-indent:0;
+}
+#gate .gate-brand-art { display:block; width:100%; height:auto; flex:none; }
+#gate .gate-brand-sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+@media (max-width:680px) { #gate .gate-brand { width:196px; top:32px; } }
+@media (max-height:540px) { #gate .gate-brand { width:170px; top:16px; } }

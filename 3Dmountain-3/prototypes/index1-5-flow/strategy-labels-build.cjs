@@ -21,8 +21,11 @@ function patchAlpine(source) {
     const hook='  for (const pin of pins) {\n    if (pin.kind === \'tag\' && !STRATEGY_IDS.has(id))';
     if(source.split(hook).length!==2)throw Error('Flow white glass: projected label hook changed');
     source=source.replace(hook,"  if (STRATEGY_IDS.has(id)) { layoutGlassStrategies(S, project, now, obstacles); return; }\n"+hook);
+  }
+  // The latest reference pairs a large number with a fine vertical divider.
+  if (!source.includes("el('span','alp-tag-index'")) {
     const markup='    tag.append(line);';
-    if(source.split(markup).length!==2)throw Error('Flow white glass: tag hook changed');
+    if(source.split(markup).length!==2)throw Error('Flow numbered labels: markup anchor changed');
     source=source.replace(markup,"    const number = el('span','alp-tag-index',String(PATHS.indexOf(opts.id)+1).padStart(2,'0'));\n    number.setAttribute('aria-hidden','true');\n    tag.append(number,line);");
   }
   return source;

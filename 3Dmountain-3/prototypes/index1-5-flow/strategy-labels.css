@@ -1,55 +1,51 @@
-/* White mineral glass, four tributaries and a restrained editorial system. */
+/* Compact frosted labels following the supplied numbered reference. */
 html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] { display:flex; align-items:stretch; }
 html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag {
-  box-sizing:border-box; position:relative; z-index:1; isolation:isolate;
+  box-sizing:border-box; position:relative; z-index:1;
   display:flex; flex-direction:row; align-items:center; justify-content:flex-start;
-  width:228px; min-height:92px; padding:18px 19px; gap:15px;
-  border:1px solid rgb(255 255 255 / 82%); border-radius:12px;
-  background:linear-gradient(135deg,rgb(255 255 255 / 89%),rgb(237 246 249 / 64%) 60%,rgb(249 253 255 / 75%));
-  -webkit-backdrop-filter:blur(18px) saturate(85%); backdrop-filter:blur(18px) saturate(85%);
-  box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #ffffff70,0 10px 32px #071d2a24,0 2px 6px #071d2a12;
-  color:#203c4e; text-align:left; white-space:normal; text-shadow:none;
-  transition:opacity .35s,border-color .35s,box-shadow .35s;
+  width:200px; min-height:64px; padding:10px 12px; gap:12px;
+  border:1px solid rgb(247 252 255 / 48%); border-radius:5px;
+  background:linear-gradient(125deg,rgb(247 252 255 / 16%),rgb(217 235 245 / 6%)),rgb(105 125 141 / 38%);
+  -webkit-backdrop-filter:blur(12px) saturate(85%); backdrop-filter:blur(12px) saturate(85%);
+  box-shadow:inset 0 1px 0 #ffffff26,0 4px 15px #071d2a1a;
+  color:#fff; text-align:left; white-space:normal; text-shadow:0 1px 3px #112a3a4d;
+  transition:opacity .25s,border-color .25s,background-color .25s;
 }
-html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before { content:none; }
-html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::after {
-  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-  background:linear-gradient(115deg,#fff0 20%,#ffffff4d 46%,#fff0 66%);
-}
-html[data-alpine-ui] .alp-labels .alp-tag-text { display:flex; align-items:flex-start; flex-direction:column; min-width:0; gap:7px; }
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before,
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::after { content:none; }
+html[data-alpine-ui] .alp-labels .alp-tag-text { display:flex; align-items:flex-start; flex-direction:column; min-width:0; gap:3px; }
 html[data-alpine-ui] .alp-labels .alp-tag-zh {
-  order:0; color:#203c4e; font:500 15px/1.5 "Noto Sans TC","PingFang TC",sans-serif;
-  letter-spacing:.035em; text-wrap:balance;
+  order:0; color:#fff; font:500 13px/1.4 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  letter-spacing:.025em; text-wrap:balance;
 }
 html[data-alpine-ui] .alp-labels .alp-tag-en {
-  order:1; color:#4e687b; opacity:1; font:400 11px/1.4 var(--site-font,"Oswald",sans-serif);
-  letter-spacing:.1em; text-wrap:balance;
+  order:1; color:#f5f9fc; opacity:1; font:400 11px/1.35 var(--site-font,"Oswald",sans-serif);
+  letter-spacing:.025em; text-wrap:balance;
 }
 html[data-alpine-ui] .alp-labels .alp-tag-index {
-  order:-1; flex:0 0 27px; align-self:flex-start; margin-top:1px;
-  font:300 30px/1 var(--site-font,"Oswald",sans-serif); letter-spacing:-.035em; color:#7894a3;
+  order:-1; flex:0 0 40px; box-sizing:border-box; align-self:center; min-height:42px;
+  display:flex; align-items:center; padding-right:12px; border-right:1px solid #ffffff66;
+  color:#fff; font:400 30px/1 var(--site-font,"Oswald",sans-serif); letter-spacing:-.015em;
   font-variant-numeric:tabular-nums;
 }
 html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"].is-current .alp-tag {
-  border-color:#fff; background-color:#fff;
-  box-shadow:inset 0 1px 0 #fff,0 12px 36px #071d2a2b,0 0 0 3px #ffffff1a;
+  border-color:#ffffffa3; background-color:rgb(124 147 162 / 44%);
+  box-shadow:inset 0 1px 0 #ffffff33,0 5px 18px #071d2a24;
 }
-html[data-alpine-ui] .alp-labels .alp-pin.is-current .alp-tag-index { color:#326e8a; }
+html[data-alpine-ui] .alp-labels .alp-pin.is-current .alp-tag-index { color:#fff; }
 html[data-alpine-ui] .alp-labels.has-current .alp-pin[data-kind="tag"]:not(.is-current) .alp-tag { opacity:.94; }
 html[data-alpine-ui] .alp-labels .alp-pin[data-layout="glass"] > .alp-pin-line { display:none; }
 .alp-glass-leader { position:absolute; top:0; left:0; width:1px; height:1px; overflow:visible; z-index:0; pointer-events:none; }
-.alp-glass-leader path { fill:none; stroke:#effbffb3; stroke-width:1; vector-effect:non-scaling-stroke; }
-.alp-glass-leader circle { fill:#fff; stroke:#b5d6e0; stroke-width:1; }
+.alp-glass-leader path { fill:none; stroke:rgb(225 243 251 / 48%); stroke-width:.8; vector-effect:non-scaling-stroke; }
+.alp-glass-leader circle { fill:#edf8fc; stroke:rgb(13 35 50 / 32%); stroke-width:1; }
 @media (max-width:760px) {
   html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag {
-    width:calc((100vw - 44px)/2); min-height:94px; padding:14px 12px; gap:9px; border-radius:10px;
-    -webkit-backdrop-filter:blur(10px) saturate(85%); backdrop-filter:blur(10px) saturate(85%);
+    width:calc((100vw - 44px)/2); min-height:66px; padding:11px 12px; gap:9px; border-radius:5px;
+    -webkit-backdrop-filter:blur(8px) saturate(85%); backdrop-filter:blur(8px) saturate(85%);
   }
-  html[data-alpine-ui] .alp-labels .alp-tag-text { gap:5px; }
-  html[data-alpine-ui] .alp-labels .alp-tag-zh { font-size:12px; letter-spacing:.015em; }
-  html[data-alpine-ui] .alp-labels .alp-tag-en { font-size:9px; letter-spacing:.055em; }
-  html[data-alpine-ui] .alp-labels .alp-tag-index { flex-basis:20px; font-size:24px; }
-  .alp-glass-leader path { stroke:#effbff99; }
+  html[data-alpine-ui] .alp-labels .alp-tag-zh { font-size:12px; letter-spacing:.01em; }
+  html[data-alpine-ui] .alp-labels .alp-tag-en { font-size:10px; letter-spacing:.015em; }
+  html[data-alpine-ui] .alp-labels .alp-tag-index { flex-basis:34px; min-height:42px; padding-right:8px; font-size:28px; }
 }
 @media (prefers-reduced-motion:reduce) {
   html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"],

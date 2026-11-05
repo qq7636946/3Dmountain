@@ -37,7 +37,7 @@ function patchHTML(html) {
   const section=html.slice(start,end),scripts=[...section.matchAll(/<script>[\s\S]*?<\/script>/g)];
   if(scripts.length!==1)throw Error('Flow gate: expected one inline controller');
   const next=section.replace(/<script>[\s\S]*?<\/script>/,()=>'<script>\n'+gateScript()+'\n  </script>');
-  return html.slice(0,start)+next+html.slice(end);
+  return require('./gate-brand-build.cjs').patchHTML(html.slice(0,start)+next+html.slice(end));
 }
 function patchMain(source) {
   if(source.includes('FLOW_GATE_PARK'))return source;

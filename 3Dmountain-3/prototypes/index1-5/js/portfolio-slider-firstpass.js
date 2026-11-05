@@ -29,7 +29,7 @@ import {
   Camera, Texture, Post, RenderTarget
 } from 'https://cdn.jsdelivr.net/npm/ogl@0.0.93/+esm';
 import { GRADE_GLSL, gradeVector, gradeRGB } from '../../../js/finnovation-grade.js?v=eb26a41a84';
-import { idleSlot } from './perf-firstpass.js?v=i15-mw2x9gw6';
+import { idleSlot } from './perf-firstpass.js?v=i15-mw30beoi';
 
 // An exact damped spring, measured in seconds: the same feel at 60/120 Hz.
 function createSpring(from = 0) {
@@ -461,7 +461,8 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
   yield 'cloning';
   /* ---- scroll state: the host feeds this ---- */
   const scroll = { y: 0 };
-  const strip = totalSlidesWidth * 1000;   /* scroll units for one full pass */
+  const strip = Math.max(1, textures.length - 1) * (slideWidth + slideGap) * 1000;   /* scroll units for one full pass */
+  let shownTravel = 0;
   let travel = 0;                          /* 0..1 through the strip */
   const scrollEase = createSpring(0);
   let sceneTarget = null;
@@ -477,6 +478,7 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
   function frame(now, dt) {
     if (disposed) return;
     const [scrollPos, scrollVel] = scrollEase(scroll.y, dt);
+    shownTravel = Math.max(0, Math.min(1, -scrollPos / strip));
 
     /* a spring-ish fly-in the first time the section is shown */
     if (intro.on) {
@@ -595,7 +597,7 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
       if (!next) return !allIn;   // more may still arrive; once every picture has come in (or failed), done
       next.update(); return true;
     },
-    addScroll(delta) { scroll.y += delta; },
+    addScroll(delta) { scroll.y = Math.max(-strip, Math.min(0, scroll.y + delta)); travel = -scroll.y / strip; },
 
     /* the host hands us the wheel; we report whether we used it, so the page
        only moves on once the whole strip has gone past                     */
@@ -603,8 +605,8 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
       const forward = delta < 0;                 /* wheel down = travel forward */
       if (forward && travel >= 1) return false;
       if (!forward && travel <= 0) return false;
-      scroll.y += delta;
-      travel = Math.min(1, Math.max(0, travel + (-delta) / strip));
+      scroll.y = Math.max(-strip, Math.min(0, scroll.y + delta));
+      travel = -scroll.y / strip;
       return true;
     },
     reset(atEnd) {
@@ -614,6 +616,11 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
       const empty = new Transform();
       for (const target of renderTargets) if (target) renderer.render({ scene: empty, camera, target, clear: true });
     },
+    seek(value, instant = true) {
+      travel = Math.max(0, Math.min(1, value)); scroll.y = -strip * travel;
+      if (instant) { shownTravel = travel; scrollEase.reset(scroll.y); const empty = new Transform(); for (const target of renderTargets) if (target) renderer.render({ scene: empty, camera, target, clear: true }); }
+    },
+    get displayProgress() { return shownTravel; },
     get progress() { return travel; },
     /* the host waits on this so the section is never cut away mid fly-in */
     get introDone() { return externalEntrance ? entrance >= .999 : !intro.on; },
@@ -664,6 +671,8 @@ export function createSlider(canvas, options = {}) {
     get loaded() { return built.then(r => r ? r.loaded : false); },
     get count() { return real ? real.count : (options.images || []).length; },
     get progress() { return real ? real.progress : 0; },
+    get displayProgress() { return real ? real.displayProgress : 0; },
+    seek: (v, instant) => real?.seek(v, instant),
     get introDone() { return real ? real.introDone : false; },
     frame: (...a) => real?.frame(...a),
     resize: () => real?.resize(),

@@ -52,7 +52,9 @@ for(const n of ['perf-boot-build.cjs','perf-firstpass-build.cjs','perf-cover-bui
  }
 }
 ({main,extra}=require('./startup-build.cjs')({main,extra}));
+({main,extra}=require('./five-sections-build.cjs').patchRuntime({main,extra}));LOCAL.add('site-sections.js');
 ({html,ui}=require('./header-brand-build.cjs')({html,ui}));
+html=require('./five-sections-build.cjs').restoreBuildHooks(html);
 html=require('./page-copy.cjs').patchHTML(html);
 ({html}=require('./editorial-polish-build.cjs')({html}));
 ({html}=require('./title-polish-build.cjs')({html}));   // 2026-11-04: the flow page's big titles
@@ -75,6 +77,7 @@ html=html.replace(/(<script type="module" id="journeyModule" src=")[^"]+/,`$1pro
 html=html.replace(/(<link rel="modulepreload" href=")(?:js\/main\.js|prototypes\/index1-5\/js\/main\.js)(?:\?[^"]*)?/,`$1prototypes/index1-5/js/main.js?v=${version}`);
 html=html.replace(/prototypes\/index1-5\/index1-5.css(?:\?[^"']*)?/,`prototypes/index1-5/index1-5.css?v=${version}`);
 html=html.split('alpine-ui.js?v=VERSION').join('alpine-ui.js?v='+version).replace(/alpine-ui.js?v=i15-[0-9a-z]+/g,'alpine-ui.js?v='+version);
+html=require('./five-sections-build.cjs').patchHTML(html);
 html=require('./startup-preload.cjs').addStartupPreloads(html,ROOT);
 html=html.replace(/\n(?:[ \t]*\n){2,}/g,'\n\n'); // 2026-10-31: helpers that take a block out and put it back left blank lines, 9 more on every build
 fs.writeFileSync(path.join(ROOT,'index1-5.html'),html);

@@ -1,0 +1,57 @@
+/* Five-section navigation and the two editorial chapters of the WebGL strip. */
+html[data-site-sections="five"] .site-native-journey,
+html[data-site-sections="five"] [data-card-group][hidden] { display: none !important; }
+html[data-site-sections="five"] body.is-ready .finnovation-ui .fi-rail { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+html[data-site-sections="five"] .fi-rail:has(> [data-section="0"][aria-current]) { --wl-i: 0; }
+html[data-site-sections="five"] .fi-rail:has(> [data-section="1"][aria-current]) { --wl-i: 1; }
+html[data-site-sections="five"] .fi-rail:has(> [data-section="2"][aria-current]) { --wl-i: 2; }
+html[data-site-sections="five"] .fi-rail:has(> [data-section="3"][aria-current]) { --wl-i: 3; }
+html[data-site-sections="five"] .fi-rail:has(> [data-section="4"][aria-current]) { --wl-i: 4; }
+html[data-site-sections="five"] .fi-world .fiw-chapters { display: none !important; }
+html[data-site-sections="five"] .fi-rail [data-section] { font-family: "Noto Sans TC",sans-serif; font-size: 13px; letter-spacing: .09em; gap: 13px; }
+html[data-site-sections="five"] .fi-rail .fi-rail-label { display: inline-block !important; opacity: 1 !important; max-width: 240px !important; }
+html[data-site-sections="five"] .site-menu-copy { display: grid; gap: 9px; }
+html[data-site-sections="five"] .fi-menu-links [data-section] { display: flex; align-items: center; gap: 28px; }
+html[data-site-sections="five"] .fi-menu-links .fi-menu-link-zh { font-family: "Noto Sans TC",sans-serif; }
+html[data-site-sections="five"] body.is-world .fi-footer :is(.fi-footer-center,.fi-footer-next) { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+html[data-site-sections="five"] .fi-footer-total { display: inline !important; }
+.site-section-veil { position: fixed; inset: 0; z-index: 10; background: #dce7f0; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .3s,visibility .3s; }
+.site-section-veil.is-on { opacity: 1; visibility: visible; pointer-events: auto; }
+html[data-site-sections="five"] .fi-portfolio::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg,#0d243c40,transparent 57%),linear-gradient(0deg,#0c233b80,transparent 35%); }
+html[data-site-sections="five"] body.is-portfolio .finnovation-ui .fi-copy { position: fixed !important; inset: 0 !important; width: auto !important; max-width: none !important; transform: none !important; translate: none !important; pointer-events: none; }
+html[data-site-sections="five"] body:is(.is-portfolio,.is-world) .finnovation-ui .fi-copy-panel:not(.site-cards-copy) { display: none !important; }
+html[data-site-sections="five"] .finnovation-ui .site-cards-copy { position: absolute !important; inset: 0 !important; width: auto !important; max-width: none !important; padding: 0 !important; text-align: left !important; pointer-events: none; --card-pad: clamp(24px,10vw,190px); }
+html[data-site-sections="five"] .site-cards-copy::before { display: none !important; }
+html[data-site-sections="five"] .site-card-intro { position: absolute; left: var(--card-pad); top: clamp(140px,17vh,210px); right: var(--card-pad); animation: site-card-arrive .65s ease both; }
+html[data-site-sections="five"] .site-section-eyebrow { margin: 0 0 17px; color: #f2f6fa !important; font: 400 13px/1.3 var(--site-font,'Oswald',sans-serif); letter-spacing: .18em; text-shadow: 0 1px 10px #0b203877; }
+html[data-site-sections="five"] .finnovation-ui .site-cards-copy h2.site-card-title { margin: 0 !important; max-width: none !important; padding: 0 !important; color: #fff !important; font-family: "Noto Sans TC",sans-serif !important; font-weight: 500 !important; font-size: clamp(36px,3.8vw,68px) !important; line-height: 1.3 !important; letter-spacing: .055em !important; text-shadow: 0 3px 28px #0c24394d !important; background: none !important; }
+html[data-site-sections="five"] .finnovation-ui .site-cards-copy h2.site-news-title { font-family: var(--site-font,'Oswald',sans-serif) !important; font-size: clamp(44px,5.3vw,88px) !important; font-weight: 400 !important; line-height: 1.15 !important; letter-spacing: .04em !important; }
+html[data-site-sections="five"] .site-card-title :is(.flow-title-char,.cl-ch) { opacity: 1 !important; filter: none !important; transform: none !important; }
+html[data-site-sections="five"] .site-card-lead { margin: 17px 0 0 !important; color: #f1f5f9 !important; font: 400 14px/1.9 "Noto Sans TC",sans-serif !important; letter-spacing: .08em; text-shadow: 0 1px 12px #0b203877; }
+html[data-site-sections="five"] .site-card-detail { position: absolute; left: var(--card-pad); bottom: clamp(104px,12vh,150px); width: min(390px,calc(100vw - 48px)); color: #fff; }
+.site-card-meta { margin: 0 0 10px; font: 400 12px/1.4 var(--site-font,'Oswald',sans-serif); letter-spacing: .16em; color: #e3d4b4; }
+.site-card-caption { margin: 0 0 10px; font: 500 clamp(18px,1.6vw,25px)/1.5 "Noto Sans TC",sans-serif; letter-spacing: .05em; }
+.site-card-description { margin: 0; color: #e4edf5; font: 400 13px/1.9 "Noto Sans TC",sans-serif; letter-spacing: .045em; }
+.site-card-status { margin: 14px 0 0; font: 400 11px/1.5 var(--site-font,'Oswald',sans-serif); letter-spacing: .13em; color: #e3d4b4; }
+.site-card-status:empty { display: none; }
+.site-card-controls { position: absolute; right: var(--card-pad); bottom: clamp(104px,12vh,150px); display: flex; align-items: center; gap: 19px; pointer-events: auto; }
+.site-card-controls button { width: 45px; height: 45px; border: 1px solid #e8f3ff6b; border-radius: 50%; background: #15324b33; color: #fff; font-size: 20px; cursor: pointer; transition: background .25s,transform .25s; }
+.site-card-controls button:hover { background: #e8f3ff2b; transform: translateX(2px); }
+.site-card-count { color: #f4f8fc; font: 400 13px/1 var(--site-font,'Oswald',sans-serif); letter-spacing: .12em; }
+html[data-site-sections="five"] #fiWorld .fiw-global { padding-bottom: 45vh; min-height: 170vh; }
+html[data-site-sections="five"] #fiWorld .fiw-global .fiw-statement { font-family: "Noto Sans TC",sans-serif; }
+@keyframes site-card-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width:760px) {
+  html[data-site-sections="five"] .fi-rail [data-section] { font-size: 11px; letter-spacing: .03em; white-space: nowrap; }
+  html[data-site-sections="five"] .site-card-intro { top: 190px; }
+  html[data-site-sections="five"] .finnovation-ui .site-cards-copy h2.site-card-title { font-size: 31px !important; letter-spacing: .04em !important; }
+  html[data-site-sections="five"] .finnovation-ui .site-cards-copy h2.site-news-title { font-size: 45px !important; }
+  html[data-site-sections="five"] .site-section-eyebrow { margin-bottom: 12px; font-size: 11px; }
+  html[data-site-sections="five"] .site-card-lead { margin-top: 11px !important; font-size: 12px !important; line-height: 1.85 !important; }
+  html[data-site-sections="five"] .site-card-detail { bottom: 110px; max-width: calc(100vw - 48px); }
+  .site-card-description { font-size: 12px; }
+  .site-card-caption { font-size: 18px; }
+  .site-card-controls { right: 24px; bottom: 68px; gap: 13px; }
+  .site-card-controls button { width: 33px; height: 33px; font-size: 16px; }
+}
+@media (prefers-reduced-motion:reduce) { .site-section-veil,.site-card-intro,.site-card-controls button { animation: none !important; transition: none !important; } }

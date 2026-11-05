@@ -27,20 +27,20 @@
      gets it back; main.js closes it whenever the cards close.
    ===================================================================== */
 import * as THREE from 'three';
-import { uploadSoon } from './perf-firstpass.js?v=i15-mw2x9gw6';   /* FIRSTPASS_VIDEO */
-import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw2x9gw6'; /* MOBILE_TOUCH_WORLD */
-import { loadWorldImage } from './world-image-source.js?v=i15-mw2x9gw6';   /* MOBILE_WORLD_IMAGE_FALLBACK */
-import { stepWorldFollow } from './motion-response.js?v=i15-mw2x9gw6';   /* SILK_SCROLL */
-import { createQualityGovernor } from './quality-governor.js?v=i15-mw2x9gw6';   /* QUALITY_GOVERNOR */
-import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw2x9gw6';   /* WORLD_GLOBE_SCROLL */
-import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw2x9gw6';   /* WORLD_DIVE_FX */
+import { uploadSoon } from './perf-firstpass.js?v=i15-mw30beoi';   /* FIRSTPASS_VIDEO */
+import { consumeMobileScroll, mountMobileTouchNavigation } from './mobile-touch-navigation.js?v=i15-mw30beoi'; /* MOBILE_TOUCH_WORLD */
+import { loadWorldImage } from './world-image-source.js?v=i15-mw30beoi';   /* MOBILE_WORLD_IMAGE_FALLBACK */
+import { stepWorldFollow } from './motion-response.js?v=i15-mw30beoi';   /* SILK_SCROLL */
+import { createQualityGovernor } from './quality-governor.js?v=i15-mw30beoi';   /* QUALITY_GOVERNOR */
+import { globeScrollDegrees } from './world-globe-motion.js?v=i15-mw30beoi';   /* WORLD_GLOBE_SCROLL */
+import { createWorldDiveFx } from './world-dive-fx.js?v=i15-mw30beoi';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
-import { createWorldSectionMotion } from './section-motion.js?v=i15-mw2x9gw6';
-import { createWorldOcean } from './world-ocean.js?v=i15-mw2x9gw6';
-import { createWorldLogo } from './world-logo.js?v=i15-mw2x9gw6';
+import { createWorldSectionMotion } from './section-motion.js?v=i15-mw30beoi';
+import { createWorldOcean } from './world-ocean.js?v=i15-mw30beoi';
+import { createWorldLogo } from './world-logo.js?v=i15-mw30beoi';
 /* PRINCIPLES_FLOW_HOOK */
-import { createWorldPrinciples } from './world-principles.js?v=i15-mw2x9gw6';
-import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw2x9gw6';
+import { createWorldPrinciples } from './world-principles.js?v=i15-mw30beoi';
+import { getSceneDaylight, setSceneTime } from './scene-daylight.js?v=i15-mw30beoi';
 import { GRADE_GLSL, gradeVector } from '../../../js/finnovation-grade.js?v=eb26a41a84';
 
 const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm';
@@ -282,7 +282,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
   /* index1-5 ocean (world-ocean.js): the planet is followed by a dive through a HUD lens into the sea, and the
      responsibility chapters become a horizontal section over it. Null when the markup is not there (then all below
      runs as the shared module). */
-  const ocean = createWorldOcean({
+  const ocean = document.documentElement.dataset.siteSections === 'five' ? null : createWorldOcean({
     root, reducedMotion, config: oceanConfig, mobilePerformance, small: Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4),
     go: value => { yt = clamp(value, 0, maxY); run(); }, remeasure: () => { measure(); refreshTriggers(); run(); }
   });
@@ -292,7 +292,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     root, reducedMotion, config: logoConfig, mobilePerformance, small: Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4),
     go: value => { yt = clamp(value, 0, maxY); run(); }, remeasure: () => { measure(); refreshTriggers(); run(); }
   }) : null;
-  const principles = createWorldPrinciples({ root, reducedMotion,
+  const principles = document.documentElement.dataset.siteSections === 'five' ? null : createWorldPrinciples({ root, reducedMotion,
     go: value => { yt = clamp(value, 0, maxY); run(); }, remeasure: () => { measure(); refreshTriggers(); run(); }
   });
   const sectionMotion = createWorldSectionMotion({ root, reducedMotion });
@@ -521,6 +521,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
     at.global = top(g); at.globalH = g?.offsetHeight || H;
     at.resp = top(r); at.block = top(r?.querySelector('[data-block]'));
     at.footer = top(f); at.footerH = f?.offsetHeight || 0;
+    if (document.documentElement.dataset.siteSections === 'five') at.resp = at.block = at.footer;
     ocean?.measure(at, top);
     principles?.measure(at, top);
     logo?.measure(at, top);
@@ -543,7 +544,7 @@ export function mountWorld({ root, reducedMotion = false, epilogue = () => null,
       part: smooth(.5, .97, c),                                       // …and tears open
       zoom: smooth(.3, 1, c),
       reveal: smooth(.5, 1, c),                                       // the planet comes up through it
-      photo: o ? o.show : smooth(at.block - H * 1.15, at.block - H * .3, yy),       // the ocean under the chapters
+      photo: document.documentElement.dataset.siteSections === 'five' ? 0 : o ? o.show : smooth(at.block - H * 1.15, at.block - H * .3, yy),       // the ocean under the chapters
       o, principles: principles ? principles.sample(yy) : null, l: logo ? logo.sample(yy) : null, footerTop: at.footer - yy                                       // the footer's top edge on screen
     };
   }

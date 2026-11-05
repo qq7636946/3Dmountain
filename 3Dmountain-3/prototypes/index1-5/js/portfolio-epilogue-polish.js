@@ -242,6 +242,14 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
   addEventListener('keydown', onKey); document.addEventListener('visibilitychange', onVisibility);
   return {
     preload: load, close,
+    async openAt(progress = 0) {
+      await load(); if (disposed || !prepared || !slider) return false;
+      if (!open) beginBridge();
+      bt = amount = 1; velocity = 0; exit = 0; suspended = false; painted = NaN;
+      slider.setEntrance(1); slider.seek(progress, true); paint(); run(); return true;
+    },
+    seekProgress(progress, instant = true) { if (!slider) return; slider.seek(progress, instant); run(); },
+    get displayStrip() { return slider?.displayProgress ?? 0; },
     get open() { return open; }, get ready() { return prepared; }, get pending() { return pending; },
     get transition() { return amount; }, get covering() { return open && amount === 1; },
     get bridge() { return bridge; }, get strip() { return slider?.progress ?? 0; },

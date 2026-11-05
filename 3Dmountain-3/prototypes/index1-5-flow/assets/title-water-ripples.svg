@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="256" viewBox="0 0 640 256">
+  <defs>
+    <filter id="soft" x="-20%" y="-30%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="2.1"/>
+    </filter>
+  </defs>
+  <!-- Curved water contours and caustic pools; transparent over the blue fill. -->
+  <g fill="none" stroke="#eaffff" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-width="10" opacity=".12" filter="url(#soft)">
+      <path d="M-70 47C12 8 48 96 136 58S249 10 319 51 442 101 511 56 613 11 710 48"/>
+      <path d="M-65 171C18 219 81 112 171 157S282 218 363 169 480 120 552 169 639 217 712 173"/>
+      <path d="M98 111C113 78 205 71 249 96S281 150 221 161 91 150 98 111Z"/>
+      <path d="M385 93C402 65 494 62 536 84S563 132 506 148 373 126 385 93Z"/>
+    </g>
+    <g stroke-width="4" opacity=".28" filter="url(#soft)">
+      <path d="M-70 47C12 8 48 96 136 58S249 10 319 51 442 101 511 56 613 11 710 48"/>
+      <path d="M-65 171C18 219 81 112 171 157S282 218 363 169 480 120 552 169 639 217 712 173"/>
+      <path d="M98 111C113 78 205 71 249 96S281 150 221 161 91 150 98 111Z"/>
+      <path d="M385 93C402 65 494 62 536 84S563 132 506 148 373 126 385 93Z"/>
+    </g>
+    <g stroke-width="1.6" opacity=".12" filter="url(#soft)">
+      <path d="M70 107C87 63 207 55 266 86S309 166 231 182 56 158 70 107Z"/>
+      <path d="M129 116C143 98 196 96 225 112S232 141 193 143 119 135 129 116Z"/>
+      <path d="M354 87C372 45 498 38 556 70S589 153 513 171 339 130 354 87Z"/>
+      <path d="M418 101C429 85 482 82 506 98S513 124 479 128 409 116 418 101Z"/>
+      <path d="M-60 229C29 187 81 270 164 231S274 189 352 230 457 270 541 230 648 188 707 229"/>
+      <path d="M-55 12C29-19 88 44 170 13S277-16 355 13 466 44 546 13 653-15 709 12"/>
+    </g>
+  </g>
+  <g fill="none" stroke="#8cbfce" stroke-width="7" opacity=".12" filter="url(#soft)">
+    <path d="M70 112C87 68 207 60 266 91S309 171 231 187 56 163 70 112Z"/>
+    <path d="M354 92C372 50 498 43 556 75S589 158 513 176 339 135 354 92Z"/>
+  </g>
+</svg>

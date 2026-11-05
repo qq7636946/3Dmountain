@@ -1,71 +1,123 @@
-/* FLOW text morph. Typography and the section scroll poses stay in their
-   existing sheets; only the temporary pair of title silhouettes is filtered. */
-.flow-title-word { display: inline-block !important; white-space: nowrap !important; }
-html[data-flow-titles="on"] #fiWorld [data-flow-title="ready"] :is(.flow-title-word, .flow-title-char) {
-  display: inline-block;
-}
-/* Replace the earlier staggered character entrance. Keeping the real glyphs
-   still avoids a second animation when the morph hands back to the heading. */
-html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-title="ready"] :is(.flow-title-char, .cl-ch) {
-  display: inline-block !important;
-  opacity: 1 !important;
-  filter: none !important;
+/* One persistent title surface. Source headings remain semantic/layout-only;
+   no legacy opacity, translation, character stagger or reveal paints a title. */
+html[data-flow-title-effect="water"]:not([data-render-mode="text"]) body .finnovation-ui [data-flow-morph-source],
+html[data-flow-title-effect="water"]:not([data-render-mode="text"]) body #fiWorld [data-flow-morph-source] {
+  opacity: 0 !important;
   transform: none !important;
+  translate: none !important;
+  rotate: none !important;
+  scale: none !important;
+  filter: none !important;
   transition: none !important;
   animation: none !important;
 }
-html[data-flow-title-effect="morph"] [data-flow-title="ready"] { animation: none; }
-html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-title="ready"]:not(.flow-title-on) :is(.flow-title-char, .cl-ch) {
-  opacity: 0 !important;
+html[data-flow-title-effect="water"] [data-flow-morph-source] *,
+html[data-flow-title-effect="water"] [data-flow-morph-source]::before,
+html[data-flow-title-effect="water"] [data-flow-morph-source]::after {
+  transform: none !important;
+  translate: none !important;
+  rotate: none !important;
+  scale: none !important;
+  filter: none !important;
+  transition: none !important;
+  animation: none !important;
 }
-/* Hide only paint, keeping the real heading and its accessible name present. */
-html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-morph-hidden] :is(.flow-title-char, .cl-ch) {
-  opacity: 0 !important;
-}
+html[data-flow-title-effect="water"] [data-flow-morph-source]::before,
+html[data-flow-title-effect="water"] [data-flow-morph-source]::after { content: none !important; }
 
-.flow-morph-filters {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
+.flow-morph-filters { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
 .flow-title-morph {
+  --flow-water-glow: drop-shadow(0 0 3px #d6f3ff66) drop-shadow(0 0 14px #88d0ff4d) drop-shadow(0 0 24px #5ca8ff29);
   position: fixed;
   z-index: 70;
   overflow: visible;
   isolation: isolate;
   pointer-events: none;
   user-select: none;
-  filter: url(#flow-title-morph-threshold) blur(.35px) drop-shadow(0 2px 12px #09132138);
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  filter: var(--flow-water-glow);
 }
 .flow-title-morph[hidden] { display: none !important; }
+.flow-title-morph[data-state="morph"] {
+  filter: url(#flow-title-morph-threshold) blur(var(--flow-soften, 0px)) var(--flow-water-glow);
+}
 .flow-morph-layer {
   position: absolute;
   width: max-content;
   pointer-events: none;
-  transform-origin: 50% 50%;
-  will-change: filter, opacity;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
 }
+.flow-title-morph[data-state="morph"] .flow-morph-layer { will-change: filter, opacity; }
 .flow-morph-layer > :is(h1, h2, h3, div) {
   position: static !important;
   margin: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  translate: none !important;
+  transition: none !important;
+  animation: none !important;
   overflow: visible !important;
+}
+.flow-title-morph[data-state="morph"] .flow-morph-layer * {
+  text-shadow: none !important;
+  -webkit-text-stroke: var(--flow-ink, 0px) currentColor;
 }
 .flow-morph-layer :is(h1, h2, h3, div, span)::before,
 .flow-morph-layer :is(h1, h2, h3, div, span)::after { content: none !important; }
 
-/* Reduced motion, a readable-text fallback or disposal always exposes the
-   original accessible heading. No overlay survives those state changes. */
-html[data-render-mode="text"] .flow-title-morph { display: none !important; }
-html[data-flow-title-effect="morph"][data-render-mode="text"] [data-flow-morph-hidden] :is(.flow-title-char, .cl-ch) {
-  opacity: 1 !important;
+/* Water moves inside the glyphs. The text masks, their baseline and their
+   scroll-bound morph stay stationary. Curved ripples replace the reference's stripes. */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .flow-title-morph .flow-morph-layer > :is(h1, h2, h3, div) {
+    background-image: url("assets/title-water-ripples.svg?v=soft-water-r6"),
+      radial-gradient(ellipse at 30% 30%, #ffffff1a 0%, #ffffff00 58%),
+      radial-gradient(ellipse at 72% 80%, #619cc42e 0%, #619cc400 62%),
+      linear-gradient(90deg, #cdfcf3 0%, #aaf5f5 30%, #9cedfc 58%, #bce3ff 80%, #d2deff 100%) !important;
+    background-size: 480px 192px, 180% 180%, 150% 180%, 100% 100% !important;
+    background-position: 0 0, 0% 40%, 100% 60%, 0 0;
+    background-repeat: repeat, no-repeat, no-repeat, no-repeat !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    animation: flow-water-current 26s linear infinite !important;
+  }
+  .flow-title-morph .flow-morph-layer > :is(h1, h2, h3, div),
+  .flow-title-morph .flow-morph-layer > :is(h1, h2, h3, div) * {
+    color: #bce3ff !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+  }
 }
-html[data-render-mode="text"] [data-flow-title="ready"] :is(.flow-title-char, .cl-ch),
-html:not([data-flow-titles="on"]) [data-flow-title="ready"] :is(.flow-title-char, .cl-ch) {
-  opacity: 1 !important; filter: none !important; transform: none !important; transition: none !important;
+/* The four horizontal strategy cards use ordinary white headings. */
+html[data-flow-title-effect="water"] body #fiWorld .fiwo-strategy-title,
+html[data-flow-title-effect="water"] body #fiWorld .fiwo-strategy-title * {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  text-shadow: none !important;
+  filter: none !important;
+  animation: none !important;
+}
+@keyframes flow-water-current {
+  from { background-position: 0 0, 0% 40%, 100% 60%, 0 0; }
+  to { background-position: 480px 0, 100% 60%, 0% 40%, 0 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flow-title-morph { display: none !important; }
-  html[data-flow-title-effect="morph"][data-flow-titles="on"] [data-flow-morph-hidden] :is(.flow-title-char, .cl-ch) { opacity: 1 !important; }
+  .flow-title-morph .flow-morph-layer > :is(h1, h2, h3, div) { animation: none !important; }
+}
+html[data-render-mode="text"] .flow-title-morph { display: none !important; }
+html[data-flow-title-effect="water"][data-render-mode="text"] [data-flow-morph-source] {
+  opacity: 1 !important;
+  transform: none !important;
+  translate: none !important;
+  filter: none !important;
+  transition: none !important;
+  animation: none !important;
 }

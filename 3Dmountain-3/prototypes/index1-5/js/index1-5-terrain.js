@@ -4,7 +4,7 @@
 import { createTerrainMaterial } from './highland-material.js?v=i15-mw30beoi';
 // ALPINE-TERRAIN (index1-5-alpine 2026-10-23): the alpine material and the real-erosion detail tile.
 import { installAlpineTerrain } from './alpine-terrain-material.js?v=i15-mw30beoi';
-import { loadAlpineDetail } from './alpine-erosion.js?v=i15-mw30beoi';
+import { loadAlpineDetail } from './alpine-erosion.js?v=flow2-perf-20261109';
 const sets = new Map();
 function getSet(THREE,lite){
   const key=lite?'lite':'full';
@@ -34,7 +34,14 @@ function getSet(THREE,lite){
   jobs.push(loadAlpineDetail(new URL('erosion-height-'+(lite?256:512)+'.png',alp).href));
   const set={maps,textures,ready:Promise.all(jobs)};sets.set(key,set);return set;
 }
-export function preloadIndex15Terrain(THREE,lite=false){return getSet(THREE,lite).ready;}
+export function preloadIndex15Terrain(THREE, lite = false, { warmTextures = false } = {}) {
+  const set = getSet(THREE, lite);
+  if (!warmTextures) return set.ready;
+  return set.ready.then(() => {
+    const { rockDetail, grassColor, grassNormal, alpineRock, alpineScree, alpineSnow, alpineErosion } = set.maps;
+    return [rockDetail, grassColor, grassNormal, alpineRock, alpineScree, alpineSnow, alpineErosion];
+  });
+}
 // ALPINE-TERRAIN: the canyon rock and the watershed terrain take the alpine material; the highland one stays as a fallback.
 export function installIndex15Terrain(THREE,{rockMaterial,terrainMaterial,lite=false}){
   return installAlpineTerrain(THREE,{rockMaterial,terrainMaterial,lite,maps:getSet(THREE,lite).maps});

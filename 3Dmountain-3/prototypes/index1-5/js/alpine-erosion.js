@@ -33,6 +33,8 @@ const smooth = (a, b, x) => { const u = clamp01((x - a) / (b - a)); return u * u
    (prototypes/index1-5-alpine/tools/bake-erosion-detail.cjs). 12-bit: q = R·16 + G/16, value (q − 2048)/256 σ.
    Loaded with the terrain's textures, before the landscape is built; without it the spurs fall back to noise. */
 let DETAIL = null;
+export const getAlpineDetailSnapshot = () => DETAIL;
+export function setAlpineDetailSnapshot(detail) { DETAIL = detail; }
 export async function loadAlpineDetail(url) {
   try {
     const blob = await (await fetch(url)).blob();

@@ -7,6 +7,149 @@ function once(source, anchor, replacement) {
   return source.replace(anchor, () => replacement);
 }
 
+// Compile only Flow2's opening render programs before its first actual draw.
+function patchHeroShaderStartup(main) {
+  main = once(main, "      const logoGlass = createReferenceLogoGlass(THREE, { renderer, config: CONFIG.logoGlass, mobile: mobileRenderBudget.mobile });", `      /* FLOW2_HERO_SHADER_WARMUP: submit the opening programs while the cover is up. */
+      const heroShaderStats = document.documentElement.hasAttribute('data-flow2-aphelion') &&
+        document.documentElement.dataset.gate === 'hold' && !requestedPreview && dropSDF && orbModelSkipped &&
+        renderer.extensions.has('KHR_parallel_shader_compile')
+        ? (startupState.heroShaders = { status: 'idle', earlyPrograms: 0 }) : null;
+      const heroPrograms = new Set();
+      let heroShaderPending = false;
+
+      function compileHeroPrograms(objects, view, target, lights = null) {
+        const previous = renderer.getRenderTarget();
+        const face = renderer.getActiveCubeFace(), mip = renderer.getActiveMipmapLevel();
+        const count = renderer.info.programs.length;
+        try {
+          renderer.setRenderTarget(target);
+          renderer.compile(objects, view, lights);
+        } finally {
+          renderer.setRenderTarget(previous, face, mip);
+        }
+        for (let i = count; i < renderer.info.programs.length; i++) heroPrograms.add(renderer.info.programs[i]);
+      }
+
+      // Pass the real objects and lighting to Three without moving them into another scene.
+      const heroDrawables = objects => ({
+        traverse: visit => objects.forEach(visit),
+        traverseVisible() {}
+      });
+
+      if (heroShaderStats && renderer.getPixelRatio() === 1) {
+        const started = performance.now();
+        try {
+          // This live composer buffer has the same linear HDR variant as the scene buffer.
+          compileHeroPrograms(heroDrawables([backdrop, sea]), camera, composer.renderTarget1, scene);
+          heroShaderStats.earlyPrograms = heroPrograms.size;
+        } catch {
+          heroShaderStats.status = 'fallback';
+          heroPrograms.clear();
+        }
+        heroShaderStats.earlySubmitMs = performance.now() - started;
+      }
+
+      async function prepareHeroShaders() {
+        const started = performance.now();
+        heroShaderStats.status = 'submitting';
+        try {
+          const objects = [];
+          scene.traverseVisible(object => {
+            if (object.material && object.material.visible !== false && object.layers.test(camera.layers)) objects.push(object);
+          });
+          compileHeroPrograms(heroDrawables(objects), camera, renderTarget, scene);
+
+          // Use the stock pass setup to get the exact target and defines (including
+          // OutputPass's colour space and tone mapping). The facade never draws or clears.
+          const standardPasses = new Set([ShaderPass.prototype.render, UnrealBloomPass.prototype.render, OutputPass.prototype.render]);
+          let target = null;
+          const linear = new Set(), screen = new Set();
+          const compiler = {
+            outputColorSpace: renderer.outputColorSpace, toneMapping: renderer.toneMapping, toneMappingExposure: renderer.toneMappingExposure,
+            getClearColor: color => renderer.getClearColor(color),
+            getClearAlpha: () => renderer.getClearAlpha(),
+            setClearColor() {}, clear() {},
+            setRenderTarget: value => { target = value; },
+            render(object, view) {
+              const seen = target ? linear : screen;
+              if (seen.has(object.material)) return;
+              seen.add(object.material);
+              compileHeroPrograms(object, view, target);
+            }
+          };
+          let read = renderTarget, write = composer.renderTarget1;
+          for (let i = 1; i < composer.passes.length; i++) {
+            const pass = composer.passes[i];
+            if (pass.enabled === false) continue;
+            if (standardPasses.has(pass.render)) {
+              const previous = pass.renderToScreen;
+              try {
+                pass.renderToScreen = composer.renderToScreen && composer.isLastEnabledPass(i);
+                pass.render(compiler, write, read, 0, false);
+              } finally { pass.renderToScreen = previous; }
+            }
+            if (pass.needsSwap) {
+              const oldRead = read;
+              read = write;
+              write = oldRead === renderTarget ? composer.renderTarget2 : oldRead;
+            }
+          }
+          heroShaderStats.programs = heroPrograms.size;
+          const submitted = performance.now();
+          heroShaderStats.submitMs = submitted - started;
+          const deadline = submitted + 500;
+          // Poll the linked programs with KHR_parallel_shader_compile. A slow or
+          // lost context can always take the original first-draw path.
+          while (!sceneStopped && performance.now() < deadline) {
+            let ready = true;
+            for (const program of heroPrograms) {
+              if (!program.isReady()) { ready = false; break; }
+            }
+            if (ready) {
+              heroShaderStats.status = 'ready';
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 8));
+          }
+          if (heroShaderStats.status !== 'ready') heroShaderStats.status = 'fallback';
+          heroShaderStats.waitMs = performance.now() - submitted;
+        } catch {
+          heroShaderStats.status = 'fallback';
+        } finally {
+          heroPrograms.clear();
+        }
+      }
+
+      const logoGlass = createReferenceLogoGlass(THREE, { renderer, config: CONFIG.logoGlass, mobile: mobileRenderBudget.mobile });`);
+  main = once(main, "        if (sceneStopped || (!manual && document.hidden)) return;", "        if (sceneStopped || (!manual && (document.hidden || heroShaderPending))) return;");
+  main = once(main, "        if (startupCovered) { startupState.parkedFrames = (startupState.parkedFrames || 0) + 1; }", `        if (!manual && firstFrame && assetsReady && heroShaderStats?.status === 'idle') {
+          heroShaderPending = true;
+          return prepareHeroShaders().then(() => {
+            heroShaderPending = false;
+            if (sceneStopped || document.hidden || !firstFrame) return;
+            if (animationFrame) { cancelAnimationFrame(animationFrame); animationFrame = 0; }
+            finishJourneyFrame(false, startupCovered);
+          }).catch(error => {
+            if (sceneStopped) return;
+            console.warn('The opening scene could not draw after shader warmup.', error);
+            window.showFinnovationText();
+          });
+        }
+        finishJourneyFrame(manual, startupCovered);
+      }
+      function finishJourneyFrame(manual, startupCovered) {
+        const shaderStats = firstFrame ? heroShaderStats : null;
+        const drawStart = shaderStats ? performance.now() : 0;
+        const programCount = shaderStats ? renderer.info.programs.length : 0;
+        if (startupCovered) { startupState.parkedFrames = (startupState.parkedFrames || 0) + 1; }`);
+  main = once(main, "        if (firstFrame && assetsReady && (!requestedPreview || journeyReady)) {", `        if (shaderStats) {
+          shaderStats.firstDrawMs = performance.now() - drawStart;
+          shaderStats.firstDrawNewPrograms = renderer.info.programs.length - programCount;
+        }
+        if (firstFrame && assetsReady && (!requestedPreview || journeyReady)) {`);
+  return main;
+}
+
 module.exports = state => {
   let main = state.main;
   main = once(main, '    async function startJourneyScene() {', `    async function startJourneyScene() {
@@ -90,5 +233,5 @@ module.exports = state => {
     } else (window.requestIdleCallback || (f => setTimeout(f, 40)))(run, { timeout: 1500 });
   };`);
   }
-  return { ...state, main, extra };
+  return { ...state, main: patchHeroShaderStartup(main), extra };
 };

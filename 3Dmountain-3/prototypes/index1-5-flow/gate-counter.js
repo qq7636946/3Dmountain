@@ -136,11 +136,17 @@ function createFlowGateCounter({ canvas, reduced, coarse, root, fontUrl }) {
   let worker = null, renderer = null, blobUrl = '', value = '', typed = false, expanded = false, disposed = false, transferred = false;
   const size = () => ({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio || 1, reduced, coarse });
   function box() {
+    // The CSS layout box fills the gate. Only its visual projection changes.
+    if (expanded) {
+      canvas.style.transform = 'none';
+      return;
+    }
     const { width, height } = size();
     const font = Math.round(width < 700 ? Math.min(height * .27, width * .4) : Math.min(height * .32, width * .27));
-    Object.assign(canvas.style, expanded ? { inset: '0', left: '0', top: '0', width: width + 'px', height: height + 'px', transform: 'none' } : {
-      inset: 'auto', left: '50%', top: '43%', width: Math.min(width, Math.max(320, font * 3.5)) + 'px', height: Math.min(height, font * 2.4) + 'px', transform: 'translate(-50%,-50%)'
-    });
+    const countWidth = Math.min(width, Math.max(320, font * 3.5));
+    const countHeight = Math.min(height, font * 2.4);
+    // Translate the scaled center from 50% to the existing 43% height.
+    canvas.style.transform = `translateY(-7%) scale(${countWidth / width}, ${countHeight / height})`;
   }
   function stats(data) {
     root.dataset.gateCounterFrames = String(data.frames); root.dataset.gateCounterMaxGap = String(data.maxGap);

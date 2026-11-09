@@ -195,18 +195,23 @@ function stoneNormalTexture(size = 512) {
   const h = new Float32Array(size * size);
   for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
     const px = i / size * tiles, py = j / size * tiles;
-    const ix = Math.floor(px), iy = Math.floor(py);
-    let f1 = 9, f2 = 9;
-    for (let gy = -1; gy <= 1; gy++) for (let gx = -1; gx <= 1; gx++) {
-      const cx = ((ix + gx) % tiles + tiles) % tiles, cy = ((iy + gy) % tiles + tiles) % tiles;
-      const dx = ix + gx + hash2(cx, cy, 1) - px, dy = iy + gy + hash2(cx, cy, 2) - py;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
+    const tileWeight = RK.tiles;
+    let tileHeight = tileWeight;
+    if (tileWeight !== 0) {
+      const ix = Math.floor(px), iy = Math.floor(py);
+      let f1 = 9, f2 = 9;
+      for (let gy = -1; gy <= 1; gy++) for (let gx = -1; gx <= 1; gx++) {
+        const cx = ((ix + gx) % tiles + tiles) % tiles, cy = ((iy + gy) % tiles + tiles) % tiles;
+        const dx = ix + gx + hash2(cx, cy, 1) - px, dy = iy + gy + hash2(cx, cy, 2) - py;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
+      }
+      const bevel = Math.min(1, (f2 - f1) / .09);
+      tileHeight = bevel * (.7 + .3 * hash2(ix, iy, 3)) * .8 * tileWeight;
     }
-    const bevel = Math.min(1, (f2 - f1) / .09);
     const grain = jsFbm(px * 5.3, py * 5.3, 1.7, 3) - .5;
     const swell = jsFbm(px * .55, py * .55, 2.9, 3) - .5;
-    h[j * size + i] = bevel * (.7 + .3 * hash2(ix, iy, 3)) * .8 * RK.tiles + grain * RK.grain + (jsNoise(px * 1.7, py * 1.7, 4.2) - .5) * .2 + swell * RK.swell;
+    h[j * size + i] = tileHeight + grain * RK.grain + (jsNoise(px * 1.7, py * 1.7, 4.2) - .5) * .2 + swell * RK.swell;
   }
   const data = new Uint8Array(size * size * 4), k = 2.4 * size / 64;
   for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {

@@ -35,3 +35,104 @@ export function startTerrainWorkers({ options, alpine, key }) {
   setTimeout(() => fail('timeout'), 180000);
   return TB;
 }
+
+// Keep the original input buffers attached so a failed worker can use the same local calculation.
+export function runAlpineErosionWorker(input, detail) {
+  const abortError = () => new DOMException('The 3D scene was stopped.', 'AbortError');
+  if (document.documentElement.dataset.renderMode === 'text') return Promise.reject(abortError());
+
+  let worker;
+  try {
+    const url = new URL('./alpine-erosion-worker.js' + new URL(import.meta.url).search, import.meta.url);
+    worker = new Worker(url, { type: 'module', name: 'flow2-alpine-erosion' });
+  } catch {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const cancel = () => finish(null, abortError());
+    const timer = setTimeout(() => finish(null), 20000);
+    const finish = (result, error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('finnovation:text-mode', cancel);
+      worker.terminate();
+      if (error) reject(error);
+      else resolve(result);
+    };
+
+    window.addEventListener('finnovation:text-mode', cancel, { once: true });
+    worker.onmessage = ({ data }) => {
+      const result = data?.result;
+      const keys = ['delta', 'flow', 'flowWide', 'scree', 'rib', 'relH', 'vshade'];
+      const valid = result?.realDetail === Boolean(detail) && keys.every(key =>
+        result[key] instanceof Float32Array && result[key].length === input.height.length
+      );
+      finish(valid ? result : null);
+    };
+    worker.onerror = event => {
+      event.preventDefault();
+      finish(null);
+    };
+    worker.onmessageerror = () => finish(null);
+    try {
+      worker.postMessage({ input, detail });
+    } catch {
+      finish(null);
+    }
+  });
+}
+
+// The live geometry keeps its own buffers for the synchronous fallback.
+export function runTerrainGeometryWorker(positions, indices) {
+  const abortError = () => new DOMException('The 3D scene was stopped.', 'AbortError');
+  if (document.documentElement.dataset.renderMode === 'text') return Promise.reject(abortError());
+
+  let worker;
+  try {
+    const url = new URL('./terrain-geometry-worker.js' + new URL(import.meta.url).search, import.meta.url);
+    worker = new Worker(url, { type: 'module', name: 'flow2-terrain-geometry' });
+  } catch {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (result, error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('finnovation:text-mode', cancel);
+      worker.terminate();
+      if (error) reject(error);
+      else resolve(result);
+    };
+    const cancel = () => finish(null, abortError());
+    const timer = setTimeout(() => finish(null), 8000);
+    const finiteVector = value => Array.isArray(value) && value.length === 3 && value.every(Number.isFinite);
+
+    window.addEventListener('finnovation:text-mode', cancel, { once: true });
+    worker.onmessage = ({ data }) => {
+      const result = data?.result;
+      const valid = result?.normals instanceof Float32Array && result.normals.length === positions.length &&
+        finiteVector(result.boxMin) && finiteVector(result.boxMax) &&
+        finiteVector(result.sphereCenter) && Number.isFinite(result.sphereRadius) && result.sphereRadius >= 0;
+      finish(valid ? result : null);
+    };
+    worker.onerror = event => {
+      event.preventDefault();
+      finish(null);
+    };
+    worker.onmessageerror = () => finish(null);
+
+    try {
+      const positionCopy = positions.slice();
+      const indexCopy = indices.slice();
+      worker.postMessage({ positions: positionCopy, indices: indexCopy }, [positionCopy.buffer, indexCopy.buffer]);
+    } catch {
+      finish(null);
+    }
+  });
+}

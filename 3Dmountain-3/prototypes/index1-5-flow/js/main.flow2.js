@@ -11,7 +11,7 @@ import { paintJourneyTransition } from './transition-details.flow2.js?v=flow-uni
     /* STUDIO_MOTION_MAIN */
     import { stepJourneyPolish } from '../../index1-5/js/motion-response.js?v=i15-mw30beoi';
     import { createQualityGovernor } from '../../index1-5/js/quality-governor.js?v=i15-mw30beoi';   /* QUALITY_GOVERNOR */
-    import { startTerrainWorkers } from '../../index1-5/js/terrain-workers.js?v=i15-mw30beoi';   /* TERRAIN_WORKER */
+    import { startTerrainWorkers } from '../../index1-5/js/terrain-workers.js?v=flow2-perf-20261109';   /* TERRAIN_WORKER */
     import { WORLD_DIVE_DEFAULTS, WORLD_DIVE_ROWS } from './world-dive-fx.flow2.js?v=flow-unified-e70fecd34dd0';
     import { createForwardMosaic, FORWARD_MOSAIC_DEFAULTS, FORWARD_MOSAIC_ROWS, BRIDGE_MOSAIC_DEFAULTS, BRIDGE_MOSAIC_ROWS } from '../../index1-5/js/forward-mosaic.js?v=i15-mw30beoi';
     import { mountLogoPanel } from './logo-panel.js?v=flow-unified-0958b0ea11ac';
@@ -21,9 +21,9 @@ import { paintJourneyTransition } from './transition-details.flow2.js?v=flow-uni
     import { createOpeningPortal, OPENING_PORTAL_DEFAULTS, OPENING_PORTAL_ROWS } from '../../index1-5/js/opening-portal.js?v=i15-mw30beoi';
     import { ALPINE_LIGHT, ALPINE_LIGHT_ROWS } from '../../index1-5/js/alpine-light-params.js?v=i15-mw30beoi';
     import { ALPINE_TERRAIN, ALPINE_TERRAIN_ROWS } from '../../index1-5/js/alpine-terrain-params.js?v=i15-mw30beoi';
-    import { preloadIndex15Terrain } from '../../index1-5/js/index1-5-terrain.js?v=i15-mw30beoi';
-    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from '../../index1-5/js/water-journey-scene-463.js?v=i15-mw30beoi';
-    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from '../../index1-5/js/water-canyon-watershed-463.js?v=i15-mw30beoi';
+    import { preloadIndex15Terrain } from '../../index1-5/js/index1-5-terrain.js?v=flow2-perf-20261109';
+    import { createJourneySceneAsync, WATERSHED_STYLE_DEFAULTS, SHORELINE_DEFAULTS, CANYON_VIEW_DEFAULTS, RELIEF_DEFAULTS } from '../../index1-5/js/water-journey-scene-463.js?v=flow2-perf-20261109';
+    import { WATERSHED_FLOW_DEFAULTS, WATERSHED_TERRAIN_DEFAULTS } from '../../index1-5/js/water-canyon-watershed-463.js?v=flow2-perf-20261109';
     import { createJourneyRiver } from '../../../js/water-journey-river.js?v=index463-scroll-20261004-78fa788ddc';
     import { createFinnovationCursor, CURSOR_DEFAULTS } from '../../../js/finnovation-cursor.js?v=index463-scroll-20261004-78fa788ddc';
     import { createForwardTransition, FORWARD_TRANSITION_DEFAULTS, CANYON_MOTION_DEFAULTS, CANYON_DEPTH_MOTION_DEFAULTS, createCanyonDepthMotion, createCanyonSpeedMotes } from '../../../js/water-forward-transition.js?v=index463-scroll-20261004-78fa788ddc';
@@ -31,7 +31,7 @@ import { paintJourneyTransition } from './transition-details.flow2.js?v=flow-uni
     import { createLogoGeometryBuilder } from '../../../js/water-logo-geometry-client.js?v=index463-scroll-20261004-78fa788ddc';
     import { mountJourneyStory, stepJourneyMotion } from '../../../js/water-journey-story.js?v=story-perf-20261004';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from '../../index1-5/js/water-logo-reference-glass.js?v=i15-mw30beoi';
+    import { createReferenceLogoGlass, REFERENCE_LOGO_GLASS } from '../../index1-5/js/water-logo-reference-glass.js?v=flow2-perf-20261109';
     import { createLogoCards, LOGO_CARD_DEFAULTS } from '../../../js/water-logo-cards.js?v=index463-scroll-20261004-78fa788ddc';
     import { createLogoDrops, LOGO_DROP_DEFAULTS, LOGO_DROP_MAX } from '../../index1-5/js/water-logo-drops.js?v=i15-mw30beoi';
     import { createLogoLetters, LOGO_LETTER_DEFAULTS, ICE_GLSL } from '../../index1-5/js/water-logo-letters.js?v=i15-mw30beoi';
@@ -109,8 +109,10 @@ import { paintJourneyTransition } from './transition-details.flow2.js?v=flow-uni
       document.documentElement.toggleAttribute('data-perf-phone', mobileRenderBudget.mobile);   /* PERF_NET: the one phone rule, for the card sizes */
       let renderer, sceneStopped = false, logoGeometryBuilder = null;
       let stopChapterPlayback = () => { };
+      let pendingJourneyWarmBatch = null;
       const pendingCompileMaterials = new Set();
       const cancelShaderWarmups = () => {
+        pendingJourneyWarmBatch?.cancel();
         // r170 compileAsync polls the Set returned by compile(). Drain it before
         // dispose clears material properties, so pending polls settle safely.
         for (const materials of pendingCompileMaterials) materials.clear();
@@ -6393,6 +6395,117 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       scene.add(logoRoot);
       const logoSpin = new THREE.Group();
       logoRoot.add(logoSpin);
+      /* FLOW2_HERO_SHADER_WARMUP: submit the opening programs while the cover is up. */
+      const heroShaderStats = document.documentElement.hasAttribute('data-flow2-aphelion') &&
+        document.documentElement.dataset.gate === 'hold' && !requestedPreview && dropSDF && orbModelSkipped &&
+        renderer.extensions.has('KHR_parallel_shader_compile')
+        ? (startupState.heroShaders = { status: 'idle', earlyPrograms: 0 }) : null;
+      const heroPrograms = new Set();
+      let heroShaderPending = false;
+
+      function compileHeroPrograms(objects, view, target, lights = null) {
+        const previous = renderer.getRenderTarget();
+        const face = renderer.getActiveCubeFace(), mip = renderer.getActiveMipmapLevel();
+        const count = renderer.info.programs.length;
+        try {
+          renderer.setRenderTarget(target);
+          renderer.compile(objects, view, lights);
+        } finally {
+          renderer.setRenderTarget(previous, face, mip);
+        }
+        for (let i = count; i < renderer.info.programs.length; i++) heroPrograms.add(renderer.info.programs[i]);
+      }
+
+      // Pass the real objects and lighting to Three without moving them into another scene.
+      const heroDrawables = objects => ({
+        traverse: visit => objects.forEach(visit),
+        traverseVisible() {}
+      });
+
+      if (heroShaderStats && renderer.getPixelRatio() === 1) {
+        const started = performance.now();
+        try {
+          // This live composer buffer has the same linear HDR variant as the scene buffer.
+          compileHeroPrograms(heroDrawables([backdrop, sea]), camera, composer.renderTarget1, scene);
+          heroShaderStats.earlyPrograms = heroPrograms.size;
+        } catch {
+          heroShaderStats.status = 'fallback';
+          heroPrograms.clear();
+        }
+        heroShaderStats.earlySubmitMs = performance.now() - started;
+      }
+
+      async function prepareHeroShaders() {
+        const started = performance.now();
+        heroShaderStats.status = 'submitting';
+        try {
+          const objects = [];
+          scene.traverseVisible(object => {
+            if (object.material && object.material.visible !== false && object.layers.test(camera.layers)) objects.push(object);
+          });
+          compileHeroPrograms(heroDrawables(objects), camera, renderTarget, scene);
+
+          // Use the stock pass setup to get the exact target and defines (including
+          // OutputPass's colour space and tone mapping). The facade never draws or clears.
+          const standardPasses = new Set([ShaderPass.prototype.render, UnrealBloomPass.prototype.render, OutputPass.prototype.render]);
+          let target = null;
+          const linear = new Set(), screen = new Set();
+          const compiler = {
+            outputColorSpace: renderer.outputColorSpace, toneMapping: renderer.toneMapping, toneMappingExposure: renderer.toneMappingExposure,
+            getClearColor: color => renderer.getClearColor(color),
+            getClearAlpha: () => renderer.getClearAlpha(),
+            setClearColor() {}, clear() {},
+            setRenderTarget: value => { target = value; },
+            render(object, view) {
+              const seen = target ? linear : screen;
+              if (seen.has(object.material)) return;
+              seen.add(object.material);
+              compileHeroPrograms(object, view, target);
+            }
+          };
+          let read = renderTarget, write = composer.renderTarget1;
+          for (let i = 1; i < composer.passes.length; i++) {
+            const pass = composer.passes[i];
+            if (pass.enabled === false) continue;
+            if (standardPasses.has(pass.render)) {
+              const previous = pass.renderToScreen;
+              try {
+                pass.renderToScreen = composer.renderToScreen && composer.isLastEnabledPass(i);
+                pass.render(compiler, write, read, 0, false);
+              } finally { pass.renderToScreen = previous; }
+            }
+            if (pass.needsSwap) {
+              const oldRead = read;
+              read = write;
+              write = oldRead === renderTarget ? composer.renderTarget2 : oldRead;
+            }
+          }
+          heroShaderStats.programs = heroPrograms.size;
+          const submitted = performance.now();
+          heroShaderStats.submitMs = submitted - started;
+          const deadline = submitted + 500;
+          // Poll the linked programs with KHR_parallel_shader_compile. A slow or
+          // lost context can always take the original first-draw path.
+          while (!sceneStopped && performance.now() < deadline) {
+            let ready = true;
+            for (const program of heroPrograms) {
+              if (!program.isReady()) { ready = false; break; }
+            }
+            if (ready) {
+              heroShaderStats.status = 'ready';
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 8));
+          }
+          if (heroShaderStats.status !== 'ready') heroShaderStats.status = 'fallback';
+          heroShaderStats.waitMs = performance.now() - submitted;
+        } catch {
+          heroShaderStats.status = 'fallback';
+        } finally {
+          heroPrograms.clear();
+        }
+      }
+
       const logoGlass = createReferenceLogoGlass(THREE, { renderer, config: CONFIG.logoGlass, mobile: mobileRenderBudget.mobile });
       const logoMaterial = logoGlass.material;
       /* LOGO 3 品牌弧：同一支玻璃 shader，只多一條藍色路徑；uniform 物件直接共用，
@@ -6721,6 +6834,65 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
       /* 光點本身就畫成拖影，所以放在模糊之後疊上去，免得被再糊一次。 */
       canyonMotion.setOverlay((r, depth) => canyonMotes?.render(r, canyon.camera, depth));
       let journeyReady = false, logoReady = false, warmPromise = null;
+      /* FLOW2_JOURNEY_WARMUP: move measured first-use work out of the two real warm draws. */
+      const warmBatchStats = () => ({ done: 0, failed: 0, totalMs: 0, maxMs: 0 });
+      const journeyWarmup = THREE.REVISION === '170' && document.documentElement.hasAttribute('data-flow2-aphelion')
+        ? (startupState.journeyWarmup = { logoPrograms: warmBatchStats(), terrainMaps: warmBatchStats(), draws: {} })
+        : null;
+      let warmBatchUrgent = Boolean(requestedPreview);
+
+      function waitForWarmBatch() {
+        if (sceneStopped) return Promise.resolve(false);
+        return new Promise(resolve => {
+          let idle = null, timer = null;
+          const start = () => {
+            pendingJourneyWarmBatch = null;
+            resolve(!sceneStopped);
+          };
+          const startNow = () => {
+            if (idle !== null) window.cancelIdleCallback(idle);
+            idle = null;
+            if (timer === null) timer = setTimeout(start, 0);
+          };
+          pendingJourneyWarmBatch = {
+            startNow,
+            cancel() {
+              if (idle !== null) window.cancelIdleCallback(idle);
+              if (timer !== null) clearTimeout(timer);
+              pendingJourneyWarmBatch = null;
+              resolve(false);
+            }
+          };
+          if (!warmBatchUrgent && !document.hidden && window.requestIdleCallback && window.cancelIdleCallback) {
+            idle = window.requestIdleCallback(start, { timeout: 32 });
+          } else startNow();
+        });
+      }
+
+      async function prepareWarmResources(items, prepare, stats) {
+        for (const item of items) {
+          if (!(await waitForWarmBatch()) || sceneStopped) return;
+          const start = performance.now();
+          try {
+            if (prepare(item) !== false) stats.done++;
+          } catch {
+            // The original warm render can still prepare this resource on demand.
+            stats.failed++;
+          }
+          const elapsed = performance.now() - start;
+          stats.totalMs += elapsed;
+          stats.maxMs = Math.max(stats.maxMs, elapsed);
+        }
+      }
+
+      function warmCanyonTextures() {
+        // The terrain builder has already requested this exact cached texture set.
+        // Upload while the terrain is building, using the same Texture objects.
+        return preloadIndex15Terrain(THREE, DROPLET_LITE, { warmTextures: true })
+          .then(textures => prepareWarmResources(textures.filter(texture => texture?.isTexture),
+            texture => renderer.initTexture(texture), journeyWarmup.terrainMaps))
+          .catch(() => { journeyWarmup.terrainMaps.failed++; });
+      }
       // Let the hero paint between warmup stages instead of chaining zero-delay tasks.
       const yieldToBrowser = () => {
         /* The opaque cover has its own animation. Preparation does not need
@@ -6761,8 +6933,9 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         });
         return warmPromise;
       }
-      async function compileForTarget(warmScene, warmCamera, target, lightsOf = null) {
+      async function compileForTarget(warmScene, warmCamera, target, lightsOf = null, programs = null) {
         if (sceneStopped) return;
+        const programStart = programs ? renderer.info.programs.length : 0;
         // Shader output depends on the target. Start compilation in the same
         // linear HDR target used by the real scene, then restore before awaiting:
         // the live hero continues rendering while the driver compiles.
@@ -6780,13 +6953,17 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
             compilation = renderer.compileAsync(warmScene, warmCamera, lightsOf);
           } else compilation = compile.call(renderer, warmScene, warmCamera, lightsOf);
         } finally { renderer.compile = compile; renderer.setRenderTarget(previous); }
+        if (programs) programs.push(...renderer.info.programs.slice(programStart));
         try { await compilation; } finally { if (materials) pendingCompileMaterials.delete(materials); }
       }
       function renderWarmScene(warmScene, warmCamera, target) {
         if (sceneStopped) return;
-        const previous = renderer.getRenderTarget();
+        const previous = renderer.getRenderTarget(), start = journeyWarmup && performance.now();
         try { renderer.setRenderTarget(target); renderer.render(warmScene, warmCamera); }
-        finally { renderer.setRenderTarget(previous); }
+        finally {
+          renderer.setRenderTarget(previous);
+          if (journeyWarmup) journeyWarmup.draws[warmScene === scene ? 'logo' : 'canyon'] = performance.now() - start;
+        }
       }
       async function prepareJourney() {
         if (sceneStopped) return;
@@ -6827,16 +7004,27 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           const warmGlow = new THREE.Sprite(transitionGlow.material); warmGlow.position.copy(stage); warmGlow.scale.setScalar(.05); warmGlow.frustumCulled = false; warm.add(warmGlow);
           try {
             for (const item of logoLetters.letters) renderer.initTexture(item.map);
-            await compileForTarget(warm, camera, warmTarget, scene);
+            const programs = journeyWarmup ? [] : null;
+            await compileForTarget(warm, camera, warmTarget, scene, programs);
+            if (programs) await prepareWarmResources(programs, program => {
+              // Three r170 caches the uniforms and attributes together on first use.
+              // Only use the programs just linked for this real warm group and target.
+              if (!program.program || !program.isReady?.() || typeof program.getUniforms !== 'function') return false;
+              program.getUniforms();
+            }, journeyWarmup.logoPrograms);
+            if (sceneStopped) return;
             await yieldToBrowser();
             if (!sceneStopped) { scene.add(warm); try { renderWarmScene(scene, camera, warmTarget); } finally { scene.remove(warm); } }
           } finally { wg.dispose(); warmBeads.dispose(); warmDisperse.dispose(); }
           logoReady = true;
           setStartupStage('letters-compiled', .88);
+          let terrainWarmup = null;
           if (!canyon) {
             if (!requestedPreview) await waitForTerrainWindow();
             if (sceneStopped) return;
-            await buildCanyon();
+            const building = buildCanyon();
+            if (journeyWarmup) terrainWarmup = warmCanyonTextures();
+            await building;
             if (sceneStopped) return;
           }
           await yieldToBrowser();
@@ -6848,6 +7036,8 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           if (canyon.ready) await canyon.ready;
           canyon.scene.environment = scene.environment;
           await compileForTarget(canyon.scene, canyon.camera, warmTarget);
+          if (journeyWarmup && !sceneStopped) await (terrainWarmup ?? warmCanyonTextures());
+          if (sceneStopped) return;
           await yieldToBrowser(); renderWarmScene(canyon.scene, canyon.camera, warmTarget);
           // Hidden aerial light ribbons need their own variant. Only reveal
           // them for the synchronous compilation setup, never across an await.
@@ -7062,6 +7252,11 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           // The section menu can jump progress directly. Retain its target
           // while the required geometry is still preparing.
           if (flowFastStart && J.progress > readyLimit) { J.progress = readyLimit; J.velocity = 0; }
+          if (journeyWarmup) {
+            const urgent = Boolean(requestedPreview) || requestedTarget > readyLimit;
+            if (urgent && !warmBatchUrgent) pendingJourneyWarmBatch?.startNow();
+            warmBatchUrgent = urgent;
+          }
           if (requestedTarget > readyLimit) { warmJourney(); J.target = Math.min(requestedTarget, readyLimit); }
         }
         stepJourneyPolish(J, scrollDt, reduceMotion);
@@ -9497,7 +9692,7 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         }
       }
       function frame(manual, fixedDelta) {
-        if (sceneStopped || (!manual && document.hidden)) return;
+        if (sceneStopped || (!manual && (document.hidden || heroShaderPending))) return;
         if (resizeFrame) { cancelAnimationFrame(resizeFrame); resize(); }
         const clockDelta = clock.getDelta();
         let realDelta = clockDelta;
@@ -9691,6 +9886,25 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
         updateLightShafts();
         const startupCovered = !manual && !firstFrame && !requestedPreview && /^(boot|live)$/.test(window.__GATE__?.state || '');
         if (!manual && !firstFrame && !startupCovered && !(portfolio?.covering || world?.covering) && journeyGovernor.sample(realDelta, performance.now() / 1000)) resize();   /* QUALITY_GOVERNOR */
+        if (!manual && firstFrame && assetsReady && heroShaderStats?.status === 'idle') {
+          heroShaderPending = true;
+          return prepareHeroShaders().then(() => {
+            heroShaderPending = false;
+            if (sceneStopped || document.hidden || !firstFrame) return;
+            if (animationFrame) { cancelAnimationFrame(animationFrame); animationFrame = 0; }
+            finishJourneyFrame(false, startupCovered);
+          }).catch(error => {
+            if (sceneStopped) return;
+            console.warn('The opening scene could not draw after shader warmup.', error);
+            window.showFinnovationText();
+          });
+        }
+        finishJourneyFrame(manual, startupCovered);
+      }
+      function finishJourneyFrame(manual, startupCovered) {
+        const shaderStats = firstFrame ? heroShaderStats : null;
+        const drawStart = shaderStats ? performance.now() : 0;
+        const programCount = shaderStats ? renderer.info.programs.length : 0;
         if (startupCovered) { startupState.parkedFrames = (startupState.parkedFrames || 0) + 1; }
         else if ((portfolio?.covering || world?.covering) && !manual) { /* covered */ }
         else if (logoRoot.visible && logoGlassShowing) {
@@ -9700,6 +9914,10 @@ rmViewPosition=-(viewMatrix*vec4(dropletPos,1.)).xyz;
           try { logoGlass.capture(scene, camera, logoSpin); composer.render(); }
           finally { scene.matrixWorldAutoUpdate = autoWorld; }
         } else composer.render();
+        if (shaderStats) {
+          shaderStats.firstDrawMs = performance.now() - drawStart;
+          shaderStats.firstDrawNewPrograms = renderer.info.programs.length - programCount;
+        }
         if (firstFrame && assetsReady && (!requestedPreview || journeyReady)) {
           firstFrame = false;
           requestAnimationFrame(() => {

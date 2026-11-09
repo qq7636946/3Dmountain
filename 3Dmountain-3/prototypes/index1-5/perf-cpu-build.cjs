@@ -13,7 +13,29 @@ const once = (s, a, b) => {
 };
 const need = (src, name) => { if (typeof src !== 'string') throw new Error('cpu: module not in extra: ' + name); return src; };
 
+// The stone normal's Voronoi relief has no contribution at zero tile weight.
+function skipZeroWeightStoneTiles(glass) {
+  const first = '\n    const ix = Math.floor(px), iy = Math.floor(py);';
+  const last = '\n    const bevel = Math.min(1, (f2 - f1) / .09);';
+  const from = glass.indexOf(first);
+  const to = glass.indexOf(last, from);
+  if (from < 0 || to < 0) throw new Error('cpu: stone normal tile block not found');
+  const tileBlock = glass.slice(from + 1, to + last.length);
+  const contribution = 'bevel * (.7 + .3 * hash2(ix, iy, 3)) * .8 * RK.tiles';
+  const guardedTiles = [
+    '    const tileWeight = RK.tiles;',
+    '    let tileHeight = tileWeight;',
+    '    if (tileWeight !== 0) {',
+    ...tileBlock.split('\n').map(line => '  ' + line),
+    '      tileHeight = ' + contribution.replace('RK.tiles', 'tileWeight') + ';',
+    '    }',
+  ].join('\n');
+  return once(once(glass, tileBlock, guardedTiles), 'h[j * size + i] = ' + contribution, 'h[j * size + i] = tileHeight');
+}
+
 module.exports = ({ main, drops, letters, glass, html, extra, journey, watershed, ui }) => {
+  glass = skipZeroWeightStoneTiles(glass);
+
   // ---------- main.js ----------
   // palette: a pure function of (hex, exposure), ~14 calls a frame. Memo keyed on the exposure; each call still writes the same numbers.
   main = once(main, 'function paletteLinear(hex, target = new THREE.Vector3()) {', `let paletteMemoExposure = NaN; const paletteMemo = new Map();

@@ -5,7 +5,8 @@ import { createConfluenceEffects } from '../../../js/water-confluence-fx-463.js?
 export { WATERSHED_FLOW_DEFAULTS } from '../../../js/water-confluence-fx-463.js?v=ice-flow-f322081684';
 // ALPINE-TERRAIN (index1-5-alpine 2026-10-23): load-time drainage erosion and the alpine dials.
 import { ALPINE_TERRAIN } from './alpine-terrain-params.js?v=i15-mw30beoi';
-import { erodeAlpineGrid, alpineRange } from './alpine-erosion.js?v=i15-mw30beoi';
+import { erodeAlpineGrid, alpineRange, getAlpineDetailSnapshot } from './alpine-erosion.js?v=flow2-perf-20261109';
+import { runAlpineErosionWorker, runTerrainGeometryWorker } from './terrain-workers.js?v=flow2-perf-20261109';
 
 export const WATERSHED_TERRAIN_DEFAULTS = Object.freeze({height:1,ridge:1,relief:1});
 
@@ -16,7 +17,7 @@ export function createCanyonWatershed(THREE, options) {
 }
 
 // Both entry points consume this same ordered build; yields never expose partial geometry.
-export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial=rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null,logoTerrain=null}) {
+export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial=rockMaterial,rockDark,rockPale,boulderGeometry,flowConfig=null,terrainConfig=null,lite=typeof innerWidth==='number'&&innerWidth<760,shoreDetail=false,mainOverlap=null,relief=null,logoTerrain=null,erosionInWorker=false,geometryInWorker=false}) {
   let sliceStart=performance.now();
   const sliceExpired=()=>performance.now()-sliceStart>=6;
   // shoreDetail (opt-in): sharper aretes, finer drainage, baked crease tone and a per-vertex
@@ -689,6 +690,7 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   function sampleHeight(x,z,channels=channelsAt(z)){return heightFromSample(makeHeightSample(x,z,channels))+alpineDeltaAt(x,z);}
   // ALPINE-TERRAIN: the erosion's height change at (x,z), bilinear on the grid (0 before it has run).
   let alpine=null;
+  let erosionWorkerUsed=false;
   function alpineDeltaAt(x,z){
     if(!alpine)return 0;
     const W=xs.length,bs=(arr,v,desc)=>{let a=0,b=arr.length-1;if(desc?v>=arr[0]:v<=arr[0])return[0,0,0];if(desc?v<=arr[b]:v>=arr[b])return[b,b,0];while(b-a>1){const m=(a+b)>>1;if(desc?arr[m]>v:arr[m]<v)a=m;else b=m;}return[a,b,(v-arr[a])/(arr[b]-arr[a])];};
@@ -812,7 +814,13 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   if(ALPINE_ON&&heightSamples){
     const N=xs.length*zs.length,hgt=new Float64Array(N),wgt=new Float32Array(N);
     for(let k=0;k<N;k++){const o=k*stride;hgt[k]=positions[k*3+1];wgt[k]=clamp((1-heightSamples[o+9])*(1-heightSamples[o+8])*heightSamples[o+4]+heightSamples[o+9]);}
-    const result=yield* erodeAlpineGrid({xs,zs,height:hgt,weight:wgt,lite,erosion:Number(ALPINE_TERRAIN.erosion)||0,ridgeSharp:Number(ALPINE_TERRAIN.ridgeSharp)||0,relief:Number(ALPINE_TERRAIN.relief)||0,fine:Number(ALPINE_TERRAIN.fineErosion??1)||0});
+    const erosionInput={xs,zs,height:hgt,weight:wgt,lite,erosion:Number(ALPINE_TERRAIN.erosion)||0,ridgeSharp:Number(ALPINE_TERRAIN.ridgeSharp)||0,relief:Number(ALPINE_TERRAIN.relief)||0,fine:Number(ALPINE_TERRAIN.fineErosion??1)||0};
+    let result;
+    if(erosionInWorker){
+      yield runAlpineErosionWorker(erosionInput,getAlpineDetailSnapshot()).then(value => { result=value; });
+      erosionWorkerUsed=Boolean(result);
+    }
+    if(!result)result=yield* erodeAlpineGrid(erosionInput);
     sliceStart=performance.now();maxHeight=0;
     for(let k=0;k<N;k++){heightSamples[k*stride+13]=result.delta[k];const y=positions[k*3+1]+result.delta[k];positions[k*3+1]=y;maxHeight=Math.max(maxHeight,y);}
     alpine=result;
@@ -858,7 +866,31 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   }
   bakeCreases();
   yield;sliceStart=performance.now();
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();ownedGeometries.push(geo);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setIndex(indices);
+  let geometryResult;
+  if (geometryInWorker) {
+    yield runTerrainGeometryWorker(positions, geo.index.array).then(result => { geometryResult = result; });
+  }
+  if (geometryResult) {
+    const normal = new THREE.BufferAttribute(geometryResult.normals, 3);
+    normal.needsUpdate = true;
+    geo.setAttribute('normal', normal);
+    geo.boundingBox = new THREE.Box3(
+      new THREE.Vector3().fromArray(geometryResult.boxMin),
+      new THREE.Vector3().fromArray(geometryResult.boxMax)
+    );
+    geo.boundingSphere = new THREE.Sphere(
+      new THREE.Vector3().fromArray(geometryResult.sphereCenter), geometryResult.sphereRadius
+    );
+  } else {
+    geo.computeVertexNormals();
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+  }
+  ownedGeometries.push(geo);
   if(reliefAttr)geo.setAttribute('aRelief',new THREE.BufferAttribute(reliefAttr,3));
   // Transfer the existing broad cavity bake into the imported rock shader; never vertex speckle.
   const terrainAO=new Float32Array(positions.length/3);
@@ -1260,6 +1292,7 @@ export function* createCanyonWatershedBuilder(THREE, {curve,widthAt,createRiver,
   const terrainBounds={min:bounds.min,max:bounds.max,center:bounds.getCenter(new THREE.Vector3()),size:bounds.getSize(new THREE.Vector3())};
   if(R)stats.reliefBuildMs=Math.round(performance.now()-buildStart);
   if(alpine)stats.alpine={erosionMs:alpine.ms,iterations:alpine.iterations,coreSpacing:CORE_DX,realDetail:alpine.realDetail};
+  if(alpine&&erosionInWorker)stats.alpine.worker=erosionWorkerUsed;
   if(logo)stats.logoTerrain=logo.stats;
   Object.assign(stats,{terrainSettings,terrainRevision:0,terrainUpdatePending:false,liveTerrainControls:!!terrainConfig});
   let lastTerrainNext=null,lastTerrainKey='';

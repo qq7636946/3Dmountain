@@ -45,6 +45,71 @@ function patchJourney(s) {
   return must(s, '    if(globalThis.scheduler?.yield)await globalThis.scheduler.yield();\n    else await new Promise(resolve=>setTimeout(resolve,0));',
     "    if(step.value&&typeof step.value.then==='function')await step.value;   /* TERRAIN_WORKER: the builder waits for the terrain workers */\n    else if(globalThis.scheduler?.yield)await globalThis.scheduler.yield();\n    else await new Promise(resolve=>setTimeout(resolve,0));");
 }
+// Run whole-grid erosion and the first mesh's derived geometry in workers on Flow2 only.
+function patchErosionWatershed(s) {
+  const alpineImport = /^import \{ erodeAlpineGrid, alpineRange \} from '\.\/alpine-erosion\.js(\?v=[^']+)?';$/m.exec(s);
+  if (!alpineImport) throw new Error('missing alpine erosion import');
+  const version = alpineImport[1] || '';
+  s = must(s, alpineImport[0], alpineImport[0].replace('alpineRange }', 'alpineRange, getAlpineDetailSnapshot }') +
+    "\nimport { runAlpineErosionWorker, runTerrainGeometryWorker } from './terrain-workers.js" + version + "';");
+  s = must(s, 'mainOverlap=null,relief=null,logoTerrain=null}) {', 'mainOverlap=null,relief=null,logoTerrain=null,erosionInWorker=false,geometryInWorker=false}) {');
+  s = must(s, '  let alpine=null;', '  let alpine=null;\n  let erosionWorkerUsed=false;');
+  const call = /^    const result=yield\* erodeAlpineGrid\((\{[^\n]+\})\);$/m.exec(s);
+  if (!call) throw new Error('missing alpine erosion calculation');
+  s = must(s, call[0], [
+    '    const erosionInput=' + call[1] + ';',
+    '    let result;',
+    '    if(erosionInWorker){',
+    '      yield runAlpineErosionWorker(erosionInput,getAlpineDetailSnapshot()).then(value => { result=value; });',
+    '      erosionWorkerUsed=Boolean(result);',
+    '    }',
+    '    if(!result)result=yield* erodeAlpineGrid(erosionInput);',
+  ].join('\n'));
+  const mesh = "  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();ownedGeometries.push(geo);";
+  s = must(s, mesh, [
+    '  const geo = new THREE.BufferGeometry();',
+    "  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));",
+    "  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));",
+    '  geo.setIndex(indices);',
+    '  let geometryResult;',
+    '  if (geometryInWorker) {',
+    '    yield runTerrainGeometryWorker(positions, geo.index.array).then(result => { geometryResult = result; });',
+    '  }',
+    '  if (geometryResult) {',
+    '    const normal = new THREE.BufferAttribute(geometryResult.normals, 3);',
+    '    normal.needsUpdate = true;',
+    "    geo.setAttribute('normal', normal);",
+    '    geo.boundingBox = new THREE.Box3(',
+    '      new THREE.Vector3().fromArray(geometryResult.boxMin),',
+    '      new THREE.Vector3().fromArray(geometryResult.boxMax)',
+    '    );',
+    '    geo.boundingSphere = new THREE.Sphere(',
+    '      new THREE.Vector3().fromArray(geometryResult.sphereCenter), geometryResult.sphereRadius',
+    '    );',
+    '  } else {',
+    '    geo.computeVertexNormals();',
+    '    geo.computeBoundingBox();',
+    '    geo.computeBoundingSphere();',
+    '  }',
+    '  ownedGeometries.push(geo);'
+  ].join('\n'));
+  const stats = '  if(alpine)stats.alpine={erosionMs:alpine.ms,iterations:alpine.iterations,coreSpacing:CORE_DX,realDetail:alpine.realDetail};';
+  return must(s, stats, stats + '\n  if(alpine&&erosionInWorker)stats.alpine.worker=erosionWorkerUsed;');
+}
+function patchErosionJourney(s) {
+  const start = '  const builder=buildJourneyScene(THREE,options);\n  let step=builder.next();\n  while(!step.done){';
+  s = must(s, start, [
+    "  const erosionInWorker = globalThis.document?.documentElement.hasAttribute('data-flow2-aphelion')",
+    "    && typeof Worker === 'function' && new URLSearchParams(globalThis.location?.search).get('terrainworker') !== '0';",
+    '  const builder=buildJourneyScene(THREE,erosionInWorker',
+    "    ? { ...options, erosionInWorker, geometryInWorker: THREE.REVISION === '170' }",
+    '    : options);',
+    '  let step=builder.next();',
+    '  while(!step.done){',
+  ].join('\n'));
+  s = must(s, 'logoTerrain = null, lite = typeof innerWidth', 'logoTerrain = null, erosionInWorker = false, geometryInWorker = false, lite = typeof innerWidth');
+  return must(s, 'rockDark,rockPale,flowConfig,terrainConfig};', 'rockDark,rockPale,flowConfig,terrainConfig,erosionInWorker,geometryInWorker};');
+}
 function patchMain(s) {
   s = must(s, "    import { createQualityGovernor } from './quality-governor.js';   /* QUALITY_GOVERNOR */",
     "    import { createQualityGovernor } from './quality-governor.js';   /* QUALITY_GOVERNOR */\n    import { startTerrainWorkers } from './terrain-workers.js';   /* TERRAIN_WORKER */");
@@ -61,9 +126,11 @@ function patchMain(s) {
 module.exports = state => {
   if (state.main.includes('/* TERRAIN_WORKER */')) return state;
   try {
-    const out = { ...state, watershed: patchWatershed(state.watershed), journey: patchJourney(state.journey), main: patchMain(state.main),
-      extra: { ...state.extra, 'terrain-workers.js': fs.readFileSync(path.join(__dirname, 'terrain-workers.js'), 'utf8').replace(/\r\n/g, '\n'), 'terrain-worker.js': fs.readFileSync(path.join(__dirname, 'terrain-worker.js'), 'utf8').replace(/\r\n/g, '\n') } };
-    log('applied (watershed, journey, main, 2 modules)');
+    const out = { ...state, watershed: patchErosionWatershed(patchWatershed(state.watershed)), journey: patchErosionJourney(patchJourney(state.journey)), main: patchMain(state.main),
+      extra: { ...state.extra, 'terrain-workers.js': fs.readFileSync(path.join(__dirname, 'terrain-workers.js'), 'utf8').replace(/\r\n/g, '\n'), 'terrain-worker.js': fs.readFileSync(path.join(__dirname, 'terrain-worker.js'), 'utf8').replace(/\r\n/g, '\n'),
+        'alpine-erosion-worker.js': fs.readFileSync(path.join(__dirname, 'alpine-erosion-worker.js'), 'utf8').replace(/\r\n/g, '\n'),
+        'terrain-geometry-worker.js': fs.readFileSync(path.join(__dirname, 'terrain-geometry-worker.js'), 'utf8').replace(/\r\n/g, '\n') } };
+    log('applied (watershed, journey, main, 4 modules)');
     return out;
   } catch (e) { log('STREAM SKIPPED —', e.message); return state; }
 };

@@ -101,7 +101,7 @@
 
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
-  <link rel="modulepreload" href="prototypes/index1-5-flow/js/main.flow2.js?v=scroll-568467abecfa">
+  <link rel="modulepreload" href="prototypes/index1-5-flow/js/main.flow2.js?v=recorded-20261109-orb-85bcce4c7df9">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -404,7 +404,7 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <link rel="stylesheet" href="prototypes/index1-5-flow/unified-type.css?v=flow-unified-16bf72d559ac">
   <!-- STARTUP_PRELOADS -->
   <link rel="modulepreload" href="prototypes/index1-5-flow/js/transition-details.flow2.js?v=flow-unified-573ae35ef338" crossorigin>
-  <link rel="modulepreload" href="prototypes/index1-5-flow/js/site-sections.flow2.js?v=flow2-ui-b53224f72009" crossorigin>
+  <link rel="modulepreload" href="prototypes/index1-5-flow/js/site-sections.flow2.js?v=recorded-20261109" crossorigin>
   <link rel="modulepreload" href="prototypes/index1-5-flow/copy-motion.flow2.js?v=flow2-editorial-ffa3aa51caff" crossorigin>
   <link rel="modulepreload" href="prototypes/index1-5/js/light-shafts.js?v=i15-mw30beoi" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/Pass.js" crossorigin>
@@ -439,7 +439,7 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <link rel="modulepreload" href="js/water-journey-river.js?v=index463-scroll-20261004-78fa788ddc" crossorigin>
   <link rel="modulepreload" href="js/finnovation-cursor.js?v=index463-scroll-20261004-78fa788ddc" crossorigin>
   <link rel="modulepreload" href="js/water-forward-transition.js?v=index463-scroll-20261004-78fa788ddc" crossorigin>
-  <link rel="modulepreload" href="prototypes/index1-5-flow/js/finnovation-interface.flow2.js?v=flow2-ui-7cc9795234f2" crossorigin>
+  <link rel="modulepreload" href="prototypes/index1-5-flow/js/finnovation-interface.flow2.js?v=recorded-20261109" crossorigin>
   <link rel="modulepreload" href="js/water-journey-story.js?v=story-perf-20261004" crossorigin>
   <link rel="modulepreload" href="js/water-logo-geometry-client.js?v=index463-scroll-20261004-78fa788ddc" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/SVGLoader.js" crossorigin>
@@ -451,7 +451,6 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <link rel="modulepreload" href="prototypes/index1-5/js/letters-water-fx.js?v=i15-mw30beoi" crossorigin>
   <link rel="modulepreload" href="js/finnovation-grade.js?v=eb26a41a84" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/objects/Water.js" crossorigin>
-  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/EffectComposer.js" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/RenderPass.js" crossorigin>
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/UnrealBloomPass.js" crossorigin>
@@ -1783,8 +1782,8 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <link rel="stylesheet" href="prototypes/index1-5-flow/flow2-section-detail.css?v=cca35906ddad">
   <link rel="stylesheet" href="prototypes/index1-5-flow/aphelion-details.css?v=5fbde868d5cf">
   <!-- FLOW2_LITE_START -->
-  <link rel="stylesheet" href="prototypes/index1-5-flow/flow2-lite.css?v=lite-2c81c613fc1e">
-  <script defer src="prototypes/index1-5-flow/flow2-lite.js?v=lite-2c81c613fc1e"></script>
+  <link rel="stylesheet" href="prototypes/index1-5-flow/flow2-lite.css?v=recorded-20261109">
+  <script defer src="prototypes/index1-5-flow/flow2-lite.js?v=recorded-20261109"></script>
   <!-- FLOW2_LITE_END -->
 </head>
 
@@ -2898,6 +2897,27 @@ function createFlowGateCounter({ canvas, reduced, coarse, root, fontUrl }) {
     // Independent of WebGL/modules so the same HTML remains usable if 3D cannot start.
     document.body.classList.add('is-booting');
     window.showFinnovationText = function () {
+      const page = document.documentElement;
+      if (page.hasAttribute("data-flow2-recorded")) return;
+      if (window.startFlow2Recorded && !page.hasAttribute("data-flow2-recorded-failed")) {
+        page.dataset.flow2Recorded = "loading";
+        const live = window.__MONTIS_STUDY__;
+        const snapshot = live && {
+          ui: live.journeyUI, progress: live.journey.progress, max: live.journey.max,
+          section: Number(live.journeyUI.root.dataset.siteSection),
+          sea: live.world?.open ? (live.world.y - live.world.seaMin) / Math.max(1, live.world.seaMax - live.world.seaMin) : 0,
+          sky: live.world?.open ? (live.world.y - live.world.targetOf("global")) / Math.max(1, live.world.endY - live.world.targetOf("global")) : 0,
+          card: live.portfolio?.displayStrip, tributary: live.strategyReveal.state.count
+        };
+        window.dispatchEvent(new Event("finnovation:render-stop"));
+        window.startFlow2Recorded(snapshot).catch(error => {
+          console.warn("Flow2 scene recordings could not start.", error);
+          delete page.dataset.flow2Recorded;
+          page.setAttribute("data-flow2-recorded-failed", "");
+          window.showFinnovationText();
+        });
+        return;
+      }
       document.documentElement.dataset.renderMode = "text";
       window.dispatchEvent(new Event("finnovation:text-mode"));
       document.body.classList.remove('is-booting');
@@ -2918,7 +2938,7 @@ function createFlowGateCounter({ canvas, reduced, coarse, root, fontUrl }) {
     });
   </script>
 
-  <script type="module" id="journeyModule" src="prototypes/index1-5-flow/js/main.flow2.js?v=scroll-568467abecfa" onerror="showFinnovationText()"></script>
+  <script type="module" id="journeyModule" src="prototypes/index1-5-flow/js/main.flow2.js?v=recorded-20261109" onerror="showFinnovationText()"></script>
   <!-- ALPINE-UI: everest-style interface layer (stat bar, scene labels, chapter numerals); styles in index1-5.css -->
   <script type="module" src="prototypes/index1-5-flow/js/alpine-ui.flow2.js?v=flow-unified-beefc9e14733"></script>
   <script type="module" src="prototypes/index1-5-11/entry-wave.js?v=4492595e68f0"></script>

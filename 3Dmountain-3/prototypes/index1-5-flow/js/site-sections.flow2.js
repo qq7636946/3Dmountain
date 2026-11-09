@@ -114,7 +114,7 @@ function mountNewsTicker(ticker, reducedMotion) {
   };
 }
 
-export function createChapterFlow({ ui, journey, getPortfolio, getWorld, loadWorld, warmEpilogue, toCards, getFlow = () => null, reducedMotion = false }) {
+export function createChapterFlow({ ui, journey, getPortfolio, getWorld, loadWorld, warmEpilogue, toCards, getFlow = () => null, reducedMotion = false, restoreHash = true }) {
   if (!ui) return { update() {}, go() {}, goSection() {} };
   const newsMotion = createNewsCopyMotion({ root: ui, getPortfolio, reducedMotion });
   const independentNews = document.documentElement.hasAttribute('data-flow2-news-ticker');
@@ -324,7 +324,7 @@ export function createChapterFlow({ ui, journey, getPortfolio, getWorld, loadWor
   }
   document.addEventListener('click', onClick, true);
   ui.addEventListener('fi:flow-next', () => goSection(2));
-  let deepLink = SECTIONS.findIndex(s => s.id === location.hash.slice(1));
+  let deepLink = restoreHash ? SECTIONS.findIndex(s => s.id === location.hash.slice(1)) : -1;
   const checkEntry = setInterval(() => { if (deepLink < 0 || /^(entered|off)$/.test(document.documentElement.dataset.gate || window.__GATE__?.state || 'hold')) { clearInterval(checkEntry); if (deepLink >= 0) goSection(deepLink, { hash: false }); deepLink = -1; } }, 200);
   raf = requestAnimationFrame(update);
   return { update() {}, go, goSection, get chapter() { return shown; }, get sections() { return SECTIONS; }, dispose() { disposed = true; cancelAnimationFrame(raf); clearInterval(checkEntry); railResize?.disconnect(); newsTicker?.dispose(); document.removeEventListener('click', onClick, true); veil.remove(); } };

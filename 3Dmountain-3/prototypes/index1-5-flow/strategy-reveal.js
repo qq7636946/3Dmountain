@@ -2,10 +2,10 @@
    wheel/key input advances at a reading pace instead of locking forever.
    Decaying momentum and a single touch swipe still reveal just one step. */
 export function createStrategyReveal({ journey, blocked = () => false, enabled = () => true,
-  clock = () => performance.now(), events = window }) {
+  clock = () => performance.now(), events = window, initialCount = 0 }) {
   const TOTAL = 4, QUIET = 180, STEP = 280, THRESHOLD = 24;
   const SUSTAIN = 700, KEY_REPEAT = 450, SUSTAIN_DISTANCE = 160;
-  let count = 0, phase = 'idle', gesture = 0, used = -1, lastAt = -Infinity;
+  let count = Math.max(0, Math.min(TOTAL, Math.floor(initialCount) || 0)), phase = 'idle', gesture = 0, used = -1, lastAt = -Infinity;
   let lastKind = '', lastDirection = 0, distance = 0, steppedAt = -Infinity, quietUntil = 0;
   let touchSerial = 0, touchActive = 0, touchGesture = -1, outside = false, disposed = false;
   let heldAt = 0, peak = 0, lastPixels = 0, strongDistance = 0;

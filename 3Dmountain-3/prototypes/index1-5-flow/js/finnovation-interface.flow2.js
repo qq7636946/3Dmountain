@@ -243,5 +243,5 @@ export function mountJourneyInterface({ navigate, reducedMotion = false }) {
        written on the bar it restyles one element. Same rule, same pixels. */
     if(key!==progressKey){progressKey=key;}
   }
-  return {root,update,get menuOpen(){return menu.open;}};
+  return {root,update,setNavigation(next){navigate=next;},get menuOpen(){return menu.open;}};
 }

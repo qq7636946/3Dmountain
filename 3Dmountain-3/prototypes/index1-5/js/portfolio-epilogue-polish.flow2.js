@@ -58,7 +58,7 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
         panel.style.setProperty('--flow2-card-center', centerY + 'px');
         panel.style.setProperty('--flow2-card-half-height', photoHeight * .5 + 'px');
       } : null;
-      slider = module.createSlider(canvas, { images, base, lift, heightReductionPx, onLayout, dpr: document.documentElement.hasAttribute('data-perf-phone') ? 1.25 : 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
+      slider = module.createSlider(canvas, { images, base, lift, heightReductionPx, onLayout, dpr: document.documentElement.hasAttribute('data-flow2-low-gpu') ? .75 : document.documentElement.hasAttribute('data-perf-phone') ? 1.25 : 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
       await slider.ready;
       if (disposed) return null;
       // Upload the first visible photographs and compile all passes off-screen.

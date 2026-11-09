@@ -37,7 +37,7 @@ import { globeScrollDegrees } from '../../index1-5/js/world-globe-motion.js?v=i1
 import { createWorldDiveFx } from './world-dive-fx.flow2.js?v=flow-unified-e70fecd34dd0';   /* WORLD_DIVE_FX */
 /* SECTION_MOTION_HOOK */
 import { createWorldSectionMotion } from '../copy-motion.flow2.js?v=flow2-editorial-ffa3aa51caff';
-import { createWorldOcean } from './world-ocean.flow2.js?v=flow2-ui-74908b0415c7';
+import { createWorldOcean } from './world-ocean.flow2.js?v=recorded-20261109';
 import { createWorldLogo } from './world-logo.flow2.js?v=flow-unified-126252f9bb35';
 /* PRINCIPLES_FLOW_HOOK */
 import { createWorldPrinciples } from './world-principles.flow2.js?v=flow-unified-adc1027b2f75';
@@ -351,7 +351,8 @@ export function mountWorld({ syncSceneTime = setSceneTime, root, reducedMotion =
 
   // ---------- renderer ----------
   const small = Math.min(screen.width, screen.height) < 700 || (navigator.deviceMemory && navigator.deviceMemory < 4);
-  const maxDpr = Math.min(window.devicePixelRatio || 1, mobilePerformance ? 1.25 : small ? 1.75 : 2);
+  const lowGpu = document.documentElement.hasAttribute('data-flow2-low-gpu');
+  const maxDpr = Math.min(window.devicePixelRatio || 1, lowGpu ? .75 : mobilePerformance ? 1.25 : small ? 1.75 : 2);
   let dpr = maxDpr;
   const worldGovernor = createQualityGovernor('world', { min: Math.min(.6, 1 / maxDpr) });   /* QUALITY_GOVERNOR: down to DPR 1 on a retina screen as before, .6 of 1 on a plain one */
   const colorParsed = new Map();
@@ -368,7 +369,7 @@ export function mountWorld({ syncSceneTime = setSceneTime, root, reducedMotion =
   function build() { buildRenderer(); buildBackground(); buildEarth(); buildHalo(); buildDeck(); buildOcean(); }
   function buildRenderer() {
     if (renderer || disposed) return;
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobilePerformance, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobilePerformance && !lowGpu, alpha: true, powerPreference: 'high-performance' });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);

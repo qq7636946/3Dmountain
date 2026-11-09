@@ -1,0 +1,230 @@
+/* Flow editorial type. Geometry, rhythm and bilingual hierarchy only;
+   copy-motion owns every reveal, transform and opacity. */
+html[data-flow-ocean-sections="separate"] {
+  --flow-type-cn: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --flow-type-en: "Oswald", "Arial Narrow", sans-serif;
+  --flow-type-ivory: #e1d3b5;
+}
+
+/* Journey copy uses one Chinese reading measure below the English display.
+   Long Chinese lines break at phrases rather than isolated final glyphs. */
+html[data-flow-ocean-sections="separate"] .finnovation-ui .fi-copy-zh {
+  font-family: var(--flow-type-cn);
+  line-height: 1.85;
+  letter-spacing: .035em;
+  line-break: strict;
+  text-wrap: pretty;
+}
+html[data-flow-ocean-sections="separate"] .finnovation-ui .fi-zh-head {
+  font-weight: 500;
+  line-height: 1.65;
+  letter-spacing: .045em;
+  text-wrap: balance;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-tagline {
+  font-family: var(--flow-type-cn);
+  line-height: 1.65;
+  letter-spacing: .035em;
+  text-wrap: balance;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-body {
+  font-family: var(--flow-type-cn);
+  line-height: 1.9;
+  letter-spacing: .025em;
+  line-break: strict;
+  text-wrap: pretty;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-en {
+  max-width: 36em;
+  line-height: 1.65;
+  letter-spacing: .035em;
+  text-wrap: pretty;
+}
+
+/* The original min-height keeps the globe's scroll composition intact.
+   min-content rows prevent the grid from distributing vacant height
+   between the kicker, English title, Chinese title and body. */
+html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] {
+  align-content: start;
+  align-items: start;
+  grid-auto-rows: min-content;
+  row-gap: 0;
+  padding-top: clamp(280px, 57vh, 620px);
+  padding-bottom: 45vh;
+  min-height: 170vh;
+}
+html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] > * {
+  grid-column: 6 / 23;
+  min-width: 0;
+}
+html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 clamp(23px, 2.8vh, 32px);
+  color: #edf4f8;
+  font-family: var(--flow-type-en);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: .15em;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker [lang="zh-Hant"] {
+  font-family: var(--flow-type-cn);
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .flow-editorial-divider { color: #cbb890; }
+html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-statement {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  color: #fff;
+  font-family: var(--flow-type-en);
+  font-size: clamp(48px, 4.35vw, 80px);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: .025em;
+  word-spacing: .07em;
+  text-wrap: balance;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .flow-global-line { display: block; }
+html[data-flow-ocean-sections="separate"] body #fiWorld .flow-global-title-zh {
+  width: fit-content;
+  max-width: 100%;
+  margin: clamp(20px, 2.6vh, 28px) 0 0;
+  color: #f5f2ea;
+  font-family: var(--flow-type-cn);
+  font-size: clamp(20px, 1.4vw, 25px);
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: .09em;
+  text-wrap: balance;
+}
+html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .flow-global-description {
+  max-width: 31em;
+  margin: 19px 0 0;
+  color: #dee8ef;
+  font-family: var(--flow-type-cn);
+  font-size: clamp(14px, .95vw, 16px);
+  font-weight: 400;
+  line-height: 1.95;
+  letter-spacing: .035em;
+  line-break: strict;
+  text-wrap: pretty;
+}
+
+@media (min-width: 681px) and (max-width: 1100px) {
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] > * { grid-column: 5 / 24; }
+  html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-statement {
+    font-size: clamp(42px, 5.3vw, 58px);
+  }
+}
+@media (max-width: 680px) {
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] {
+    padding-top: max(290px, 56vh);
+  }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] > * { grid-column: 1 / -1; }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker {
+    gap: 9px;
+    margin-bottom: 21px;
+    font-size: 11px;
+    letter-spacing: .12em;
+  }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker [lang="zh-Hant"] { font-size: 11px; }
+  html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-statement {
+    font-size: clamp(34px, 9.6vw, 52px);
+    line-height: 1.1;
+    letter-spacing: .02em;
+  }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .flow-global-title-zh {
+    margin-top: 21px;
+    font-size: clamp(18px, 5vw, 21px);
+    line-height: 1.65;
+    letter-spacing: .055em;
+  }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .flow-global-description {
+    max-width: 25em;
+    margin-top: 15px;
+    font-size: 13px;
+    line-height: 1.9;
+    letter-spacing: .025em;
+  }
+}
+@media (min-width: 681px) and (max-height: 650px) {
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] {
+    padding-top: max(260px, 53vh);
+  }
+  html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-statement { font-size: clamp(40px, 4.2vw, 58px); }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .fiw-kicker { margin-bottom: 17px; }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .flow-global-title-zh { margin-top: 17px; font-size: 20px; }
+  html[data-flow-ocean-sections="separate"] body #fiWorld .fiw-global[data-flow-editorial="global"] .flow-global-description { margin-top: 12px; }
+}
+
+/* Why Us: the same display scale as the journey, on a shared reading axis. */
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-copy { align-self:center; }
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-kicker { margin-bottom:10px; }
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-sub {
+  margin-bottom:20px; font-size:14px; letter-spacing:.1em;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-strategy-title {
+  margin-bottom:24px; max-width:100%; font-kerning:normal;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-tagline { margin-bottom:12px; }
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-body { margin-bottom:14px; max-width:30em; }
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-en { margin-bottom:26px; }
+@media (max-width:680px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-sub { font-size:13px; margin-bottom:14px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-strategy-title { margin-bottom:19px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-en { margin-bottom:21px; }
+}
+@media (max-height:650px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-kicker { margin-bottom:8px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-sub { margin-bottom:12px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-strategy-title { margin-bottom:17px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy-en { margin-bottom:18px; }
+}
+
+/* Match Latest News: small Chinese chapter label above the English display. */
+html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading {
+  position:absolute; z-index:3; pointer-events:none;
+  left:max(clamp(28px,6vw,96px),calc((100% - 1040px)/2));
+  top:clamp(140px,17vh,210px); width:min(1040px,calc(100% - 56px));
+  text-shadow:0 2px 20px #04132566;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-eyebrow {
+  margin:0 0 17px; color:#f2f6fa; font:400 13px/1.3 var(--flow-type-en);
+  letter-spacing:.18em; text-shadow:0 1px 10px #0b203877;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading h2 {
+  margin:0; padding:0; color:#fff; font:400 clamp(44px,5.3vw,88px)/1.15 var(--flow-type-en);
+  letter-spacing:.04em; white-space:nowrap; text-shadow:0 3px 28px #0c24394d;
+}
+html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-panel.fiwo-strategy {
+  padding-top:clamp(310px,34vh,370px);
+}
+@media (min-width:681px) and (max-height:650px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading { top:100px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-panel.fiwo-strategy { padding-top:260px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-strategy .fiwo-photo--strategy img { max-height:26vh; }
+}
+@media (min-width:681px) and (max-width:760px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading h2 { font-size:45px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-eyebrow { margin-bottom:12px; font-size:11px; }
+}
+@media (max-width:680px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading { left:clamp(24px,6.2vw,36px); top:190px; width:calc(100% - 48px); }
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading h2 { font-size:45px; white-space:normal; text-wrap:balance; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-eyebrow { font-size:11px; margin-bottom:12px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-panel.fiwo-strategy { padding-top:340px; padding-bottom:78px; gap:18px; }
+}
+@media (max-width:680px) and (max-height:740px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading { top:175px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-panel.fiwo-strategy { padding-top:325px; padding-bottom:74px; gap:16px; }
+}
+@media (max-width:680px) and (max-height:610px) {
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading { top:159px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .flow-why-heading h2 { font-size:40px; }
+  html[data-flow-ocean-sections="separate"] #fiWorld .fiwo-panel.fiwo-strategy { padding-top:296px; padding-bottom:66px; gap:12px; }
+}

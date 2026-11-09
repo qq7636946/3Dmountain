@@ -1,0 +1,83 @@
+/* River annotations share the entrance button's blue glass and white ink. */
+html[data-alpine-ui] .alp-labels { --alp-marker-scale:.7; --alp-river-light:151 216 255; }
+/* Blur at the fading pin itself so the scene remains its backdrop. An
+   opacity-promoted ancestor isolates a child's backdrop from the WebGL canvas. */
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] {
+  display:flex; align-items:stretch; border-radius:999px; will-change:transform;
+  transition:opacity .28s ease;
+  -webkit-backdrop-filter:blur(calc(10px * var(--alp-marker-scale))) saturate(94%); backdrop-filter:blur(calc(10px * var(--alp-marker-scale))) saturate(94%);
+}
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag {
+  box-sizing:border-box; position:relative; z-index:1;
+  display:flex; flex-direction:row; align-items:center; justify-content:flex-start;
+  width:max-content; min-width:calc(208px * var(--alp-marker-scale)); max-width:calc(260px * var(--alp-marker-scale)); min-height:calc(54px * var(--alp-marker-scale));
+  padding:calc(10px * var(--alp-marker-scale)) calc(22px * var(--alp-marker-scale)); gap:calc(13px * var(--alp-marker-scale));
+  border:1px solid rgb(248 253 255 / 38%); border-radius:999px;
+  background:rgb(49 91 128 / 40%);
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / 12%),0 3px 16px rgb(7 29 42 / 17%);
+  color:#fff; text-align:left; white-space:normal; text-shadow:0 1px 4px rgb(7 29 42 / 28%);
+  font-kerning:normal; font-optical-sizing:auto;
+  transition:opacity .25s,border-color .25s,background-color .25s;
+}
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before,
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::after {
+  content:""; position:absolute; pointer-events:none; border-radius:inherit;
+}
+/* Keep the pill edge clean, without a separate top or side accent. */
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::before {
+  content:none;
+}
+/* Only opacity animates, once per reveal, on the existing four small cards. */
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag::after {
+  inset:0; opacity:0;
+  background:linear-gradient(115deg,rgb(214 246 255 / 20%),rgb(151 216 255 / 3%) 45%,transparent 70%);
+  box-shadow:inset 0 0 0 1px rgb(220 248 255 / 65%),0 0 20px rgb(var(--alp-river-light) / 25%);
+}
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"].is-visible .alp-tag::after {
+  animation:alp-river-ignite .9s ease-out both;
+}
+@keyframes alp-river-ignite { 0% { opacity:0; } 22% { opacity:1; } 100% { opacity:0; } }
+html[data-alpine-ui] .alp-labels .alp-tag-text { display:flex; align-items:center; min-width:0; }
+html[data-alpine-ui] .alp-labels .alp-tag-zh {
+  order:0; color:#fff; font:500 calc(18px * var(--alp-marker-scale))/1.45 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  letter-spacing:.04em; white-space:nowrap;
+  text-shadow:inherit;
+}
+html[data-alpine-ui] .alp-labels .alp-tag-en {
+  display:none;
+}
+html[data-alpine-ui] .alp-labels .alp-tag-index {
+  order:-1; flex:0 0 calc(34px * var(--alp-marker-scale)); box-sizing:border-box; align-self:center; min-height:calc(28px * var(--alp-marker-scale));
+  display:flex; align-items:center; padding-right:0; border-right:1px solid rgb(255 255 255 / 28%);
+  color:#fff; font:500 calc(18px * var(--alp-marker-scale))/1 var(--site-font,"Oswald",sans-serif); letter-spacing:-.01em;
+  font-variant-numeric:lining-nums tabular-nums;
+  text-shadow:none;
+}
+html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"]:is(.is-current,.is-step-current) .alp-tag {
+  border-color:rgb(255 255 255 / 58%); background-color:rgb(49 91 128 / 40%);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / 22%),0 4px 18px rgb(7 29 42 / 20%);
+}
+html[data-alpine-ui] .alp-labels .alp-pin:is(.is-current,.is-step-current) .alp-tag-index { color:#fff; }
+html[data-alpine-ui] .alp-labels.has-current .alp-pin[data-kind="tag"]:not(.is-current) .alp-tag { opacity:.96; }
+html[data-alpine-ui] .alp-labels .alp-pin[data-layout="glass"] > .alp-pin-line { display:none; }
+.alp-glass-leader { position:absolute; top:0; left:0; width:1px; height:1px; overflow:visible; z-index:0; pointer-events:none; }
+.alp-glass-leader path { fill:none; stroke:rgb(174 224 255 / 55%); stroke-width:.65; vector-effect:non-scaling-stroke; }
+.alp-glass-leader circle { fill:#dbf6ff; stroke:rgb(var(--alp-river-light) / 24%); stroke-width:5; paint-order:stroke fill; }
+html[data-alpine-ui] .alp-labels .is-step-current .alp-glass-leader path { stroke:rgb(198 238 255 / 80%); }
+@media (max-width:760px) {
+  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] {
+    -webkit-backdrop-filter:blur(calc(8px * var(--alp-marker-scale))) saturate(94%); backdrop-filter:blur(calc(8px * var(--alp-marker-scale))) saturate(94%);
+  }
+  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag {
+    width:calc((50vw - 22px) * var(--alp-marker-scale)); min-width:0; max-width:none; min-height:calc(58px * var(--alp-marker-scale));
+    padding:calc(10px * var(--alp-marker-scale)) calc(11px * var(--alp-marker-scale)); gap:calc(9px * var(--alp-marker-scale));
+  }
+  html[data-alpine-ui] .alp-labels .alp-tag-zh { font-size:calc(16px * var(--alp-marker-scale)); letter-spacing:.015em; white-space:normal; text-wrap:pretty; }
+  html[data-alpine-ui] .alp-labels .alp-tag-index { flex-basis:calc(28px * var(--alp-marker-scale)); min-height:calc(27px * var(--alp-marker-scale)); }
+}
+@media (prefers-reduced-motion:reduce) {
+  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"],
+  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"] .alp-tag { transition:none; }
+  html[data-alpine-ui] .alp-labels .alp-pin[data-kind="tag"].is-visible .alp-tag::after { animation:none; }
+}

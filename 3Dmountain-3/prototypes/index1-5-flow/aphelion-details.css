@@ -1,0 +1,220 @@
+/* Flow2: typographic contrast and numbered interface details inspired by
+   Aphelion. Display only: the existing scroll, scene and motion own timing. */
+html[data-flow2-aphelion] {
+  --ap-ice: #c4e9ff;
+  --ap-paper: #f3f8fc;
+  --ap-ink: #15374d;
+  --ap-line: #d0eafa45;
+  --ap-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+/* Use the original headline spans, preserving their word animation and sizing. */
+@supports (-webkit-text-stroke: 1px white) {
+  html[data-flow2-aphelion][data-render-mode="webgl"] body :is(
+    #chapter-knowledge h1, #chapter-strategies h2
+  ) > span:last-child,
+  html[data-flow2-aphelion][data-render-mode="webgl"] body :is(
+    #chapter-knowledge h1, #chapter-strategies h2
+  ) > span:last-child *,
+  html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .flow-why-heading h2 > .flow-copy-word:last-child,
+  html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .flow-why-heading h2 > .flow-copy-word:last-child * {
+    -webkit-text-fill-color: #e7f4ff1f !important;
+    -webkit-text-stroke: 1.2px #f2f9ff;
+    paint-order: stroke fill;
+  }
+  /* Thin outlines lose definition at phone sizes. Keep the small text solid. */
+  @media (max-width: 767px), (prefers-contrast: more), (forced-colors: active) {
+    html[data-flow2-aphelion][data-render-mode="webgl"] body :is(
+      #chapter-knowledge h1, #chapter-strategies h2
+    ) > span:last-child,
+    html[data-flow2-aphelion][data-render-mode="webgl"] body :is(
+      #chapter-knowledge h1, #chapter-strategies h2
+    ) > span:last-child *,
+    html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .flow-why-heading h2 > .flow-copy-word:last-child,
+    html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .flow-why-heading h2 > .flow-copy-word:last-child * {
+      -webkit-text-fill-color: currentColor !important;
+      -webkit-text-stroke: 0;
+    }
+  }
+}
+
+/* A quiet index, with the active chapter carried by number and rule together. */
+@media (min-width: 1101px) {
+  html[data-flow2-aphelion][data-render-mode="webgl"] .finnovation-ui .fi-rail > [data-section] {
+    --ap-index-rule: #e4f2ff20;
+    box-shadow: inset 0 -1px var(--ap-index-rule);
+  }
+  html[data-flow2-aphelion][data-render-mode="webgl"] .finnovation-ui .fi-rail > [data-section][aria-current] {
+    --ap-index-rule: #c4e9ff94;
+  }
+  html[data-flow2-aphelion][data-render-mode="webgl"] .finnovation-ui .fi-rail > [data-section] .fi-rail-number {
+    font: 500 11px/1 var(--ap-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .035em;
+  }
+  html[data-flow2-aphelion][data-render-mode="webgl"] .finnovation-ui .fi-rail > [data-section][aria-current] .fi-rail-number {
+    color: var(--ap-ice);
+  }
+  html[data-flow2-aphelion][data-render-mode="webgl"] .finnovation-ui[data-site-section="3"] .fi-rail > [data-section] {
+    --ap-index-rule: #17394d26;
+  }
+  html[data-flow2-aphelion][data-render-mode="webgl"] .finnovation-ui[data-site-section="3"] .fi-rail > [data-section][aria-current] .fi-rail-number {
+    color: #17394d;
+  }
+}
+
+/* Image captions become real folios, not another overlay on the photograph. */
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-strategy .fiwo-photo--strategy figcaption {
+  padding: 12px 14px;
+  border: 1px solid var(--ap-line);
+  border-top: 0;
+  background: #102b3b4d;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] #fiWorld .why-photo-folio {
+  padding-left: 14px;
+  border-left: 1px solid var(--ap-line);
+  color: var(--ap-ice);
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-strategy-keywords > span::before {
+  width: 4px; height: 4px;
+  border: 1px solid #b9dcef80;
+  box-sizing: border-box;
+  background: transparent;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-progress button {
+  border: 1px solid var(--ap-line);
+  border-right-width: 0;
+  background: #102b3b45;
+  border-radius: 0;
+  color: #d0e5f2;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol { gap: 0; }
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-progress li:first-child button { border-radius: 5px 0 0 5px; }
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-progress li:last-child button { border-right-width: 1px; border-radius: 0 5px 5px 0; }
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-progress button:is(.is-active,[aria-current="step"]) {
+  background: var(--ap-paper);
+  border-color: var(--ap-paper);
+  color: var(--ap-ink);
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body #fiWorld .fiwo-progress button:hover:not([aria-current]) { background: #d5edff24; }
+html[data-flow2-aphelion][data-render-mode="webgl"] #fiWorld .fiwo-progress-line {
+  height: 5px;
+  background: repeating-linear-gradient(90deg, #c4e9ff55 0 1px, transparent 1px 8px) left bottom / 100% 4px no-repeat;
+}
+
+/* Primary entry and secondary actions share one material and one arrow treatment. */
+html[data-flow2-aphelion][data-render-mode="webgl"] body .finnovation-ui #chapter-knowledge .fi-copy-action {
+  --btn-tint-strong: var(--ap-paper);
+  --btn-tint-hover: #fff;
+  --btn-ink: var(--ap-ink);
+  --btn-ink-shadow: none;
+  --btn-blur: none;
+  --btn-drop: none;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body .finnovation-ui #chapter-knowledge .fi-copy-action .btn-chip {
+  color: var(--ap-ink);
+  background: #183a5012;
+  box-shadow: inset 0 0 0 1px #183a502b;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body :is(.fi-copy-action, .fiwo-pill) {
+  border-color: #e0f2ff80;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body :is(.fi-copy-action, .fiwo-pill):hover {
+  border-color: #f3faff;
+}
+html[data-flow2-aphelion][data-render-mode="webgl"] body #chapter-knowledge .fi-copy-action:hover { background: #fff; }
+
+/* Use the real audio state. No continuously animated meter or extra JS loop. */
+@media (min-width: 768px) {
+  html[data-flow2-aphelion] #flow2-header-sound::before {
+    content: "SOUND OFF";
+    position: absolute;
+    right: calc(100% + 12px);
+    top: 50%;
+    translate: 0 -50%;
+    font: 500 10px/1.2 var(--ap-mono);
+    letter-spacing: .08em;
+    white-space: nowrap;
+    color: inherit;
+    pointer-events: none;
+    opacity: 0;
+  }
+  html[data-flow2-aphelion] #flow2-header-sound[aria-pressed="true"]::before { content: "SOUND ON"; }
+  html[data-flow2-aphelion] #flow2-header-sound:is(:hover,:focus-visible)::before { opacity: 1; }
+  html[data-flow2-aphelion] #flow2-header-sound { position: relative !important; }
+}
+
+/* The existing white menu keeps its composition and open/close animation.
+   English labels and row dividers bring the reference's structured index. */
+html[data-flow2-aphelion] #fi-menu .fi-menu-links {
+  border-top: 1px solid #193a4c29;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links button {
+  min-height: clamp(78px, 6vw, 106px);
+  padding: 13px 4px;
+  border-bottom: 1px solid #193a4c29;
+  gap: clamp(12px, 1.5vw, 24px);
+  box-sizing: border-box;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links .site-menu-copy { gap: 7px; }
+html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-en {
+  display: block;
+  font: 500 12px/1.3 var(--ap-mono);
+  letter-spacing: .11em;
+  color: #526c7e;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-zh {
+  font-size: clamp(25px, 2.6vw, 48px);
+  letter-spacing: -.025em;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-number {
+  align-self: flex-start;
+  margin-top: 5px;
+  font: 500 12px/1.3 var(--ap-mono);
+  color: #627987;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links button::after {
+  content: "↗";
+  flex: 0 0 22px;
+  height: auto;
+  margin-left: auto;
+  background: none;
+  color: #718994;
+  font: 400 20px/1 var(--ap-mono);
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links button[aria-current="step"] {
+  background: linear-gradient(90deg, #d7eaf16b, transparent 85%);
+  border-bottom-color: #3d7d9b;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links button:is(:hover,:focus-visible) {
+  background: #e8f1f5;
+}
+html[data-flow2-aphelion] #fi-menu .fi-menu-links button:is([aria-current],:hover,:focus-visible)::after { color: #175778; }
+html[data-flow2-aphelion] #fi-menu .flow2-menu-reel {
+  border: 1px solid #15374d33;
+  border-radius: 8px;
+}
+@media (max-width: 767px) {
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links button {
+    min-height: 0;
+    padding: clamp(8px, 1.5dvh, 13px) 2px;
+    gap: 12px;
+  }
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links .site-menu-copy { gap: 5px; }
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-zh { font-size: clamp(23px, 7.4vw, 30px); }
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-en { font-size: 9px; }
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-number { font-size: 11px; }
+}
+@media (max-height: 610px) {
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links button { min-height: 0; padding-block: 7px; }
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-zh { font-size: 25px; }
+  html[data-flow2-aphelion] #fi-menu .fi-menu-links .fi-menu-link-en { display: none; }
+}
+
+/* Keep the native text and high-contrast fallbacks fully readable. */
+@media (forced-colors: active) {
+  html[data-flow2-aphelion] body :is(h1,h2,h3) * {
+    -webkit-text-fill-color: currentColor !important;
+    -webkit-text-stroke: 0 !important;
+  }
+}

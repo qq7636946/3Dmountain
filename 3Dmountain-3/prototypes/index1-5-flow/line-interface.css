@@ -1,0 +1,56 @@
+/* Flow retains small control dividers; the viewport frame is intentionally off. */
+html[data-flow-ocean-sections="separate"] {
+  --flow-frame-line:rgb(216 237 252 / 30%);
+  --flow-detail-line:rgb(216 237 252 / 23%);
+}
+html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-frame {
+  display:none !important;
+  opacity:1;
+  pointer-events:none;
+}
+html[data-flow-ocean-sections="separate"] .fi-frame path {
+  stroke:var(--flow-frame-line);
+  stroke-width:1;
+}
+html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) .finnovation-ui::before,
+html[data-flow-ocean-sections="separate"]:not([data-render-mode="text"]) .fi-header::after {
+  content:none; display:none;
+}
+html[data-flow-ocean-sections="separate"] .finnovation-ui::before { bottom:58px; }
+html[data-flow-ocean-sections="separate"] .fi-header::after { bottom:0; }
+html[data-flow-ocean-sections="separate"] body.is-ready .finnovation-ui .fi-topnav button::after {
+  height:1px; background:var(--flow-ice);
+}
+html[data-flow-ocean-sections="separate"] body.is-ready .finnovation-ui .fi-footer-next {
+  border-left:1px solid var(--flow-detail-line) !important;
+  padding-left:16px;
+}
+html[data-flow-ocean-sections="separate"] body.is-ready .finnovation-ui .fi-rail {
+  --wl-core:#f2f8ff; --wl-band:#c5dcec; --wl-ice:#e5eff6;
+}
+html[data-flow-ocean-sections="separate"] body #fiWorld .fiwo-strategy-meta {
+  border-top-color:var(--flow-detail-line);
+}
+html[data-flow-ocean-sections="separate"] body .site-card-detail::before {
+  content:""; display:block; position:absolute; left:0; top:-16px;
+  width:56px; height:1px; background:var(--flow-ice); pointer-events:none;
+}
+html[data-flow-ocean-sections="separate"] body .site-card-controls button {
+  border:1px solid var(--flow-frame-line);
+  background:rgb(35 72 103 / 18%);
+}
+html[data-flow-ocean-sections="separate"] body .fi-menu-links button {
+  border-bottom:1px solid rgb(211 230 244 / 24%);
+}
+html[data-flow-ocean-sections="separate"] body .fi-menu-links button[aria-current] {
+  border-bottom-color:rgb(235 246 255 / 70%);
+}
+@media (max-width:680px) {
+  html[data-flow-ocean-sections="separate"] { --flow-frame-line:rgb(216 237 252 / 24%); }
+  html[data-flow-ocean-sections="separate"] .fi-header::after { display:none; }
+  html[data-flow-ocean-sections="separate"] .finnovation-ui::before { bottom:54px; }
+  html[data-flow-ocean-sections="separate"] body.is-ready .finnovation-ui .fi-footer-next { padding-left:10px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  html[data-flow-ocean-sections="separate"] .fi-frame path { transition:none; }
+}

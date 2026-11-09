@@ -1,0 +1,6 @@
+/* Only suppress the Flow light rings when this page's liquid pass is in use. */
+html[data-flow-ocean-sections="separate"][data-gate="enter"]:is([data-entry-wave="playing"],[data-entry-wave="done"]) #gate::before,
+html[data-flow-ocean-sections="separate"][data-gate="enter"]:is([data-entry-wave="playing"],[data-entry-wave="done"]) #gate::after {
+  animation: none;
+  display: none;
+}

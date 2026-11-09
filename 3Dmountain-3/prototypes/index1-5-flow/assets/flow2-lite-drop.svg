@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <clipPath id="silhouette"><path d="M161 11C245 11 308 77 308 160S240 308 158 308 12 241 12 161 78 11 161 11Z"/></clipPath>
+    <radialGradient id="body" cx=".39" cy=".31" r=".73">
+      <stop stop-color="#f0f9ff" stop-opacity=".96"/>
+      <stop offset=".37" stop-color="#b5d5e9" stop-opacity=".74"/>
+      <stop offset=".68" stop-color="#779fb8" stop-opacity=".8"/>
+      <stop offset=".86" stop-color="#385b7a" stop-opacity=".96"/>
+      <stop offset="1" stop-color="#bfdae9"/>
+    </radialGradient>
+    <linearGradient id="rim" x1=".12" y1=".12" x2=".85" y2=".9">
+      <stop stop-color="#f8fcff"/>
+      <stop offset=".28" stop-color="#d4ebf9" stop-opacity=".76"/>
+      <stop offset=".62" stop-color="#526f91" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#dcf1fc" stop-opacity=".9"/>
+    </linearGradient>
+    <linearGradient id="horizon" x2="0" y2="1">
+      <stop stop-color="#f9fdff" stop-opacity="0"/>
+      <stop offset=".41" stop-color="#effaff" stop-opacity=".55"/>
+      <stop offset=".52" stop-color="#f7fcff" stop-opacity=".9"/>
+      <stop offset=".65" stop-color="#d2e9f5" stop-opacity=".56"/>
+      <stop offset="1" stop-color="#b3d6ec" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="light">
+      <stop stop-color="#fff" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#eefaff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="refract" x1="0" y1=".2" x2="1" y2=".8">
+      <stop stop-color="#e8faff" stop-opacity=".08"/>
+      <stop offset=".43" stop-color="#d9f4ff" stop-opacity=".68"/>
+      <stop offset=".72" stop-color="#7c9ec8" stop-opacity=".37"/>
+      <stop offset="1" stop-color="#d9daf6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#silhouette)">
+    <circle cx="160" cy="160" r="151" fill="url(#body)"/>
+    <path d="M4 134C62 113 104 112 157 118c57 6 104-8 161 8v65c-65-16-97-20-159-15C91 181 49 173 4 154Z" fill="url(#horizon)"/>
+    <path d="M36 100c33-53 78-67 116-65 50 1 93 27 109 64-32-25-71-39-114-32-40 7-56 27-72 58-25 52-13 106 32 143C62 252 29 210 23 171c-5-30 2-50 13-71Z" fill="url(#refract)"/>
+    <path d="M91 216c30 5 46 23 74 31 41 12 85-7 119-39-16 52-59 87-113 90-42 2-78-15-103-46-9-13-6-39 23-36Z" fill="#40627f" opacity=".34"/>
+    <path d="M45 207c11 30 43 64 84 76 42 12 95 1 126-26-25 31-72 48-112 44-48-5-87-30-98-94Z" fill="#a4d1e5" opacity=".43"/>
+    <ellipse cx="119" cy="70" rx="95" ry="39" transform="rotate(-25 119 70)" fill="url(#light)"/>
+    <ellipse cx="217" cy="248" rx="72" ry="24" transform="rotate(-19 217 248)" fill="url(#light)" opacity=".45"/>
+    <path d="M43 101C64 53 108 24 157 22c29-2 58 6 79 20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".59"/>
+    <path d="M263 239c-23 36-63 57-106 57" fill="none" stroke="#e7f7ff" stroke-width="1.6" stroke-linecap="round" opacity=".61"/>
+  </g>
+  <path d="M161 11C245 11 308 77 308 160S240 308 158 308 12 241 12 161 78 11 161 11Z" fill="none" stroke="url(#rim)" stroke-width="1.9"/>
+</svg>

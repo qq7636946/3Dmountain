@@ -1,0 +1,281 @@
+/* Canarias-inspired interface, exclusive to index1-5-flow3.
+   The scene, chapter visibility and motion remain owned by the existing flow. */
+html[data-ui="canarias"]:not([data-render-mode="text"]) {
+  --canarias-serif: Georgia, "Times New Roman", "Noto Sans TC", serif;
+  --canarias-ink: #e9faff;
+  --canarias-cyan: #55e5ff;
+  --canarias-line: rgb(79 218 250 / 68%);
+  --canarias-glass: linear-gradient(180deg, rgb(47 153 200 / 17%), rgb(1 45 78 / 24%) 55%, rgb(0 172 213 / 15%));
+  --canarias-rim: inset 0 0 3px rgb(124 237 255 / 65%), inset 0 -7px 18px -12px #58e8ff;
+  --canarias-glow: 0 0 8px rgb(0 191 237 / 22%), 0 0 25px -8px rgb(0 200 242 / 38%);
+  --canarias-muted: #b9d6e5;
+}
+
+/* Tint the existing scene through its presentation veil; preserve the renderer. */
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .wash {
+  background: linear-gradient(180deg, #00254be8, #0033609c 48%, #00152fba) !important;
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+/* Navigation stays open and quiet, with light reserved for its active edge. */
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header {
+  --ui-ink: var(--canarias-ink);
+  --ui-muted: var(--canarias-muted);
+  color: var(--canarias-ink);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav {
+  gap: clamp(28px, 3.8vw, 58px);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav button {
+  font-family: var(--canarias-serif) !important;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: .2em;
+  color: var(--canarias-ink) !important;
+  text-shadow: 0 1px 8px rgb(0 22 44 / 65%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav button::after {
+  background: linear-gradient(90deg, transparent, var(--canarias-cyan), transparent);
+  box-shadow: 0 0 7px rgb(62 218 255 / 55%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail {
+  --wl-core: #d9fcff;
+  --wl-band: #55e5ff;
+  --wl-glow: #00b6e5;
+  --wl-ice: #9aeeff;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button {
+  color: var(--canarias-muted);
+  font-weight: 400;
+  text-shadow: 0 1px 7px rgb(0 19 40 / 65%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button[aria-current],
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail button:is(:hover, :focus-visible) {
+  color: var(--canarias-ink);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-rail-number {
+  font-family: var(--canarias-serif);
+  font-weight: 400;
+  color: #9adbea;
+}
+
+/* Clear, cyan-edged lenses. Existing button contents and click targets stay intact. */
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel :is(h1, h2),
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel :is(h1, h2) span {
+  font-family: var(--canarias-serif) !important;
+  font-weight: 400 !important;
+  font-size: clamp(30px, 3.5vw, 52px) !important;
+  letter-spacing: .025em !important;
+  line-height: 1.15 !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-kicker {
+  font-family: var(--canarias-serif) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  letter-spacing: .23em !important;
+  color: #b4d6e5;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-zh,
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-zh span {
+  font-size: clamp(13px, 1.2vw, 17px) !important;
+  font-weight: 400 !important;
+  letter-spacing: .12em !important;
+  color: #d1e7f1;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(.fi-copy-action, .fiwo-pill, .fiwp-next, .fiw-outro-links button),
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .site-card-controls button {
+  border: 1px solid var(--canarias-line) !important;
+  border-radius: 999px !important;
+  background: var(--canarias-glass) !important;
+  box-shadow: var(--canarias-rim), var(--canarias-glow) !important;
+  color: var(--canarias-ink) !important;
+  -webkit-backdrop-filter: blur(5px) saturate(1.1) !important;
+  backdrop-filter: blur(5px) saturate(1.1) !important;
+  transition: border-color .35s ease, background-color .35s ease, box-shadow .35s ease !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(.fi-copy-action, .fiwo-pill, .fiwp-next, .fiw-outro-links button)::before,
+html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(.fi-copy-action, .fiwo-pill, .fiwp-next, .fiw-outro-links button)::after {
+  display: none !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-action {
+  width: min(360px, 100%);
+  max-width: 100%;
+  min-height: 54px;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-action > span {
+  width: 100%;
+  min-height: 52px;
+  justify-content: center;
+  gap: 20px;
+  padding: 0 26px !important;
+  border: 0;
+  font-family: var(--canarias-serif) !important;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: .13em;
+  color: var(--canarias-ink) !important;
+  text-shadow: 0 1px 6px rgb(0 29 54 / 65%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .fi-copy-action .fi-grid-icon {
+  display: none;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-top),
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .site-card-controls button {
+  font-family: var(--canarias-serif);
+  font-weight: 400;
+  letter-spacing: .12em;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) .btn-chip {
+  width: 24px;
+  height: 28px;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #b0f4ff !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(.fi-copy-action, .fiwo-pill, .fiwp-next, .fiw-outro-links button):is(:hover, :focus-visible),
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .site-card-controls button:is(:hover, :focus-visible) {
+  border-color: #8af1ff !important;
+  background: linear-gradient(180deg, rgb(52 178 216 / 24%), rgb(2 59 91 / 32%) 55%, rgb(0 182 221 / 23%)) !important;
+  box-shadow: var(--canarias-rim), 0 0 12px rgb(0 200 245 / 40%), 0 0 34px -8px rgb(0 200 242 / 50%) !important;
+}
+
+/* Round corner controls echo the same water rim without adding another panel. */
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-menu-toggle,
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer .fi-icon,
+html[data-ui="canarias"]:not([data-render-mode="text"]) body #fiWorld .fiw-footer .fiw-top i {
+  border: 1px solid var(--canarias-line) !important;
+  border-radius: 50%;
+  background: var(--canarias-glass) !important;
+  box-shadow: var(--canarias-rim), 0 0 14px -4px rgb(0 196 239 / 38%) !important;
+  color: var(--canarias-ink) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-actions .fi-menu-toggle:is(:hover, :focus-visible),
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer button:is(:hover, :focus-visible, [aria-pressed="true"]) .fi-icon {
+  border-color: #a3f5ff !important;
+  background: rgb(0 128 171 / 29%) !important;
+  box-shadow: var(--canarias-rim), 0 0 18px rgb(0 201 239 / 32%) !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-sound > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-footer-center, .fi-footer-next) {
+  font-family: var(--canarias-serif);
+  font-weight: 400;
+  letter-spacing: .12em;
+  color: var(--canarias-ink);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-next {
+  border-left: 0 !important;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-progress {
+  background: rgb(108 216 240 / 18%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-footer-progress i {
+  background: linear-gradient(90deg, #087194, #56e5ff);
+  box-shadow: 0 0 8px rgb(0 207 247 / 45%);
+}
+
+/* A translucent navy menu, with restrained rules and generous serif labels. */
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu {
+  --ui-ink: #e9faff;
+  --ui-muted: #b9d6e5;
+  --ui-line: rgb(87 204 234 / 20%);
+  color: var(--canarias-ink);
+  border: 1px solid rgb(88 214 241 / 33%);
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 15% 0, rgb(13 100 137 / 34%), transparent 65%), rgb(2 24 46 / 90%) !important;
+  box-shadow: 0 24px 100px rgb(0 8 24 / 48%), inset 0 1px 0 rgb(155 239 255 / 12%);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  scrollbar-width: thin;
+  scrollbar-color: #2a6c85 transparent;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .fi-menu::backdrop {
+  background: rgb(0 12 29 / 46%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-top {
+  background: transparent;
+  border-bottom-color: rgb(104 211 235 / 19%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body .fi-menu .fi-menu-top .fi-menu-close {
+  font-family: var(--canarias-serif);
+  font-weight: 400;
+  letter-spacing: .14em;
+  color: var(--canarias-ink);
+  border-color: var(--canarias-line);
+  background: var(--canarias-glass);
+  box-shadow: var(--canarias-rim), var(--canarias-glow);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-intro h2,
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-link-en {
+  font-family: var(--canarias-serif) !important;
+  font-weight: 400;
+  letter-spacing: .02em;
+  line-height: 1.2;
+  color: var(--canarias-ink);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui :is(.fi-menu-eyebrow, .fi-menu-link-number) {
+  color: #91e5f6;
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-links button {
+  color: var(--canarias-ink);
+  border-bottom: 1px solid rgb(92 193 221 / 22%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu-links button:is([aria-current], :hover, :focus-visible) {
+  background: linear-gradient(90deg, rgb(14 123 159 / 12%), transparent);
+  border-bottom-color: rgb(104 231 255 / 64%);
+}
+html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(button, a):focus-visible {
+  outline: 2px solid #adf3ff;
+  outline-offset: 5px;
+}
+
+@media (min-width: 1101px) {
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-header-right {
+    position: static;
+  }
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-topnav {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+@media (max-width: 680px) {
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-action {
+    width: min(310px, 100%);
+    min-height: 48px;
+  }
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel .fi-copy-action > span {
+    min-height: 46px;
+    padding-inline: 22px !important;
+    font-size: 13px;
+    letter-spacing: .1em;
+  }
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(.fi-copy-action, .fiwo-pill, .fiwp-next, .fiw-outro-links button),
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body .site-card-controls button {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-menu {
+    border-radius: 12px;
+    background: rgb(3 29 51 / 97%) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="canarias"]:not([data-render-mode="text"]) body :is(.finnovation-ui, #fiWorld) :is(.fi-copy-action, .fiwo-pill, .fiwp-next, .fiw-outro-links button, .fi-menu-toggle, .fi-menu-close, .fi-icon, .site-card-controls button) {
+    transition: none !important;
+  }
+}

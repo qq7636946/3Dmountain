@@ -1,0 +1,517 @@
+/* index1-5-alpine — everest-style interface layer (2026-10-23).
+   Adds to the shared FINNOVATION interface (js/finnovation-interface.js) without changing what it does:
+     · kicker: the last "·" phrase in gold, "01 / …" numbers in gold mono
+     · chapter panels retain their own copy; the opening frame gets an "or scroll" caption beside its button.
+       Decorative Roman numerals and the large floating chapter emblem are removed.
+     · a frosted stat bar with live, honest journey data: the 3D view's height (scene units) and heading, journey %,
+       Taipei time (the firm's home city, as the page itself says), chapter n/6
+     · a few labels in the scene, projected with the canyon camera: 頂峰 SUMMIT, 匯流 CONFLUENCE, and in the FOUR PATHS
+       chapter the four strategy names on the four tributaries.
+   Reads window.__MONTIS_STUDY__ (journey, canyon.camera, canyon.watershed) and the interface DOM; never writes to the
+   scene. Styles: prototypes/index1-5-alpine/index1-5.css, ALPINE-UI block. Off in the readable/text mode and with
+   ?alpui=0; ?uiserif=sitka|bodoni|didot picks the display face for A/B. */
+// The UI is a separately loaded module; read the scene's published instance so an import cache key cannot split time.
+const getSceneDaylight = () => globalThis.__SCENE_DAYLIGHT__;
+
+const html = document.documentElement;
+const params = new URLSearchParams(location.search);
+if (params.get('alpui') === '0') html.removeAttribute('data-alpine-ui');
+if (/^(sitka|bodoni|didot)$/.test(params.get('uiserif') || '')) html.dataset.alpSerif = params.get('uiserif');
+
+const PATH_ZH = ['AI 量化交易', '上市櫃投資', '未上市及 Pre-IPO', '衍生性商品'];   // client copy for the four strategy labels
+const PATHS = ['ai', 'public', 'private', 'derivatives'];
+const STRATEGY_IDS = new Set(['strategies', ...PATHS]);
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const isText = () => html.dataset.renderMode === 'text';
+if (params.get('visual') === 'classic') html.dataset.visual = 'classic';
+if (params.get('atmos') === '1') html.dataset.atmos = 'on';   // film grain, vignette and the ocean-photo grading (switched off by default, client 2026-10-24)
+if (params.get('fonts') === 'classic') html.dataset.fonts = 'classic';   // the platform serif / mono stacks of before the one-type-system pass   // visual board pass (2026-10-24) off: the previous look
+// A single film layer covers every chapter of index1-5, including the lake.
+const unifiedGrain = html.dataset.look === 'index1-5' && params.get('atmos') !== '0' && html.dataset.visual !== 'classic';
+let atmos = [];
+/* one vignette under the interface and one film grain over everything: the page and the canvas share the same air */
+function buildAtmos() {
+  if (html.dataset.visual === 'classic' || (!unifiedGrain && params.get('atmos') !== '1') || atmos.length) return;   // grain + vignette are opt-in now (?atmos=1)
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 160; const g = c.getContext('2d'), img = g.createImageData(160, 160);
+    for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255 | 0; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+    g.putImageData(img, 0, 0); html.style.setProperty('--alp-grain-url', `url(${c.toDataURL('image/png')})`); if (unifiedGrain) html.dataset.grain = 'unified';
+  } catch { /* no grain */ }
+  for (const cls of (unifiedGrain && params.get('atmos') !== '1' ? ['alp-grain'] : ['alp-vignette', 'alp-grain'])) { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); document.body.append(d); atmos.push(d); }
+}
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const hidden = n => { n.setAttribute('aria-hidden', 'true'); return n; };
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const range = document.createRange();
+
+let root = null, cells = null, layer = null, pins = [], raf = 0, lastStats = 0, lastRects = 0, obstacles = [];
+let railObserver = null;
+let summitRevision = -1, chapterId = '', names = [];
+let sceneClock = null, sceneClockText = null, sceneClockPeriod = null, sceneClockSun = null, sceneClockKey = '';
+const titleCase = s => s.charAt(0) + s.slice(1).toLowerCase();
+
+/* ---------- copy: gold kicker phrase, italic chapter name, "or scroll" ---------- */
+function enhanceCopy() {
+  names = [...root.querySelectorAll('.fi-rail button')]
+    .map(b => [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim());
+  root.querySelectorAll('.fi-copy-panel').forEach((panel, i) => {
+    if (panel.querySelector('.alp-mark, .alp-or')) return;
+    const kicker = panel.querySelector('.fi-copy-kicker');
+    if (kicker && !kicker.children.length) {
+      const text = kicker.textContent.trim(), parts = text.split(' · '), num = text.match(/^(\d{2})\s*\/\s*(.+)$/);
+      if (parts.length > 1) { kicker.textContent = parts.slice(0, -1).join(' · ') + ' · '; kicker.append(el('span', 'alp-gold', parts.at(-1))); }
+      else if (num) { kicker.textContent = ''; kicker.append(el('span', 'alp-num', num[1]), ` / ${num[2]}`); }
+    }
+    if (i === 0) { panel.querySelector('.fi-copy-action')?.after(hidden(el('span', 'alp-or', 'or scroll'))); return; }
+    const own = panel.dataset.mark;   // a chapter that carries its own mid-title (page-copy.cjs `mark`) shows it instead of the chapter name
+    const mark = hidden(el('p', 'alp-mark', own || titleCase(names[Math.min(i, 5)] || '')));
+    mark.lang = own ? 'zh-Hant' : 'en';
+    panel.querySelector('h1, h2')?.after(mark);
+  });
+}
+/* The opening title runs on one line on wide screens; shrink it to the column if a wider local face would overflow. */
+function fitHero() {
+  const h1 = root.querySelector('#chapter-knowledge h1');
+  if (!h1) return;
+  h1.style.removeProperty('--alp-fit');
+  if (getComputedStyle(h1).whiteSpace !== 'nowrap') return;
+  range.selectNodeContents(h1);
+  const text = range.getBoundingClientRect().width, room = h1.clientWidth;
+  if (text > room && text > 0) h1.style.setProperty('--alp-fit', (room / text * .98).toFixed(3));
+}
+
+/* ---------- stat bar ---------- */
+function buildStats() {
+  const bar = el('aside', 'alp-stats'), dl = el('dl');
+  bar.setAttribute('aria-label', '旅程資訊 Journey');
+  const out = {};
+  for (const [k, label, tone] of [['alt', 'VIEW HEIGHT', ''], ['hdg', 'HEADING', 'is-blue'], ['pct', 'JOURNEY %', ''], ['time', 'TAIPEI TIME', 'is-blue'], ['chap', 'CHAPTER', 'is-gold']]) {
+    const cell = el('div', 'alp-stat' + (tone ? ' ' + tone : '')), dd = el('dd', null, '—');
+    cell.dataset.k = k; cell.append(el('dt', null, label), dd); dl.append(cell);
+    out[k] = { dd, value: '' };
+  }
+  bar.append(dl); root.append(bar);
+  html.setAttribute('data-alpine-ui-live', '');
+  return out;
+}
+const taipei = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
+/* Narrative light has its own clock. It must never replace the office's real Taipei time. */
+function buildSceneClock() {
+  sceneClock = el('aside', 'alp-scene-clock');
+  sceneClock.setAttribute('aria-label', 'Scene time · 隨捲動變化的場景時間');
+  sceneClock.setAttribute('aria-live', 'off');
+  const NS = 'http://www.w3.org/2000/svg', arc = document.createElementNS(NS, 'svg');
+  arc.setAttribute('viewBox', '0 0 44 28'); arc.setAttribute('aria-hidden', 'true');
+  const horizon = document.createElementNS(NS, 'path');
+  horizon.setAttribute('d', 'M2 23H42 M4 23A18 18 0 0 1 40 23');
+  sceneClockSun = document.createElementNS(NS, 'circle');
+  sceneClockSun.setAttribute('r', '2.4'); sceneClockSun.setAttribute('cx', '4'); sceneClockSun.setAttribute('cy', '23');
+  arc.append(horizon, sceneClockSun);
+  const copy = el('span', 'alp-scene-clock-copy');
+  sceneClockText = el('strong', null, '—'); sceneClockPeriod = el('span', 'alp-scene-period', '');
+  copy.append(el('span', 'alp-scene-caption', 'SCENE TIME'), sceneClockText, sceneClockPeriod);
+  sceneClock.append(arc, copy); document.body.append(sceneClock);
+}
+function updateSceneClock() {
+  if (!sceneClock) return;
+  const D = getSceneDaylight(), hour = D?.hour;
+  if (!Number.isFinite(hour) || D.enabled === false) { sceneClock.hidden = true; return; }
+  sceneClock.hidden = false;
+  const minutes = (Math.round(hour * 60) % 1440 + 1440) % 1440;
+  const text = String(Math.floor(minutes / 60)).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0');
+  const period = hour < 5.5 || hour >= 19.5 ? 'NIGHT' : hour < 7.5 ? 'DAWN' : hour < 11 ? 'MORNING' : hour < 15 ? 'DAYLIGHT' : hour < 17 ? 'AFTERNOON' : hour < 18.6 ? 'SUNSET' : 'BLUE HOUR';
+  const key = text + period;
+  if (key === sceneClockKey) return;
+  sceneClockKey = key; sceneClockText.textContent = text; sceneClockPeriod.textContent = period;
+  sceneClock.dataset.period = period.toLowerCase().replace(' ', '-');
+  const phase = Math.min(1, Math.max(0, (hour - 6) / 12));
+  sceneClockSun.setAttribute('cx', (4 + phase * 36).toFixed(2));
+  sceneClockSun.setAttribute('cy', (23 - Math.sin(phase * Math.PI) * 18).toFixed(2));
+}
+function put(k, value, small) {
+  const c = cells[k], key = value + '|' + (small || '');
+  if (c.value === key) return;
+  c.value = key; c.dd.replaceChildren(value, ...(small ? [el('small', null, small)] : []));
+}
+function updateStats(S, dir) {
+  const cam = S.canyon.camera, y = cam.position.y;
+  put('alt', y < 10 ? y.toFixed(1) : Math.round(y).toLocaleString('en-US'));
+  cam.getWorldDirection(dir);
+  const deg = (Math.atan2(dir.x, -dir.z) * 180 / Math.PI + 360) % 360;
+  put('hdg', String(Math.round(deg) % 360).padStart(3, '0') + '°', COMPASS[Math.round(deg / 45) % 8]);
+  const j = S.journey, p = j.max ? Math.min(1, Math.max(0, j.progress / j.max)) : 0;
+  put('pct', String(Math.round(p * 100)));
+  put('time', taipei.format(new Date()));
+  const current = [...root.querySelectorAll('.fi-rail button')].findIndex(b => b.hasAttribute('aria-current'));
+  put('chap', String(Math.max(0, current) + 1).padStart(2, '0') + '/06');
+}
+
+/* ---------- labels in the scene ---------- */
+function makePin(kind, opts) {
+  const node = el('div', 'alp-pin');
+  node.dataset.kind = kind;
+  if (kind === 'peak') {
+    const text = el('span', 'alp-pin-text');
+    text.append(el('span', 'alp-pin-name', opts.name), el('span', 'alp-pin-num', opts.num || ''));
+    node.append(text, el('i', 'alp-pin-line'));
+  } else {
+    const tag = el('span', 'alp-tag');
+    const line = el('span', 'alp-tag-text');
+    if (opts.zh) line.append(el('span', 'alp-tag-zh', opts.zh));
+    /* FLOW_STRATEGY_MAP_COPY: bilingual annotations are scoped to Flow2. */
+    if (html.hasAttribute('data-flow2-blue-ui')) {
+      const english = el('span','alp-tag-en',opts.text);
+      english.lang = 'en'; line.append(english);
+    }
+    const number = el('span','alp-tag-index',String(PATHS.indexOf(opts.id)+1).padStart(2,'0'));
+    number.setAttribute('aria-hidden','true');
+    tag.append(number,line);
+    node.append(tag, el('i', 'alp-pin-line'));
+  }
+  if (opts.phone) node.dataset.phone = '';
+  layer.append(node);
+  const pin = { node, kind, on: false, x: NaN, y: NaN, lead: -1, side: 'up', w: 0, h: 0, ...opts };
+  pins.push(pin);
+  return pin;
+}
+/* Size of the text part alone (leader at zero length); the leader is added per placement. */
+function measure() {
+  for (const pin of pins) {
+    const text = pin.node.firstChild;
+    pin.w = text.offsetWidth; pin.h = text.offsetHeight + (pin.kind === 'peak' ? 6 : 0);
+    pin.lead = -1;
+  }
+}
+function buildLabels(W) {
+  layer = hidden(el('div', 'alp-labels'));
+  document.body.append(layer);
+  const zc = W.descriptors.reduce((s, d) => s + d.joinZ, 0) / W.descriptors.length;
+  const main = W.mainAt(zc);
+
+  if (params.get('summit') === '1') makePin('peak', { id: 'summit', name: 'SUMMIT', num: '頂峰', at: { x: 0, y: 0, z: 0 }, maxLead: 46, phone: true });
+  W.descriptors.forEach((d, k) => {
+    const h2 = root.querySelector(`#chapter-${PATHS[k]} h2`);
+    makePin('tag', { id: PATHS[k], text: h2 ? h2.textContent.replace(/\s+/g, ' ').trim() : PATHS[k].toUpperCase(), curve: d.curve, t: .74, maxLead: 22, zh: PATH_ZH[k] });
+  });
+  for (const pin of pins) pin.node.classList.toggle('is-current', pin.id === chapterId);
+  layer.classList.toggle('has-current', PATHS.includes(chapterId));
+  measure();
+  document.fonts?.ready.then(measure);
+}
+/* The highest point of the near ridge beyond the confluence; recomputed when the terrain is rebaked. */
+function placeSummit(W) {
+  if (!pins.some(p => p.id === 'summit')) return;   // the summit label is opt-in (?summit=1)
+  const rev = W.stats?.terrainRevision ?? 0;
+  if (rev === summitRevision) return;
+  summitRevision = rev;
+  const out = [0, 0, 0, 0];
+  let best = [-Infinity, 0, 0];
+  for (let x = -2600; x <= 2600; x += 100) for (let z = -5200; z <= -3400; z += 100) { W.terrainAt(x, z, out); if (out[0] > best[0]) best = [out[0], x, z]; }
+  const summit = pins.find(p => p.id === 'summit');
+  summit.at = { x: best[1], y: best[0], z: best[2] };
+  summit.node.querySelector('.alp-pin-num').textContent = `頂峰 · ▲ ${Math.round(best[0]).toLocaleString('en-US')}`;
+  measure();
+}
+const overlaps = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+const pad = (r, p) => ({ l: r.left - p, r: r.right + p, t: r.top - p, b: r.bottom + p });
+/* Everything a label must keep clear of: the actual text runs of the current copy (not its full-width box, so a label
+   can sit beside a short line), the pill, the header groups, the rail, the footer and the stat bar. */
+function refreshRects() {
+  obstacles = [];
+  const panel = root.querySelector('.fi-copy-panel.is-active');
+  if (panel) {
+    for (const n of panel.querySelectorAll('.fi-copy-kicker, h1 > span, h2 > span, .alp-mark, .fi-copy-zh')) {
+      range.selectNodeContents(n); const r = range.getBoundingClientRect(); if (r.width) obstacles.push(pad(r, 12));
+    }
+    for (const n of panel.querySelectorAll('.fi-copy-action, .alp-or')) { const r = n.getBoundingClientRect(); if (r.width) obstacles.push(pad(r, 12)); }
+  }
+  const rail = document.documentElement.hasAttribute('data-flow2-blue-ui') ? '.fi-rail > [data-section]' : '.fi-rail';
+  for (const n of root.querySelectorAll(`.fi-brand, .fi-header-right, ${rail}, .fi-footer, .alp-stats`)) {
+    const r = n.getBoundingClientRect(); if (r.width) obstacles.push(pad(r, 10));
+  }
+}
+/* A point on the ground is hidden when a ridge rises above the line of sight (marched over the baked height grid). */
+const ground = [0, 0, 0, 0];
+function occluded(W, c, x, y, z) {
+  for (let i = 1; i < 24; i++) {
+    const s = i / 24, px = c.x + (x - c.x) * s, py = c.y + (y - c.y) * s, pz = c.z + (z - c.z) * s;
+    W.terrainAt(px, pz, ground);
+    if (ground[0] > py + 6) return true;
+  }
+  return false;
+}
+function show(pin, on) {
+  /* FLOW_STRATEGY_VISIBILITY */
+  const steps = window.__MONTIS_STUDY__?.strategyReveal;
+  if (pin.kind === 'tag' && steps && !steps.visible(PATHS.indexOf(pin.id))) on = false;
+  /* FLOW_RIVER_LIGHT: state changes only; no new loop or layout reads. */
+  const index = PATHS.indexOf(pin.id);
+  const current = !!(on && pin.kind === 'tag' && steps && steps.visible(index) && !steps.visible(index + 1));
+  if (pin.lightCurrent !== current) {
+    pin.lightCurrent = current; pin.node.classList.toggle('is-step-current', current);
+  }
+  if (pin.on === on) return;
+  pin.on = on; pin.node.classList.toggle('is-visible', on);
+  pin.node.style.opacity = on ? '1' : '0';
+}
+/* Label box for a placement. up: text above the point; right/left: a station tag beside the point. */
+function boxAt(pin, x, y, lead, side) {
+  if (side === 'right') return { l: x - 4, r: x + lead + pin.w + 4, t: y - pin.h / 2 - 4, b: y + pin.h / 2 + 4 };
+  if (side === 'left') return { l: x - lead - pin.w - 4, r: x + 4, t: y - pin.h / 2 - 4, b: y + pin.h / 2 + 4 };
+  return { l: x - pin.w / 2 - 4, r: x + pin.w / 2 + 4, t: y - lead - pin.h - 4, b: y + 4 };
+}
+const SHIFT = { up: 'translate(-50%, -100%)', right: 'translate(0, -50%)', left: 'translate(-100%, -50%)' };
+function updateLabels(S, v, now) {
+  const W = S.canyon.watershed, cam = S.canyon.camera, Wd = innerWidth, Ht = innerHeight;
+  const aerial = smooth(260, 620, cam.position.y);
+  const blocked = document.body.classList.contains('is-world') || document.body.classList.contains('is-portfolio') || !!S.portfolio?.open;
+  if (aerial < .5 || blocked || !W) { for (const pin of pins) show(pin, false); return; }
+  placeSummit(W);
+  /* not while the visitor pushes past the journey's end: the cards' bridge restyles the page in that frame, and measuring then forced the whole
+     layout (131 ms on a phone at CPU ×4, 2026-11-03 「山要切換到卡牌時候會卡住」). The labels hide as the bridge opens. */
+  if (now - lastRects > 250 && !(S.journey.target >= S.journey.max - .001)) { lastRects = now; refreshRects(); }
+  const id = root.dataset.chapter || '', placed = [], eye = cam.position;
+  const project = (x, y, z) => { v.set(x, y, z).project(cam); return v.z < 1 && v.z > -1 ? [(v.x + 1) * .5 * Wd, (1 - v.y) * .5 * Ht] : null; };
+  const fits = box => box.l > 12 && box.r < Wd - 12 && box.t > 12 && box.b < Ht - 12 && obstacles.every(o => !overlaps(box, o)) && placed.every(o => !overlaps(box, o));
+  if (STRATEGY_IDS.has(id)) { layoutGlassStrategies(S, project, now, obstacles); return; }
+  for (const pin of pins) {
+    if (pin.kind === 'tag' && !STRATEGY_IDS.has(id)) { show(pin, false); continue; }
+    let pt = null, lead = pin.maxLead, side = 'up';
+    if (pin.kind === 'peak') {
+      const cand = project(pin.at.x, pin.at.y, pin.at.z);
+      if (cand && !occluded(W, eye, pin.at.x, pin.at.y + 4, pin.at.z)) {
+        const up = Math.round(Math.min(pin.maxLead, Math.max(16, cand[1] - 12 - pin.h - 6)));
+        for (const [s, l] of [['up', up], ['up', 16], ['right', 26], ['left', 26]]) {
+          if (fits(boxAt(pin, cand[0], cand[1], l, s))) { pt = cand; side = s; lead = l; break; }
+        }
+      }
+    } else {
+      // keep the last good spot if it still works; otherwise walk along the river (and try either side of it)
+      // until the tag is in sight and clear of the copy, the other labels and the interface
+      const sides = ['up'];   /* FLOW_SUMMIT_LABELS: vertical leaders; same river search and occlusion rules. */
+      search: for (const t of [pin.t, .74, .7, .78, .66, .82, .62, .58, .86]) {
+        const q = pin.curve.getPointAt(t), cand = project(q.x, 0, q.z);
+        if (!cand || occluded(W, eye, q.x, 4, q.z)) continue;
+        for (const s of sides) {
+          const l = s === 'up' ? pin.maxLead : 18;
+          if (fits(boxAt(pin, cand[0], cand[1], l, s))) { pt = cand; pin.t = t; side = s; lead = l; break search; }
+        }
+      }
+    }
+    if (!pt) { show(pin, false); continue; }
+    placed.push(boxAt(pin, pt[0], pt[1], lead, side));
+    if (side !== pin.side) { pin.side = side; pin.node.dataset.side = side; pin.x = NaN; }
+    if (lead !== pin.lead) { pin.lead = lead; pin.node.style.setProperty('--lead', lead + 'px'); }
+    const x = Math.round(pt[0] * 2) / 2, y = Math.round(pt[1] * 2) / 2;
+    if (x !== pin.x || y !== pin.y) { pin.x = x; pin.y = y; pin.node.style.transform = `translate3d(${x}px, ${y}px, 0) ${SHIFT[side]}`; }
+    show(pin, true);
+  }
+}
+
+/* FLOW_WHITE_GLASS_LAYOUT */
+/* Composed callouts, with fine leaders ending on the real tributaries. */
+let glassLayoutKey = '', glassLayoutAt = -Infinity;
+function layoutGlassStrategies(S, project, now, obstacles) {
+  const W = S.canyon.watershed, cam = S.canyon.camera, width = innerWidth, height = innerHeight;
+  const tags = pins.filter(pin => pin.kind === 'tag'), phone = width <= 760;
+  const key = [width, height, chapterId, ...cam.position.toArray().map(v => v.toFixed(1)),
+    ...cam.quaternion.toArray().map(v => v.toFixed(4)), ...tags.map(p => p.w + ':' + p.h),
+    ...obstacles.map(o => [o.l,o.r,o.t,o.b].map(v => Math.round(v)).join(':'))].join('|');
+  if (key === glassLayoutKey) { for (const pin of tags) show(pin, pin.glassVisible === true); return; }
+  if (now - glassLayoutAt < 80) return;
+  glassLayoutKey = key; glassLayoutAt = now;
+  if (html.hasAttribute('data-flow2-blue-ui')) {
+    layoutMapStrategies(S, project, obstacles, tags, phone);
+    return;
+  }
+  const placed = [], clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  // The narrower desktop title wraps to two lines. Lift its lower markers
+  // into the valley and leave the left chapter rail a clear reading margin.
+  const compact = width <= 1100;
+  const slots = phone ? [[.25,.345],[.75,.345],[.25,.50],[.75,.50]]
+    : compact ? [[.285,.42],[.365,.30],[.71,.425],[.80,.29]]
+    : [[.235,.51],[.365,.34],[.675,.52],[.80,.33]];
+  const clear = box => obstacles.every(o => !overlaps(box, o)) && placed.every(o => !overlaps(box, o));
+  for (const pin of pins) {
+    if (pin.kind !== 'tag') { show(pin, false); continue; }
+    const slot = slots[PATHS.indexOf(pin.id)], pad = phone ? 14 : 28, w = pin.w, h = pin.h;
+    const left = clamp(slot[0] * width - w / 2, pad, width - w - pad);
+    const top = clamp(slot[1] * height - h / 2, phone ? 208 : 150, height - h - 135);
+    let box = null, bestCost = Infinity;
+    for (const dy of [0, -40, 40, -80, 80, -120, 120]) {
+      for (const dx of [0, ...(phone ? [] : [-40, 40, -80, 80])]) {
+        const x = clamp(left + dx, pad, width - w - pad), y = clamp(top + dy, phone ? 205 : 145, height - h - 100);
+        const candidate = { l:x-6, r:x+w+6, t:y-6, b:y+h+6 }, cost = dx*dx + dy*dy;
+        if (cost < bestCost && clear(candidate)) { box = { ...candidate, x, y }; bestCost = cost; }
+      }
+    }
+    if (!box) { pin.glassVisible=false; show(pin, false); continue; }
+    // Rank in screen space before the more expensive terrain visibility test.
+    const samples = [];
+    for (const t of [.46,.52,.58,.64,.70,.76,.82,.88,.94]) {
+      const q = pin.curve.getPointAt(t), point = project(q.x, 0, q.z);
+      if (!point || point[0] < 8 || point[0] > width-8 || point[1] < 140 || point[1] > height-70) continue;
+      const dx = point[0] - clamp(point[0],box.x+12,box.x+w-12);
+      const dy = point[1] - (point[1] < box.y+h/2 ? box.y : box.y+h);
+      samples.push({ q, point, cost:dx*dx+dy*dy });
+    }
+    samples.sort((a,b) => a.cost-b.cost);
+    const anchor = samples.slice(0,3).find(({q}) => !occluded(W,cam.position,q.x,4,q.z)) || samples[0];
+    if (!anchor && !phone) { pin.glassVisible=false; show(pin, false); continue; }
+    if (!pin.glassLeader) {
+      const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns,'svg');
+      svg.classList.add('alp-glass-leader'); svg.setAttribute('aria-hidden','true');
+      const path = document.createElementNS(ns,'path'), dot = document.createElementNS(ns,'circle');
+      dot.setAttribute('r','1.75'); svg.append(path,dot); pin.node.append(svg);
+      pin.glassLeader = { svg, path, dot };
+    }
+    // In portrait a tributary may leave the crop; keep its card readable
+    // and omit that leader instead of inventing a visible ground location.
+    const ax = anchor ? anchor.point[0]-box.x : w/2, ay = anchor ? anchor.point[1]-box.y : h;
+    const sx = clamp(ax,20,w-20), sy = ay < h/2 ? 0 : h, bend = sy+(ay-sy)*.55;
+    const line = pin.glassLeader, length = Math.hypot(ax-sx,ay-sy);
+    line.svg.style.opacity = !anchor || length < 14 || (ax>0&&ax<w&&ay>0&&ay<h) ? '0' : '1';
+    line.path.setAttribute('d',`M${sx.toFixed(1)} ${sy} C${sx.toFixed(1)} ${bend.toFixed(1)},${ax.toFixed(1)} ${bend.toFixed(1)},${ax.toFixed(1)} ${ay.toFixed(1)}`);
+    line.dot.setAttribute('cx',ax.toFixed(1)); line.dot.setAttribute('cy',ay.toFixed(1));
+    pin.node.dataset.layout = 'glass'; pin.node.dataset.side = 'up';
+    pin.node.style.transform = `translate3d(${box.x.toFixed(1)}px,${box.y.toFixed(1)}px,0)`;
+    placed.push(box); pin.glassVisible=true; show(pin,true);
+  }
+}
+
+/* Flow2's map annotations use a straight stem at a projected river point.
+   Only screen-space label placement changes; the scene and reveal clock stay shared. */
+function layoutMapStrategies(S, project, obstacles, tags, phone) {
+  const width = innerWidth, height = innerHeight, W = S.canyon.watershed, cam = S.canyon.camera;
+  const slots = phone ? [[.16,.29],[.18,.41],[.64,.31],[.86,.20]]
+    : [[.19,.39],[.37,.255],[.64,.40],[.76,.245]];
+  const placed = [], stems = [], edge = phone ? 18 : 64;
+  const clear = box => obstacles.every(o => !overlaps(box,o)) && placed.every(o => !overlaps(box,o)) && stems.every(o => !overlaps(box,o));
+  for (const pin of pins) if (pin.kind !== 'tag') show(pin,false);
+  // Reserve the two outside tributaries first, then fit the inside pair.
+  const ordered = [tags[0],tags[3],tags[1],tags[2]].filter(Boolean);
+  for (const pin of ordered) {
+    const i = PATHS.indexOf(pin.id), slot = slots[i], w = pin.w, h = pin.h;
+    const minLead = h + (phone ? 22 : 38), maxLead = Math.min(phone ? 235 : 360,height * .34);
+    const candidates = [];
+    for (let sample = 25; sample <= 49; sample++) {
+      const q = pin.curve.getPointAt(sample/50), point = project(q.x,0,q.z);
+      if (!point || point[0] < edge || point[0] > width-edge || point[1] > height-90) continue;
+      for (const dy of [0,-24,24,-48,48]) {
+        const y = slot[1]*height + dy, lead = point[1]-y;
+        if (y < (phone ? 156 : 120) || lead < minLead || lead > maxLead) continue;
+        for (const side of ['right','left']) {
+          const sx = side === 'right' ? 3 : w-3, x = point[0]-sx;
+          if (x < edge || x+w > width-edge) continue;
+          const box = {l:x-8,r:x+w+8,t:y-8,b:y+h+8};
+          const stem = {l:point[0]-2,r:point[0]+2,t:y+8,b:point[1]+4};
+          if (!clear(box) || !clear(stem)) continue;
+          const cost = (point[0]-slot[0]*width)**2 + dy*dy*1.4 + (side === 'left' ? 1800 : 0);
+          candidates.push({x,y,sx,lead,side,box,stem,q,cost});
+        }
+      }
+    }
+    candidates.sort((a,b) => a.cost-b.cost);
+    // Candidate offsets share a river sample: test each sample only once, and
+    // never display a ground dot on a branch hidden behind a mountain ridge.
+    const visibility = new Map();
+    let result = candidates.find(c => {
+      if (!visibility.has(c.q)) visibility.set(c.q,!occluded(W,cam.position,c.q.x,4,c.q.z));
+      return visibility.get(c.q);
+    });
+    if (!result && candidates[0]) result = {...candidates[0],stem:null,lead:h};
+    if (!result && phone) {
+      // A portrait crop can exclude a whole tributary. Keep its name in the
+      // overview, but never attach a ground dot to a made-up river location.
+      const x = Math.max(18, Math.min(width-w-18,(i%2 ? .75 : .25)*width-w/2));
+      for (const y of [slot[1]*height,slot[1]*height-32,slot[1]*height+32,156,198,240,282,324,366,408]) {
+        const box = {l:x-6,r:x+w+6,t:y-6,b:y+h+6};
+        if (clear(box)) { result = {x,y,sx:3,lead:h,side:'right',box}; break; }
+      }
+    }
+    if (!result) { pin.glassVisible=false; show(pin,false); continue; }
+    if (!pin.glassLeader) {
+      const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+      svg.classList.add('alp-glass-leader'); svg.setAttribute('aria-hidden','true');
+      const path=document.createElementNS(ns,'path'),dot=document.createElementNS(ns,'circle');
+      dot.setAttribute('r','2.7'); svg.append(path,dot); pin.node.append(svg);
+      pin.glassLeader={svg,path,dot};
+    }
+    const {x,y,sx,lead,side,box,stem} = result, line=pin.glassLeader;
+    line.svg.style.opacity='1';
+    line.path.setAttribute('d',`M${sx.toFixed(1)} 3 V${lead.toFixed(1)}`);
+    line.dot.setAttribute('cx',sx.toFixed(1)); line.dot.setAttribute('cy',lead.toFixed(1));
+    line.dot.style.display=stem ? '' : 'none';
+    pin.node.dataset.layout='map'; pin.node.dataset.side='up'; pin.node.dataset.copySide=side;
+    pin.node.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+    placed.push(box); if(stem) stems.push(stem);
+    pin.glassVisible=true; show(pin,true);
+  }
+}
+
+/* ---------- loop ---------- */
+let dir = null, vec = null, fitted = false;
+let filmGrainAmount = -1;
+let bridgeInk = -1, inkHeader = null, inkSet = null;
+function frame(now) {
+  raf = requestAnimationFrame(frame);
+  if (now - lastStats > 200) updateSceneClock();
+  const S = window.__MONTIS_STUDY__;
+  if (unifiedGrain && S?.CONFIG?.scene) {
+    const rawGrain = Number(S.CONFIG.scene.grain);
+    const amount = Number.isFinite(rawGrain) ? Math.max(0, Math.min(.25, rawGrain * (.035 / .006))) : .035;
+    if (amount !== filmGrainAmount) {
+      filmGrainAmount = amount; html.style.setProperty('--fi-film-grain-opacity', amount.toFixed(4));
+    }
+  }
+  if (!S?.canyon?.camera || !S.journey) return;
+  if (!dir) { dir = S.canyon.camera.position.clone(); vec = dir.clone(); }
+  // the header stays white while the bridge's haze is still thin, then turns navy with the haze (0 until the bridge is .45 across, 1 at .7)
+  const ink = Math.max(0, Math.min(1, ((S.portfolio?.transition || 0) - .45) / .25));
+  if (!inkHeader?.isConnected) inkHeader = root.querySelector('.fi-header');
+  if (inkHeader && (Math.abs(ink - bridgeInk) > .01 || inkSet !== inkHeader)) { bridgeInk = ink; inkSet = inkHeader; inkHeader.style.setProperty('--alp-bridge-ink', ink.toFixed(3)); }
+  // the opening title is sized by rules that apply once the page is ready, so fit it then
+  if (!fitted && document.body.classList.contains('is-ready')) { fitted = true; fitHero(); }
+  const id = root.dataset.chapter || '';
+  if (id !== chapterId) {
+    chapterId = id; lastRects = 0;
+    for (const pin of pins) pin.node.classList.toggle('is-current', pin.id === id);
+    layer?.classList.toggle('has-current', PATHS.includes(id));
+  }
+  if (!layer && S.canyon.watershed?.descriptors?.length === 4) buildLabels(S.canyon.watershed);
+  if (layer) updateLabels(S, vec, now);
+  if (cells && now - lastStats > 200) { lastStats = now; updateStats(S, dir); }
+}
+function stop() {
+  railObserver?.disconnect();
+  railObserver = null;
+  for (const d of atmos) d.remove(); atmos = [];
+  cancelAnimationFrame(raf); raf = 0;
+  layer?.remove(); layer = null; pins = [];
+  root?.querySelector('.alp-stats')?.remove(); cells = null;
+  sceneClock?.remove(); sceneClock = null;
+  html.removeAttribute('data-alpine-ui-live');
+}
+function start() {
+  if (!html.hasAttribute('data-alpine-ui') || isText()) return;
+  root = document.querySelector('[data-journey-ui]');
+  if (!root || !root.querySelector('.fi-copy-panel')) { setTimeout(start, 200); return; }
+  const chapterRail = html.hasAttribute('data-flow2-blue-ui') && root.querySelector('.fi-rail');
+  if (chapterRail && typeof ResizeObserver === 'function') {
+    // Cache the orbit's button bounds after layout, including a direct jump to the final view.
+    railObserver = new ResizeObserver(refreshRects);
+    railObserver.observe(root);
+    railObserver.observe(chapterRail);
+  }
+  enhanceCopy();
+  buildAtmos();
+  if (params.get('stats') === '1') cells = buildStats(); else html.setAttribute('data-alpine-ui-live', '');   // the bottom-right stat bar is removed (client 2026-10-24); ?stats=1 brings it back
+  if (params.get('sceneclock') === '1') buildSceneClock();   // the scene-time readout is a development aid: off for delivery (?sceneclock=1 shows it)
+  fitHero();
+  document.fonts?.ready.then(fitHero);
+  addEventListener('resize', () => { lastRects = 0; fitHero(); if (layer) measure(); });
+  addEventListener('finnovation:text-mode', stop);
+  raf = requestAnimationFrame(frame);
+}
+start();

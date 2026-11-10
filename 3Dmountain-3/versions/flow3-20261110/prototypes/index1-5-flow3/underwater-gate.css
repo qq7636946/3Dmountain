@@ -1,0 +1,155 @@
+/* Canarias-inspired presentation, exclusive to the Flow 3 entry gate. */
+html[data-ui="canarias"] {
+  --gate-deep: #03162f;
+  --gate-ink: #e6f7fc;
+  --ocean-cyan: #34dafa;
+  --ocean-serif: Georgia, "Times New Roman", "Noto Serif TC", serif;
+}
+html[data-ui="canarias"] .gate-sea {
+  background:
+    radial-gradient(ellipse at 48% -18%, #1b7a9c8c, transparent 57%),
+    radial-gradient(ellipse at 10% 80%, #08487166, transparent 55%),
+    linear-gradient(145deg, #082d50, #031a39 60%, #021329);
+}
+html[data-ui="canarias"] .gate-rays { opacity: .65; }
+html[data-ui="canarias"] .gate-dust--far { opacity: .25; animation-name: gateRiseFar; }
+html[data-ui="canarias"] .gate-dust--mid { opacity: .4; }
+html[data-ui="canarias"] .gate-dust--near { opacity: .5; }
+html[data-ui="canarias"] .gate-glints { opacity: .22; }
+html[data-ui="canarias"] #gate .gate-brand { width: 155px; }
+html[data-ui="canarias"] #gate.is-in .gate-brand { opacity: .8; }
+html[data-ui="canarias"]:is([data-gate="ready"], [data-gate="enter"]) #gate.is-in .gate-brand { opacity: 0; }
+html[data-ui="canarias"] #gate .gate-hud { display: none; }
+
+/* The existing gate clock supplies --p. Only transforms animate the water. */
+.ocean-loading {
+  position: absolute;
+  left: 50%; top: var(--gy, 43vh);
+  transform: translate(-50%, -50%);
+  display: grid; justify-items: center;
+  opacity: 0;
+  transition: opacity .7s ease, filter .8s ease;
+}
+.gate.is-in .ocean-loading { opacity: 1; }
+.ocean-orb {
+  position: relative;
+  width: clamp(170px, 15.5vw, 200px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid #3ad8f6;
+  border-radius: 50%;
+  background: radial-gradient(circle at 28% 24%, #77d6ef26, #16558226 48%, #001a3940 76%);
+  box-shadow: 0 0 9px #28d3fc75, 0 0 28px #00b8f72e, inset 0 0 14px #37dfff5c, inset -12px -12px 30px #00335366;
+}
+.ocean-orb::before {
+  content: ""; position: absolute; z-index: 2;
+  inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(circle at 30% 20%, #c4f6ff66 0 2%, #8de5ff19 4%, transparent 6%),
+    radial-gradient(ellipse at 50% 110%, #31e1ff80, transparent 55%);
+  box-shadow: inset 0 0 8px #56e7ff4f;
+}
+.ocean-orb-water {
+  position: absolute; inset: 0;
+  background: linear-gradient(#06b9da75, #008bb6a6);
+  transform: translateY(calc((1 - var(--p, 0)) * 100%));
+  transition: transform .5s cubic-bezier(.22,.61,.36,1);
+  will-change: transform;
+}
+.ocean-wave {
+  position: absolute; left: 0; top: -12px;
+  width: 200%; height: 24px;
+  fill: #41cee383;
+  animation: ocean-wave 4.8s linear infinite;
+}
+.ocean-wave--back { fill: #a1e5ef38; top: -15px; animation-duration: 7.2s; animation-direction: reverse; }
+.ocean-orb-value {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  color: #effaff;
+  font: 400 clamp(36px, 3.1vw, 42px)/1 var(--ocean-serif);
+  letter-spacing: -.045em;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-shadow: 0 2px 15px #00254360;
+}
+.ocean-loading-caption {
+  position: absolute; top: calc(100% + 30px); width: 300px;
+  margin: 0; text-align: center;
+  color: #a9c9db;
+  font: 400 11px/1.8 var(--ocean-serif);
+  letter-spacing: .28em;
+}
+.ocean-loading-caption span { display: block; margin-top: 6px; font: 400 10px/1.8 "Noto Sans TC", sans-serif; letter-spacing: .3em; color: #80a6be; }
+.gate.is-in .ocean-loading.is-complete { opacity: 0; filter: blur(5px); pointer-events: none; }
+
+html[data-ui="canarias"] #gate .gate-choice {
+  top: calc(var(--gy) + min(16vh, 19vw) + 22px);
+  gap: 21px;
+  width: min(420px, calc(100vw - 48px));
+}
+html[data-ui="canarias"] #gate .gate-choice::before {
+  width: 170%; height: 190%;
+  background: radial-gradient(closest-side, #00224394, #00244336 65%, transparent);
+}
+html[data-ui="canarias"] #gate .gate-hint {
+  color: #ddedf5;
+  font: 400 12px/1.3 var(--ocean-serif);
+  letter-spacing: .26em;
+}
+html[data-ui="canarias"] #gate .gate-hint [lang="zh-Hant"] { font-size: 10px; letter-spacing: .28em; color: #c0d8e6; }
+html[data-ui="canarias"] #gate .gate-buttons { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 13px; }
+html[data-ui="canarias"] #gate .gate-btn {
+  justify-content: center; gap: 12px;
+  width: 100%; min-height: 60px; padding: 0 24px;
+  border: 1px solid #30d7fc;
+  border-radius: 999px;
+  color: #e7f7ff;
+  background: linear-gradient(180deg, #3bc9f02e, #0879b312 52%, #19c7ed3d);
+  box-shadow: inset 0 0 8px #31dcff70, inset 0 -2px 4px #55eaff75, 0 0 9px #08c9fa50, 0 0 24px #09c3ff20;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font: 400 19px/1.1 var(--ocean-serif);
+  letter-spacing: .055em;
+  text-shadow: 0 0 14px #95e8ff36;
+  transition: opacity .9s var(--gate-out), translate 1s var(--gate-out), background .3s, box-shadow .3s, border-color .3s, scale .3s;
+}
+html[data-ui="canarias"] #gate .gate-btn [lang="zh-Hant"] { font-size: 11px; letter-spacing: .15em; color: #c6e5f1; }
+html[data-ui="canarias"] #gate .gate-btn > span { white-space: nowrap; font-weight: 400 !important; }
+html[data-ui="canarias"] #gate .gate-hint .gate-ch { font-weight: 400 !important; }
+html[data-ui="canarias"] #gate .gate-btn--muted {
+  width: 78%; min-height: 43px;
+  font-size: 13px; letter-spacing: .08em;
+  border-color: #45c7e46b;
+  background: linear-gradient(#103c5652, #08527724);
+  box-shadow: inset 0 0 8px #36c4e31a, 0 0 9px #07c8fa12;
+}
+html[data-ui="canarias"] #gate .gate-btn--muted [lang="zh-Hant"] { font-size: 10px; }
+html[data-ui="canarias"] #gate .gate-btn:is(:hover, :focus-visible) {
+  background: linear-gradient(180deg, #3bc9f047, #0879b326 50%, #19c7ed66);
+  color: #fff; border-color: #9aefff;
+  box-shadow: inset 0 0 14px #31dcff8c, 0 0 12px #08c9fa70, 0 0 35px #09c3ff38;
+}
+html[data-ui="canarias"] #gate .gate-btn:focus-visible { outline: 2px solid #c2f6ff; outline-offset: 5px; }
+html[data-ui="canarias"] #gate .gate-btn:disabled { cursor: default; }
+html[data-ui="canarias"] #gate .gate-eq { height: 12px; opacity: .8; }
+@keyframes ocean-wave { to { transform: translateX(-50%); } }
+@media (max-width: 680px) {
+  html[data-ui="canarias"] #gate .gate-brand { width: 135px; top: 22px; }
+  html[data-ui="canarias"] #gate .gate-choice { top: calc(var(--gy) + min(16vh, 19vw) + 30px); gap: 19px; }
+  html[data-ui="canarias"] #gate .gate-btn { min-height: 56px; font-size: 18px; padding-inline: 16px; }
+  html[data-ui="canarias"] #gate .gate-btn--muted { min-height: 42px; font-size: 12px; width: 86%; }
+}
+@media (max-height: 580px) {
+  html[data-ui="canarias"] #gate { --gy: 36vh; }
+  html[data-ui="canarias"] #gate .gate-brand { width: 98px; top: 8px; }
+  html[data-ui="canarias"] #gate .gate-choice { top: 58vh; gap: 10px; }
+  html[data-ui="canarias"] #gate .gate-hint [lang="zh-Hant"] { display: none; }
+  html[data-ui="canarias"] #gate .gate-btn { min-height: 46px; }
+  html[data-ui="canarias"] #gate .gate-btn--muted { min-height: 36px; }
+  .ocean-orb { width: 142px; }
+  .ocean-loading-caption { top: calc(100% + 18px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ocean-wave { animation: none; }
+  .ocean-orb-water, .ocean-loading { transition: none; }
+}

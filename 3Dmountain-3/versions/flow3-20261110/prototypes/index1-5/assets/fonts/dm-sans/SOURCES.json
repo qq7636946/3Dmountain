@@ -1,0 +1,27 @@
+{
+  "family": "DM Sans",
+  "css": "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap",
+  "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/OFL.txt",
+  "files": [
+    {
+      "name": "latin-ext-italic.woff2",
+      "url": "https://fonts.gstatic.com/s/dmsans/v17/rP2Fp2ywxg089UriCZa4ET-DNl0.woff2",
+      "bytes": 40840
+    },
+    {
+      "name": "latin-italic.woff2",
+      "url": "https://fonts.gstatic.com/s/dmsans/v17/rP2Fp2ywxg089UriCZa4Hz-D.woff2",
+      "bytes": 76248
+    },
+    {
+      "name": "latin-ext.woff2",
+      "url": "https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZ2IHSeH.woff2",
+      "bytes": 31292
+    },
+    {
+      "name": "latin.woff2",
+      "url": "https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHQ.woff2",
+      "bytes": 62724
+    }
+  ]
+}

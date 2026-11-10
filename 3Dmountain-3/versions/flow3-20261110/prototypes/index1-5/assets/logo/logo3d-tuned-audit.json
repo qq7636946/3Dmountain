@@ -1,0 +1,52 @@
+{
+  "source": "logo3D.svg",
+  "software": "4.3.2",
+  "parts": [
+    {
+      "name": "logo_body",
+      "vertices": 46155,
+      "triangles": 92306,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "loose_edges": 0,
+      "degenerate_faces": 0,
+      "inverted_caps": 0,
+      "signed_volume": 0.025901137076456953,
+      "depth_levels": 12620,
+      "roundover_volume_change": 0.029932691153807825,
+      "roundover": {
+        "algorithm": "svg-sdf-roundover-v1",
+        "radius": 0.02,
+        "profile": 0.5,
+        "profilePower": 2.0,
+        "segments": 24,
+        "resolution": 704,
+        "thickness": 0.148,
+        "seconds": 2.313
+      }
+    },
+    {
+      "name": "logo_sail",
+      "vertices": 14112,
+      "triangles": 28220,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "loose_edges": 0,
+      "degenerate_faces": 0,
+      "inverted_caps": 0,
+      "signed_volume": 0.008098502032082818,
+      "depth_levels": 7587,
+      "roundover_volume_change": 0.028069134421377356,
+      "roundover": {
+        "algorithm": "svg-sdf-roundover-v1",
+        "radius": 0.02,
+        "profile": 0.5,
+        "profilePower": 2.0,
+        "segments": 24,
+        "resolution": 704,
+        "thickness": 0.148,
+        "seconds": 2.313
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "asset": "logo3d-tuned.glb",
+  "revision": "1792904710368626100",
+  "parameters": {
+    "radius": 0.02,
+    "segments": 24,
+    "profile": 0.5,
+    "angleLimit": 28.0,
+    "clamp": 1,
+    "weightedNormals": 1,
+    "normalWeight": 50,
+    "smooth": 1
+  }
+}

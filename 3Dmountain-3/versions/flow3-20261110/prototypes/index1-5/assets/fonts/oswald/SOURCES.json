@@ -1,0 +1,17 @@
+{
+  "family": "Oswald",
+  "css": "https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap",
+  "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/OFL.txt",
+  "downloaded": "2026-11-04",
+  "note": "variable weight 200–700",
+  "files": [
+    {
+      "name": "latin.woff2",
+      "bytes": 28488
+    },
+    {
+      "name": "latin-ext.woff2",
+      "bytes": 23952
+    }
+  ]
+}

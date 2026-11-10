@@ -1,0 +1,29 @@
+{
+  "source": "logo3D.svg",
+  "software": "4.3.2",
+  "parts": [
+    {
+      "name": "logo_body",
+      "vertices": 11884,
+      "triangles": 23764,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "loose_edges": 0,
+      "degenerate_faces": 0,
+      "signed_volume": 0.02670034861625798
+    },
+    {
+      "name": "logo_sail",
+      "vertices": 3118,
+      "triangles": 6232,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "loose_edges": 0,
+      "degenerate_faces": 0,
+      "signed_volume": 0.008332383697567808
+    }
+  ],
+  "base_thickness": 0.148,
+  "bevel_radius": 0.009,
+  "bevel_segments": 10
+}

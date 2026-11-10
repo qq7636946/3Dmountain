@@ -1,0 +1,14 @@
+/* Original brand paths stacked vertically and centred above the count. */
+#gate .gate-brand {
+  top:clamp(28px,4.8vh,50px); width:181.44px; max-width:calc(100vw - 64px);
+  display:flex; align-items:center; justify-content:center; gap:0;
+  color:#f5f9fc; font-size:0; letter-spacing:0; text-indent:0;
+}
+#gate .gate-brand-art { display:block; width:100%; height:auto; flex:none; }
+#gate .gate-brand-sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-logo3 { width:154.98px; min-height:62.16px; }
+@media (max-width:680px) {
+  #gate .gate-brand { width:164.64px; top:32px; }
+  html[data-look="index1-5"]:not([data-opening-refinement]) .fi-header[data-header-logo3] .fi-brand-logo3 { width:clamp(105.84px,30.24vw,129.78px); min-height:43.68px; }
+}
+@media (max-height:540px) { #gate .gate-brand { width:109.2px; top:16px; } }

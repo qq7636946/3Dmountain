@@ -1,0 +1,8 @@
+Original background for the FINNOVATION principles chapter.
+Mode: built-in image_gen tool. Generated 2026-10-24.
+Workspace original: canopy-v1.png
+Web asset: canopy-v1.webp (same dimensions, WebP quality 85)
+Reference for layout and transition direction: https://mont-fort.com/
+
+Final generation prompt:
+Use case: photorealistic-natural. Create one original cinematic website background, very wide landscape 16:9 composition. An atmospheric view through dark, softly out-of-focus lakeside tree canopy toward pale dawn light reflecting on tranquil water in the lower right. The foreground foliage is organic, soft and layered, descending from the upper edge and especially upper right; distant trees dissolve into blue mist. Color direction: deep slate navy #102b3b, smoky blue teal #284c59, subdued desaturated moss accents, a small amount of soft champagne sunlight #ddca9c. Restrained, photographic, sophisticated and natural, never neon. Large calm low-detail negative space across the left and center for white editorial typography, dark enough for readable text; softly brighter open light on far right. Strong atmospheric depth and shallow depth of field, realistic subtle surface detail, no artificial lens flare. No text, no lettering, no logos, no people, no buildings, no charts, no UI, no watermark. This is a background asset, not a screenshot or finished webpage.

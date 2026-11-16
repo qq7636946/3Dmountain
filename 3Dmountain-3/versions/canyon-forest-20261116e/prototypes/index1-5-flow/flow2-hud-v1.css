@@ -1,0 +1,611 @@
+/* Flow2 HUD (2026-11-10, client: 「index1-5-flow2.html的UI都改成 https://hubtown.co.in/ 這網站類型的UI」, then 「文字標題變化可以參考這標體的特效」 with
+   web3.esqrd.co). index1-5-flow2.html only. Every rule waits for html[data-flow2-hud] (the interface) or html[data-flow2-streak] (the titles),
+   which flow2-hud.js sets: ?hud=0 and ?streak=0 leave the page as it was.
+
+   The KIND of interface that reference has, drawn with this page's own palette, logo and titles; none of its code, fonts or pictures:
+   - a hairline frame with cut corners, and a bar along its foot in three cells: SOUND | where you are (and the scroll hint) | NEXT
+   - the sections as a row of small links at the top, beside a cut-corner MENU block with a four-square mark
+   - every pill and round button becomes a cut-corner block with hairline edges; arrows sit in their own cell
+   - small Latin labels in a monospace face, wide-tracked; squares instead of dots; no rounded corners anywhere
+   The big titles keep their face and size. They arrive and leave as a line of light (the streak), one word after another.
+
+   Weight: the type layer before this one (flow2-type-b.css) uses :root:not(#f2b):not(#f2b) with !important; the :not(#f2h) triple passes it.
+   A cut block draws its own edges as background layers (--f2h-l the line, --f2h-f the fill, --f2h-k the cut), so a hover only changes those values. */
+
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] {
+  --f2h-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Noto Sans TC", monospace;
+  --f2h-edge: var(--blue-edge, 17px);
+  --f2h-inset: var(--blue-inset, 34px);
+  --f2h-frame-cut: clamp(16px, 1.9vw, 28px);
+  --f2h-bar: 48px;
+  --f2h-cell-l: 156px;
+  --f2h-cell-r: 124px;
+  --f2h-k: 11px;
+  --f2h-l: #dcefff5c;
+  --f2h-f: #0000;
+  --f2h-ink: #f2f8fc;
+  --f2h-ink-dark: #10283d;
+  --f2h-light: #d4edfa;
+  --f2h-glass: #06192b85;
+  --f2h-ease: cubic-bezier(.2, .8, .2, 1);
+  /* the older names for a label face, back to a monospace (the type layer had pointed them at the display face) */
+  --zrk-mono: var(--f2h-mono);
+  --blue-mono: var(--f2h-mono);
+  --ap-mono: var(--f2h-mono);
+  --flow2-folio-type: var(--f2h-mono);
+  --flow2-menu-mono: var(--f2h-mono);
+}
+/* the news section stands on a pale ground: dark lines and ink there */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui[data-site-section="3"] {
+  --f2h-l: #173b5252;
+  --f2h-ink: #10283d;
+}
+
+/* ------------------------------------------------------------------ labels: the monospace face */
+/* The type layer gives every label `font-family: var(--f2-font-display) !important`; the name is re-pointed on the labels themselves, so the
+   titles (which use the same name) keep their face. */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body :is(
+  .fi-copy-kicker, .flow-why-eyebrow, .site-section-eyebrow, .site-news-status, .site-news-index, .fiwo-kicker, .why-photo-folio,
+  .fiwo-photo figcaption, .fiw-kicker, .fi-footer-current, .fi-footer-total, #flow2-header-sound, #flow2-menu-toggle, .site-card-count,
+  .fi-rail-number, .flow2-route-kicker, .alp-tag-en, .fiw-pin span, .fiw-pin small, .fiwp-eyebrow, .fiw-outro-kicker, .fiwp-progress span,
+  .fiwp-chapter-end span, .fiwp-bottom > span, .flow2-static-news-kicker, .fiwo-progress, .fiwp-card h3, .btn-lux, .fiw-top,
+  .site-news-controls, .site-card-controls, .f2-feel-hint, .f2h-nav, .f2h-next, .fi-menu-close, .flow2-menu-contact, .fi-menu-link-number,
+  .alp-pin[data-kind="peak"], .gate-btn, .gate-hud, .gate-hint) {
+  --f2-font-display: var(--f2h-mono);
+  --site-font: var(--f2h-mono);
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body :is(.f2-feel-hint, .fi-footer-total, .f2h-nav button, .f2h-next, #flow2-menu-toggle, #flow2-menu-toggle *) {
+  font-family: var(--f2h-mono) !important;
+}
+
+/* ------------------------------------------------------------------ the frame */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"] body.is-ready .flow2-blue-frame {
+  --c: var(--f2h-frame-cut);
+  --l: var(--f2h-l);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  background:
+    linear-gradient(var(--l), var(--l)) var(--c) 0 / calc(100% - 2 * var(--c)) 1px no-repeat,
+    linear-gradient(var(--l), var(--l)) var(--c) 100% / calc(100% - 2 * var(--c)) 1px no-repeat,
+    linear-gradient(var(--l), var(--l)) 0 var(--c) / 1px calc(100% - 2 * var(--c)) no-repeat,
+    linear-gradient(var(--l), var(--l)) 100% var(--c) / 1px calc(100% - 2 * var(--c)) no-repeat,
+    linear-gradient(135deg, #0000 50%, var(--l) 50% calc(50% + 1px), #0000 calc(50% + 1px)) 0 0 / var(--c) var(--c) no-repeat,
+    linear-gradient(45deg, #0000 calc(50% - 1px), var(--l) calc(50% - 1px) 50%, #0000 50%) 100% 0 / var(--c) var(--c) no-repeat,
+    linear-gradient(45deg, #0000 50%, var(--l) 50% calc(50% + 1px), #0000 calc(50% + 1px)) 0 100% / var(--c) var(--c) no-repeat,
+    linear-gradient(135deg, #0000 calc(50% - 1px), var(--l) calc(50% - 1px) 50%, #0000 50%) 100% 100% / var(--c) var(--c) no-repeat;
+  transition: none;
+}
+/* the old frame's ticks and sheet lines are another drawing language */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui > :is(.fi-frame, .flow2-site-atlas) { display: none !important; }
+
+/* ------------------------------------------------------------------ the bar at the foot (computers) */
+.f2h-nav, .f2h-next { display: none; }
+@media (min-width: 961px) {
+  /* frame + the bar's top line, its two dividers and a faint shade behind it */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .flow2-blue-frame {
+    --b: var(--f2h-bar);
+    background:
+      linear-gradient(var(--l), var(--l)) var(--c) 0 / calc(100% - 2 * var(--c)) 1px no-repeat,
+      linear-gradient(var(--l), var(--l)) var(--c) 100% / calc(100% - 2 * var(--c)) 1px no-repeat,
+      linear-gradient(var(--l), var(--l)) 0 var(--c) / 1px calc(100% - 2 * var(--c)) no-repeat,
+      linear-gradient(var(--l), var(--l)) 100% var(--c) / 1px calc(100% - 2 * var(--c)) no-repeat,
+      linear-gradient(135deg, #0000 50%, var(--l) 50% calc(50% + 1px), #0000 calc(50% + 1px)) 0 0 / var(--c) var(--c) no-repeat,
+      linear-gradient(45deg, #0000 calc(50% - 1px), var(--l) calc(50% - 1px) 50%, #0000 50%) 100% 0 / var(--c) var(--c) no-repeat,
+      linear-gradient(45deg, #0000 50%, var(--l) 50% calc(50% + 1px), #0000 calc(50% + 1px)) 0 100% / var(--c) var(--c) no-repeat,
+      linear-gradient(135deg, #0000 calc(50% - 1px), var(--l) calc(50% - 1px) 50%, #0000 50%) 100% 100% / var(--c) var(--c) no-repeat,
+      linear-gradient(var(--f2h-bl, var(--l)), var(--f2h-bl, var(--l))) 0 calc(100% - var(--b)) / 100% 1px no-repeat,
+      linear-gradient(var(--f2h-bl, var(--l)), var(--f2h-bl, var(--l))) var(--f2h-cell-l) 100% / 1px var(--b) no-repeat,
+      linear-gradient(var(--f2h-bl, var(--l)), var(--f2h-bl, var(--l))) calc(100% - var(--f2h-cell-r)) 100% / 1px var(--b) no-repeat,
+      linear-gradient(var(--f2h-bar-shade, #06192b33), var(--f2h-bar-shade, #06192b33)) 0 100% / 100% var(--b) no-repeat;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui[data-site-section="3"] { --f2h-bar-shade: #0000; --f2h-bl: #dcefff5c; }
+
+  /* SOUND: the left cell */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound {
+    position: fixed !important;
+    inset: auto auto var(--f2h-edge) var(--f2h-edge);
+    width: var(--f2h-cell-l);
+    min-width: 0;
+    height: var(--f2h-bar);
+    min-height: 0;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 0 0 calc(var(--f2h-frame-cut) * .55 + 12px);
+    --f2h-f: #0000;
+    --f2h-l: #0000;
+    scale: none;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, var(--f2h-frame-cut) 100%, 0 calc(100% - var(--f2h-frame-cut)));
+    transition: none;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound:is(:hover, :focus-visible) {
+    --f2h-f: #ffffff1c;
+    scale: none;
+    outline: none;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-header-sound .fi-icon { order: 0; flex: none; }
+
+  /* where you are: 01 / 05 and the section's name, at the start of the middle cell (it stood beside the logo) */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .fi-footer {
+    inset: auto auto calc(var(--f2h-edge) + (var(--f2h-bar) - 24px) / 2) calc(var(--f2h-edge) + var(--f2h-cell-l) + 22px);
+    width: max-content;
+    height: 24px;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-footer-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: auto;
+    height: 24px;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-footer-center::before {
+    content: "";
+    flex: none;
+    width: 5px;
+    height: 5px;
+    background: var(--f2-accent, #a9dcff);
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-footer-total {
+    display: block !important;
+    order: -1;
+    color: var(--f2-accent, #a9dcff);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: .14em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  /* the bar's ink is light in every section (the type layer makes it dark in the news section, for the pale pill SOUND used to be) */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui[data-site-section="3"] :is(.fi-header #flow2-header-sound, .fi-header #flow2-header-sound > span, .fi-footer-current) {
+    color: #f2f8fc !important;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui[data-site-section="3"] .fi-header #flow2-header-sound .fi-icon { color: var(--f2-accent, #a9dcff); }
+
+  /* the scroll hint: the middle of the bar */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui > .f2-feel-hint {
+    position: fixed;
+    bottom: calc(var(--f2h-edge) + (var(--f2h-bar) - 15.4px) / 2);
+    text-shadow: none;
+  }
+
+  /* NEXT: the right cell */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2h-next {
+    position: fixed;
+    inset: auto var(--f2h-edge) var(--f2h-edge) auto;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    width: var(--f2h-cell-r);
+    height: var(--f2h-bar);
+    margin: 0;
+    padding: 0 calc(var(--f2h-frame-cut) * .55 + 14px) 0 0;
+    border: 0;
+    background: #0000;
+    color: #f2f8fc;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    pointer-events: auto;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--f2h-frame-cut)), calc(100% - var(--f2h-frame-cut)) 100%, 0 100%);
+    transition: background-color .3s ease, color .3s ease;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2h-next:is(:hover, :focus-visible) { background: #ffffff1c; outline: none; }
+  /* a small arrow built of squares */
+  .f2h-next i {
+    position: relative;
+    top: -4px;
+    flex: none;
+    width: 2px;
+    height: 2px;
+    margin-inline: 4px;
+    background: currentColor;
+    box-shadow: 0 2px, -4px 4px, 0 4px, 4px 4px, -2px 6px, 0 6px, 2px 6px, 0 8px;
+    transition: translate .45s cubic-bezier(.2, .8, .2, 1);
+  }
+  .f2h-next:is(:hover, :focus-visible) i { translate: 0 3px; }
+
+  /* the sections, as a row of links at the top right */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .f2h-nav {
+    position: fixed;
+    inset: var(--f2h-inset) calc(var(--f2h-inset) + 128px) auto auto;
+    z-index: 3;
+    display: none;
+    align-items: center;
+    gap: clamp(14px, 1.7vw, 26px);
+    height: 44px;
+    pointer-events: auto;
+  }
+  @media (min-width: 1240px) {
+    :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .f2h-nav { display: flex; }
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui .f2h-nav button {
+    position: relative;
+    margin: 0;
+    padding: 14px 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--f2h-ink);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: .6;
+    cursor: pointer;
+    text-shadow: 0 1px 8px #06192b55;
+    transition: opacity .3s ease;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui[data-site-section="3"] .f2h-nav button { text-shadow: none; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui .f2h-nav button:is(:hover, :focus-visible) { opacity: 1; outline: none; }
+  /* the current section: full strength, a square before it */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui .f2h-nav button::before {
+    content: "";
+    position: absolute;
+    left: -11px;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    margin-top: -2px;
+    background: currentColor;
+    opacity: 0;
+    scale: 0;
+    transition: opacity .3s ease, scale .45s cubic-bezier(.2, .8, .2, 1);
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body :is(
+    .finnovation-ui[data-site-section="0"] .f2h-nav [data-section="0"], .finnovation-ui[data-site-section="1"] .f2h-nav [data-section="1"],
+    .finnovation-ui[data-site-section="2"] .f2h-nav [data-section="2"], .finnovation-ui[data-site-section="3"] .f2h-nav [data-section="3"],
+    .finnovation-ui[data-site-section="4"] .f2h-nav [data-section="4"]) { opacity: 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body :is(
+    .finnovation-ui[data-site-section="0"] .f2h-nav [data-section="0"], .finnovation-ui[data-site-section="1"] .f2h-nav [data-section="1"],
+    .finnovation-ui[data-site-section="2"] .f2h-nav [data-section="2"], .finnovation-ui[data-site-section="3"] .f2h-nav [data-section="3"],
+    .finnovation-ui[data-site-section="4"] .f2h-nav [data-section="4"])::before { opacity: 1; scale: 1; }
+
+  /* the canyon's moving titles stand on the bar instead of the edge of the window; SOUND no longer needs room at their right */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body .finnovation-ui {
+    --flow2-baseline: calc(var(--f2h-bar) + var(--f2h-edge) - var(--ui-inset, 0px));
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui > .flow2-route {
+    -webkit-mask-image: linear-gradient(90deg, #0000 0, #000 84px, #000 calc(100% - 84px), #0000 100%);
+    mask-image: linear-gradient(90deg, #0000 0, #000 84px, #000 calc(100% - 84px), #0000 100%);
+  }
+
+  /* WHY's card numbers: in the bar, as a row of square cells */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress {
+    top: auto;
+    bottom: calc(var(--f2h-edge) + (var(--f2h-bar) - 30px) / 2);
+    height: 30px;
+    min-height: 0;
+    align-items: center;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol { gap: 0; align-items: center; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button {
+    width: 40px;
+    min-width: 0;
+    height: 30px;
+    min-height: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(var(--f2h-l), var(--f2h-l)) 0 50% / 1px 12px no-repeat;
+    box-shadow: none;
+    opacity: 1;
+    scale: none;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button:is([aria-current], [aria-selected="true"], .is-active) {
+    background: var(--f2h-light);
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  }
+}
+
+/* the bar's backing: a dark, blurred strip. Only where something would otherwise show through the bar: the reading sections (principles to
+   the footer, where copy scrolls under it) and the news section (pale ground above, dark foot). Elsewhere the scene shows through the bar. */
+.f2h-bar { display: none; }
+@media (min-width: 961px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2h-bar {
+    display: block;
+    position: fixed;
+    inset: auto var(--f2h-edge) var(--f2h-edge) var(--f2h-edge);
+    height: var(--f2h-bar);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    background: #071c2ed9;
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    backdrop-filter: blur(14px) saturate(1.15);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--f2h-frame-cut)), calc(100% - var(--f2h-frame-cut)) 100%, var(--f2h-frame-cut) 100%, 0 calc(100% - var(--f2h-frame-cut)));
+    transition: opacity .6s ease, visibility 0s linear .6s;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open])[data-flow2-rail="hide"] body.is-ready .finnovation-ui > .f2h-bar,
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui[data-site-section="3"] > .f2h-bar { opacity: 1; visibility: visible; transition: opacity .6s ease, visibility 0s; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui[data-site-section="3"] > .f2h-bar { background: #0a2438b8; }
+}
+
+/* ------------------------------------------------------------------ MENU: a cut block with a four-square mark */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header #flow2-menu-toggle {
+  --f2h-f: var(--f2h-light);
+  --f2h-l: #0000;
+  --f2h-k: 12px;
+  gap: 11px;
+  min-width: 0;
+  padding: 0 19px 0 17px;
+  color: #103047;
+  box-shadow: none;
+  transition: scale .45s var(--f2h-ease);
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header #flow2-menu-toggle:is(:hover, :focus-visible) { --f2h-f: #f1f9ff; box-shadow: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle::after { content: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon {
+  order: -1;
+  display: grid !important;
+  grid-template-columns: repeat(2, 3px);
+  gap: 3px;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  transform: none;
+  rotate: 0deg;
+  transition: rotate .6s var(--f2h-ease);
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon i {
+  display: block;
+  position: static;
+  width: 3px;
+  height: 3px;
+  margin: 0;
+  border-radius: 0;
+  background: currentColor;
+  transform: none;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle:is(:hover, :focus-visible) .fi-grid-icon { transform: none; rotate: 90deg; }
+
+/* ------------------------------------------------------------------ the left list of sections: squares, three strengths */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section] { border-radius: 0; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]::after { border-radius: 0; transition: scale .45s var(--f2h-ease), opacity .3s ease; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section][aria-current]::after { scale: 1.5; }
+@media (min-width: 961px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section] .fi-rail-zh { opacity: .62; transition: opacity .3s ease; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]:is(:hover, :focus-visible) .fi-rail-zh { opacity: .9; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section][aria-current] .fi-rail-zh { opacity: 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail::before { opacity: .55; }
+}
+
+/* ------------------------------------------------------------------ cut blocks: every button that was a pill or a disc */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-header :is(#flow2-menu-toggle, #flow2-header-sound),
+  .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action,
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button),
+  .finnovation-ui :is(.site-card-controls, .site-news-controls) button,
+  .finnovation-ui .site-card-count,
+  #fiWorld .fiw-top i,
+  #fi-menu :is(.fi-menu-close, .flow2-menu-contact, .flow2-menu-sound, .flow2-menu-play),
+  .flow2-static-news-links button) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - var(--f2h-k)) 0, 100% var(--f2h-k), 100% 100%, var(--f2h-k) 100%, 0 calc(100% - var(--f2h-k)));
+  background:
+    linear-gradient(var(--f2h-l), var(--f2h-l)) 0 0 / calc(100% - var(--f2h-k)) 1px no-repeat,
+    linear-gradient(var(--f2h-l), var(--f2h-l)) 100% 100% / 1px calc(100% - var(--f2h-k)) no-repeat,
+    linear-gradient(var(--f2h-l), var(--f2h-l)) 100% 100% / calc(100% - var(--f2h-k)) 1px no-repeat,
+    linear-gradient(var(--f2h-l), var(--f2h-l)) 0 0 / 1px calc(100% - var(--f2h-k)) no-repeat,
+    linear-gradient(45deg, #0000 calc(50% - 1px), var(--f2h-l) calc(50% - 1px) 50%, #0000 50%) 100% 0 / var(--f2h-k) var(--f2h-k) no-repeat,
+    linear-gradient(45deg, #0000 50%, var(--f2h-l) 50% calc(50% + 1px), #0000 calc(50% + 1px)) 0 100% / var(--f2h-k) var(--f2h-k) no-repeat,
+    linear-gradient(var(--f2h-f), var(--f2h-f)) !important;
+  box-shadow: none !important;
+  outline: none;
+}
+/* their old lights were drawn for a pill */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux::before,
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux::after { border-radius: 0; }
+
+/* the main call (light) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action {
+  --f2h-f: var(--f2h-light);
+  --f2h-l: #0000;
+  --f2h-chip-l: #1030473d;
+  --f2h-chip-f: #0000;
+  --f2h-chip-ink: #103047;
+  color: #103047;
+  transition: translate .45s var(--f2h-ease);
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action:is(:hover, :focus-visible) {
+  --f2h-f: #f1f9ff;
+  --f2h-chip-f: #103047;
+  --f2h-chip-ink: #eaf6ff;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action.btn-lux > span {
+  padding: 0 0 0 22px;
+  gap: 20px;
+}
+/* the others (dark glass, hairline) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button), .finnovation-ui :is(.site-card-controls, .site-news-controls) button, #fiWorld .fiw-top i) {
+  --f2h-f: var(--f2h-glass);
+  --f2h-l: #d6f4ff73;
+  --f2h-chip-l: #d6f4ff40;
+  --f2h-chip-f: #0000;
+  --f2h-chip-ink: #dff2ff;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button), .finnovation-ui :is(.site-card-controls, .site-news-controls) button):is(:hover, :focus-visible),
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-top:is(:hover, :focus-visible) i {
+  --f2h-f: #0b2a3bd9;
+  --f2h-l: #eaf8ff;
+  --f2h-chip-f: var(--f2h-light);
+  --f2h-chip-ink: #103047;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld :is(.fiwo-pill, .fiwp-next).btn-lux { padding: 0 0 0 22px; gap: 20px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-outro-links button.btn-lux { padding: 0 0 0 18px; gap: 16px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui :is(.site-card-controls, .site-news-controls) button { --f2h-k: 8px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-top i { --f2h-k: 8px; font-style: normal; }
+/* the count on the news cards */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui .site-card-count { --f2h-f: #e5f0f6e0; --f2h-l: #0000; --f2h-k: 7px; }
+
+/* the arrow's own cell, at the end of a block */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux .btn-chip {
+  align-self: stretch;
+  flex: 0 0 46px;
+  width: 46px;
+  height: auto;
+  min-height: 100%;
+  border: 0;
+  border-left: 1px solid var(--f2h-chip-l, #d6f4ff40);
+  border-radius: 0;
+  background: var(--f2h-chip-f, #0000);
+  color: var(--f2h-chip-ink, currentColor);
+  box-shadow: none;
+  transition: background-color .4s var(--f2h-ease), color .3s ease;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux .btn-chip::before { content: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux .btn-chip svg { stroke-linecap: square; stroke-linejoin: miter; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-outro-links .btn-lux .btn-chip { flex-basis: 40px; width: 40px; }
+/* a keyboard's mark: the block's own edges brighten (an outline would be cut with the corners) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld, #fi-menu) :is(.btn-lux, #flow2-menu-toggle, .fi-menu-close, .flow2-menu-contact, .site-card-controls button, .site-news-controls button):focus-visible {
+  --f2h-l: #ffffff;
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ small tags above the titles */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-copy-panel > .fi-copy-kicker, #fiWorld .flow-why-eyebrow, .finnovation-ui #latest-news > .site-section-eyebrow,
+  #fiWorld .fiw-global[data-flow-editorial="global"] > .fiw-kicker) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  gap: 12px;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-copy-panel > .fi-copy-kicker, #fiWorld .flow-why-eyebrow, .finnovation-ui #latest-news > .site-section-eyebrow,
+  #fiWorld .fiw-global[data-flow-editorial="global"] > .fiw-kicker)::before {
+  padding: 4px 11px 4px 8px;
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
+  font-family: var(--f2h-mono);
+  letter-spacing: .1em;
+}
+
+/* ------------------------------------------------------------------ pictures and cards: cut corners, no rounding */
+/* the photographs in WHY are drawn in the 3D scene (the figure is only their place): no cut here, it would only clip the caption */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-strategy .fiwo-photo--strategy { border-radius: 0; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-strategy .fiwo-photo--strategy :is(img, picture, figcaption, .fiwo-photo-frame) { border-radius: 0; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwp-card { border-radius: 0; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .flow2-static-news-card,
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .flow2-static-news-card :is(img, picture, figure) { border-radius: 0; }
+
+/* ------------------------------------------------------------------ the menu: a cut panel */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui #fi-menu {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 30px 100%, 0 calc(100% - 30px));
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu :is(.fi-menu-links button, .flow2-menu-home, [class*="reel"], video, img) { border-radius: 0; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-links button:is([aria-current], :hover, :focus-visible) {
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-close { --f2h-f: #0000; --f2h-l: #28577459; --f2h-k: 9px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-close:is(:hover, :focus-visible) { --f2h-f: #dcebf3; --f2h-l: #285774; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-sound { --f2h-f: #0000; --f2h-l: #28577459; --f2h-k: 9px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-sound:is(:hover, :focus-visible) { --f2h-f: #dcebf3; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-contact { --f2h-f: #102f45; --f2h-l: #0000; --f2h-k: 9px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-contact:is(:hover, :focus-visible) { --f2h-f: #1b4a68; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-play { --f2h-f: #ffffff; --f2h-l: #0000; --f2h-k: 9px; }
+
+/* ------------------------------------------------------------------ the entry: its two buttons */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .gate-choice .gate-btn {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+/* ------------------------------------------------------------------ the titles: a line of light (the streak) */
+/* flow2-hud.js adds .f2s to each big title it looks after and .f2s-on while that title stands. The page's own motion still says WHEN
+   (each word's scroll-led opacity is read as the signal); the words then arrive and leave in their own time, whole. */
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s .flow-copy-ink {
+  transform: none !important;
+  filter: none !important;
+  will-change: auto !important;
+}
+/* while a title stands, its words are whole whatever the scroll says; once it is leaving, the scroll's own fade is back on them */
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-on .flow-copy-ink { opacity: 1 !important; }
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s .flow-copy-word {
+  opacity: 0;
+  transform-origin: 50% 56%;
+  clip-path: none !important;
+}
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-on .flow-copy-word { opacity: 1; }
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-in .flow-copy-word {
+  animation: f2s-in var(--f2s-in, .68s) cubic-bezier(.2, .7, .2, 1) calc(var(--f2s-wait, 0ms) + var(--f2s-i, 0) * var(--f2s-step, 55ms)) both !important;
+  will-change: transform, filter, opacity;
+}
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-out .flow-copy-word {
+  animation: f2s-out var(--f2s-out, .26s) cubic-bezier(.3, .5, .5, 1) calc(var(--f2s-i, 0) * 16ms) both !important;
+  will-change: transform, filter, opacity;
+}
+/* a thin, wide smear of light opens into the word: the blur is taken before the squeeze, so it runs sideways only */
+@keyframes f2s-in {
+  0%   { opacity: 0; transform: scale(1.5, .028); filter: blur(15px) brightness(2.1); }
+  20%  { opacity: 1; transform: scale(1.36, .05); filter: blur(12px) brightness(2.1); }
+  48%  { opacity: 1; transform: scale(1.1, .62);  filter: blur(7px) brightness(1.5); }
+  100% { opacity: 1; transform: scale(1, 1);      filter: blur(0) brightness(1); }
+}
+@keyframes f2s-out {
+  0%   { opacity: 1; transform: scale(1, 1);      filter: blur(0) brightness(1); }
+  45%  { opacity: 1; transform: scale(1.22, .12); filter: blur(10px) brightness(1.8); }
+  100% { opacity: 0; transform: scale(1.5, .024); filter: blur(15px) brightness(2.1); }
+}
+/* the news item's name changes in place: the same arrival */
+html[data-flow2-streak]:not([data-render-mode="text"]) body .finnovation-ui .site-news-item.is-current .site-news-name {
+  transform-origin: 50% 56%;
+  animation: f2s-in .62s cubic-bezier(.2, .7, .2, 1) .08s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-flow2-streak] body .flow-copy-title.f2s .flow-copy-word { opacity: 1 !important; animation: none !important; }
+  html[data-flow2-streak] body .site-news-item.is-current .site-news-name { animation: none; }
+}
+
+/* the menu's film: its button keeps its size beside the wider monospace captions; the rows' marks are squares */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-play { flex: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-reel figcaption { font: 500 11px/1.4 var(--f2h-mono); letter-spacing: .14em; gap: clamp(12px, 1.6vw, 22px); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-links button::after { border-radius: 0; }
+
+/* F2H_READING_FADE: from the principles to the footer the page's copy scrolls up the screen. It fades out just above the bar (the 3D scene
+   behind is a separate layer and is not touched), so nothing runs under the bar or in the margin below it. */
+@media (min-width: 961px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open])[data-flow2-rail="hide"] body #fiWorld .fiw-viewport {
+    -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 72px), #0000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 8px));
+    mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 72px), #0000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 8px));
+  }
+}
+
+/* phones and narrow screens: SOUND is a cut block of dark glass at the foot (it was a pill) */
+@media (max-width: 960px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound {
+    --f2h-f: var(--f2h-glass);
+    --f2h-l: #d6f4ff73;
+    --f2h-k: 10px;
+    scale: none;
+  }
+}
+/* the phone's plain news page (white): both header buttons as white cut blocks with a grey edge, side by side */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header :is(#flow2-menu-toggle, #flow2-header-sound) {
+  --f2h-f: #ffffff;
+  --f2h-l: #9fb6c7;
+  --f2h-k: 10px;
+  scale: none;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header #flow2-header-sound {
+  inset: max(var(--blue-inset), env(safe-area-inset-top)) calc(max(var(--blue-inset), env(safe-area-inset-right)) + 104px) auto auto;
+}
+
+/* F2H_PIN: the globe's home label (the only place label that is a block; the others are bare words and must not be cut) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-pin.is-home > span {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}

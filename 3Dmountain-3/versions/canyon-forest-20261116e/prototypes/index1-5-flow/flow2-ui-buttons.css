@@ -1,0 +1,80 @@
+/* Flow2 buttons (2026-11-11): 「按鈕UI幫我改一下」, on a picture of the WHY section's dark block with its slash and arrow cell.
+   index1-5-flow2.html only, with the fourth interface. Loaded after flow2-hud.css.
+
+   The page's own buttons were pills, the arrow riding in a round bead: soft, and of one family with the drop. The overnight
+   interface (flow2-hud) had redrawn every one of them as a block: a rounded rectangle, a slash, the arrow in a cell cut on the
+   slant. This sheet gives the pill and the bead back, inside that interface's own measures: every height, padding and place
+   stays what flow2-hud.css made it (so nothing in the layout moves), only the shape changes.
+     - every block that was a pill or a disc is one again (the header pair, the calls, the WHY and footer buttons, the news
+       controls, the menu's buttons, the gate's two)
+     - no slash; the arrow sits in a bead at the pill's end, a dark bead on the light call, a ring on the dark ones
+     - under the pointer nothing moves: the bead and the pill's edge change colour, as before
+   html[data-flow2-btn] is set by a line in the page; ?btn=0 leaves the blocks as they were.
+
+   The prefix carries one more :not(#f2h) than flow2-hud.css's so that these few values are the last word. */
+
+/* ---- pills and discs ---- */
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-header :is(#flow2-menu-toggle, #flow2-header-sound),
+  .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action,
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button),
+  .finnovation-ui :is(.site-card-controls, .site-news-controls) button,
+  #fiWorld .fiw-top i,
+  #fi-menu :is(.fi-menu-close, .flow2-menu-contact, .flow2-menu-sound, .flow2-menu-play),
+  .flow2-static-news-links button) {
+  --f2h-rad: 999px;
+  --f2h-r: 999px;
+}
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud] body .gate-choice .gate-btn { border-radius: 999px; }
+
+/* ---- no slash: the arrow in a bead ---- */
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux {
+  --f2h-tan: 0;
+  --f2h-k: 0px;
+  --f2b-d: calc(var(--f2h-bh, 46px) - 16px);     /* the bead: a ring of eight pixels of the pill round it */
+}
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux .btn-chip {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  flex: 0 0 var(--f2b-d);
+  width: var(--f2b-d);
+  height: var(--f2b-d);
+  min-height: 0;
+  margin: 0 7px 0 0;
+  padding: 0;
+  border: 1px solid var(--f2b-bead-l, #0000);
+  border-radius: 50%;
+  clip-path: none;
+  background: var(--f2b-bead, #103047);
+  color: var(--f2b-bead-ink, #eaf6ff);
+  transition: background-color .35s ease, border-color .35s ease, color .3s ease;
+}
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux:is(:hover, :focus-visible) .btn-chip {
+  background: var(--f2b-bead-on, var(--f2b-bead, #103047));
+  border-color: var(--f2b-bead-l-on, var(--f2b-bead-l, #0000));
+  color: var(--f2b-bead-ink-on, var(--f2b-bead-ink, #eaf6ff));
+}
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-outro-links .btn-lux .btn-chip { flex-basis: var(--f2b-d); width: var(--f2b-d); }
+
+/* the light call: a dark bead; its words a little further from the round end, and no diamond before them (the pill never had one) */
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action {
+  --f2b-bead: #103047;
+  --f2b-bead-ink: #eaf6ff;
+  --f2b-bead-on: #0a2233;
+}
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action.btn-lux > span { padding: 0 0 0 28px; gap: 0; }
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action.btn-lux .btn-chip { margin-left: 18px; }
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action .fi-grid-icon { display: none !important; }
+
+/* the dark ones (WHY, the footer's links): the bead is a ring, and fills with the interface's light under the pointer */
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button) {
+  --f2b-bead: #0000;
+  --f2b-bead-l: #d6f4ff80;
+  --f2b-bead-ink: #dff2ff;
+  --f2b-bead-on: var(--f2h-light, #d4edfa);
+  --f2b-bead-l-on: var(--f2h-light, #d4edfa);
+  --f2b-bead-ink-on: #103047;
+}
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body #fiWorld :is(.fiwo-pill, .fiwp-next).btn-lux { padding: 0 0 0 28px; gap: 16px; }
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-btn][data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-outro-links button.btn-lux { padding: 0 0 0 22px; gap: 12px; }

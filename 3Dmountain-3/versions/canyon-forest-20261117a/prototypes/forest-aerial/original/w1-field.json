@@ -1,0 +1,18 @@
+{
+ "w": 747,
+ "h": 418,
+ "cell": 0.018741633199464525,
+ "phiMax": 9.0,
+ "lakeCenterUV": [
+  0.5087,
+  0.4928
+ ],
+ "turn": "clockwise seen from above (north up), 38 deg in the lake",
+ "layout": [
+  "phi u16",
+  "cover u8",
+  "hit u8",
+  "shore u8 (cells*16)"
+ ],
+ "by": "w1_bake.py"
+}

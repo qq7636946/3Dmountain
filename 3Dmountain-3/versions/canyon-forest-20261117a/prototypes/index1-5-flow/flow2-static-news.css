@@ -1,0 +1,129 @@
+/* An ordinary, natively scrollable news section for Flow2 touch devices. */
+.flow2-static-news[hidden] { display: none; }
+.flow2-static-news {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #b4c7d5 transparent;
+  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
+  background: #eaf0f5;
+  color: #132f44;
+  font: 400 15px/1.65 "Noto Sans TC", system-ui, sans-serif;
+}
+.flow2-static-news:focus { outline: none; }
+/* The header (logo, SOUND, MENU) floats over the page: a band in the page's own colour stays at the top, so the cards pass under it
+   instead of colliding with the header (2026-11-10). It takes no room: the content starts below it as before.
+   The id is in the selector because the page's inline `#latest-news::before` (the desktop heading's ring; this page shares the id) would
+   otherwise win; its ring properties are reset here. */
+#latest-news.flow2-static-news::before {
+  content: "";
+  position: sticky;
+  inset: 0 auto auto;
+  top: 0;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: max(76px, calc(env(safe-area-inset-top, 0px) + 64px));
+  margin-bottom: calc(-1 * max(76px, calc(env(safe-area-inset-top, 0px) + 64px)));
+  border: 0;
+  border-radius: 0;
+  translate: none;
+  opacity: 1;
+  transform: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  background: linear-gradient(180deg, #eaf0f5 0 58%, #eaf0f5d9 74%, #eaf0f500);
+  pointer-events: none;
+}
+.flow2-static-news-content {
+  width: min(100%, 1100px);
+  margin-inline: auto;
+  padding: max(76px, calc(env(safe-area-inset-top, 0px) + 60px)) clamp(16px, 4vw, 42px)
+    max(92px, calc(env(safe-area-inset-bottom, 0px) + 76px));
+}
+.flow2-static-news-heading { margin-bottom: 25px; }
+.flow2-static-news-heading h2 {
+  margin: 3px 0 8px;
+  font: 500 clamp(36px, 6.2vw, 62px)/1.1 var(--site-font, "Oswald", sans-serif);
+  letter-spacing: .035em;
+}
+.flow2-static-news-heading p:last-child { color: #455c6e; font-size: 13px; }
+.flow2-static-news-kicker {
+  color: #3e6179;
+  font: 500 11px/1.55 "Noto Sans TC", system-ui, sans-serif;
+  letter-spacing: .12em;
+}
+.flow2-static-news-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: clamp(12px, 2.1vw, 24px);
+}
+.flow2-static-news-card {
+  background: #fff;
+  border: 1px solid #cbd9e3;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.flow2-static-news-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  background: #d8e4eb;
+}
+.flow2-static-news-card-copy { padding: 16px 18px 18px; }
+.flow2-static-news-card h3 { margin: 4px 0 7px; font-size: 19px; line-height: 1.4; }
+.flow2-static-news-card h3 + p { color: #455c6e; font-size: 14px; }
+.flow2-static-news-status { margin-top: 12px; color: #537087; font-size: 12px; }
+.flow2-static-news-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 22px; }
+.flow2-static-news-links button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #9bb1c1;
+  border-radius: 6px;
+  background: #fff;
+  color: #132f44;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.flow2-static-news-links button:focus-visible { outline: 2px solid #356784; outline-offset: 2px; }
+html[data-flow2-plain-news-open] :is(#gl, #flow2-recorded-frame, .wash, .grain, .alp-grain, .flow-optics, .fi-copy) {
+  visibility: hidden !important;
+}
+html[data-flow2-plain-news-open] body.is-ready .finnovation-ui > :is(.fi-veil, .fi-frame, .flow2-blue-frame, .flow2-site-atlas, .fi-rail, .fi-footer) {
+  display: none !important;
+}
+html[data-flow2-plain-news-open] .finnovation-ui::before,
+html[data-flow2-plain-news-open] .finnovation-ui::after,
+html[data-flow2-plain-news-open] .fi-header::before,
+html[data-flow2-plain-news-open] .fi-header::after { content: none !important; }
+html[data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header {
+  --flow2-frost: #132f44;
+  --alp-bridge-ink: 1 !important;
+}
+html[data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header :is(#flow2-header-sound, #flow2-menu-toggle) {
+  color: #132f44 !important;
+  background: #fff !important;
+  border: 1px solid #b9cad7 !important;
+  border-radius: 6px;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+  transition: none !important;
+}
+html[data-flow2-section-wipe] .site-section-veil[data-plain-news-handoff] {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+}
+html[data-flow2-section-wipe] .site-section-veil[data-plain-news-handoff]::before,
+html[data-flow2-section-wipe] .site-section-veil[data-plain-news-handoff]::after { display: none; }
+@media (min-width: 768px) {
+  .flow2-static-news-content { padding-top: max(124px, calc(env(safe-area-inset-top, 0px) + 108px)); }
+}

@@ -1,0 +1,274 @@
+/* Flow2 lock-on labels (2026-11-11): what flow2-ui-lockon.js needs drawn. index1-5-flow2.html only.
+   Every rule waits for html[data-flow2-lockon], which that script sets (the fourth interface only; ?lockon=0 and ?hud=0 to 3 leave the
+   labels as they were). Client: 「山谷的標籤可以改成類似圖一這種風格嗎 好像軍事戰機鎖定掃描風」.
+   Hairlines in the interface's own pale blue and white; no red, no glow, nothing that blinks. One arrival per target, then still. */
+
+html[data-flow2-lockon] {
+  --f2u-lk: 46px;                    /* the box's side */
+  --f2u-lk-gap: 7px;                 /* between the box and its label */
+  --f2u-lk-ink: #f2f9fe;
+  --f2u-lk-soft: #cfe4f2;
+  --f2u-lk-a: var(--f2-accent, #a9dcff);
+  --f2u-lk-face: "Oswald", "Noto Sans TC", "Arial Narrow", sans-serif;
+  --f2u-lk-fs: 11px;                 /* the readout and the small Latin line */
+  --f2u-lk-name: 12px;               /* a canyon mark's name */
+  --f2u-lk-zh: 15px;                 /* a strategy's Chinese name */
+}
+@media (min-width: 1680px) { html[data-flow2-lockon] { --f2u-lk: 52px; --f2u-lk-fs: 12px; --f2u-lk-name: 13px; --f2u-lk-zh: 16px; } }
+/* a short window: the title block stands closer under the valley's rivers, the boxes are a step smaller */
+@media (min-width: 761px) and (max-height: 820px) { html[data-flow2-lockon] { --f2u-lk: 44px; } }
+@media (max-width: 760px) { html[data-flow2-lockon] { --f2u-lk: 40px; --f2u-lk-gap: 6px; --f2u-lk-fs: 10px; --f2u-lk-name: 11px; --f2u-lk-zh: 13px; } }
+
+/* the old drawing steps aside: the marks themselves stay (their place is read from them) */
+html[data-flow2-lockon] #flow2-canyon-atlas .flow2-atlas-marker { display: none; }
+html[data-flow2-lockon] .alp-labels .alp-pin[data-kind="tag"] { visibility: hidden !important; }
+/* the river's traced course under the canyon's targets: one fine line, no halo (the dashed links join the targets) */
+html[data-flow2-lockon] #flow2-canyon-atlas .flow2-atlas-halo { display: none; }
+html[data-flow2-lockon] #flow2-canyon-atlas .flow2-atlas-line { stroke-width: 1; opacity: .5; }
+
+html[data-flow2-lockon] .f2u-lock {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: var(--f2u-lk-face);
+  color: var(--f2u-lk-ink);
+}
+html[data-flow2-lockon][data-render-mode="text"] .f2u-lock { display: none; }
+
+/* ---- the links ---- */
+html[data-flow2-lockon] .f2u-lk-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+html[data-flow2-lockon] .f2u-lk-links line {
+  fill: none;
+  stroke: #dcf1fd;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  stroke-linecap: butt;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+html[data-flow2-lockon] .f2u-lk-links line.is-on { opacity: .8; visibility: visible; transition: opacity .6s ease .42s, visibility 0s; }
+
+/* ---- a target ---- */
+html[data-flow2-lockon] .f2u-lk {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+html[data-flow2-lockon] .f2u-lk.is-on { opacity: 1; visibility: visible; transition: opacity .2s ease, visibility 0s; }
+html[data-flow2-lockon] .f2u-lk-box {
+  position: absolute;
+  left: calc(var(--f2u-lk) / -2);
+  top: calc(var(--f2u-lk) / -2);
+  width: var(--f2u-lk);
+  height: var(--f2u-lk);
+}
+/* the square: a hairline all round, its four corners drawn heavier; a breath of dark glass inside keeps it readable on cloud and water */
+html[data-flow2-lockon] .f2u-lk-frame {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 1px solid rgb(214 239 255 / 44%);
+  background: rgb(6 25 43 / 9%);
+  box-shadow: 0 0 0 1px rgb(6 25 43 / 13%);
+  transition: border-color .4s ease;
+}
+html[data-flow2-lockon] .f2u-lk-frame::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  --c: var(--f2u-lk-ink);
+  --n: 7px;
+  background:
+    linear-gradient(var(--c), var(--c)) 0 0 / var(--n) 1px, linear-gradient(var(--c), var(--c)) 0 0 / 1px var(--n),
+    linear-gradient(var(--c), var(--c)) 100% 0 / var(--n) 1px, linear-gradient(var(--c), var(--c)) 100% 0 / 1px var(--n),
+    linear-gradient(var(--c), var(--c)) 0 100% / var(--n) 1px, linear-gradient(var(--c), var(--c)) 0 100% / 1px var(--n),
+    linear-gradient(var(--c), var(--c)) 100% 100% / var(--n) 1px, linear-gradient(var(--c), var(--c)) 100% 100% / 1px var(--n);
+  background-repeat: no-repeat;
+}
+/* the one in hand (FOUR PATHS: the path just reached) is drawn whole */
+html[data-flow2-lockon] .f2u-lk.is-locked .f2u-lk-frame { border-color: rgb(236 248 255 / 88%); }
+/* the point itself */
+html[data-flow2-lockon] .f2u-lk-box > i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgb(6 25 43 / 30%);
+}
+/* the readout, in the box's top-left corner */
+html[data-flow2-lockon] .f2u-lk-xy {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  display: block;
+  font: 500 var(--f2u-lk-fs)/1 var(--f2u-lk-face);
+  letter-spacing: .05em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--f2u-lk-soft);
+  text-shadow: 0 1px 2px rgb(6 25 43 / 55%);
+}
+html[data-flow2-lockon] .f2u-lk-box .f2-feel-copy { text-shadow: 0 1px 2px rgb(6 25 43 / 55%); }
+
+/* ---- the label ---- */
+html[data-flow2-lockon] .f2u-lk-label {
+  position: absolute;
+  display: block;
+  white-space: nowrap;
+  font: 600 var(--f2u-lk-name)/1.25 var(--f2u-lk-face);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--f2u-lk-ink);
+  text-shadow: 0 1px 2px rgb(6 25 43 / 60%), 0 0 12px rgb(6 25 43 / 34%);
+}
+html[data-flow2-lockon] .f2u-lk-label b { margin-right: .62em; font-weight: 500; color: var(--f2u-lk-a); font-variant-numeric: tabular-nums; }
+html[data-flow2-lockon] .f2u-lk-zh {
+  display: block;
+  font: 500 var(--f2u-lk-zh)/1.3 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: .05em;
+  text-transform: none;
+}
+html[data-flow2-lockon] .f2u-lk-zh b { font: 500 var(--f2u-lk-fs)/1 var(--f2u-lk-face); letter-spacing: .14em; vertical-align: .14em; }
+html[data-flow2-lockon] .f2u-lk-en {
+  display: block;
+  margin-top: 3px;
+  font: 500 var(--f2u-lk-fs)/1.3 var(--f2u-lk-face);
+  letter-spacing: .16em;
+  color: var(--f2u-lk-soft);
+}
+/* where the label stands (the script picks the first free place, and keeps it while it is free) */
+html[data-flow2-lockon] .f2u-lk[data-at="tl"] .f2u-lk-label { left: calc(var(--f2u-lk) / -2); bottom: calc(var(--f2u-lk) / 2 + var(--f2u-lk-gap)); }
+html[data-flow2-lockon] .f2u-lk[data-at="tr"] .f2u-lk-label { right: calc(var(--f2u-lk) / -2); bottom: calc(var(--f2u-lk) / 2 + var(--f2u-lk-gap)); text-align: right; }
+html[data-flow2-lockon] .f2u-lk[data-at="bl"] .f2u-lk-label { left: calc(var(--f2u-lk) / -2); top: calc(var(--f2u-lk) / 2 + var(--f2u-lk-gap)); }
+html[data-flow2-lockon] .f2u-lk[data-at="br"] .f2u-lk-label { right: calc(var(--f2u-lk) / -2); top: calc(var(--f2u-lk) / 2 + var(--f2u-lk-gap)); text-align: right; }
+html[data-flow2-lockon] .f2u-lk[data-at="r"] .f2u-lk-label { left: calc(var(--f2u-lk) / 2 + var(--f2u-lk-gap) + 4px); top: 0; translate: 0 -50%; }
+html[data-flow2-lockon] .f2u-lk[data-at="l"] .f2u-lk-label { right: calc(var(--f2u-lk) / 2 + var(--f2u-lk-gap) + 4px); top: 0; translate: 0 -50%; text-align: right; }
+html[data-flow2-lockon] .f2u-lk[data-at="none"] .f2u-lk-label { left: 0; top: 0; visibility: hidden; }
+/* a strategy whose river point is out of sight: its words alone, where its tag stood */
+html[data-flow2-lockon] .f2u-lk.is-floating .f2u-lk-box { display: none; }
+html[data-flow2-lockon] .f2u-lk.is-floating .f2u-lk-label {
+  inset: 0 auto auto 0;
+  translate: none;
+  padding: 6px 10px 7px;
+  border-radius: 3px;
+  background: rgb(6 25 43 / 40%);
+  box-shadow: inset 0 0 0 1px rgb(214 239 255 / 18%);
+  text-align: left;
+  visibility: visible;
+}
+
+/* ---- arrival, once: the box closes onto the point, then the readout, the point and the label ---- */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-flow2-lockon] .f2u-lk.is-on.is-arriving .f2u-lk-frame { animation: f2u-lk-close .72s cubic-bezier(.16, 1, .3, 1) both; }
+  html[data-flow2-lockon] .f2u-lk.is-on.is-arriving .f2u-lk-box > i { animation: f2u-lk-in .3s ease .46s both; }
+  html[data-flow2-lockon] .f2u-lk.is-on.is-arriving .f2u-lk-xy { animation: f2u-lk-in .3s ease .3s both; }
+  html[data-flow2-lockon] .f2u-lk.is-on.is-arriving .f2u-lk-label { animation: f2u-lk-in .55s ease .42s both; }
+}
+@keyframes f2u-lk-close { from { scale: 1.75; opacity: 0; } 60% { opacity: 1; } }
+@keyframes f2u-lk-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-flow2-lockon] :is(.f2u-lk, .f2u-lk-links line, .f2u-lk-frame) { transition: none !important; }
+}
+
+/* ==== FOUR PATHS as one family (second pass, 2026-11-11): 「4個項目設計 幫我再思考看看有沒有更好的設計」 ====
+   Every strategy is the same unit, a FLAG: the box on its river, and its name on a hairline pole that continues one side of the
+   box (above the box, or below it when above is taken). The name is the larger type: the four names are what this chapter says.
+   flow2-ui-lockon.js marks the layer [data-family]; ?paths=1 leaves the first pass. */
+html[data-flow2-lockon] .f2u-lock[data-family] {
+  --f2u-lk-gap: 0px;                 /* the pole runs into the box's corner */
+  --f2u-lk-zh: 19px;                 /* a strategy's Chinese name */
+  --f2u-lk-no: 12px;                 /* its number */
+}
+@media (min-width: 1680px) { html[data-flow2-lockon] .f2u-lock[data-family] { --f2u-lk-zh: 20px; --f2u-lk-no: 13px; } }
+@media (max-width: 1320px) { html[data-flow2-lockon] .f2u-lock[data-family] { --f2u-lk-zh: 17px; } }
+@media (max-width: 760px) { html[data-flow2-lockon] .f2u-lock[data-family] { --f2u-lk-zh: 14px; --f2u-lk-no: 10px; } }
+
+/* the pole: the label's own edge, on the side where it meets the box */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk-label {
+  padding: 1px 0 11px 12px;
+  border-left: 1px solid rgb(214 239 255 / 48%);
+  transition: border-color .4s ease;
+}
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="tr"] .f2u-lk-label { padding: 1px 12px 11px 0; border-left: 0; border-right: 1px solid rgb(214 239 255 / 48%); }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="bl"] .f2u-lk-label { padding: 11px 0 1px 12px; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="br"] .f2u-lk-label { padding: 11px 12px 1px 0; border-left: 0; border-right: 1px solid rgb(214 239 255 / 48%); }
+/* the strategy just reached: its box is drawn whole (above), and its pole with it */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-locked .f2u-lk-label { border-color: rgb(236 248 255 / 88%); }
+
+/* the name */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk-zh { font-size: var(--f2u-lk-zh); line-height: 1.2; letter-spacing: .07em; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk-zh b { font-size: var(--f2u-lk-no); margin-right: .78em; letter-spacing: .12em; vertical-align: .2em; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk-en { margin-top: 5px; letter-spacing: .2em; }
+
+/* a strategy whose river is not in the picture at all (a phone's upright crop): the same name on the same pole, without a box
+   and without the dark plate the first pass gave it */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-floating .f2u-lk-label {
+  padding: 1px 0 1px 12px;
+  border-radius: 0;
+  border-left: 1px solid rgb(214 239 255 / 48%);
+  border-right: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* the lock: once, as a strategy arrives, two hairlines the width and height of the window close in on its point. One slow
+   sweep of a one-pixel line at half strength, then gone: nothing blinks and nothing stays. */
+html[data-flow2-lockon] .f2u-lk-scan { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+html[data-flow2-lockon] .f2u-lk-scan::before,
+html[data-flow2-lockon] .f2u-lk-scan::after { content: ""; position: absolute; opacity: 0; }
+html[data-flow2-lockon] .f2u-lk-scan::before { left: -50vw; top: -.5px; width: 100vw; height: 1px; background: linear-gradient(90deg, transparent, rgb(214 239 255 / 70%) 30%, rgb(214 239 255 / 70%) 70%, transparent); }
+html[data-flow2-lockon] .f2u-lk-scan::after { left: -.5px; top: -50vh; width: 1px; height: 100vh; background: linear-gradient(180deg, transparent, rgb(214 239 255 / 70%) 30%, rgb(214 239 255 / 70%) 70%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-flow2-lockon] .f2u-lk.is-on.is-arriving .f2u-lk-scan::before { animation: f2u-lk-scan-x .95s cubic-bezier(.3, .7, .2, 1) both; }
+  html[data-flow2-lockon] .f2u-lk.is-on.is-arriving .f2u-lk-scan::after { animation: f2u-lk-scan-y .95s cubic-bezier(.3, .7, .2, 1) .06s both; }
+  /* the family's box closes after the lines have found the point */
+  html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-on.is-arriving .f2u-lk-frame { animation-delay: .22s; }
+  html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-on.is-arriving .f2u-lk-xy { animation-delay: .5s; }
+  html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-on.is-arriving .f2u-lk-box > i { animation-delay: .62s; }
+  html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-on.is-arriving .f2u-lk-label { animation-delay: .6s; }
+}
+@keyframes f2u-lk-scan-x { 0% { opacity: 0; transform: scaleX(1); } 22% { opacity: .5; } 78% { opacity: .42; } 100% { opacity: 0; transform: scaleX(.03); } }
+@keyframes f2u-lk-scan-y { 0% { opacity: 0; transform: scaleY(1); } 22% { opacity: .5; } 78% { opacity: .42; } 100% { opacity: 0; transform: scaleY(.05); } }
+
+/* the flag's eight places (flow2-ui-lockon.js picks the one with the least water under the name). The pole is always the label's
+   edge on the box's side; a breath of the interface's dark glass lies behind the name and thins out away from the pole, so the
+   name reads on rock, cloud and water alike. The four strategies carry the same glass: none is the odd one out. */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk-label {
+  --f2u-pole: rgb(214 239 255 / 48%);
+  background: linear-gradient(to right, rgb(6 25 43 / 38%), rgb(6 25 43 / 20%) 58%, rgb(6 25 43 / 0));
+}
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-locked .f2u-lk-label { --f2u-pole: rgb(236 248 255 / 88%); }
+/* flying to the right of its pole */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk:is([data-at="tl"], [data-at="ur"], [data-at="bl"], [data-at="dr"]) .f2u-lk-label {
+  border-left: 1px solid var(--f2u-pole); border-right: 0; text-align: left;
+}
+/* flying to the left of its pole */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk:is([data-at="tr"], [data-at="ul"], [data-at="br"], [data-at="dl"]) .f2u-lk-label {
+  border-right: 1px solid var(--f2u-pole); border-left: 0; text-align: right;
+  background: linear-gradient(to left, rgb(6 25 43 / 38%), rgb(6 25 43 / 20%) 58%, rgb(6 25 43 / 0));
+}
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk:is([data-at="tl"], [data-at="ur"]) .f2u-lk-label { padding: 2px 18px 11px 12px; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk:is([data-at="tr"], [data-at="ul"]) .f2u-lk-label { padding: 2px 12px 11px 18px; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk:is([data-at="bl"], [data-at="dr"]) .f2u-lk-label { padding: 11px 18px 2px 12px; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk:is([data-at="br"], [data-at="dl"]) .f2u-lk-label { padding: 11px 12px 2px 18px; }
+/* where each stands: the pole runs into a corner of the box */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="ul"] .f2u-lk-label { right: calc(var(--f2u-lk) / 2); bottom: calc(var(--f2u-lk) / 2); left: auto; top: auto; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="ur"] .f2u-lk-label { left: calc(var(--f2u-lk) / 2); bottom: calc(var(--f2u-lk) / 2); right: auto; top: auto; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="dl"] .f2u-lk-label { right: calc(var(--f2u-lk) / 2); top: calc(var(--f2u-lk) / 2); left: auto; bottom: auto; }
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk[data-at="dr"] .f2u-lk-label { left: calc(var(--f2u-lk) / 2); top: calc(var(--f2u-lk) / 2); right: auto; bottom: auto; }
+/* a number set after its name when the flag flies left would read backwards: the number always leads the line */
+html[data-flow2-lockon] .f2u-lock[data-family] .f2u-lk.is-floating .f2u-lk-label { background: linear-gradient(to right, rgb(6 25 43 / 38%), rgb(6 25 43 / 20%) 58%, rgb(6 25 43 / 0)); padding: 4px 18px 5px 12px; text-align: left; }
+
+/* a very wide window: the four keep their weight against the picture (at 2560 the 20px names were a hundredth of its width) */
+@media (min-width: 2200px) { html[data-flow2-lockon] .f2u-lock[data-family] { --f2u-lk: 60px; --f2u-lk-zh: 24px; --f2u-lk-no: 15px; --f2u-lk-fs: 13px; } }

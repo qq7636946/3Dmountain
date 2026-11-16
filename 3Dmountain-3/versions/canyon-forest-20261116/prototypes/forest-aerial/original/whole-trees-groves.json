@@ -1,0 +1,62 @@
+{
+ "what": "The trees of the canyon-style bake (whole_groves_web.py)",
+ "count": 18505,
+ "layout": "count x 5 Uint16 (x, z, h, w, rot), then count x Uint8 kind",
+ "ranges": {
+  "x": [
+   -7.0,
+   7.0
+  ],
+  "z": [
+   -3.917002,
+   3.917002
+  ],
+  "h": [
+   0.0,
+   0.25
+  ],
+  "w": [
+   0.0,
+   0.12
+  ],
+  "rot": [
+   0.0,
+   6.2832
+  ]
+ },
+ "kinds": [
+  "broad A (atlas top-view crown 1)",
+  "broad B (atlas top-view crown 2)",
+  "pine (asset model)"
+ ],
+ "medium": 11103,
+ "atlas": "whole-atlas.webp 1024 RGBA, layout of the asset atlas (2048 px rects below)",
+ "rects": {
+  "crownA": [
+   43,
+   1473,
+   595,
+   1989
+  ],
+  "crownB": [
+   680,
+   1479,
+   1231,
+   1994
+  ],
+  "broadSide": [
+   37,
+   592,
+   528,
+   1311
+  ],
+  "spruceSide": [
+   1564,
+   550,
+   1972,
+   1782
+  ]
+ },
+ "rocks_note": "x, z, footprint, rot \u2014 whole-rock.glb (footprint 1) + whole-rock.jpg, from forest/moss_covered_rock_pile (CC-BY 4.0, Lassi Kaukonen)",
+ "credit": "Trees: \"a forest (3) with a road at night for game\" by dasy444 (Sketchfab), CC-BY 4.0"
+}

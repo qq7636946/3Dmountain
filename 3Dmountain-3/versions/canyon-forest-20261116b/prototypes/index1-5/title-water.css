@@ -1,0 +1,137 @@
+/* 2026-11-01. Titles after the DUNKIRK title: heavy geometric capitals, very open, one line running most of the frame, and the letters are windows onto a bright sea.
+   The fill has two layers. Under: the colour run across the line (--ttl-run), aqua to periwinkle, which is also the floor of the fill's brightness and what shows until the picture
+   has loaded. Over: the client's own sea (images/world/title-sea.webp, .qa/index1-5/type-team/a/make-plate.py), enlarged so that one wave crosses several letters: crests are
+   white with alpha, troughs a little blue with alpha.
+   Static on purpose: nothing animates the background, so this paints once; will-change keeps the page's own per-frame translate and opacity on the compositor, so it is not repainted.
+   The bloom is a text-shadow with no offset: light, not a drop shadow, rastered once with the text. No filter, no blend mode.
+   Dials: the variables below. --ttl-sea is the picture's scale in em of the title, --ttl-sea-y which band of it. --ttl-fit and --ttl-track per chapter set one measure for ten lines. */
+@property --ttl-sweep { syntax: '<percentage>'; inherits: false; initial-value: -40%; }
+@keyframes ttl-sweep { from { --ttl-sweep: -30%; } to { --ttl-sweep: 135%; } }
+:root {
+  --ttl-run: linear-gradient(90deg, #c0faf1 0%, #98f0f3 30%, #86e5fb 58%, #a6d5ff 80%, #bdcaff 100%);
+  --ttl-water: url(../../images/world/title-sea.webp);
+  --ttl-font: var(--site-font, 'Oswald'), 'Noto Sans TC', sans-serif;   /* Montserrat 600 before 2026-11-04, then Instrument Serif, then Oswald */
+  /* three rings of light: a tight one that lifts the letter off the picture, a soft one, a wide one that lights the air */
+  --ttl-bloom: 0 0 .09em rgba(214, 243, 255, .55), 0 0 .36em rgba(136, 208, 255, .44), 0 0 1.05em rgba(92, 168, 255, .36);
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body :is(.fi-copy-panel .fi-motion-node:is(h1, h2), .fiw-statement, .fiwo-strategy-title, .fiwp-title, .fiw-outro-title, .fi-menu-intro h2) {
+    font-family: var(--ttl-font);
+    font-weight: var(--ttl-weight, 400);
+    font-style: normal;
+    letter-spacing: var(--ttl-track, 5px);
+    word-spacing: var(--ttl-words, .1em);
+    line-height: var(--ttl-lead, 1.24);
+    text-transform: uppercase;
+    text-shadow: var(--ttl-bloom);
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-image: var(--ttl-water), var(--ttl-run);
+    background-size: var(--ttl-sea, 30em) auto, 100% 100%;
+    background-position: var(--ttl-sea-x, 50%) var(--ttl-sea-y, 28%), 0 0;
+    background-repeat: repeat, no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    will-change: translate, opacity;
+  }
+  /* centred titles: the box hugs the text so that the colour run spans the line; the tracking after the last letter is evened out on the left */
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body .fi-copy-panel .fi-motion-node:is(h1, h2) {
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: none;
+    margin-inline: auto;
+    padding-left: var(--ttl-track, 5px);
+    font-size: clamp(26px, calc(4.17vw * var(--ttl-short, 1)), 60px);   /* the client's 60px, from about 1440 wide */
+    position: relative;
+    background-image: linear-gradient(104deg, transparent calc(var(--ttl-sweep) - 13%), rgba(255, 255, 255, .95) var(--ttl-sweep), transparent calc(var(--ttl-sweep) + 13%)), var(--ttl-water), var(--ttl-run);
+    background-size: 100% 100%, var(--ttl-sea, 30em) auto, 100% 100%;
+    background-position: 0 0, var(--ttl-sea-x, 50%) var(--ttl-sea-y, 28%), 0 0;
+    background-repeat: no-repeat, repeat, no-repeat;
+  }
+  /* a soft light in the air behind the line, so that it floats */
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body .fi-copy-panel .fi-motion-node:is(h1, h2)::before {
+    content: '';
+    position: absolute;
+    inset: -.85em -9%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(50% 50% at 50% 54%, rgba(120, 192, 255, .3), rgba(120, 192, 255, .1) 55%, rgba(120, 192, 255, 0) 100%);
+  }
+  /* when a chapter arrives, one sweep of light crosses its line, as light runs over water. Only for its length does the line repaint. */
+  @media (prefers-reduced-motion: no-preference) {
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body .fi-copy-panel.is-active .fi-motion-node:is(h1, h2) { animation: ttl-sweep 1.9s cubic-bezier(.3, .05, .25, 1) .3s 1 both; }
+  }
+  /* a short window brings the chapter rail down beside the line: the line gives way */
+  @media (min-width: 961px) and (max-height: 800px) { :root { --ttl-short: .84; } }
+  /* the client's numbers from the inspector: weight 600, tracking 10px. One size for every chapter, so nothing jumps from one to the next; the words kept apart, since open tracking closes the gaps between them. */
+  @media (min-width: 961px) {
+    /* one line at every desktop width. The page's own panel stops at about 1260 px and its rules outrank a plain selector, so these name the panel in full; the panel centres what runs past it. */
+    html[data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel > .fi-motion-node:is(h1, h2) { white-space: nowrap; text-wrap: nowrap; width: max-content; max-width: none; }
+    html[data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.is-ready .finnovation-ui .fi-copy-panel > .fi-motion-node:is(h1, h2) > span { display: inline; white-space: nowrap; }
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body :is(.fiw-outro-title, .fi-menu-intro h2) { white-space: nowrap; width: max-content; }
+  }
+  /* the first two chapters sit on the pale mid-blue band of the sky: the same run, lifted, so that its periwinkle end does not sink into a periwinkle sky */
+  html[data-look="index1-5"] body :is(#chapter-knowledge, #chapter-innovation) { --ttl-run: linear-gradient(90deg, #cdfcf3 0%, #aaf5f5 30%, #9cedfc 58%, #bce3ff 80%, #d2deff 100%); }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body :is(.fiwo-strategy-title, .fiwp-title, .fiw-outro-title, .fi-menu-intro h2) { width: fit-content; }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiwp-title { --ttl-track: 5px; --ttl-sea: 24em; font-size: clamp(25px, 3.4vw, 56px); }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiwo-strategy-title { --ttl-track: 4px; --ttl-sea: 24em; font-size: clamp(25px, 2.8vw, 46px); }
+  /* the quiet roles, same family: smaller type, so the picture is calmer and the run paler. Over the bright Earth the sentence is close to white. */
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiw-statement {
+    --ttl-track: 2px; --ttl-words: .08em; --ttl-sea: 34em;
+    --ttl-run: linear-gradient(90deg, #f0fffb 0%, #e2fbfc 50%, #e4ecff 100%);
+    --ttl-lead: 1.38;
+    --ttl-bloom: none;   /* invisible on cloud, and the page's line masks would cut it */
+    font-size: clamp(19px, 1.85vw, 34px);
+  }
+  /* three lines, as the page has now: the column is widened to the right, where there is only Earth */
+  @media (min-width: 1101px) { html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiw-statement { grid-column: 6 / 24; } }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body :is(.fiw-outro-title, .fi-menu-intro h2) { --ttl-track: 3px; --ttl-sea: 26em; --ttl-lead: 1.46; font-size: clamp(18px, 1.9vw, 32px); max-width: none; }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) #fiWorld .fiw-outro-title { max-width: none; }   /* experience.css holds it to 12em, by id */
+  @media (max-width: 680px) {
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body .fi-copy-panel .fi-motion-node:is(h1, h2) { --ttl-track: 3px; --ttl-sea: 20em; font-size: clamp(20px, 7vw, 32px); }
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body .fi-copy-panel .fi-motion-node:is(h1, h2) > span { display: block; }
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiwp-title { --ttl-track: 2.5px; font-size: clamp(20px, 6.2vw, 30px); }
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiwo-strategy-title { --ttl-track: 3px; font-size: clamp(22px, 7.1vw, 34px); }
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body :is(.fiw-outro-title, .fi-menu-intro h2) { --ttl-track: 1.5px; font-size: clamp(16px, 4.7vw, 24px); }
+    html[data-look="index1-5"]:not([data-render-mode="text"]) body .fiw-statement { --ttl-track: 1px; font-size: clamp(17px, 4.9vw, 22px); }
+  }
+}
+
+/* 2026-11-01. The closing LOGO: mark and words, one calm stack at every window size.
+   The title holds one line: its size follows both the width and the height of the window and is capped by what fits (the old 60rem box wrapped it above 1650px wide).
+   The block's height is known here, so its top is textY (the dial) until the window is too short for that; then it stays off the bottom edge.
+   The mark's share of the screen: markY, horizon, shortFrom/shortTo/shortSize (logoLake), markScale (logoSeal). */
+html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on {
+  --fisl-title-em: 14.4;                                       /* the one-line title's width in em at its tracking */
+  --fisl-title-base: clamp(24px, min(3.5vw, 6.1vh), 84px);
+  --fisl-title-size: min(calc(var(--fisl-title-base) * var(--fisl-k, 1)), calc((100vw - 48px) / var(--fisl-title-em)));
+  --fisl-label-size: clamp(var(--type-label, 12px), 1.3vh, 14px);
+  --fisl-copy-size: clamp(var(--type-support, 14px), 1.5vh, 17px);
+  --fisl-gap-kicker: calc(clamp(8px, 1.8vh, 22px) * var(--fisl-k, 1));
+  --fisl-gap-title: calc(clamp(8px, 2vh, 24px) * var(--fisl-k, 1));
+  --fisl-gap-copy: calc(clamp(6px, 1.3vh, 16px) * var(--fisl-k, 1));
+  --fisl-copy-lines: 2;
+  --fisl-block: calc(var(--fisl-label-size) * 1.5 + var(--fisl-gap-kicker) + var(--fisl-title-size) * 1.24 + var(--fisl-gap-title) + var(--fisl-copy-size) * 1.7 * (1 + var(--fisl-copy-lines)) + var(--fisl-gap-copy));
+  --fisl-foot: max(clamp(24px, 5.4vh, 72px), env(safe-area-inset-bottom, 0px));
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fisl-text {
+  top: min(calc(var(--fisl-y, .715) * 100%), calc(100% - var(--fisl-block) - var(--fisl-foot)));
+  width: calc(100% - 48px);
+}
+html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fisl-kicker { margin-bottom: var(--fisl-gap-kicker); font-size: var(--fisl-label-size); }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fisl-title { font-size: var(--fisl-title-size); max-width: none; white-space: nowrap; text-wrap: nowrap; }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fisl-zh { margin-top: var(--fisl-gap-title); font-size: var(--fisl-copy-size); }
+html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fisl-line { margin-top: var(--fisl-gap-copy); font-size: var(--fisl-copy-size); max-width: none; }
+/* an upright window (a tablet): the title takes more of the narrow width */
+@media (min-width: 681px) and (max-aspect-ratio: 1/1) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on { --fisl-title-base: clamp(24px, min(5vw, 6.1vh), 84px); }
+}
+/* the phone: tracking .14em, one line still */
+@media (max-width: 680px) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on { --fisl-title-em: 12.9; --fisl-title-base: clamp(20px, min(6.4vw, 6.1vh), 38px); }
+}
+/* a very short window: the two sentences share one line */
+@media (max-height: 460px) {
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on { --fisl-copy-lines: 1; }
+  html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fisl-line br { display: none; }
+}

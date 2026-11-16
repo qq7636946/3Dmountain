@@ -5,11 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>恒灝創新 FINNOVATION｜Canyon forest</title>
-  <!-- index1-5-canyon-forest (published 2026-11-16): the page and every file it uses live in versions/canyon-forest-20261116/,
-       so the live index1-5.html and the other published pages keep their own files. This address forwards there (query and hash kept). -->
-  <meta http-equiv="refresh" content="0; url=versions/canyon-forest-20261116/index1-5-canyon-forest.html">
-  <script>location.replace('versions/canyon-forest-20261116/index1-5-canyon-forest.html' + location.search + location.hash);</script>
+  <!-- index1-5-canyon-forest (updated 2026-11-16 afternoon): the page and every file it uses live in versions/canyon-forest-20261116b/, so the live index1-5.html keeps its own files. Forwards there, query and hash kept. -->
+  <script>
+    (function () {
+      var t = new URL("versions/canyon-forest-20261116b/index1-5-canyon-forest.html", location.href), q = new URLSearchParams(location.search);
+      q.forEach(function (v, k) { t.searchParams.set(k, v); });
+      location.replace(t.pathname + t.search + location.hash);
+    })();
+  </script>
   <style>html,body{margin:0;height:100%;background:#1d2d48}</style>
 </head>
-<body><a href="versions/canyon-forest-20261116/index1-5-canyon-forest.html" style="position:fixed;left:16px;bottom:16px;font:12px sans-serif;color:#cfe0f5">Open the page</a></body>
+<body><a href="versions/canyon-forest-20261116b/index1-5-canyon-forest.html" style="position:fixed;left:16px;bottom:16px;font:12px sans-serif;color:#cfe0f5">Open the page</a></body>
 </html>

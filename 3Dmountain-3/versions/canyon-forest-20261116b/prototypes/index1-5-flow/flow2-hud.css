@@ -1,0 +1,807 @@
+/* FOURTH ROUND (2026-11-11): no frame, no bar; the instruments stand on the two edges. See the end of this file, and
+   .qa/index1-5/flow2-hud/make-v2.cjs + round4.tpl.css, which write it. What follows first is the third round's text less its frame, its
+   bar and its reading fade. */
+/* Flow2 HUD, second version (2026-11-10) with its third round (2026-11-11). index1-5-flow2.html only.
+   Client: 「index1-5-flow2.html的UI都改成 https://hubtown.co.in/ 這網站類型的UI」 (first version, kept as flow2-hud-v1.css, ?hud=1), then
+   「依照這樣的框線UI幫我調整一下 不要跟參考網址一模一樣」, 「等高地紋路拿掉，整體幫我優化+設計細節加強10倍」 and 「我要有點弧角」 (second version,
+   kept as it stood as flow2-hud-v2.css, ?hud=2), then 「主要是畫面的細緻度加強 UI幫我適合的處理一下」 (third round: the same interface, fitted to
+   the picture). The third round, in short:
+   - the right ink on every ground: from the news through the white cloud passage into the Earth the frame, the logo, the caption and
+     the stops keep their dark ink until the picture has turned dark (flow2-hud.js reads the cloud deck's own clock and marks
+     .finnovation-ui[data-f2h-ground="pale"]); from the news to the end of the page the bar stands on its own dark glass
+   - a wide window (1680px and more) gets one step more of everything small: labels 12px, the bar 58px, the numeral 28px
+   - every slash leans the same (--f2h-tan), no control moves or grows under the pointer, every control answers the pointer and the keyboard
+   - over content the list of sections is a gauge (five stops, the present one numbered); the brand's line is said once more only, under
+     the closing mark; the canyon's survey grid is gone and its stops are drawn in the frame's hand; the footer runs whole to the window's foot
+
+   Still a hairline frame with a bar at its foot, but drawn in this page's own way, not the reference's:
+   - arcs, not cut corners: the frame and every block have slightly rounded corners (--f2h-arc; ?arc=N tries another size, 0 = square)
+   - the origin: the frame's top left corner is drawn heavier; cells and arrows are divided by a slash, the one slanted line of the system
+   - the bar's top line is a waterline: a ruler with the five sections marked on it, and the place in the whole site travels along it as a
+     diamond (the page already writes that number: --fi-progress on .fi-footer-progress i)
+   - the frame's left edge is the gauge of the five sections (diamonds on the line, numbers, leaders); the logo and MENU are tied to the
+     frame by short leaders; a caption sits in the top line (Taipei's time, the head office's coordinates as the globe gives them)
+   - where you are is read large (02 / 05, both names, FLOW n%), NEXT names the section it goes to, the brand's line stands in the middle
+   - labels are the page's own two faces again (Oswald, Noto Sans TC): no third typeface, nothing asked from a font service
+   - the canyon's contour lines are gone; its survey lines and labels stay clear of the frame's own furniture
+   The titles' line of light (after web3.esqrd.co) is unchanged.
+
+   Every rule waits for html[data-flow2-hud] (set by flow2-hud.js): ?hud=0 leaves the page as it was, ?hud=1 loads the first version,
+   ?streak=0 keeps the page's own title motion, ?contours=1 shows the contour lines again.
+
+   Weight: the type layer (flow2-type-b.css) uses :root:not(#f2b):not(#f2b) with !important; the :not(#f2h) triple passes it.
+   A block: --f2h-l its hairline, --f2h-f its fill, --f2h-fh the fill that rises from its foot under the pointer (--f2h-rise, a registered
+   property so that it can move), --f2h-r its corner. A hover only changes those values: nothing moves.
+   This file is written by .qa/index1-5/flow2-hud/make-v2.cjs (edit there, or here and say so there). */
+
+@property --f2h-rise { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] {
+  --f2h-mono: "Oswald", "Noto Sans TC", "Arial Narrow", sans-serif;  /* the label face (the name is the first version's) */
+  --f2h-edge: var(--blue-edge, 17px);
+  --f2h-inset: var(--blue-inset, 34px);
+  --f2h-gap: calc(var(--f2h-inset) - var(--f2h-edge));
+  --f2h-arc: 16px;                               /* the frame's corner */
+  --f2h-r: calc(var(--f2h-arc) * .5);            /* a button's */
+  --f2h-rs: calc(var(--f2h-arc) * .32);          /* a small control's, a tag's */
+  --f2h-bar: 52px;
+  --f2h-tan: .365;                               /* every slash leans the same (20°): its run is its height × this */
+  --f2h-run: calc(var(--f2h-bar) * var(--f2h-tan));
+  --f2h-cell-l: 172px;
+  --f2h-k: 14px;
+  --f2h-fs: 11px;                                /* a label in the bar */
+  --f2h-fs-cap: 10px;                            /* the caption in the top line */
+  --f2h-fs-n: 25px;                              /* the large numeral */
+  --f2h-fs-zh: 12px;                             /* the section's Chinese name in the bar */
+  --f2h-m: 11px;                                 /* a section's mark on the waterline */
+  --f2h-n-lift: 1px;                             /* the numeral's figures stand low in their line: lifted to the labels' centre line */
+  --f2h-next-why: 218px;                         /* the width of NEXT while it reads "NEXT 04 LATEST NEWS" (WHY's numbers keep clear of it) */
+  --f2h-line: #dcefff5c;
+  --f2h-l: #dcefff5c;
+  --f2h-b: #eef8ffe6;
+  --f2h-t: #dcefff3d;
+  --f2h-a: var(--f2-accent, #a9dcff);
+  --f2h-f: #0000;
+  --f2h-ink: #f2f8fc;
+  --f2h-ink-dark: #10283d;
+  --f2h-light: #d4edfa;
+  --f2h-glass: #06192b85;
+  --f2h-ease: cubic-bezier(.2, .8, .2, 1);
+  --f2h-cap: 0px;
+}
+@media (max-width: 960px) { :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] { --f2h-arc: 12px; } }
+/* a wide window has more picture around the same small type: one step more of everything small. --f2-size-label is the type layer's
+   label size (kickers, counters, SOUND, MENU, the stops' numbers): it takes the same step, so every label on the page stays one size */
+@media (min-width: 1680px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] { --f2h-bar: 58px; --f2h-cell-l: 184px; --f2h-fs: 12px; --f2h-fs-cap: 11px; --f2h-fs-n: 28px; --f2h-n-lift: 2px; --f2h-next-why: 232px; --f2h-fs-zh: 13px; --f2h-m: 13px; --f2h-line: #dcefff69; --f2h-t: #dcefff45; --f2-size-label: 12px; }
+}
+@media (min-width: 2200px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] { --f2h-bar: 64px; --f2h-cell-l: 198px; --f2h-fs: 13px; --f2h-fs-cap: 12px; --f2h-fs-n: 31px; --f2h-n-lift: 2px; --f2h-next-why: 248px; --f2h-fs-zh: 14px; --f2h-m: 14px; --f2-size-label: 13px; }
+}
+/* a pale ground (the news section; the white cloud passage into the Earth, which flow2-hud.js marks): dark lines and ink there, heavy
+   enough to hold on it (the bar has a dark backing, so the bar keeps light ones) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui:is([data-site-section="3"], [data-f2h-ground="pale"]) > :is(.flow2-blue-frame, .fi-header, .fi-rail, .f2h-cap, .f2h-next, .f2h-read, .f2h-bar) {
+  --f2h-line: #14344b80;
+  --f2h-l: #14344b80;
+  --f2h-b: #0f2c41;
+  --f2h-t: #14344b4d;
+  --f2h-a: #1c5f7c;
+  --f2h-ink: #10283d;
+}
+
+/* ------------------------------------------------------------------ the canyon: no contour lines; its survey sheet stays inside the frame */
+html[data-flow2-hud]:not([data-flow2-contours]) body #flow2-canyon-atlas .flow2-atlas-contours { display: none !important; }
+/* third round: no grid, crosses or guide lines laid over the picture either (they were another drawing hand than the frame's);
+   ?contours=1 brings the whole sheet back. What stays is the course and its three stops (the page's own diamonds), with the frame's hairline
+   for a leader and the bar's ink for a label */
+html[data-flow2-hud]:not([data-flow2-contours]) body #flow2-canyon-atlas :is(.flow2-atlas-grid, .flow2-atlas-register, .flow2-atlas-aerial-guides) { display: none !important; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #flow2-canyon-atlas .flow2-atlas-leader { stroke: #dcefff94; stroke-width: 1; stroke-dasharray: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #flow2-canyon-atlas .flow2-atlas-caption { fill: #f2f8fc; stroke: #06192b9e; stroke-width: 2.2px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #flow2-canyon-atlas .flow2-atlas-index { fill: #a9dcff; }
+@media (min-width: 961px) {
+  /* the sheet's lines, the course and its labels fade before the list of sections (left), the logo's row (top) and the bar (foot) */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #flow2-canyon-atlas > svg {
+    -webkit-mask-image: linear-gradient(90deg, #0000 0, #0000 128px, #000 208px), linear-gradient(180deg, #0000 0, #0000 86px, #000 126px, #000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 44px), #0000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 8px));
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(90deg, #0000 0, #0000 128px, #000 208px), linear-gradient(180deg, #0000 0, #0000 86px, #000 126px, #000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 44px), #0000 calc(100% - var(--f2h-edge) - var(--f2h-bar) - 8px));
+    mask-composite: intersect;
+  }
+}
+
+/* ------------------------------------------------------------------ the frame: gone (fourth round; flow2-hud-v3.css has how it was drawn) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui > .flow2-blue-frame { display: none !important; }
+/* the old frame's ticks and sheet lines are another drawing language */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui > :is(.fi-frame, .flow2-site-atlas) { display: none !important; }
+
+/* ------------------------------------------------------------------ the bar at the foot, and the frame's furniture (computers) */
+.f2h-nav, .f2h-next, .f2h-read, .f2h-cap, .f2h-motto { display: none; }
+/* (fourth round: the bar, its waterline and what stood in them are gone; see the end of this file) */
+
+/* ------------------------------------------------------------------ third round: the logo through the cloud passage */
+/* the page gives the logo its light ink at 28% of the cloud deck, when the picture is white; it keeps the dark ink it has in the news
+   until the picture under it has turned dark (flow2-hud.js clears the mark then) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui[data-f2h-ground="pale"] .fi-header .fi-brand { color: #13233a !important; }
+@media (prefers-reduced-motion: no-preference) {
+  /* the ink changes softly where the picture turns (not with "reduce motion") */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header .fi-brand { transition: color .45s ease; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui > .f2h-cap { transition: color .45s ease; }
+}
+
+/* ------------------------------------------------------------------ MENU: a block of dark glass; its mark is three lines that level out */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header #flow2-menu-toggle {
+  --f2h-f: var(--f2h-glass);
+  --f2h-l: #d6f4ff80;
+  --f2h-fh: var(--f2h-light);
+  gap: 13px;
+  min-width: 0;
+  padding: 0 18px 0 19px;
+  color: #f2f8fc;
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+  transition: --f2h-rise .5s var(--f2h-ease), color .3s ease .06s;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header #flow2-menu-toggle:is(:hover, :focus-visible) {
+  --f2h-rise: 100%;
+  --f2h-l: #eaf8ff;
+  color: #103047;
+  box-shadow: none;
+}
+/* third round: MENU keeps its size under the pointer and the finger (the feel layer grew it by 4.5%: no control moves or grows) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header #flow2-menu-toggle:is(:hover, :focus-visible, :active) { scale: none; }
+/* (the type layer gives this word a dark ink for the pale pill MENU used to be) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .flow2-menu-mobile-text { color: inherit !important; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle::after { content: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon {
+  order: 3;
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  width: 15px;
+  height: auto;
+  margin: 0;
+  transform: none;
+  rotate: none;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon i {
+  display: block;
+  position: static;
+  width: 15px;
+  height: 1px;
+  margin: 0;
+  border-radius: 0;
+  background: currentColor;
+  transform: none;
+  transition: width .45s var(--f2h-ease);
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon i:nth-child(2) { width: 10px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon i:nth-child(3) { width: 5px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle .fi-grid-icon i:nth-child(4) { display: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle:is(:hover, :focus-visible) .fi-grid-icon { transform: none; rotate: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-menu-toggle:is(:hover, :focus-visible) .fi-grid-icon i { width: 15px; }
+
+/* ------------------------------------------------------------------ the list of sections: stops on the frame's left edge */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section] { border-radius: var(--f2h-rs); }
+@media (min-width: 961px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail::before { opacity: 0; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section] { gap: 10px; }
+  /* a leader from the edge to the name */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]::before {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto -35px;
+    width: 26px;
+    height: 1px;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--f2h-line);
+    opacity: 1 !important;
+    transform: none;
+    translate: none;
+    transform-origin: 0 50%;
+    scale: .5 1;
+    transition: scale .5s var(--f2h-ease), background-color .3s ease;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]:is(:hover, :focus-visible, [aria-current])::before { scale: 1 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section][aria-current]::before { background: var(--f2h-a); }
+  /* the stop: a diamond on the frame's line */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]::after {
+    inset: calc(50% - 3.5px) auto auto -43.5px;
+    width: 7px;
+    height: 7px;
+    border: 1px solid var(--f2h-a);
+    border-radius: 0;
+    background: #0000;
+    box-shadow: none;
+    opacity: .85;
+    translate: none;
+    rotate: 45deg;
+    scale: 1;
+    transition: background-color .3s ease, scale .45s var(--f2h-ease), opacity .3s ease;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section][aria-current]::after { background: var(--f2h-a); opacity: 1; scale: 1.2; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section] .fi-rail-number {
+    display: block !important;
+    order: -1;
+    color: var(--f2h-a);
+    font: 500 10px/1 var(--f2h-mono);
+    letter-spacing: .12em;
+    font-variant-numeric: tabular-nums;
+    opacity: .74;
+    transition: opacity .3s ease;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]:is(:hover, :focus-visible, [aria-current]) .fi-rail-number { opacity: 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section] .fi-rail-zh { opacity: .8; transition: opacity .3s ease; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section]:is(:hover, :focus-visible) .fi-rail-zh { opacity: .95; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail > [data-section][aria-current] .fi-rail-zh { opacity: 1; }
+
+  /* third round. Over content (WHY, the news, the cloud passage, the Earth) the page hides the names: the list is then a gauge. Five
+     stops on the frame's line and only the present one keeps its number: nothing stands in the column where the titles of WHY and the
+     pictures of the news pass. Under the pointer or the keyboard the strip opens every stop on its own dark block (their numbers and
+     the marks on the line keep their place: nothing jumps) */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:not(:hover, :focus-within) > [data-section]:not([aria-current]) .fi-rail-number { opacity: 0; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail > [data-section]::after { opacity: .78; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail > [data-section]:is([aria-current], :hover, :focus-visible)::after { opacity: 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:is(:hover, :focus-within) > [data-section] {
+    margin-left: -12px;
+    padding: 0 14px 0 12px;
+    border-radius: var(--f2h-rs);
+    background: #06192be6;
+    box-shadow: inset 0 0 0 1px #d6f4ff33;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:is(:hover, :focus-within) > [data-section]::before { translate: 12px 0; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:is(:hover, :focus-within) > [data-section]::after { translate: 12px 0; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:is(:hover, :focus-within) > [data-section] :is(.fi-rail-zh, .fi-rail-number) { color: #d3e3ee !important; opacity: 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:is(:hover, :focus-within) > [data-section]:is([aria-current], :hover, :focus-visible) :is(.fi-rail-zh, .fi-rail-number) { color: #a9dcff !important; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail:is(:hover, :focus-within) > [data-section]:is(:hover, :focus-visible) { box-shadow: inset 0 0 0 1px #d6f4ff8c; }
+
+  /* on a pale ground (the news; the cloud passage) the stops are drawn in two inks, so that they hold on the pale ground, on white
+     and on the pictures that pass under them; the present stop's number stands on a small pale plate, as the cards' counter does */
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui:is([data-site-section="3"], [data-f2h-ground="pale"]) .fi-rail > [data-section]::after { border-color: #1c5f7c; background: #f2f8fc; opacity: 1; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui:is([data-site-section="3"], [data-f2h-ground="pale"]) .fi-rail > [data-section][aria-current]::after { background: #1c5f7c; box-shadow: 0 0 0 1.5px #f2f8fcd9; }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui:is([data-site-section="3"], [data-f2h-ground="pale"]) .fi-rail:not(:hover, :focus-within) > [data-section][aria-current] .fi-rail-number {
+    padding: 4px 6px 4px 8px;
+    margin-left: -3px;
+    border-radius: var(--f2h-rs);
+    background: #e7f1f7eb;
+    color: #10283d !important;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui[data-f2h-ground="pale"] .fi-rail > [data-section] :is(.fi-rail-zh, .fi-rail-number) { color: var(--f2-ink-light-2, #4b677d) !important; }
+}
+
+/* ------------------------------------------------------------------ blocks: every button that was a pill or a disc */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-header :is(#flow2-menu-toggle, #flow2-header-sound),
+  .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action,
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button),
+  .finnovation-ui :is(.site-card-controls, .site-news-controls) button,
+  .finnovation-ui .site-card-count,
+  #fiWorld .fiw-top i,
+  #fi-menu :is(.fi-menu-close, .flow2-menu-contact, .flow2-menu-sound, .flow2-menu-play),
+  .flow2-static-news-links button) {
+  border: 1px solid var(--f2h-l) !important;
+  border-radius: var(--f2h-rad, var(--f2h-r)) !important;
+  clip-path: none;
+  background:
+    linear-gradient(to top left, #0000 50%, var(--f2h-s, #0000) 50% calc(50% + 1px), #0000 calc(50% + 1px)) 100% 0 / var(--f2h-k) 100% no-repeat,
+    linear-gradient(var(--f2h-fh, #0000), var(--f2h-fh, #0000)) 0 100% / 100% var(--f2h-rise) no-repeat,
+    linear-gradient(var(--f2h-f), var(--f2h-f)) !important;
+  box-shadow: none !important;
+  outline: none;
+}
+/* their old lights were drawn for a pill */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux::before,
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux::after { border-radius: var(--f2h-r); }
+
+/* the main call (light): a diamond before its words, and the arrow's cell fills from below like water */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action {
+  --f2h-bh: 52px;
+  --f2h-f: var(--f2h-light);
+  --f2h-l: #0000;
+  --f2h-chip-l: #10304752;
+  --f2h-chip-f: #103047;
+  --f2h-chip-ink: #103047;
+  --f2h-chip-ink-on: #eaf6ff;
+  color: #103047;
+  transition: translate .45s var(--f2h-ease);
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action:is(:hover, :focus-visible) { --f2h-f: #f1f9ff; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action.btn-lux > span {
+  padding: 0 0 0 22px;
+  gap: 14px;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action .fi-grid-icon {
+  display: block !important;
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin: 0;
+  background: #1c5f7c;
+  transform: none;
+  rotate: 45deg;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui :is(#chapter-knowledge, .fi-copy-panel) .fi-copy-action .fi-grid-icon i { display: none !important; }
+/* the others (dark glass, hairline) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button), .finnovation-ui :is(.site-card-controls, .site-news-controls) button, #fiWorld .fiw-top i) {
+  --f2h-f: var(--f2h-glass);
+  --f2h-l: #d6f4ff73;
+  --f2h-chip-l: #d6f4ff59;
+  --f2h-chip-f: var(--f2h-light);
+  --f2h-chip-ink: #dff2ff;
+  --f2h-chip-ink-on: #103047;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  #fiWorld :is(.fiwo-pill, .fiwp-next, .fiw-outro-links button), .finnovation-ui :is(.site-card-controls, .site-news-controls) button):is(:hover, :focus-visible),
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-top:is(:hover, :focus-visible) i {
+  --f2h-f: #0b2a3bd9;
+  --f2h-l: #eaf8ff;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld :is(.fiwo-pill, .fiwp-next).btn-lux { padding: 0 0 0 24px; gap: 18px; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-outro-links button.btn-lux { --f2h-bh: 44px; padding: 0 0 0 20px; gap: 14px; }
+/* third round: the slash before an arrow's cell leans as every slash does: its run is the block's height (--f2h-bh) × --f2h-tan */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux { --f2h-k: calc(var(--f2h-bh, 46px) * var(--f2h-tan)); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui :is(.site-card-controls, .site-news-controls) button { --f2h-r: var(--f2h-rs); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-top i { --f2h-r: var(--f2h-rs); font-style: normal; }
+/* the count on the news cards */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui .site-card-count { --f2h-f: #e7f1f7eb; --f2h-l: #14344b3d; --f2h-r: var(--f2h-rs); }
+
+/* the arrow's own cell, at the end of a block: a slash before it, and a fill that rises under the pointer */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux .btn-chip {
+  align-self: stretch;
+  flex: 0 0 54px;
+  width: 54px;
+  height: auto;
+  min-height: 100%;
+  padding: 0 0 0 calc(var(--f2h-k) * .5);
+  border: 0;
+  border-radius: 0 calc(var(--f2h-r) - 1px) calc(var(--f2h-r) - 1px) 0;
+  clip-path: polygon(var(--f2h-k) 0, 100% 0, 100% 100%, 0 100%);
+  background:
+    linear-gradient(to top left, #0000 calc(50% - 1px), var(--f2h-chip-l, #d6f4ff59) calc(50% - 1px) 50%, #0000 50%) 0 0 / var(--f2h-k) 100% no-repeat,
+    linear-gradient(var(--f2h-chip-f, #0000), var(--f2h-chip-f, #0000)) 0 100% / 100% var(--f2h-rise) no-repeat;
+  color: var(--f2h-chip-ink, currentColor);
+  box-shadow: none;
+  transition: --f2h-rise .5s var(--f2h-ease), color .3s ease .08s;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux:is(:hover, :focus-visible) .btn-chip { --f2h-rise: 100%; color: var(--f2h-chip-ink-on, currentColor); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld) .btn-lux .btn-chip::before { content: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-outro-links .btn-lux .btn-chip { flex-basis: 48px; width: 48px; }
+/* a keyboard's mark: the block's own edges brighten (an outline would be cut with the corners) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(.finnovation-ui, #fiWorld, #fi-menu) :is(.btn-lux, #flow2-menu-toggle, .fi-menu-close, .flow2-menu-contact, .site-card-controls button, .site-news-controls button):focus-visible {
+  --f2h-l: #ffffff;
+  outline: none;
+}
+
+/* third round: the logo and BACK TO TOP wore a thick white box under the keyboard; they take the frame's hairline and arc */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-header .fi-brand:focus-visible { outline: 1px solid var(--f2h-b); outline-offset: 7px; border-radius: var(--f2h-rs); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-top:focus-visible { outline: 1px solid #eaf8ff; outline-offset: 6px; border-radius: var(--f2h-rs); }
+/* ------------------------------------------------------------------ small tags above the titles */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-copy-panel > .fi-copy-kicker, #fiWorld .flow-why-eyebrow, .finnovation-ui #latest-news > .site-section-eyebrow,
+  #fiWorld .fiw-global[data-flow-editorial="global"] > .fiw-kicker) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  gap: 12px;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body :is(
+  .finnovation-ui .fi-copy-panel > .fi-copy-kicker, #fiWorld .flow-why-eyebrow, .finnovation-ui #latest-news > .site-section-eyebrow,
+  #fiWorld .fiw-global[data-flow-editorial="global"] > .fiw-kicker)::before {
+  padding: 4px 10px 4px 9px;
+  border-radius: var(--f2h-rs);
+  font-family: var(--f2h-mono);
+  letter-spacing: .12em;
+}
+
+/* ------------------------------------------------------------------ pictures and cards: the same small arc */
+/* the photographs in WHY are drawn in the 3D scene (the figure is only their place): their own corners are not touched */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwp-card { border-radius: var(--f2h-r); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .flow2-static-news-card,
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .flow2-static-news-card :is(img, picture, figure) { border-radius: var(--f2h-r); }
+
+/* ------------------------------------------------------------------ the menu: a panel with the frame's arc */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui #fi-menu { border-radius: calc(var(--f2h-arc) + 2px); clip-path: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu :is(.fi-menu-links button, .flow2-menu-home, [class*="reel"], video, img) { border-radius: var(--f2h-r); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-links button::after { border-radius: 0; rotate: 45deg; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-close { --f2h-f: #0000; --f2h-l: #28577459; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-close:is(:hover, :focus-visible) { --f2h-f: #dcebf3; --f2h-l: #285774; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-sound { --f2h-f: #0000; --f2h-l: #28577459; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-sound:is(:hover, :focus-visible) { --f2h-f: #dcebf3; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-contact { --f2h-f: #102f45; --f2h-l: #0000; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-contact:is(:hover, :focus-visible) { --f2h-f: #1b4a68; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-play { --f2h-f: #ffffff; --f2h-l: #0000; --f2h-r: var(--f2h-rs); }
+
+/* ------------------------------------------------------------------ the entry: its two buttons */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .gate-choice .gate-btn { border-radius: var(--f2h-r); clip-path: none; }
+
+/* ------------------------------------------------------------------ the titles: a line of light (the streak) */
+/* flow2-hud.js adds .f2s to each big title it looks after and .f2s-on while that title stands. The page's own motion still says WHEN
+   (each word's scroll-led opacity is read as the signal); the words then arrive and leave in their own time, whole. */
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s .flow-copy-ink {
+  transform: none !important;
+  filter: none !important;
+  will-change: auto !important;
+}
+/* while a title stands, its words are whole whatever the scroll says; once it is leaving, the scroll's own fade is back on them */
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-on .flow-copy-ink { opacity: 1 !important; }
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s .flow-copy-word {
+  opacity: 0;
+  transform-origin: 50% 56%;
+  clip-path: none !important;
+}
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-on .flow-copy-word { opacity: 1; }
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-in .flow-copy-word {
+  animation: f2s-in var(--f2s-in, .68s) cubic-bezier(.2, .7, .2, 1) calc(var(--f2s-wait, 0ms) + var(--f2s-i, 0) * var(--f2s-step, 55ms)) both !important;
+  will-change: transform, filter, opacity;
+}
+html[data-flow2-streak]:not([data-render-mode="text"]):not(#f2s):not(#f2s) body .flow-copy-title.f2s.f2s-out .flow-copy-word {
+  animation: f2s-out var(--f2s-out, .26s) cubic-bezier(.3, .5, .5, 1) calc(var(--f2s-i, 0) * 16ms) both !important;
+  will-change: transform, filter, opacity;
+}
+/* a thin, wide smear of light opens into the word: the blur is taken before the squeeze, so it runs sideways only */
+@keyframes f2s-in {
+  0%   { opacity: 0; transform: scale(1.5, .028); filter: blur(15px) brightness(2.1); }
+  20%  { opacity: 1; transform: scale(1.36, .05); filter: blur(12px) brightness(2.1); }
+  48%  { opacity: 1; transform: scale(1.1, .62);  filter: blur(7px) brightness(1.5); }
+  100% { opacity: 1; transform: scale(1, 1);      filter: blur(0) brightness(1); }
+}
+@keyframes f2s-out {
+  0%   { opacity: 1; transform: scale(1, 1);      filter: blur(0) brightness(1); }
+  45%  { opacity: 1; transform: scale(1.22, .12); filter: blur(10px) brightness(1.8); }
+  100% { opacity: 0; transform: scale(1.5, .024); filter: blur(15px) brightness(2.1); }
+}
+/* the news item's name changes in place: the same arrival */
+html[data-flow2-streak]:not([data-render-mode="text"]) body .finnovation-ui .site-news-item.is-current .site-news-name {
+  transform-origin: 50% 56%;
+  animation: f2s-in .62s cubic-bezier(.2, .7, .2, 1) .08s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-flow2-streak] body .flow-copy-title.f2s .flow-copy-word { opacity: 1 !important; animation: none !important; }
+  html[data-flow2-streak] body .site-news-item.is-current .site-news-name { animation: none; }
+}
+
+/* the menu's film: its button keeps its size beside its captions */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-play { flex: none; }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .flow2-menu-reel figcaption { font: 500 11px/1.4 var(--f2h-mono); letter-spacing: .14em; gap: clamp(12px, 1.6vw, 22px); }
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fi-menu .fi-menu-links button::after { border-radius: 0; }
+
+/* phones and narrow screens: SOUND is a cut block of dark glass at the foot (it was a pill) */
+@media (max-width: 960px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound {
+    --f2h-f: var(--f2h-glass);
+    --f2h-l: #d6f4ff73;
+    --f2h-k: 10px;
+    scale: none;
+  }
+}
+/* the phone's plain news page (white): both header buttons as white cut blocks with a grey edge, side by side */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header :is(#flow2-menu-toggle, #flow2-header-sound) {
+  --f2h-f: #ffffff;
+  --f2h-l: #9fb6c7;
+  --f2h-k: 10px;
+  scale: none;
+}
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header #flow2-header-sound {
+  inset: max(var(--blue-inset), env(safe-area-inset-top)) calc(max(var(--blue-inset), env(safe-area-inset-right)) + 104px) auto auto;
+}
+
+/* third round, phones: the row of the five numbers is whole. The shared layout fades its last 25px (for a row that scrolls); this
+   page's row never scrolls, so the fade only cut the fifth number and the box round it when it is the present one */
+@media (max-width: 960px) {
+  :root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui > .fi-rail { -webkit-mask-image: none; mask-image: none; }
+}
+/* the phone's plain news page is white: MENU is a white block with dark ink there, no glass */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-plain-news-open] body.is-ready .finnovation-ui .fi-header #flow2-menu-toggle {
+  --f2h-fh: #0000;
+  color: #103047;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* F2H_PIN: the globe's home label (the only place label that is a block; the others are bare words) */
+:root:not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiw-pin.is-home > span { border-radius: var(--f2h-rs); clip-path: none; }
+
+/* ================================================================== fourth round (2026-11-11): no frame, no bar =====================
+   Client: 「圖一、二外框拿掉 這些設計看能不能移到左右兩邊 下面不要放那麼多 下方最多scroll 重新排出最完美的UI，跑馬燈拿掉 跟大家一樣這種標題」.
+   The picture has the whole middle and the whole foot of the screen. What stands on it:
+   - top left the logo, top right SOUND and MENU (two blocks of the same dark glass, side by side)
+   - the left edge: the list of the five sections, on an axis of its own that starts under the logo's left edge
+   - the right edge: where you are (the section's number over 05), the place in the whole site on a short vertical track with the
+     section's name written down beside it, FLOW n%, and NEXT with the section it goes to; Taipei's time heads that column
+   - the foot: the scroll hint on the opening screen (flow2-feel.js), nothing else. WHY's numbers sit under WHY's pictures and the
+     news' two buttons under the news' text.
+   The canyon's moving strip is not mounted (flow2-hud.js, the page's route script): its chapters show their own title block.
+   Written from .qa/index1-5/flow2-hud/round4.tpl.css by make-v2.cjs; the rules above this line are the third round's, less its frame,
+   its bar and what stood in them (flow2-hud-v3.css, ?hud=3, keeps those). */
+
+:root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] {
+  --f2u-n: 30px;                 /* the section's number in the right column */
+  --f2u-box: 44px;               /* SOUND's and MENU's height */
+}
+@media (min-width: 1680px) { :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] { --f2u-n: 34px; } }
+@media (min-width: 2200px) { :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] { --f2u-n: 38px; } }
+
+/* the numeral that rolls when the section changes (the third round's, kept) */
+.f2h-read-n { position: relative; display: block; overflow: hidden; font-variant-numeric: tabular-nums; }
+.f2h-read-n b { display: block; font-weight: 500; }
+.f2h-read-n b.is-out { position: absolute; inset: 0 0 auto auto; }
+.f2h-read-n[data-dir="down"] b.is-out { animation: f2h-roll-out-up .52s cubic-bezier(.2, .8, .2, 1) both; }
+.f2h-read-n[data-dir="down"] b.is-in { animation: f2h-roll-in-up .52s cubic-bezier(.2, .8, .2, 1) both; }
+.f2h-read-n[data-dir="up"] b.is-out { animation: f2h-roll-out-down .52s cubic-bezier(.2, .8, .2, 1) both; }
+.f2h-read-n[data-dir="up"] b.is-in { animation: f2h-roll-in-down .52s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes f2h-roll-out-up { to { translate: 0 -105%; opacity: 0; } }
+@keyframes f2h-roll-in-up { from { translate: 0 105%; opacity: 0; } }
+@keyframes f2h-roll-out-down { to { translate: 0 105%; opacity: 0; } }
+@keyframes f2h-roll-in-down { from { translate: 0 -105%; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .f2h-read-n b { animation: none !important; } .f2h-read-n b.is-out { display: none; } }
+
+@media (min-width: 961px) {
+  /* the page's own line of where you are (beside the logo) is read in the right column: kept for screen readers only */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .fi-footer { inset: auto auto 0 0; width: 1px; height: 1px; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-footer-center { display: block; width: 0; height: 0; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-footer-center > :is(.fi-footer-current, .fi-footer-total, .fi-footer-progress) {
+    position: absolute !important;
+    display: block !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ---------------------------------------------------------------- the left edge: the list of sections on its own axis */
+  /* the stops stood on the frame's line; they stand on a hairline of their own now, under the logo's left edge */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui > .fi-rail { left: max(var(--f2h-inset), env(safe-area-inset-left)); }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui .fi-rail::before {
+    left: -.5px;
+    width: 1px;
+    background: var(--f2h-line);
+    opacity: 1;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* over content (the gauge of five stops) the axis is lighter still */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-flow2-rail="compact"] body.is-ready .finnovation-ui .fi-rail::before { opacity: .7; }
+
+  /* ---------------------------------------------------------------- the right edge: where you are, and what comes next */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side {
+    position: fixed;
+    inset: 50% max(var(--f2h-inset), env(safe-area-inset-right)) auto auto;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    translate: 0 -50%;
+    color: var(--f2h-ink);
+    font: 500 var(--f2h-fs)/1.4 var(--f2h-mono);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px #06192b4d, 0 0 14px #06192b47;   /* the opening sky is pale: small pale-blue figures need an edge there */
+    pointer-events: none;                 /* only NEXT takes the pointer */
+    transition: opacity .5s ease, visibility 0s;
+  }
+  /* on a pale ground the dark ink stands by itself */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui:is([data-site-section="3"], [data-f2h-ground="pale"]) > .f2u-side { text-shadow: none; }
+  /* the reading sections (the principles to the footer): copy runs the full width there, the column steps aside as the list does */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open])[data-flow2-rail="hide"] body.is-ready .finnovation-ui > .f2u-side { opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility 0s linear .4s; }
+  /* the menu is a sheet on the right: the column is under it */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui:has(#fi-menu[open]) > .f2u-side { opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s; }
+
+  /* Taipei's time, and where the head office stands (it was the caption in the frame's top line) */
+  .f2u-cap {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+    margin-bottom: 30px;
+    font-size: var(--f2h-fs-cap);
+    line-height: 1.3;
+    letter-spacing: .2em;
+    font-variant-numeric: tabular-nums;
+    opacity: .82;
+  }
+  .f2u-cap b { margin-left: .55em; font-weight: 500; color: var(--f2h-a); }
+
+  /* the section's number over 05 */
+  .f2u-where { display: flex; align-items: flex-end; gap: 10px; margin-right: -1px; }
+  .f2u-side .f2h-read-n { height: calc(var(--f2u-n) + 2px); font-size: var(--f2u-n); line-height: calc(var(--f2u-n) + 2px); letter-spacing: .02em; }
+  .f2u-of {
+    padding: 0 0 4px 12px;
+    color: var(--f2h-a);
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(to top left, #0000 calc(50% - 1px), var(--f2h-a) calc(50% - 1px) 50%, #0000 50%) 0 calc(100% - 6px) / 6px 15px no-repeat;
+  }
+
+  /* the place in the whole site: a short vertical track; the travelled part is lit, a diamond marks the place */
+  .f2u-gauge { position: relative; align-self: stretch; min-width: 46px; height: clamp(104px, 19.5vh, 190px); margin: 18px 0 14px; }
+  .f2u-track { position: absolute; inset: 0 3px 0 auto; width: 1px; background: var(--f2h-line); }
+  .f2u-track::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: calc(var(--f2u-p, 0) * 100%);
+    background: var(--f2h-a);
+  }
+  /* the five sections, marked beside the track */
+  .f2u-track::after {
+    content: "";
+    position: absolute;
+    inset: 0 2px 0 auto;
+    width: 6px;
+    background:
+      linear-gradient(var(--f2h-line), var(--f2h-line)) 0 0 / 100% 1px no-repeat,
+      linear-gradient(var(--f2h-line), var(--f2h-line)) 0 20% / 100% 1px no-repeat,
+      linear-gradient(var(--f2h-line), var(--f2h-line)) 0 40% / 100% 1px no-repeat,
+      linear-gradient(var(--f2h-line), var(--f2h-line)) 0 60% / 100% 1px no-repeat,
+      linear-gradient(var(--f2h-line), var(--f2h-line)) 0 80% / 100% 1px no-repeat,
+      linear-gradient(var(--f2h-line), var(--f2h-line)) 0 100% / 100% 1px no-repeat;
+  }
+  .f2u-track i {
+    position: absolute;
+    inset: calc(var(--f2u-p, 0) * 100% - 3.5px) auto auto -3px;
+    width: 7px;
+    height: 7px;
+    background: var(--f2h-b);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--f2h-a) 26%, #0000);
+    rotate: 45deg;
+  }
+  /* the section's name, written down the track */
+  .f2u-name {
+    position: absolute;
+    inset: 50% 22px auto auto;
+    translate: 0 -50%;
+    writing-mode: vertical-rl;
+    letter-spacing: .26em;
+    opacity: .88;
+  }
+  .f2u-flow { margin-bottom: 28px; opacity: .92; font-variant-numeric: tabular-nums; }
+  .f2u-flow b { display: inline-block; min-width: 2.1em; margin-left: .45em; font-weight: 500; color: var(--f2h-a); text-align: right; }
+
+  /* NEXT: two lines of words, no box. Under the pointer a line is drawn under the name; nothing moves */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side > .f2u-next {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 7px;
+    width: auto;
+    height: auto;
+    margin: -10px -10px -10px 0;
+    padding: 10px;
+    border: 0 !important;                 /* the page's own NEXT has a rule on its left */
+    border-radius: var(--f2h-rs);
+    background: none;
+    clip-path: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-shadow: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side > .f2u-next:focus-visible { outline: 1px solid var(--f2h-b); outline-offset: 0; }
+  .f2u-next-top { display: flex; align-items: center; gap: 10px; }
+  .f2u-next .f2h-next-k { color: var(--f2h-a); font-size: calc(var(--f2h-fs) - 1px); letter-spacing: .24em; }
+  .f2u-next i {
+    flex: none;
+    width: 9px;
+    height: 12px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12' fill='none' stroke='%23000' stroke-width='1.1'%3E%3Cpath d='M4.5 0v11M.9 7.3l3.6 3.6 3.6-3.6'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12' fill='none' stroke='%23000' stroke-width='1.1'%3E%3Cpath d='M4.5 0v11M.9 7.3l3.6 3.6 3.6-3.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .f2u-next.is-top i { rotate: 180deg; }
+  .f2u-next .f2h-next-n {
+    padding-bottom: 5px;
+    background: linear-gradient(currentColor, currentColor) 100% 100% / 0 1px no-repeat;
+  }
+  /* the last section names nothing after it: the line keeps its room, so the column stands where it stood */
+  .f2u-next .f2h-next-n:empty::before { content: "\00a0"; }
+  .f2u-next .f2h-next-n b { margin-right: .7em; font-weight: 500; color: var(--f2h-a); font-variant-numeric: tabular-nums; }
+  .f2u-next:is(:hover, :focus-visible) .f2h-next-n { background-size: 100% 1px; }
+  @media (prefers-reduced-motion: no-preference) { .f2u-next .f2h-next-n { transition: background-size .5s var(--f2h-ease); } }
+
+  /* the news: its pictures pass under the right edge from side to side. The column keeps NEXT alone there, on the small pale plate
+     that the list's present number has on the left edge; the rest steps aside and keeps its room, so NEXT does not change place */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side > :not(.f2u-next) { transition: opacity .35s ease, visibility 0s; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui[data-site-section="3"] > .f2u-side > :not(.f2u-next) { opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side > .f2u-next { transition: background-color .4s ease; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui[data-site-section="3"] > .f2u-side > .f2u-next { margin-right: 0; background-color: #e7f1f7eb; box-shadow: 0 0 0 1px #10283d14; }
+
+  /* ---------------------------------------------------------------- SOUND: a block of dark glass at MENU's left */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound {
+    position: fixed !important;
+    inset: max(var(--f2h-inset), env(safe-area-inset-top)) calc(max(var(--f2h-inset), env(safe-area-inset-right)) + var(--f2u-menu-w, 100px) + 10px) auto auto;
+    width: auto;
+    min-width: 0;
+    height: var(--f2u-box);
+    min-height: 0;
+    justify-content: center;
+    gap: 11px;
+    padding: 0 16px 0 15px;
+    --f2h-f: var(--f2h-glass);
+    --f2h-l: #d6f4ff80;
+    --f2h-fh: #ffffff26;
+    --f2h-s: #0000;
+    color: #f2f8fc;
+    clip-path: none;
+    scale: none;
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    backdrop-filter: blur(10px) saturate(1.1);
+    transition: --f2h-rise .5s var(--f2h-ease);
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound:is(:hover, :focus-visible, :active) {
+    --f2h-rise: 100%;
+    --f2h-l: #eaf8ff;
+    scale: none;
+    outline: none;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body .finnovation-ui #flow2-header-sound .fi-icon { order: 0; flex: none; }
+  /* its ink is light on its dark glass in every section (the type layer inks it dark in the news) */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header :is(#flow2-header-sound, #flow2-header-sound > span) { color: #f2f8fc !important; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui .fi-header #flow2-header-sound :is(.fi-icon, .fi-icon *) { color: #a9dcff !important; }
+
+  /* ---------------------------------------------------------------- the foot: the scroll hint, alone */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud] body .finnovation-ui > .f2-feel-hint {
+    position: fixed;
+    bottom: max(calc(var(--f2h-inset) - 12px), 24px);
+    font-size: var(--f2h-fs);
+  }
+
+  /* ---------------------------------------------------------------- what the bar carried for two sections, back with their content */
+  /* WHY's card numbers: under WHY's picture, on the line of its keywords, ending at the picture's right edge (flow2-hud.js measures
+     where that line is: --f2u-why-y on the stage; without it the row keeps the page's own place). Cells divided by slashes; the
+     present one is a plate */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress { top: var(--f2u-why-y, auto); height: 30px; min-height: 0; align-items: center; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress .fiwo-progress-line { width: 56px; flex: none; margin-right: 14px; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol { gap: 0; align-items: center; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button {
+    width: 42px;
+    min-width: 0;
+    height: 30px;
+    min-height: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: var(--f2h-rs) !important;
+    background: linear-gradient(to top left, #0000 calc(50% - 1px), var(--f2h-line) calc(50% - 1px) 50%, #0000 50%) 0 50% / 5px 14px no-repeat;
+    box-shadow: none;
+    opacity: 1;
+    scale: none;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li:first-child > button { background-image: none; }
+  @media (prefers-reduced-motion: no-preference) { :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button { transition: color .25s ease, background-color .25s ease; } }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button:is(:hover, :focus-visible) { background-color: #ffffff29; color: #f2f8fc !important; outline: none; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button:focus-visible { box-shadow: inset 0 0 0 1px #eaf8ff; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #fiWorld .fiwo-progress ol li > button:is([aria-current], [aria-selected="true"], .is-active) { background: var(--f2h-light); color: var(--f2h-ink-dark) !important; }
+
+  /* the news' two controls: under the news' text, where the page has them; their marks are drawn (pause, play, the arrow of NEXT) */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body .finnovation-ui .site-news-ticker .site-news-controls { gap: 6px; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body .finnovation-ui .site-news-ticker .site-news-controls button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body .finnovation-ui .site-news-ticker .site-news-controls button > span { font-size: 0 !important; line-height: 0 !important; color: inherit; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body .finnovation-ui .site-news-ticker .site-news-controls [data-news-pause]:not([data-paused]) > .site-news-pause { display: block; width: 8px; height: 10px; background: linear-gradient(90deg, currentColor 0 2px, #0000 2px 6px, currentColor 6px 8px); }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body .finnovation-ui .site-news-ticker .site-news-controls [data-news-pause][data-paused] > .site-news-play { display: block; width: 0; height: 0; margin-left: 2px; border: solid #0000; border-width: 5px 0 5px 8px; border-left-color: currentColor; }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body .finnovation-ui .site-news-ticker .site-news-controls [data-news-next] > span { display: block; width: 9px; height: 12px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12' fill='none' stroke='%23000' stroke-width='1.1'%3E%3Cpath d='M4.5 0v11M.9 7.3l3.6 3.6 3.6-3.6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12' fill='none' stroke='%23000' stroke-width='1.1'%3E%3Cpath d='M4.5 0v11M.9 7.3l3.6 3.6 3.6-3.6'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+  /* ---------------------------------------------------------------- the canyon: the course keeps clear of the two edges and of the title block */
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"] body #flow2-canyon-atlas > svg {
+    -webkit-mask-image: linear-gradient(90deg, #0000 0, #0000 150px, #000 240px, #000 calc(100% - 240px), #0000 calc(100% - 150px)), linear-gradient(180deg, #0000 0, #0000 86px, #000 126px, #000 52%, #0000 62%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(90deg, #0000 0, #0000 150px, #000 240px, #000 calc(100% - 240px), #0000 calc(100% - 150px)), linear-gradient(180deg, #0000 0, #0000 86px, #000 126px, #000 52%, #0000 62%);
+    mask-composite: intersect;
+  }
+}
+
+/* narrower computers and short windows: the column gives up its small print first */
+@media (min-width: 961px) and (max-width: 1279px) { .f2u-cap, .f2u-flow { display: none; } .f2u-gauge { margin-bottom: 22px; } }
+@media (min-width: 961px) and (max-height: 779px) { .f2u-cap { display: none; } }
+@media (min-width: 961px) and (max-height: 659px) { .f2u-flow { display: none; } .f2u-gauge { height: 96px; margin-bottom: 20px; } }
+
+/* entering the page: the column comes up after the titles (once). Opacity only: nothing slides in */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h)[data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side { animation: f2u-in 1s ease .9s backwards; }
+}
+@keyframes f2u-in { from { opacity: 0; } }

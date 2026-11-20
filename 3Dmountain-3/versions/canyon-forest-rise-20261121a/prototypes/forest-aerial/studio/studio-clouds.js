@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 // Thin mist in the valley, with deeper banks of broken cloud above the flanks.
 // Each entry is a world-space ellipsoid: centre, radii, optical thickness, cloud (1) or mist (0).
-const BANKS = [
+export const BANKS = [
   [ 2.4,1.06,-2.4, 3.4,0.12,1.9, 0.22,0], [-2.6,1.12,-2.6, 3.3,0.14,1.8, 0.22,0],
   [ 3.8,0.98, 1.8, 2.5,0.12,1.5, 0.17,0], [-3.4,0.97, 1.5, 2.8,0.14,1.6, 0.18,0],
   [-4.2,1.94,-2.5, 2.6,0.34,1.24,0.72,1], [-2.2,2.11,-3.4, 1.9,0.31,0.89,0.62,1],
@@ -38,6 +38,8 @@ const VERT = `
 
 const FRAG = `
   uniform float uTime,uArrival,uLattice;
+  uniform vec3 uCloudLit,uCloudShade;
+  uniform vec2 uCloudTone;
   uniform sampler2D tCanopy,tWater;
   uniform vec4 uBounds;
   uniform vec2 uYRange;
@@ -98,7 +100,9 @@ const FRAG = `
     vec3 face=normalize(local/vRadius);
     float sunward=cloudField(q+uSun.xz*0.27);
     float light=dot(face,normalize(uSun))*0.21 + (field-sunward)*1.20 + 0.50 + fringe*0.12;
-    vec3 color=mix(vec3(0.36,0.43,0.49),vec3(0.94,0.93,0.88),clamp(light,0.0,1.0));
+    // 2026-11-21 (client: 「雲霧要白一點 或是開顏色調整參數」): lit / shade colours, brightness and contrast are uniforms;
+    // their defaults are the old constants, so other pages look as before (the rise page sets its own in flow2-studio-pbr-view.js).
+    vec3 color=mix(uCloudShade,uCloudLit,clamp((light-0.5)*uCloudTone.y+0.5,0.0,1.0))*uCloudTone.x;
     color=mix(vec3(dot(color,vec3(0.2126,0.7152,0.0722))),color,smoothstep(0.12,0.93,uArrival));
     vec4 clip=projectionMatrix*viewMatrix*vec4(sampleW,1.0);
     gl_FragDepth=clamp(clip.z/clip.w*0.5+0.5,0.0,1.0);
@@ -125,7 +129,9 @@ export function createStudioClouds(atlas,studio) {
       uYRange: atlas.uniforms.uYRange, uRelief: atlas.uniforms.uRelief, uCanopy: atlas.uniforms.uCanopy,
       uTributaries: studio.uTributaries,
       uStudioMist: studio.uStudioMist, uCloudLayer: studio.uCloudLayer, uArrival: studio.uArrival,
-      uLeftFog: { value: new THREE.Vector3(1,1,1) }, uLeftFogOffset: { value: new THREE.Vector3() }
+      uLeftFog: { value: new THREE.Vector3(1,1,1) }, uLeftFogOffset: { value: new THREE.Vector3() },
+      uCloudLit: { value: new THREE.Vector3(0.94,0.93,0.88) }, uCloudShade: { value: new THREE.Vector3(0.36,0.43,0.49) },
+      uCloudTone: { value: new THREE.Vector2(1,1) }
     },
     vertexShader: VERT,fragmentShader: FRAG,transparent: true,depthWrite: false
   });

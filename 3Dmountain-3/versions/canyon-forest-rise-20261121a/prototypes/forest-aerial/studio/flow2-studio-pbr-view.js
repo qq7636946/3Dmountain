@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { createForestFlow } from '../flow2-scene-flow.js?v=pbr-01-perf1';
 import { createForestBirds } from '../flow2-scene-birds.js?v=timed-passes1';
 import { createRiverBeams } from '../flow2-river-beams.js?v=studio-confluence-20261121-1-perf1';
-import { createStudioTerrainPbrLayer } from './studio-terrain-pbr-layer.js?v=sward-colors2-rise3-perf2-ktx2';
+import { createStudioTerrainPbrLayer } from './studio-terrain-pbr-layer.js?v=sward-colors2-rise3-perf2-ktx2-clouds2';
 import { bindAtmosphereArrival } from './studio-highland-ecology.js?v=weather1';
 import { createTributaryNetwork } from './studio-tributary-network.js?v=meadow-riffles1';
 import { createStudioCartography } from './studio-cartography.js?v=strategy-beacons-20261121-2-perf1';
@@ -19,12 +19,16 @@ const PBR = {
   waterDeep: '#0a182c', waterShallow: '#264468', waterSpeed: 1.1, waterWave: 1.48, waterClear: .94, whitewater: 1, waterGlow: .88,
   sunIntensity: 1.36, sunShadow: .6, sunRays: .39, sunAzimuth: 62, sunElevation: 24,
   mist: .2, cloudStrength: .22, valleyMist: .13, mistHeight: .27, contourOpacity: 0, contourInterval: .04,
+  cloudShadow: .9, mistColor: '#dfe6ec', airWhite: .5,   /* 2026-11-21 (client: 「雲霧要白一點」「雲霧反射出來的影子在山谷上也要做出」) */
   layers: { tributaries: true, contours: false, terrainStyle: true, water: true, sunbeams: true, atmosphere: true, clouds: true, gulls: true }
 };
 const CURTAIN = {
   enabled: true, showTributaries: true, showLogo: true, height: .68, speed: .3, brightness: .6, progress: 1,   /* client's values 2026-11-20 (垂直光幕與中央LOGO 初始參數) */
   scanIntensity: 1.2, pulseStrength: .9, color: '#88ccf8', contactColor: '#d9f2ff', logoScale: 1.4, logoHeight: 1.26, logoRotation: 326
 };
+/* 2026-11-21 (client: 「雲霧要白一點 或是開顏色調整參數給我」): the clouds' and valley banks' colours (studio-clouds.js uniforms).
+   Before: lit #f8f7f1, shade #a2afba, brightness 1, contrast 1. */
+const CLOUD_LOOK = { lit: '#ffffff', shade: '#e1e8ee', bright: 1.18, contrast: .85 };
 const { clamp, degToRad, euclideanModulo, lerp, smoothstep, smootherstep } = THREE.MathUtils;
 
 const ROWS = [
@@ -59,6 +63,11 @@ const ROWS = [
   ['太陽仰角（度）', 'pbr.sunElevation', 3, 85, 1],
   ['遠景霧', 'pbr.mist', 0, 1.2, .01], ['雲層強度', 'pbr.cloudStrength', 0, .6, .01],
   ['谷底霧', 'pbr.valleyMist', 0, 1.2, .01], ['霧層高度', 'pbr.mistHeight', .1, 1.8, .01],
+  ['— 雲霧顏色與雲影 —'],
+  ['雲亮面顏色', 'cloudLook.lit', 'color'], ['雲暗面顏色', 'cloudLook.shade', 'color'],
+  ['雲霧亮度', 'cloudLook.bright', .4, 1.8, .01], ['雲霧立體感', 'cloudLook.contrast', .2, 2, .01],
+  ['谷底霧顏色', 'pbr.mistColor', 'color'], ['遠景霧白度', 'pbr.airWhite', 0, 1, .01, 'percent'],
+  ['雲影濃度（投在山谷）', 'pbr.cloudShadow', 0, 1, .01, 'percent'],
   ['— 左側雲霧 —'],
   ['左側雲霧', 'leftFog.enabled', 'checkbox'], ['濃度', 'leftFog.density', 0, 2, .01, 'percent'],
   ['水平範圍', 'leftFog.scale', .35, 1.8, .01, 'percent'], ['厚度', 'leftFog.thickness', .25, 2, .01, 'percent'],
@@ -84,7 +93,7 @@ const ROWS = [
   ['海鷗', 'pbr.layers.gulls', 'checkbox'], ['投資策略標籤', 'cartography.labels', 'checkbox']
 ];
 
-function registerControls(tune, { studio, curtain, cartography, lines3d, floatingLogo, applyRouteProgress, applyBeamOutline, applyLeftFog }) {
+function registerControls(tune, { studio, curtain, cartography, lines3d, floatingLogo, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook }) {
   const panel = window.__FLOW2_PANEL__?.add({
     id: 'rise-studio-pbr', storageId: 'rise-studio-pbr-preset-2', title: '俯視山谷 PBR', key: 'p', tune,
     rows: [...(tune.riverBeams ? ROWS : ROWS.filter(row => row[1] !== 'riverBeams.on')),
@@ -132,6 +141,7 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
       else if (key.startsWith('cartography.')) cartography.apply();
       else if (key.startsWith('lines3d.')) lines3d.apply();
       else if (key.startsWith('leftFog.')) applyLeftFog();
+      else if (key.startsWith('cloudLook.')) applyCloudLook();
       else if (key.startsWith('floatingLogo.')) floatingLogo?.apply();
       applyRouteProgress(key === 'curtain.progress');
     },
@@ -148,7 +158,7 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
         ...(tune.riverBeams?.filaments !== undefined ? { riverDesign: Object.fromEntries(
           ['on', 'bright', 'coreWidth', 'halo', 'haloWidth', 'wide', 'speed', 'spacing', 'packetLength', 'pulse',
             'filaments', 'sparkDensity', 'glint', 'tribBright', 'softClip', 'colour', 'glow'].map(key => [key, tune.riverBeams[key]])) } : {}),
-        leftFog: tune.leftFog, floatingLogo: tune.floatingLogo,
+        leftFog: tune.leftFog, cloudLook: tune.cloudLook, floatingLogo: tune.floatingLogo,
         lines3d: { enabled: !!tune.lines3d.enabled, opacity: tune.lines3d.opacity, color: tune.lines3d.color, accentColor: tune.lines3d.accentColor }
       };
     }
@@ -160,6 +170,7 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
   lines3d.apply();
   applyBeamOutline();
   applyLeftFog();
+  applyCloudLook();
   floatingLogo?.apply();
   return panel;
 }
@@ -200,6 +211,14 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     const U = studio.mistGroup.material.uniforms;
     U.uLeftFog.value.set(leftFog.enabled ? leftFog.density : 0, leftFog.scale, leftFog.thickness);
     U.uLeftFogOffset.value.set(leftFog.x, leftFog.y, leftFog.z);
+  };
+  const cloudLook = { ...CLOUD_LOOK }, cloudColour = new THREE.Color();
+  const applyCloudLook = () => {
+    const U = studio.mistGroup.material.uniforms;
+    if (!U.uCloudLit) return;
+    cloudColour.set(cloudLook.lit); U.uCloudLit.value.set(cloudColour.r, cloudColour.g, cloudColour.b);
+    cloudColour.set(cloudLook.shade); U.uCloudShade.value.set(cloudColour.r, cloudColour.g, cloudColour.b);
+    U.uCloudTone.value.set(clamp(+cloudLook.bright || 0, 0, 3), clamp(+cloudLook.contrast || 0, 0, 3));
   };
   const outlinePoint = new THREE.Vector3();
   const applyBeamOutline = () => {
@@ -251,8 +270,8 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   }
   const panel = registerControls({
     camera: framing, pbr: studio.config, curtain: curtain.config, cartography: cartography.config,
-    riverBeams: beams?.tune, lines3d: lines3d.config, leftFog, floatingLogo: floatingLogo?.config
-  }, { studio, curtain, cartography, lines3d, floatingLogo, applyRouteProgress, applyBeamOutline, applyLeftFog });
+    riverBeams: beams?.tune, lines3d: lines3d.config, leftFog, cloudLook, floatingLogo: floatingLogo?.config
+  }, { studio, curtain, cartography, lines3d, floatingLogo, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook });
 
   const gulls = !reducedMotion && query.get('birds') !== '0' ? createForestBirds(renderer, {
     atlas, camera: atlas.camera, once: false, panel: false, timedCrossings: true,

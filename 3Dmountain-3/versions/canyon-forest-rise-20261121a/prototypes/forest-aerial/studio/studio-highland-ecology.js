@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BANKS } from './studio-clouds.js?v=look1';
 
 // Reuse the canyon's authored lake-to-ridge arrival field in the unused height
 // alpha channel. Raw RGBA bytes preserve height precision (no canvas premultiply).
@@ -37,18 +38,58 @@ export function packArrivalField(atlas) {
   return true;
 }
 
+const f3 = v => (+v).toFixed(3);
+const BANK_C = BANKS.map(b => `vec4(${f3(b[0])},${f3(b[1])},${f3(b[2])},${f3(b[6])})`).join(',');
+const BANK_R = BANKS.map(b => `vec4(${f3(b[3])},${f3(b[4])},${f3(b[5])},${f3(b[7])})`).join(',');
+
 export const HIGHLAND_GLSL = `
   uniform float uBiomeContrast, uCavityDepth, uCloudStrength;
+  uniform vec4 uBankShadow;   /* xyz: direction to the sun, w: how dark the cloud banks' shadows are (0 = none) */
+  uniform vec3 uMistColor;
+  const vec4 ST_BANK_C[${BANKS.length}] = vec4[${BANKS.length}](${BANK_C});
+  const vec4 ST_BANK_R[${BANKS.length}] = vec4[${BANKS.length}](${BANK_R});
+  float stBkHash(vec2 p){vec3 h=fract(p.xyx*vec3(0.1031,0.11369,0.13787));h+=dot(h,h.yzx+19.19);return fract((h.x+h.y)*h.z);}
+  float stBkNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(stBkHash(i),stBkHash(i+vec2(1,0)),f.x),mix(stBkHash(i+vec2(0,1)),stBkHash(i+1.0),f.x),f.y);}
+  float stBkField(vec2 p){mat2 rot=mat2(0.8,-0.6,0.6,0.8);float b=stBkNoise(p);p=rot*p*2.13+3.71;float c=stBkNoise(p);p=rot*p*2.06+7.27;return b*0.50+c*0.29+stBkNoise(p)*0.15+stBkNoise(rot*p*2.11)*0.06;}
+
+  // 2026-11-21 (client: 「雲霧反射出來的影子在山谷上也要做出」): the shadow of the cloud banks actually drawn by studio-clouds.js.
+  // From the ground point, go toward the sun; where that line crosses a bank, its chord and the same billow field as the cloud
+  // give the density. Banks drift and the billows move with the same clocks as the clouds, so the shadows follow them.
+  float stBankShadow(vec3 P) {
+    if (uBankShadow.w < 0.001 || uBankShadow.y < 0.02) return 1.0;
+    vec3 L = uBankShadow.xyz;
+    vec2 wind = vec2(-0.021, 0.010) * uTime;
+    float dens = 0.0;
+    for (int i = 0; i < ${BANKS.length}; i++) {
+      vec4 cs = ST_BANK_C[i], rs = ST_BANK_R[i];
+      float sx = float(i) * 2.731;
+      vec3 c = cs.xyz + vec3(0.55, 0.0, -0.26) * sin(uTime * 0.019 + sx);
+      vec3 e = (P - c) / rs.xyz, d = L / rs.xyz;
+      float rr = dot(d, d), t = -dot(e, d) / rr;
+      if (t <= 0.0) continue;
+      vec3 cl = e + t * d;
+      float chord = 1.0 - dot(cl, cl);
+      if (chord <= 0.0) continue;
+      vec3 S = P + L * t;
+      vec2 q = S.xz * vec2(1.07, 1.42) + S.y * vec2(0.42, -0.28) + wind + sx;
+      float billows = smoothstep(0.32, 0.69, stBkField(q) + chord * 0.22 - 0.12);
+      dens += chord * smoothstep(0.0, 0.35, chord) * billows * cs.w * mix(0.45, 1.0, rs.w);
+    }
+    return 1.0 - uBankShadow.w * (1.0 - exp(-dens * 2.2));
+  }
   uniform float uValleyMist, uMistHeight, uArrival, uArrivalMap;
 
   // Broad shadows move in world space. Both rock/grass and water use this
   // visibility on their DIRECT sunlight; skylight stays available in shadow.
-  float stCloudVisibility(vec2 p) {
+  float stCloudNoiseVis(vec2 p) {
     if (uCloudStrength < 0.001) return 1.0;
     vec2 q = p * 0.095 + vec2(uTime * 0.0018, -uTime * 0.0011);
     float cover = stFbm2(q + vec2(4.8, -2.3));
     return 1.0 - uCloudStrength * smoothstep(0.34, 0.66, cover);
   }
+  // water (and reflections) sit at the water line; the land passes its own height (stCloudVisibility3)
+  float stCloudVisibility(vec2 p) { return stCloudNoiseVis(p) * stBankShadow(vec3(p.x, 0.105, p.y)); }
+  float stCloudVisibility3(vec3 P) { return stCloudNoiseVis(P.xz) * stBankShadow(P); }
 
   // Integrate an exponential density along the camera ray. The local height
   // gate keeps ridge crests clear even with a long aerial view distance.
@@ -61,7 +102,7 @@ export const HIGHLAND_GLSL = `
     float path = min(length(eye - world), 80.0) * integral;
     float density = low * (0.28 + path * 0.55) * uValleyMist;
     float fog = min(0.48, 1.0 - exp(-density));
-    return mix(color, vec3(0.39, 0.48, 0.57), fog);
+    return mix(color, uMistColor, fog);
   }
 
   vec3 stArrivalColor(vec3 color, vec2 p, float field) {

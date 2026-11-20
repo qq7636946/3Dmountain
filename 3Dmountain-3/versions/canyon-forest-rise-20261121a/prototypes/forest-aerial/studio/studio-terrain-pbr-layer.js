@@ -16,8 +16,8 @@
        * Low-raking warm golden-ivory daylight key + luminous periwinkle-slate sky fill + 5-tap real-time mountain self-shadows
        * Batched volumetric diagonal sunlight shafts aligned to live sun vector + alpine daylight sky dome with solar halo */
 import * as THREE from 'three';
-import { HIGHLAND_GLSL, packArrivalField } from './studio-highland-ecology.js?v=weather1';
-import { createStudioClouds } from './studio-clouds.js?v=left-bank1';
+import { HIGHLAND_GLSL, packArrivalField } from './studio-highland-ecology.js?v=weather1-bank1';
+import { createStudioClouds } from './studio-clouds.js?v=look1';
 import { createShoreCobbles } from './studio-shore-cobbles.js?v=weather1';
 
 const PBR_VER = 'pbr-20261119-09';
@@ -112,6 +112,9 @@ export const DEFAULT_PBR_CONFIG = {
   sunElevation: 24,
   mist: 0.36,             /* 遠景空氣透視，與低谷高度霧分開 */
   cloudStrength: 0.34,
+  cloudShadow: 0,         /* 雲團投在地面的影子（0 = 無；rise 頁另設） */
+  airWhite: 0,            /* 遠景霧白度（0 = 舊的藍灰） */
+  mistColor: '#a8b8c7',   /* 谷底霧顏色（舊值） */
   valleyMist: 0.28,
   mistHeight: 0.64,       /* 水面以上的薄霧高度（場景單位） */
   contourOpacity: 0.07,
@@ -621,6 +624,9 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
       uStrataStrength: studioUniforms.uStrataStrength,
       uCloudLayer: studioUniforms.uCloudLayer,
       uCloudStrength: studioUniforms.uCloudStrength,
+      uAirWhite: studioUniforms.uAirWhite,
+      uBankShadow: studioUniforms.uBankShadow,
+      uMistColor: studioUniforms.uMistColor,
       uValleyMist: studioUniforms.uValleyMist,
       uMistHeight: studioUniforms.uMistHeight,
       uArrival: studioUniforms.uArrival,
@@ -740,6 +746,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
       uniform vec3 uWaterDeep, uWaterShallow, uCurtainCol, uCurtainContact;
       uniform float uWaterSpeed, uWaterWave, uWaterClear, uWaterGlow, uWaterOn, uCurtainGlow;
       uniform float uStrataStrength, uWhitewater, uCloudLayer;
+      uniform float uAirWhite;
       uniform vec3 uRockBaseGain,uRockLayerGain;
       uniform vec4 uCurtainLogo;
 
@@ -910,7 +917,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
                      (sign(det)/max(abs(det),1e-10));
 
         /* Real-time mountain cast shadow + monumental slow-drifting cloud shadows (matching flow2-valley5-light.js!) */
-        float cloudSh = stCloudVisibility(wp);
+        float cloudSh = stCloudVisibility3(vec3(wp.x, vForestWorld.y, wp.y));
         float sunVis = stTerrainSunShadow(vForestWorld, sunNS, outDist, stBranch) * cloudSh;
 
         /* -------------------- PART 1: CC0 2K PBR TERRAIN (DUAL-SCALE GRASS + TRIPLANAR SLATE CLIFFS + TIGHT WET SHORE) -------------------- */
@@ -1619,6 +1626,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           vec3 airCol = mix(vec3(0.32, 0.44, 0.62), vec3(0.86, 0.90, 0.95), sunSide * 0.60);
           float ridgeAir=outerRidge*obliqueFactor*exp(-max(0.0,vForestWorld.y-.105)*.32);
           airCol=mix(airCol,vec3(.42,.52,.65),ridgeAir*.30);
+          airCol=mix(airCol,vec3(.86,.90,.94),uAirWhite);   /* 2026-11-21 遠景霧白度 (0 = as before) */
           float mistAmt=clamp(farA*((.28+.66*obliqueFactor)*.64+.17*ridgeAir)*uStudioMist,0.0,.74);
           col = mix(col, airCol, mistAmt);
         }
@@ -1701,6 +1709,8 @@ function patchWaterSurfaceMaterial(atlas, shoreAlb, studioUniforms) {
       uPbrTerrainOn: studioUniforms.uPbrTerrainOn,
       uTributaries: studioUniforms.uTributaries,
       uCloudStrength: studioUniforms.uCloudStrength,
+      uBankShadow: studioUniforms.uBankShadow,
+      uMistColor: studioUniforms.uMistColor,
       uValleyMist: studioUniforms.uValleyMist,
       uMistHeight: studioUniforms.uMistHeight
     });
@@ -1994,6 +2004,9 @@ export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig
     uStrataStrength: { value: cfg.strataStrength },
     uCloudLayer: { value: cfg.layers.clouds ? 1 : 0 },
     uCloudStrength: { value: cfg.cloudStrength },
+    uBankShadow: { value: new THREE.Vector4(0, 1, 0, 0) },
+    uAirWhite: { value: 0 },
+    uMistColor: { value: new THREE.Color(cfg.mistColor || '#a8b8c7') },
     uValleyMist: { value: cfg.valleyMist },
     uMistHeight: { value: cfg.mistHeight },
     uArrival: { value: 1 },
@@ -2123,6 +2136,9 @@ export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig
     studioUniforms.uStrataStrength.value = THREE.MathUtils.clamp(+cfg.strataStrength || 0, 0, 1.4);
     studioUniforms.uCloudLayer.value = cfg.layers.clouds && cfg.layers.terrainStyle ? 1 : 0;
     studioUniforms.uCloudStrength.value = cfg.layers.terrainStyle ? THREE.MathUtils.clamp(+cfg.cloudStrength || 0, 0, 0.6) : 0;
+    { const L = atlas.uniforms.uSun.value; studioUniforms.uBankShadow.value.set(L.x, L.y, L.z, cfg.layers.clouds && cfg.layers.terrainStyle ? THREE.MathUtils.clamp(+cfg.cloudShadow || 0, 0, 1) : 0); }
+    studioUniforms.uMistColor.value.set(cfg.mistColor || '#a8b8c7');
+    studioUniforms.uAirWhite.value = THREE.MathUtils.clamp(+cfg.airWhite || 0, 0, 1);
     studioUniforms.uValleyMist.value = cfg.layers.atmosphere ? THREE.MathUtils.clamp(+cfg.valleyMist || 0, 0, 1.2) : 0;
     studioUniforms.uMistHeight.value = THREE.MathUtils.clamp(+cfg.mistHeight || 0.1, 0.1, 1.8);
     studioUniforms.uTributaries.value = atlas.studioHydrology && cfg.layers.tributaries && cfg.layers.terrainStyle ? 1 : 0;

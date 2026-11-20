@@ -1,0 +1,148 @@
+/* RISE · index1-5-canyon-forest-rise.html only (2026-11-19). The page opens under water: until the underwater world's first frame is drawn
+   the canvas shows the water's own colours (no flash of the canyon's loading ground), and the canyon's loading note stays out. */
+html[data-rise="under"]:not([data-rise-scene]) #xs-gl { display: block; background: linear-gradient(#3c7198, #285779 40%, #142f4b 82%, #0b2038); }
+html[data-rise="under"] .f2-start-note { opacity: 0 !important; visibility: hidden !important; }
+/* Only the HUD elements consume this fade. An inherited value on <html>
+   invalidates the rest of the site on every frame of the crossing. */
+@property --rise-interface-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+/* Ease the canyon's contrast veil in with the dry view; the bed carries its own lighting. */
+html[data-rise="under"][data-xs-gorge] body.is-ready .finnovation-ui > .fi-veil {
+  opacity: calc(0.18 + 0.82 * var(--rise-interface-opacity, 0)) !important;
+  transition: none !important;
+}
+/* Prevent 200ms CSS opacity transition on --xs-ui from fighting per-frame scroll-scrubbed waterline handoff */
+:root:not(#xs1):not(#xs2):not(#xs3):not(#xs4):not(#xs5):not(#xs6):not(#xs7):not(#xs8):not(#xs9):not(#xs10)[data-xs-gorge][data-rise="under"] body :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .alp-labels, #flow2-canyon-atlas) {
+  opacity: var(--rise-interface-opacity, 0) !important;
+  transition: none !important;
+}
+@media (orientation: portrait), (max-width: 760px) {
+  html[data-rise-scene][data-rise="under"] #xs-sea { display: block !important; }
+  html[data-rise="under"] #xs-sea .xs-sea-rule { display: none; }
+  html[data-rise="under"] #xs-sea .c .xs-sea-c { width: min(78vw, 400px); }
+}
+
+html[data-rise] {
+  --rise-display-size: clamp(42px, min(5.6vw, 10vh), 108px);
+  --rise-display-face: var(--site-font, "Oswald", sans-serif);
+  --rise-body-face: "XS Jakarta", "Plus Jakarta Sans", "Noto Sans TC", sans-serif;
+  --rise-copy-ink: #edf6fa;
+  --rise-copy-accent: #a5d5e8;
+  --rise-copy-rule: rgb(165 213 232 / 0.63);
+}
+
+html[data-rise] #xs-sea {
+  --sea-ink: var(--rise-copy-ink);
+  --sea-acc: var(--rise-copy-accent);
+}
+
+html[data-rise] #xs-sea .xs-sea-t { font-size: var(--rise-display-size); }
+html[data-rise] #xs-sea .c .xs-sea-c { top: calc(22vh + 34px + var(--rise-display-size) * 2.1); }
+html[data-rise] #xs-sea .xs-sea-c::before { background-color: var(--rise-copy-rule); }
+
+html[data-rise] #xs-sea .xs-sea-insight-copy {
+  position: absolute;
+  top: 70.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 960px);
+  display: grid;
+  justify-items: center;
+  gap: clamp(5px, 0.9vh, 10px);
+  text-align: center;
+}
+
+html[data-rise] #xs-sea .xs-sea-insight-copy > :is(.xs-sea-k, .xs-sea-t, .xs-sea-c) {
+  position: static;
+  width: auto;
+  max-width: 100%;
+  transform: none;
+}
+
+html[data-rise] #xs-sea .xs-sea-insight-copy .xs-sea-t {
+  font-size: clamp(22px, min(5.9vw, 8.5vh), 92px);
+  white-space: nowrap;
+}
+
+html[data-rise] #xs-sea .xs-sea-insight-copy .xs-sea-c::before {
+  margin: 0 auto clamp(5px, 0.7vh, 9px);
+  max-width: 42px;
+}
+
+html[data-rise] #xs-sea .xs-sea-insight-copy .xs-sea-p {
+  font-size: clamp(13px, 1.05vw, 15px);
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+/* The canyon's first heading shares the underwater type hierarchy. Its
+   lower position leaves the droplet and the mouth of the valley in view. */
+@layer rise-typography {
+  html[data-rise] #chapter-innovation > .fi-copy-kicker {
+    font: 500 11px/1.4 var(--rise-display-face) !important;
+    letter-spacing: .24em !important;
+    color: rgb(237 246 250 / .79) !important;
+  }
+  html[data-rise] #chapter-innovation > h2 {
+    font: 300 calc(min(var(--rise-display-size), 9.2vh, 8.4vw) * var(--tx-fit, 1))/.98 var(--rise-display-face) !important;
+    letter-spacing: .012em !important;
+    color: var(--rise-copy-ink) !important;
+    font-style: normal !important;
+    white-space: nowrap !important;
+  }
+  html[data-rise] #chapter-innovation > h2 em {
+    font-style: normal !important;
+    color: var(--rise-copy-accent) !important;
+  }
+  html[data-rise] #chapter-innovation > h2::after {
+    content: "" !important;
+    display: block !important;
+    width: 72px !important;
+    height: 1px !important;
+    margin: clamp(8px, 1.45vh, 16px) auto 0 !important;
+    background: var(--rise-copy-rule) !important;
+    opacity: var(--tx-dom, 1);
+  }
+  html[data-rise] #chapter-innovation > .tx-lines,
+  html[data-rise] #chapter-innovation > .fi-copy-zh {
+    font: 400 clamp(14px, 1.06vw, 16px)/1.65 var(--rise-body-face) !important;
+    letter-spacing: .012em !important;
+    color: rgb(237 246 250 / .90) !important;
+    width: min(500px, 82vw) !important;
+    text-wrap: balance;
+  }
+  html[data-rise] #chapter-innovation > .fi-copy-zh {
+    font-family: "Noto Sans TC", "PingFang TC", sans-serif !important;
+    color: rgb(234 245 250 / .76) !important;
+  }
+  html[data-rise] #chapter-innovation > .tx-lines > p,
+  html[data-rise] #chapter-innovation > .fi-copy-zh span {
+    text-shadow: 0 1px 5px rgb(3 16 28 / .34) !important;
+  }
+}
+
+html[data-rise] .f2p-tab:is([data-panel-id="rise-water-light"], [data-panel-id="rise-bubble-logo"]) {
+  order: -1;
+  white-space: nowrap;
+}
+html[data-rise] .f2p-box[data-panel-id="rise-water-light"] {
+  left: 0;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 48px;
+}
+
+html[data-rise-studio-pbr] .f2p-tab[data-panel-id="rise-studio-pbr"] {
+  order: -2;
+  white-space: nowrap;
+}
+html[data-rise-studio-pbr] .f2p-box[data-panel-id="rise-studio-pbr"] {
+  left: 0;
+  width: 346px;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 48px;
+}
+/* MASTER 2026-11-20: no dragging in the valley on this page (client), so its 'DRAG TO EXPLORE · RESET VIEW' button is not shown (the [hidden] attribute alone lost to the button's own display rule) */
+html[data-rise-studio-pbr] .f2fa-home { display: none !important; }

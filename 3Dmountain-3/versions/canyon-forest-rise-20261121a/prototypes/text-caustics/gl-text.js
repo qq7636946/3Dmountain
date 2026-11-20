@@ -1,0 +1,779 @@
+/* Text reveal · the WebGL text renderer behind Filament (#16, the default) and Caustics (#19), ported for index1-5-canyon-forest.html
+   (Team TX, 2026-11-17).
+
+   From Codrops' "Text Character Animations with GSAP" (js/variations/glText.js, the renderer behind variations 16 to 19), MIT
+   License, Copyright (c) 2009 - 2026 Codrops (https://codrops.com); the full notice is in LICENSE-codrops-MIT.txt next to this file.
+   The texture maths (boxBlur, blur, findOwners, smoothStarts, computeTexture), the shader prelude and the hand-over blend are the
+   demo's. What is different here, for a page that already spends its frame on a 3D canyon:
+
+   · ONE canvas and ONE WebGL2 context for the whole page (the demo made one per text). A "block" is one piece of text (a title, a
+     paragraph, a subtitle); several blocks can play at once: the shared canvas then spans their boxes and each block is drawn in its
+     own viewport inside it, with its own texture. The canvas exists at full size only while something plays; afterwards it shrinks to
+     1×1 and is hidden, the blocks' textures are deleted, and nothing is drawn at all (no loop runs) until the next reveal.
+   · The program is compiled once, ahead (KHR_parallel_shader_compile when the browser has it, so compiling never holds up a frame).
+   · The letters are measured with DOM Ranges over the page's own text nodes (no SplitText, no extra spans: the page's own title
+     machinery, copy-motion.js and flow2-hud.js, keeps its markup), and drawn into the texture at those places; the baseline comes
+     from the font's own ascent (canvas measureText), the same metric the browser uses to place the text.
+   · No GSAP: a plain requestAnimationFrame loop, running only while a block plays.
+   · Every block is drawn at its box's current place, which follows the page's own scroll-led lift (--copy-y), read from the inline
+     style, so the loop never asks the browser for a layout.
+   · The canvas draws at most maxPixelRatio device pixels per CSS pixel (1.5 by default).
+
+   The shader reads one texture per block, as large as the block's viewport, one texel per pixel:
+   R  the letters, as the page draws them (edge curve applied)
+   G  the letters blurred over the effect's blur em (Filament's halo; 0 for Caustics)
+   B  when the nearest letter starts, as a share of uMaxDelay
+   A  the nearest letter's random seed, from 1/255 to 1 (Filament's flicker); or, for an effect that sets smoothStart (Caustics), the
+      letters' starts blurred over that many em, from 1/255 to 1 for 0 to uMaxDelay; 0 where no letter is near */
+
+/* flow2-tex ENGINE (2026-11-17): one stable screen-sized drawing buffer (see fit); only where flow2-tex is on; ?texEtext=0 / ?texE=0 / ?tex=0 = as before */
+const STABLE_BUFFER = (() => { try { const q = new URLSearchParams(location.search); return document.documentElement.hasAttribute('data-flow2-tex') && q.get('texEtext') !== '0' && q.get('texE') !== '0' && q.get('tex') !== '0'; } catch (error) { return false; } })();
+
+const DEFAULTS = {
+    // the canvas never draws at more device pixels per CSS pixel than this
+    maxPixelRatio: 1.5,
+    // seconds the last frame is held, so every letter has surely finished
+    hold: 0.05,
+    // seconds the canvas takes to fade out over the page text when a block ends (the demo's .8)
+    handover: 0.7,
+    // seconds a block takes to fade when its chapter leaves while it still plays
+    leave: 0.3,
+    // the page draws light text on a dark ground thinner than a canvas does; this curve on the letters' edges brings the canvas letters to the page's weight
+    edge: 2.4,
+    // CSS px of room kept around the blocks when the canvas is sized, so small moves of a block do not resize it
+    slack: 24,
+};
+
+// One triangle over the whole viewport, with vUv running down the page like the texture
+const VERTEX = `#version 300 es
+out vec2 vUv;
+
+void main() {
+    vec2 position = vec2(float((gl_VertexID & 1) << 2) - 1.0, float((gl_VertexID & 2) << 1) - 1.0);
+    vUv = vec2(position.x * 0.5 + 0.5, 0.5 - position.y * 0.5);
+    gl_Position = vec4(position, 0.0, 1.0);
+}`;
+
+// What the effect's fragment shader starts with; the effect adds main(). The demo's, with the block's place in the shared canvas
+// (uOrigin, device px from the canvas's bottom left) and its opacity (uAlpha) added.
+const PRELUDE = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+
+// The letters (see the top of gl-text.js)
+uniform sampler2D uTexture;
+// seconds since play
+uniform float uTime;
+// seconds one letter takes
+uniform float uDuration;
+// seconds until the last letter starts
+uniform float uMaxDelay;
+// the block in device pixels, and device pixels per CSS pixel
+uniform vec2 uResolution;
+uniform float uPixelRatio;
+// the text's font size, in CSS pixels
+uniform float uFontSize;
+// the text colour, rgba from 0 to 1
+uniform vec4 uColor;
+// where the block's viewport starts in the shared canvas (device px, from the bottom left), and its opacity
+uniform vec2 uOrigin;
+uniform float uAlpha;
+
+// 0 to 1 from the block's top left to its bottom right
+in vec2 vUv;
+out vec4 fragColor;
+
+// This pixel's texel, as it is
+vec4 texel() {
+    vec2 f = gl_FragCoord.xy - uOrigin;
+    return texelFetch(uTexture, ivec2(int(f.x), int(uResolution.y - f.y)), 0);
+}
+
+// The texture this many CSS pixels away from this pixel, filtered
+vec4 texelAt(vec2 offset) {
+    return texture(uTexture, vUv + offset * uPixelRatio / uResolution);
+}
+
+// This pixel, in CSS pixels from the block's top left
+vec2 pixel() {
+    return vUv * uResolution / uPixelRatio;
+}
+
+// The texel this many CSS pixels from this pixel, as it is
+vec4 texelNearby(vec2 offset) {
+    vec2 f = gl_FragCoord.xy - uOrigin;
+    vec2 at = vec2(f.x, uResolution.y - f.y) + offset * uPixelRatio;
+    return texelFetch(uTexture, clamp(ivec2(floor(at)), ivec2(0), ivec2(uResolution) - 1), 0);
+}
+
+// From a texel: whether a letter is near, when it starts and its seed
+bool hasLetter(vec4 t) {
+    return t.a > 0.0;
+}
+
+float letterStart(vec4 t) {
+    return t.b * uMaxDelay;
+}
+
+float letterSeed(vec4 t) {
+    return (t.a * 255.0 - 1.0) / 254.0;
+}
+
+// With smoothStart: when the letters around this texel start, blended
+float nearbyStart(vec4 t) {
+    return (t.a * 255.0 - 1.0) / 254.0 * uMaxDelay;
+}
+
+// The text colour at this opacity, premultiplied as the canvas expects
+vec4 paint(float alpha) {
+    alpha = clamp(alpha, 0.0, 1.0);
+    return vec4(uColor.rgb * alpha, alpha);
+}
+`;
+
+/* ------------------------------------------------------------------ the texture maths (the demo's, unchanged) */
+
+// One box blur along every row (step 1) or every column (step width)
+const boxBlur = (source, target, length, count, step, lineStep, radius) => {
+    const scale = 1 / (2 * radius + 1);
+    for (let line = 0; line < count; line++) {
+        const start = line * lineStep;
+        let sum = 0;
+        for (let i = 0; i <= radius && i < length; i++) sum += source[start + i * step];
+        for (let i = 0; i < length; i++) {
+            target[start + i * step] = sum * scale;
+            if (i + radius + 1 < length) sum += source[start + (i + radius + 1) * step];
+            if (i - radius >= 0) sum -= source[start + (i - radius) * step];
+        }
+    }
+};
+
+// The values blurred by three box blurs each way, close to a gaussian that spreads this many pixels (its standard deviation)
+const blur = (values, width, height, spread) => {
+    const radius = Math.max(1, Math.round((Math.sqrt(1 + 4 * spread * spread) - 1) / 2));
+    const source = Float32Array.from(values);
+    const target = new Float32Array(values.length);
+    for (let pass = 0; pass < 3; pass++) {
+        boxBlur(source, target, width, height, 1, width, radius);
+        boxBlur(target, source, height, width, width, 1, radius);
+    }
+    return source;
+};
+
+// For every pixel, the letter it belongs to: the one whose drawn shape is nearest, up to reach pixels away; -1 farther out
+const findOwners = (coverage, boxes, width, height, reach) => {
+    const count = width * height;
+    const inBox = new Int16Array(count).fill(-1);
+    boxes.forEach(([x0, y0, x1, y1], index) => {
+        for (let y = Math.max(0, y0); y < Math.min(height, y1); y++) {
+            inBox.fill(index, y * width + Math.max(0, x0), y * width + Math.min(width, x1));
+        }
+    });
+    const owners = new Int16Array(count).fill(-1);
+    const distance = new Uint16Array(count);
+    const queue = new Int32Array(count);
+    let head = 0;
+    let tail = 0;
+    for (let i = 0; i < count; i++) {
+        if (coverage[i] >= 0.25 && inBox[i] >= 0) {
+            owners[i] = inBox[i];
+            queue[tail++] = i;
+        }
+    }
+    const claim = (from, to) => {
+        if (owners[to] !== -1) return;
+        owners[to] = owners[from];
+        distance[to] = distance[from] + 1;
+        queue[tail++] = to;
+    };
+    while (head < tail) {
+        const i = queue[head++];
+        if (distance[i] >= reach) continue;
+        const x = i % width;
+        if (x > 0) claim(i, i - 1);
+        if (x < width - 1) claim(i, i + 1);
+        if (i >= width) claim(i, i - width);
+        if (i < count - width) claim(i, i + width);
+    }
+    return owners;
+};
+
+// Every pixel's letter start, blurred across the letters around it, so it changes smoothly from one letter to the next and from line to line
+const smoothStarts = (owners, delays, width, height, spread) => {
+    const count = width * height;
+    const weight = new Float32Array(count);
+    const start = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+        if (owners[i] < 0) continue;
+        weight[i] = 1;
+        start[i] = delays[owners[i]];
+    }
+    const weights = blur(weight, width, height, spread);
+    const starts = blur(start, width, height, spread);
+    for (let i = 0; i < count; i++) starts[i] = weights[i] > 0 ? starts[i] / weights[i] : 0;
+    return starts;
+};
+
+// The texture from the letters as drawn (see the top of this file). The slow part of building a block, so it runs in a worker.
+const computeTexture = ({pixels, width, height, boxes, reach, spread, smooth, delays, seeds, maxDelay, edge}) => {
+    const count = width * height;
+    const coverage = new Float32Array(count);
+    for (let i = 0; i < count; i++) coverage[i] = pixels[i * 4 + 3] / 255;
+    const owners = findOwners(coverage, boxes, width, height, reach);
+    const greens = spread > 0 ? blur(coverage, width, height, spread) : new Float32Array(count);
+    const nearby = smooth ? smoothStarts(owners, delays, width, height, smooth) : null;
+    const starts = delays.map(delay => (maxDelay ? Math.round((delay / maxDelay) * 255) : 0));
+    const data = new Uint8Array(count * 4);
+    for (let i = 0; i < count; i++) {
+        const owner = owners[i];
+        data[i * 4] = Math.round(255 * Math.pow(coverage[i], edge));
+        data[i * 4 + 1] = Math.min(255, Math.round(greens[i] * 255));
+        if (owner >= 0) {
+            data[i * 4 + 2] = starts[owner];
+            data[i * 4 + 3] = nearby ? 1 + Math.round((maxDelay ? nearby[i] / maxDelay : 0) * 254) : seeds[owner];
+        }
+    }
+    return data;
+};
+
+// One worker works out every block's texture, off the page's main thread; where a worker cannot start, the work is done here
+const WORKER_SOURCE = `${[boxBlur, blur, findOwners, smoothStarts, computeTexture].map(fn => `const ${fn.name} = ${fn};`).join('\n')}
+onmessage = ({data: {id, job}}) => {
+    const data = computeTexture(job);
+    postMessage({id, data}, [data.buffer]);
+};`;
+
+let worker;
+const jobs = new Map();
+let jobCount = 0;
+const getWorker = () => {
+    if (worker !== undefined) return worker;
+    try {
+        worker = new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE], {type: 'text/javascript'})));
+        worker.onmessage = ({data: {id, data}}) => {
+            jobs.get(id)?.(data);
+            jobs.delete(id);
+        };
+        worker.onerror = () => {
+            worker = null;
+            jobs.forEach(resolve => resolve(null));
+            jobs.clear();
+        };
+    } catch (error) {
+        worker = null;
+    }
+    return worker;
+};
+const runJob = job => {
+    if (!getWorker()) return Promise.resolve(computeTexture(job));
+    return new Promise(resolve => {
+        const id = jobCount++;
+        jobs.set(id, resolve);
+        worker.postMessage({id, job}, [job.pixels.buffer]);
+    });
+};
+
+/* ------------------------------------------------------------------ helpers */
+
+const fract = x => x - Math.floor(x);
+const easeInOut = h => (h < 0.5 ? 2 * h * h : 1 - Math.pow(-2 * h + 2, 2) / 2);   // GSAP's power1.inOut
+const scratch = document.createElement('canvas').getContext('2d', {willReadFrequently: true});
+// a CSS colour as the page paints it, rgba 0..255
+const readColor = css => {
+    scratch.canvas.width = 1;
+    scratch.canvas.height = 1;
+    scratch.clearRect(0, 0, 1, 1);
+    scratch.fillStyle = css;
+    scratch.fillRect(0, 0, 1, 1);
+    return [...scratch.getImageData(0, 0, 1, 1).data];
+};
+// the translateY the page's copy motion gives an element (copy-motion.js writes it inline as --copy-y, in px)
+export const liftOf = el => {
+    if (!el) return 0;
+    const v = parseFloat(el.style.getPropertyValue('--copy-y'));
+    return Number.isFinite(v) ? v : 0;
+};
+
+/* ------------------------------------------------------------------ a block: one piece of text with its own texture */
+
+export class TextBlock {
+    /* stage: the TextStage; lines(): the elements whose text is drawn, in reading order; dom: the element carrying --tx-dom (the page
+       text's opacity under the canvas); lift: the element whose --copy-y moves the text; alpha(): the block's own opacity now (0..1);
+       start: seconds after play before its first letter; colorEl: the element whose colour the letters take */
+    constructor({stage, name, lines, dom, lift = null, alpha = () => 1, start = 0, colorEl = null}) {
+        Object.assign(this, {stage, name, lines, dom, lift, alpha, start, colorEl});
+        this.layout = null;     // the last measure: places, sizes, starts
+        this.data = null;       // the texture's bytes for layout.key
+        this.dataKey = '';
+        this.building = null;   // the promise of the texture on its way
+        this.tex = null;        // the GL texture while it plays
+    }
+
+    // Measures the letters where the page draws them now. Returns the layout (null when there is nothing to draw).
+    measure() {
+        const els = this.lines().filter(Boolean);
+        if (!els.length) return (this.layout = null);
+        const S = this.stage.settings;
+        const pr = this.stage.pixelRatio();
+        const dy0 = liftOf(this.lift);
+        const range = document.createRange();
+        const styleOf = new Map();
+        const chars = [];
+        let em = 0;
+        for (const el of els) {
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                const parent = node.parentElement;
+                let st = styleOf.get(parent);
+                if (!st) {
+                    const cs = getComputedStyle(parent);
+                    st = {font: `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`, upper: cs.textTransform === 'uppercase', size: parseFloat(cs.fontSize), hidden: cs.display === 'none'};
+                    styleOf.set(parent, st);
+                }
+                if (st.hidden) continue;
+                const text = node.data;
+                for (let i = 0; i < text.length; i++) {
+                    const code = text.codePointAt(i);
+                    const len = code > 0xffff ? 2 : 1;
+                    const ch = text.slice(i, i + len);
+                    if (!/\s/.test(ch)) {
+                        range.setStart(node, i);
+                        range.setEnd(node, i + len);
+                        const r = range.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0) {
+                            chars.push({ch: st.upper ? ch.toUpperCase() : ch, font: st.font, x: r.left, y: r.top - dy0, w: r.width, h: r.height, line: el});
+                            em = Math.max(em, st.size);
+                        }
+                    }
+                    i += len - 1;
+                }
+            }
+        }
+        if (!chars.length) return (this.layout = null);
+
+        // the box of all the letters, and the pad around it for the light that lands off them
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (const c of chars) {
+            x0 = Math.min(x0, c.x);
+            y0 = Math.min(y0, c.y);
+            x1 = Math.max(x1, c.x + c.w);
+            y1 = Math.max(y1, c.y + c.h);
+        }
+        const pad = S.pad * em;
+        // the texture's top left, on a whole device pixel of the screen so the letters stay sharp
+        const left = Math.floor((x0 - pad) * pr) / pr;
+        const top = Math.floor((y0 - pad) * pr) / pr;
+        const width = Math.ceil((x1 + pad - left) * pr);
+        const height = Math.ceil((y1 + pad - top) * pr);
+        const maxSize = this.stage.maxTextureSize || 4096;
+        if (width < 1 || height < 1 || width > maxSize || height > maxSize) return (this.layout = null);
+
+        // reading order: line by line (a new element, or a wrapped line of the same one), letters left to right
+        const delays = [];
+        let time = 0, lineStart = 0, prevLine = null, prevTop = -Infinity, prevH = 0, first = true;
+        for (const c of chars) {
+            const newLine = !first && (c.line !== prevLine || c.y > prevTop + prevH * 0.5);
+            if (newLine) time = S.overlap ? lineStart + S.line : time + S.line;
+            if (first || newLine) {
+                lineStart = time;
+                prevTop = c.y;
+                prevH = c.h;
+            }
+            delays.push(time);
+            time += S.letter;
+            prevLine = c.line;
+            first = false;
+        }
+        const maxDelay = delays.reduce((m, d) => Math.max(m, d), 0);
+        const colorCss = getComputedStyle(this.colorEl || els[0]).color;
+        const key = [width, height, left.toFixed(3), top.toFixed(3), pr, chars.map(c => c.ch + c.font + c.x.toFixed(1) + ',' + c.y.toFixed(1)).join('|')].join(';');
+        this.layout = {key, chars, left, top, width, height, pr, em, pad, delays, maxDelay, color: readColor(colorCss), dy0};
+        return this.layout;
+    }
+
+    // The texture for the layout as the page stands now; resolves true when it is ready
+    build() {
+        const m0 = performance.now();
+        const L = this.measure();
+        if (!L) return Promise.resolve(false);
+        if (this.data && this.dataKey === L.key) return Promise.resolve(true);
+        if (this.building && this.building.key === L.key) return this.building.promise;
+        const ctx = document.createElement('canvas').getContext('2d', {willReadFrequently: true});
+        ctx.canvas.width = L.width;
+        ctx.canvas.height = L.height;
+        ctx.setTransform(L.pr, 0, 0, L.pr, -L.left * L.pr, -L.top * L.pr);
+        ctx.fillStyle = '#fff';
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'left';
+        const boxes = [];
+        let font = '';
+        for (const c of L.chars) {
+            if (c.font !== font) {
+                ctx.font = font = c.font;
+            }
+            // the baseline: the text's box runs from the font's ascent above it to its descent below
+            const m = ctx.measureText(c.ch);
+            const asc = m.fontBoundingBoxAscent, desc = m.fontBoundingBoxDescent;
+            const base = c.y + (asc + desc > 0 ? asc * (c.h / (asc + desc)) : c.h * 0.8);
+            ctx.fillText(c.ch, c.x, base);
+            boxes.push([
+                Math.floor((c.x - L.left) * L.pr),
+                Math.floor((c.y - L.top) * L.pr),
+                Math.ceil((c.x + c.w - L.left) * L.pr),
+                Math.ceil((c.y + c.h - L.top) * L.pr),
+            ]);
+        }
+        const S = this.stage.settings;
+        const key = L.key;
+        const pixels = ctx.getImageData(0, 0, L.width, L.height).data;
+        const m1 = performance.now();
+        const promise = runJob({
+            pixels,
+            width: L.width,
+            height: L.height,
+            boxes,
+            reach: Math.round(L.pad * L.pr),
+            spread: (S.blur || 0) * L.em * L.pr,
+            smooth: (S.smoothStart || 0) * L.em * L.pr,
+            delays: L.delays,
+            seeds: L.delays.map(() => 1 + Math.floor(Math.random() * 254)),
+            maxDelay: L.maxDelay,
+            edge: this.stage.opts.edge,
+        }).then(data => {
+            this.stage.stats.builds.push({name: this.name, px: L.width * L.height, mainMs: +(m1 - m0).toFixed(1), workerMs: +(performance.now() - m1).toFixed(1)});
+            if (this.building?.key === key) this.building = null;
+            if (!data) return false;
+            // a newer layout is being worked out: this one is kept only if it is still the page's
+            if (this.layout?.key !== key) return false;
+            this.data = data;
+            this.dataKey = key;
+            this.builtLayout = this.layout;
+            return true;
+        });
+        this.building = {key, promise};
+        ctx.canvas.width = ctx.canvas.height = 0;
+        return promise;
+    }
+
+    // drops the texture's bytes (kept only for the chapters near the one on screen)
+    forget() {
+        if (this.stage.active.has(this)) return;
+        this.data = null;
+        this.dataKey = '';
+        this.builtLayout = null;
+    }
+
+    get ready() {
+        return !!(this.data && this.builtLayout && this.dataKey === this.builtLayout.key);
+    }
+}
+
+/* ------------------------------------------------------------------ the stage: one canvas, one context, every block */
+
+export class TextStage {
+    constructor({fragment, host, settings, ...opts}) {
+        this.fragment = fragment;
+        this.host = host;
+        this.settings = settings;
+        this.opts = {...DEFAULTS, ...opts};
+        this.active = new Set();
+        this.canvas = null;
+        this.gl = null;
+        this.uniforms = {};
+        this.warming = null;
+        this.raf = 0;
+        this.rect = null;          // the canvas's box now, CSS px in the screen: {l, t, w, h} (l, t on device pixels)
+        this.seekTime = null;      // test hook: every playing block held at this many seconds
+        this.maxTextureSize = 0;
+        this.stats = {reveals: 0, frames: 0, cpuMax: 0, cpuSum: 0, px: 0, pxMax: 0, upMs: 0, gpu: [], canvasMax: [0, 0], builds: []};
+        this.timer = null;         // EXT_disjoint_timer_query_webgl2 (test only: __FLOW2_TX__.stage.enableTimer())
+        this.hostRect = null;
+        addEventListener('resize', () => (this.hostRect = null), {passive: true});
+    }
+
+    pixelRatio() {
+        return Math.min(window.devicePixelRatio || 1, this.opts.maxPixelRatio);
+    }
+
+    // Test only: the GPU time of each drawn frame of this canvas (EXT_disjoint_timer_query_webgl2), into stats.gpu (ms)
+    enableTimer() {
+        const gl = this.gl;
+        const ext = gl && gl.getExtension('EXT_disjoint_timer_query_webgl2');
+        if (!ext) return false;
+        const pending = [];
+        const poll = () => {
+            const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT);
+            for (let i = pending.length - 1; i >= 0; i--) {
+                const q = pending[i];
+                if (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) continue;
+                if (!disjoint) this.stats.gpu.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6);
+                gl.deleteQuery(q);
+                pending.splice(i, 1);
+            }
+        };
+        this.timer = {
+            begin: () => {
+                poll();
+                const q = gl.createQuery();
+                gl.beginQuery(ext.TIME_ELAPSED_EXT, q);
+                return q;
+            },
+            end: q => {
+                gl.endQuery(ext.TIME_ELAPSED_EXT);
+                pending.push(q);
+            },
+            poll,
+        };
+        return true;
+    }
+
+    // Starts WebGL and compiles the effect once. Resolves true when it can draw.
+    warm() {
+        if (this.warming) return this.warming;
+        this.warming = new Promise(resolve => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.className = 'tx-gl';
+                canvas.setAttribute('aria-hidden', 'true');
+                canvas.width = canvas.height = 1;
+                canvas.style.display = 'none';
+                const gl = canvas.getContext('webgl2', {premultipliedAlpha: true, antialias: false, depth: false, stencil: false, alpha: true, preserveDrawingBuffer: false});
+                if (!gl) return resolve(false);
+                canvas.addEventListener('webglcontextlost', ev => {
+                    ev.preventDefault();
+                    this.lost();
+                });
+                const program = gl.createProgram();
+                const shaders = [[gl.VERTEX_SHADER, VERTEX], [gl.FRAGMENT_SHADER, PRELUDE + this.fragment]].map(([type, src]) => {
+                    const shader = gl.createShader(type);
+                    gl.shaderSource(shader, src);
+                    gl.compileShader(shader);
+                    gl.attachShader(program, shader);
+                    return shader;
+                });
+                gl.linkProgram(program);
+                const parallel = gl.getExtension('KHR_parallel_shader_compile');
+                const finish = () => {
+                    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                        console.warn('text reveal:', gl.getProgramInfoLog(program), ...shaders.map(s => gl.getShaderInfoLog(s)));
+                        return resolve(false);
+                    }
+                    gl.useProgram(program);
+                    gl.bindVertexArray(gl.createVertexArray());
+                    gl.activeTexture(gl.TEXTURE0);
+                    for (const name of ['uTexture', 'uTime', 'uDuration', 'uMaxDelay', 'uResolution', 'uPixelRatio', 'uFontSize', 'uColor', 'uOrigin', 'uAlpha']) this.uniforms[name] = gl.getUniformLocation(program, name);
+                    gl.uniform1i(this.uniforms.uTexture, 0);
+                    gl.uniform1f(this.uniforms.uDuration, this.settings.duration);
+                    gl.disable(gl.DEPTH_TEST);
+                    gl.disable(gl.BLEND);
+                    this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+                    // one draw of one pixel now, so the driver finishes the program in this quiet moment, not on the first reveal's first frame
+                    const tex = gl.createTexture();
+                    gl.bindTexture(gl.TEXTURE_2D, tex);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 0, 255]));
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                    gl.uniform2f(this.uniforms.uResolution, 1, 1);
+                    gl.uniform1f(this.uniforms.uPixelRatio, 1);
+                    gl.uniform1f(this.uniforms.uFontSize, 16);
+                    gl.uniform1f(this.uniforms.uMaxDelay, 1);
+                    gl.uniform1f(this.uniforms.uTime, 1);
+                    gl.uniform1f(this.uniforms.uAlpha, 0);
+                    gl.viewport(0, 0, 1, 1);
+                    gl.drawArrays(gl.TRIANGLES, 0, 3);
+                    gl.deleteTexture(tex);
+                    this.canvas = canvas;
+                    this.gl = gl;
+                    this.host.append(canvas);
+                    resolve(true);
+                };
+                if (!parallel) return finish();
+                const poll = () => (gl.getProgramParameter(program, parallel.COMPLETION_STATUS_KHR) ? finish() : requestAnimationFrame(poll));
+                poll();
+            } catch (error) {
+                console.warn('text reveal: no WebGL', error);
+                resolve(false);
+            }
+        });
+        return this.warming;
+    }
+
+    get ready() {
+        return !!(this.gl && !this.gl.isContextLost());
+    }
+
+    // The GPU took the context away: every block ends at once (the page text shows), and the next reveal starts a fresh context
+    lost() {
+        for (const block of [...this.active]) this.finish(block, true);
+        this.canvas?.remove();
+        this.canvas = null;
+        this.gl = null;
+        this.warming = null;
+    }
+
+    /* Plays a block from its start. onDone(ended) runs when it has handed over to the page text (or was stopped). */
+    play(block, onDone) {
+        if (!this.ready || !block.ready) return false;
+        const gl = this.gl;
+        const L = block.builtLayout;
+        const t0 = performance.now();
+        if (!block.tex) block.tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, block.tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, L.width, L.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, block.data);
+        this.stats.upMs += performance.now() - t0;
+        block.run = {t0: performance.now() + block.start * 1000, total: L.maxDelay + this.settings.duration + this.opts.hold, leaving: 0, onDone, dom: -1};
+        block.dom?.style.setProperty('--tx-dom', '0');
+        this.active.add(block);
+        this.stats.reveals++;
+        this.canvas.style.display = 'block';
+        if (!this.raf) this.raf = requestAnimationFrame(this.frame);
+        return true;
+    }
+
+    // The block's chapter leaves while it plays: it fades over opts.leave seconds, then ends
+    leave(block) {
+        if (!this.active.has(block) || block.run.leaving) return;
+        block.run.leaving = performance.now();
+    }
+
+    // Ends a block now: its texture is deleted; the page text under it is left to the caller (cut) or shown (a normal end)
+    finish(block, cut = false) {
+        if (!this.active.has(block)) return;
+        this.active.delete(block);
+        if (block.tex && this.gl) this.gl.deleteTexture(block.tex);
+        block.tex = null;
+        const run = block.run;
+        block.run = null;
+        if (!cut) block.dom?.style.removeProperty('--tx-dom');
+        run?.onDone?.(!cut);
+        if (!this.active.size) this.idle();
+        else this.rect = null;   // the canvas shrinks to the blocks still playing (next frame)
+    }
+
+    // Nothing plays: the canvas gives its drawing buffer back and hides; no loop runs
+    idle() {
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = 0;
+        if (this.canvas) {
+            if (!STABLE_BUFFER) this.canvas.width = this.canvas.height = 1;   /* flow2-tex ENGINE: with the stable buffer it keeps its size (see fit) */
+            this.canvas.style.display = 'none';
+        }
+        this.rect = null;
+    }
+
+    // Sizes and places the canvas so it covers every playing block (only when a block would fall outside it)
+    fit(boxes, pr) {
+        let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+        for (const x of boxes) {
+            l = Math.min(l, x.l);
+            t = Math.min(t, x.t);
+            r = Math.max(r, x.l + x.w);
+            b = Math.max(b, x.t + x.h);
+        }
+        const R = this.rect;
+        if (R && R.pr === pr && l >= R.l && t >= R.t && r <= R.l + R.w && b <= R.t + R.h) return false;
+        const s = this.opts.slack;
+        let L = Math.floor((l - s) * pr) / pr, T = Math.floor((t - s) * pr) / pr;
+        let W = Math.ceil((r + s - L) * pr), H = Math.ceil((b + s - T) * pr);
+        /* flow2-tex ENGINE (2026-11-17, iGPU / return-trip hitches): every size change of a WebGL canvas reallocates its drawing buffer through
+           a synchronous call to the GPU process; with the 3D page busy on the same GPU that call waited 80–220 ms per reveal (measured on the
+           canyon ↔ view round trip, engine/igpu/ret-*), and idle() shrank it to 1 × 1 again after each one. With STABLE_BUFFER the canvas is
+           one screen-sized buffer at (0, 0), allocated once per screen size and kept while hidden; blocks inside the screen are drawn in it at
+           the same device pixels as before (the origin is on a device pixel either way). Blocks reaching outside the screen: as before.
+           ?texEtext=0 = as before. */
+        if (STABLE_BUFFER && l >= 0 && t >= 0 && r <= innerWidth && b <= innerHeight) { L = 0; T = 0; W = Math.ceil(innerWidth * pr); H = Math.ceil(innerHeight * pr); }
+        // the host's place is read once per screen size (reading it in a frame would make the browser lay the page out mid-frame)
+        const host = this.hostRect || (this.hostRect = this.host.getBoundingClientRect());
+        if (!STABLE_BUFFER || this.canvas.width !== W) this.canvas.width = W;
+        if (!STABLE_BUFFER || this.canvas.height !== H) this.canvas.height = H;
+        Object.assign(this.canvas.style, {left: `${L - host.left}px`, top: `${T - host.top}px`, width: `${W / pr}px`, height: `${H / pr}px`});
+        this.rect = {l: L, t: T, w: W / pr, h: H / pr, W, H, pr};
+        this.stats.canvasMax = [Math.max(this.stats.canvasMax[0], W), Math.max(this.stats.canvasMax[1], H)];
+        return true;
+    }
+
+    frame = now => {
+        this.raf = 0;
+        const gl = this.gl;
+        if (!gl || gl.isContextLost()) return;
+        const c0 = performance.now();
+        const O = this.opts;
+        const draws = [];
+        for (const block of [...this.active]) {
+            const run = block.run;
+            const L = block.builtLayout;
+            const t = this.seekTime != null ? this.seekTime - block.start : (now - run.t0) / 1000;
+            let c = 1;
+            if (this.seekTime == null && t > run.total) {
+                const h = (t - run.total) / O.handover;
+                if (h >= 1) {
+                    this.finish(block);
+                    continue;
+                }
+                c = 1 - easeInOut(h);
+            }
+            if (run.leaving) {
+                const f = (now - run.leaving) / 1000 / O.leave;
+                if (f >= 1) {
+                    this.finish(block, true);
+                    continue;
+                }
+                c *= 1 - f;
+            }
+            // the page text under the canvas: hidden while the letters form, then at the rate that keeps the two together as bright as the text
+            const a = L.color[3] / 255;
+            const d = run.leaving ? run.dom : this.seekTime == null && t > run.total ? (a * c >= 1 ? 1 : (1 - c) / (1 - a * c)) : 0;
+            if (Math.abs(d - run.dom) > 0.002) {
+                run.dom = d;
+                block.dom?.style.setProperty('--tx-dom', d.toFixed(3));
+            }
+            const alpha = Math.max(0, Math.min(1, block.alpha())) * c;
+            if (t < 0 || alpha <= 0.001) continue;
+            const dy = liftOf(block.lift) - L.dy0;
+            draws.push({block, L, t, alpha, box: {l: L.left, t: L.top + dy, w: L.width / L.pr, h: L.height / L.pr}});
+        }
+        if (this.active.size) this.raf = requestAnimationFrame(this.frame);
+        if (!draws.length) {
+            if (this.canvas && this.rect) gl.clear(gl.COLOR_BUFFER_BIT);
+            return;
+        }
+        const pr = draws[0].L.pr;
+        this.fit(draws.map(d => d.box), pr);
+        const R = this.rect;
+        const q = this.timer?.begin();
+        gl.viewport(0, 0, R.W, R.H);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        const U = this.uniforms;
+        let px = 0;
+        for (const {block, L, t, alpha, box} of draws) {
+            const ox = Math.round((box.l - R.l) * pr);
+            const oy = R.H - Math.round((box.t - R.t) * pr) - L.height;
+            gl.viewport(ox, oy, L.width, L.height);
+            gl.bindTexture(gl.TEXTURE_2D, block.tex);
+            gl.uniform1f(U.uTime, t);
+            gl.uniform1f(U.uMaxDelay, L.maxDelay);
+            gl.uniform2f(U.uResolution, L.width, L.height);
+            gl.uniform1f(U.uPixelRatio, L.pr);
+            gl.uniform1f(U.uFontSize, L.em);
+            gl.uniform4f(U.uColor, L.color[0] / 255, L.color[1] / 255, L.color[2] / 255, L.color[3] / 255);
+            gl.uniform2f(U.uOrigin, ox, oy);
+            gl.uniform1f(U.uAlpha, alpha);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            px += L.width * L.height;
+        }
+        this.timer?.end(q);
+        const cpu = performance.now() - c0;
+        const S = this.stats;
+        S.frames++;
+        S.cpuSum += cpu;
+        S.cpuMax = Math.max(S.cpuMax, cpu);
+        S.px += px;
+        S.pxMax = Math.max(S.pxMax, px);
+    };
+}

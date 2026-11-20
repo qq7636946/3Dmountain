@@ -1,0 +1,225 @@
+/* Text caustics · type and layout of the chapter titles, index1-5-canyon-forest.html only (Team TX, 2026-11-17).
+   Client: 「TextCharacterAnimations-main 字體改成這資料夾的字體然後特效改成 19號的特效，然後這樣排版 可以後面再改」, then, on the mock-up
+   (an arrow from the upper-left paragraph down under the big title): 「擺到下面好了」, then 「拿掉  變兩排英文一排中文共三排」, and the
+   reveal changed to #16 Filament (「字體特效使用16號」). text-caustics.js says the rest.
+
+   Everything here waits for html[data-tx-type="caustics"] (set by a line in the page's head unless ?type=old), so ?type=old and every
+   other page are untouched. The page's title sheets carry up to eight ids and !important; this sheet's prefix carries nine.
+
+   The layout, one centred column low on the screen (the upper part stays clear for the glass mark, the drop and the canyon):
+     · the kicker (without the FINNOVATION chip: 「拿掉」);
+     · the title, light grey-white, over the water (since 2026-11-18 in the page's own Oswald at its own size; was Host Grotesk Light);
+     · under it, centred: two short English lines and the chapter's Chinese line (「變兩排英文一排中文共三排」);
+     · the chapter's button at the foot.
+   Sizes follow the screen's height as well as its width, so the column always fits between the mark and the bottom edge
+   (checked at 1880×930, 1440×900, 1400×705, 390×844). Phone: the same column, the title smaller (it may wrap).
+   Dials: the --tx-* values on main.fi-copy below. Chinese keeps the page's CJK face (Noto Sans TC).
+
+   2026-11-18 (client: 「文字字體改回去原本的oswald 字體跟大小。 特效維持」): the TYPE is the page's own again, the layout and the
+   Filament reveal stay. Title, kicker, Chinese line and button take the page's type system (prototypes/index1-5-flow/flow2-type-b.css:
+   Oswald 500, --f2-size-display = clamp(48px, 5.2vw, 76px), tracking .01em, leading 1.08; kicker Oswald label; Chinese line Noto Sans TC
+   lead 22px); this sheet no longer sets their family, size, weight, tracking or leading (the title's size only carries the fit factor).
+   The two English lines, new with the layout, take the page's running text (Noto Sans TC, --f2-size-body 15px, 400, .025em, 1.85).
+   The reveal draws the letters in whatever face and size the page text has (gl-text.js reads them), so it is Oswald at the same size.
+   Host Grotesk / Plus Jakarta Sans are no longer used (the files stay in fonts/; the @font-face rules are in the backup,
+   _archive/backups/text-oswald-20261118/text-caustics.css). */
+
+/* ------------------------------------------------------------------ the copy area: the whole interface frame */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
+  width: auto !important; height: auto !important; max-width: none !important;
+  margin: 0 !important; padding: 0 !important;
+  transform: none !important;
+  pointer-events: none !important;
+  text-align: center !important;
+  /* the dials (px are inside the interface frame, which stands 25 px in from the screen on desktop, 10 px on phones) */
+  /* every size and gap also follows the screen's height, so the column's top stays at about 64 % of the height: below the glass mark,
+     whose ring reaches down to about 62 % on the first screen (measured at 1880×930, 1440×900, 1400×705) */
+  /* sizes of the type: the page's own (flow2-type-b.css --f2-size-*; 2026-11-18, 「改回去原本的oswald 字體跟大小」) */
+  --tx-title-side: 40px;                            /* a title never comes closer than this to the frame's sides (text-caustics.js shrinks it, and keeps it off the side columns) */
+  --tx-kicker-gap: clamp(4px, .9vh, 12px);          /* kicker → title */
+  --tx-title-gap: clamp(6px, 1.3vh, 16px);          /* title → paragraph */
+  --tx-zh-gap: clamp(3px, .7vh, 9px);               /* paragraph → Chinese line */
+  --tx-action-gap: clamp(8px, 1.7vh, 20px);         /* Chinese line → button */
+  --tx-bottom: clamp(8px, 1.5vh, 20px);             /* the button's foot above the frame's foot */
+  --tx-title-ink: #e4e9ee;                          /* light grey-white */
+  --tx-body-ink: rgb(240 244 247 / .9);
+  --tx-kicker-ink: rgb(240 244 247 / .92);
+  --tx-shade: 0 1px 2px rgb(3 16 28 / .26), 0 1px 16px rgb(3 16 28 / .3);   /* a soft shade under the settled small text (the bright view from above) */
+}
+
+/* the opening chapter (only with ?start=drop on this page) keeps the box the copy area gave it before: centred at the foot */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > #chapter-knowledge {
+  top: auto !important; right: auto !important;
+  left: 50% !important;
+  bottom: calc(var(--ui-footer, 0px) + clamp(16px, 2.4vh, 28px)) !important;
+  width: min(1260px, calc(100% - 40px)) !important;
+  margin-left: calc(min(1260px, calc(100% - 40px)) / -2) !important;
+  pointer-events: auto;
+}
+
+/* ------------------------------------------------------------------ a chapter: one centred column at the foot of the frame */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
+  width: auto !important; height: auto !important; max-width: none !important;
+  margin: 0 !important; padding: 0 !important; gap: 0 !important;
+  transform: none !important;
+  display: grid !important;
+  grid-template-columns: var(--tx-title-side) minmax(0, 1fr) var(--tx-title-side);
+  grid-template-rows: minmax(0, 1fr) auto var(--tx-kicker-gap) auto var(--tx-title-gap) auto var(--tx-zh-gap) auto var(--tx-action-gap) auto var(--tx-bottom);
+  justify-content: stretch !important;
+  align-content: stretch !important;
+  align-items: end !important;
+  justify-items: center !important;
+  text-align: center !important;
+  /* the frame-wide chapter must not catch the pointer (the view from above is dragged under it); its button does */
+  pointer-events: none !important;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > :not(.fi-copy-kicker, .tx-lines, .fi-copy-zh, h1, h2, .fi-copy-action) {
+  position: absolute !important;
+}
+
+/* ---- the kicker, over the title */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-kicker {
+  grid-area: 2 / 1 / 3 / -1;
+  justify-self: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  /* the type: the page's own kicker (Oswald 500, upper case, its label size and tracking) */
+  color: var(--tx-kicker-ink) !important;
+  text-shadow: var(--tx-shade) !important;
+}
+
+/* the kicker without the FINNOVATION chip before it (client: 「拿掉」), nor the hairline after it */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-kicker::before,
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-kicker::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* ---- the title: low in the middle, in the page's own title type (Oswald 500, its size, tracking and leading: flow2-type-b.css) */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > :is(h1, h2) {
+  grid-area: 4 / 1 / 5 / -1;
+  justify-self: center !important;
+  margin: 0 !important; padding: 0 !important;
+  width: auto !important; max-width: none !important;
+  /* the page's title size; --tx-fit (text-caustics.js) only shrinks a title that would not fit between the side columns */
+  font-size: calc(var(--f2-size-display, clamp(48px, 5.2vw, 76px)) * var(--tx-fit, 1)) !important;
+  color: var(--tx-title-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > :is(h1, h2) :is(span, .flow-copy-word, .flow-copy-ink) {
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > :is(h1, h2) > span {
+  opacity: var(--tx-dom, 1);
+}
+/* the hud's streak is replaced by the WebGL reveal (Filament, or Caustics): its words simply stand while the title stands, and fade when it leaves */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) .flow-copy-title.f2s .flow-copy-word {
+  animation: none !important;
+  transition: opacity .34s ease !important;
+  will-change: auto !important;
+}
+
+/* ---- the paragraph (text-caustics.js puts it in), centred under the title: the page's running text (flow2-type-b.css "body") */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .tx-lines {
+  grid-area: 6 / 2 / 7 / 3;
+  justify-self: center !important;
+  margin: 0 !important; padding: 0 !important;
+  max-width: 100% !important;
+  font-family: var(--f2-font-text, "Noto Sans TC", sans-serif) !important;
+  font-weight: 400 !important;
+  font-size: var(--f2-size-body, 15px) !important;
+  line-height: var(--f2-body-leading, 1.85) !important;
+  letter-spacing: var(--f2-body-tracking, .025em) !important;
+  color: var(--tx-body-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-align: center !important;
+  text-transform: none !important;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .tx-lines > p {
+  margin: 0 !important; padding: 0 !important;
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: var(--tx-shade) !important;
+  white-space: nowrap;
+  opacity: var(--tx-dom, 1);
+}
+
+/* ---- the Chinese line, under the paragraph: the page's own lead type (Noto Sans TC 500, 22 px, .045em, 1.6) */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-zh {
+  grid-area: 8 / 2 / 9 / 3;
+  justify-self: center !important;
+  margin: 0 !important; padding: 0 !important;
+  width: auto !important; max-width: 100% !important;
+  text-align: center !important;
+  color: var(--tx-body-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-zh :is(span, .fi-zh-head) {
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: var(--tx-shade) !important;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-zh > .tx-zh-in {
+  opacity: var(--tx-dom, 1);
+}
+
+/* ---- the button, centred at the foot */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .fi-copy-action {
+  grid-area: 10 / 1 / 11 / -1;
+  justify-self: center !important;
+  margin: 0 !important;
+  pointer-events: auto !important;
+}
+/* (its label keeps the page's own type: Oswald 500) */
+
+/* ---- the page text under the reveal: hidden while the letters form, handed over at the end (text-caustics.js); a plain fade when no reveal can run */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel .tx-fade :is(span, p) {
+  transition: opacity .6s ease;
+}
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > canvas.tx-gl {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ phones: the same column, smaller; the button where it was */
+@media (max-width: 760px) {
+  :root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy {
+    --tx-title-side: 12px;
+    --tx-kicker-gap: 8px;
+    --tx-title-gap: 10px;
+    --tx-zh-gap: 6px;
+    --tx-action-gap: 14px;
+    --tx-bottom: 74px;
+  }
+  :root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > .tx-lines > p {
+    white-space: normal;
+    text-wrap: balance;   /* (2026-11-18) at the page's 14 px a line may wrap: no word left alone on the last line */
+  }
+  :root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9)[data-tx-type="caustics"] body .finnovation-ui > main.fi-copy > .fi-copy-panel:not(#chapter-knowledge) > :is(h1, h2) {
+    white-space: normal !important;
+    max-width: calc(100% - 2 * var(--tx-title-side)) !important;
+    text-wrap: balance;
+  }
+}

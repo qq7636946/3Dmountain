@@ -1,4 +1,4 @@
-import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-highland-ecology.js?v=weather1-bank1";import{createStudioClouds}from"./studio-clouds.js?v=look1";import{createShoreCobbles}from"./studio-shore-cobbles.js?v=weather1";const PBR_VER="pbr-20261119-09",SHORE_VER="shore-2",CORE_COLUMNS=256,CORE_ROWS=144,SHORE_ATLAS_GLSL=`
+import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-highland-ecology.js?v=weather1-bank1";import{createStudioClouds}from"./studio-clouds.js?v=look1";import{createShoreCobbles}from"./studio-shore-cobbles.js?v=weather1";import{refineHeadwaterBanks}from"./studio-headwater-detail.js?v=20261121-1";const REFINE_HEADWATERS=document.documentElement.hasAttribute("data-rise-headwater-detail")&&new URLSearchParams(location.search).get("headwaters")!=="0",PBR_VER="pbr-20261119-09",SHORE_VER="shore-2",CORE_COLUMNS=256,CORE_ROWS=144,SHORE_ATLAS_GLSL=`
   // Both tiles have a periodic gutter equal to 1/16 of their width. Use the unwrapped
   // derivatives so a tile seam cannot select a coarse mip across the atlas.
   vec4 stTileGrad(sampler2D materialMap, vec2 uv, float tile, vec2 du, vec2 dv) {
@@ -152,7 +152,7 @@ import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-
     vec3 rayCol = mix(vec3(0.76, 0.84, 0.94), vec3(1.00, 0.99, 0.94), 0.35 + 0.65 * vUv.y);
     gl_FragColor = vec4(rayCol * alpha, 1.0);
   }
-`;function buildExtendedReliefGrid(width,depth,nx,nz,skirt,sn,water,sub){const easeOut=t=>t*.4+t*t*.6,line=(n,size)=>{const a=[];for(let i=0;i<sn;i++)a.push(-size/2-skirt*easeOut((sn-i)/sn));for(let i=0;i<=n;i++)a.push(-size/2+size*i/n);for(let i=1;i<=sn;i++)a.push(size/2+skirt*easeOut(i/sn));return a},xs=line(nx,width),zs=line(nz,depth),cx=xs.length-1,cz=zs.length-1,pos=[],idx=[];for(const z of zs)for(const x of xs)pos.push(x,0,z);const fine=new Uint8Array(cx*cz),extra=new Map;if(water?.data)for(let z=0;z<nz;z++)for(let x=0;x<nx;x++){let low=255,high=0;for(const dz of[.12,.5,.88])for(const dx of[.12,.5,.88]){const px=Math.floor((x+dx)/nx*water.width),pz=Math.floor((z+dz)/nz*water.height),cut=water.data[(pz*water.width+px)*4+3];low=Math.min(low,cut),high=Math.max(high,cut)}(high-low>27||high>207&&high-low>12)&&(fine[(z+sn)*cx+x+sn]=1)}function vertex(x,z){const i=Math.floor(x/sub),j=Math.floor(z/sub),fx=x%sub,fz=z%sub;if(!fx&&!fz)return j*(cx+1)+i;const key=z*(cx*sub+1)+x;if(extra.has(key))return extra.get(key);const id=pos.length/3;return pos.push(fx?THREE.MathUtils.lerp(xs[i],xs[i+1],fx/sub):xs[i],0,fz?THREE.MathUtils.lerp(zs[j],zs[j+1],fz/sub):zs[j]),extra.set(key,id),id}for(let j=0;j<cz;j++)for(let i=0;i<cx;i++){const k=j*cx+i,x=i*sub,z=j*sub;if(fine[k])for(let dz=0;dz<sub;dz++)for(let dx=0;dx<sub;dx++){const a=vertex(x+dx,z+dz),b=vertex(x+dx+1,z+dz),c=vertex(x+dx,z+dz+1),d2=vertex(x+dx+1,z+dz+1);idx.push(a,c,b,b,c,d2)}else{const a=j*(cx+1)+i,b=a+1,c=a+cx+1,d2=c+1,left=i>0&&fine[k-1],bottom=fine[k+cx],right=i<cx-1&&fine[k+1],top=fine[k-cx];if(!(left||bottom||right||top)){idx.push(a,c,b,b,c,d2);continue}const loop=[a];if(left)for(let t=1;t<sub;t++)loop.push(vertex(x,z+t));if(loop.push(c),bottom)for(let t=1;t<sub;t++)loop.push(vertex(x+t,z+sub));if(loop.push(d2),right)for(let t=sub-1;t>0;t--)loop.push(vertex(x+sub,z+t));if(loop.push(b),top)for(let t=sub-1;t>0;t--)loop.push(vertex(x+t,z));const centre=pos.length/3;pos.push((xs[i]+xs[i+1])*.5,0,(zs[j]+zs[j+1])*.5);for(let t=0;t<loop.length;t++)idx.push(centre,loop[t],loop[(t+1)%loop.length])}}const g=new THREE.BufferGeometry;g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)),g.setIndex(new THREE.Uint32BufferAttribute(idx,1));const w=width+2*skirt,d=depth+2*skirt;return g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.8,0),Math.hypot(w,d)/2+3),g.boundingBox=new THREE.Box3(new THREE.Vector3(-w/2,0,-d/2),new THREE.Vector3(w/2,3,d/2)),g}function makeWatershedGlsl(noiseFn){return`
+`;function buildExtendedReliefGrid(width,depth,nx,nz,skirt,sn,water,sub){const easeOut=t=>t*.4+t*t*.6,line=(n,size)=>{const a=[];for(let i=0;i<sn;i++)a.push(-size/2-skirt*easeOut((sn-i)/sn));for(let i=0;i<=n;i++)a.push(-size/2+size*i/n);for(let i=1;i<=sn;i++)a.push(size/2+skirt*easeOut(i/sn));return a},xs=line(nx,width),zs=line(nz,depth),cx=xs.length-1,cz=zs.length-1,pos=[],idx=[];for(const z of zs)for(const x of xs)pos.push(x,0,z);const fine=new Uint8Array(cx*cz),extra=new Map;if(water?.data)for(let z=0;z<nz;z++)for(let x=0;x<nx;x++){let low=255,high=0;for(const dz of[.12,.5,.88])for(const dx of[.12,.5,.88]){const px=Math.floor((x+dx)/nx*water.width),pz=Math.floor((z+dz)/nz*water.height),cut=water.data[(pz*water.width+px)*4+3];low=Math.min(low,cut),high=Math.max(high,cut)}(high-low>27||high>207&&high-low>12)&&(fine[(z+sn)*cx+x+sn]=1)}const headwaterCells=REFINE_HEADWATERS?refineHeadwaterBanks(fine,xs,zs,width,depth):0;function vertex(x,z){const i=Math.floor(x/sub),j=Math.floor(z/sub),fx=x%sub,fz=z%sub;if(!fx&&!fz)return j*(cx+1)+i;const key=z*(cx*sub+1)+x;if(extra.has(key))return extra.get(key);const id=pos.length/3;return pos.push(fx?THREE.MathUtils.lerp(xs[i],xs[i+1],fx/sub):xs[i],0,fz?THREE.MathUtils.lerp(zs[j],zs[j+1],fz/sub):zs[j]),extra.set(key,id),id}for(let j=0;j<cz;j++)for(let i=0;i<cx;i++){const k=j*cx+i,x=i*sub,z=j*sub;if(fine[k])for(let dz=0;dz<sub;dz++)for(let dx=0;dx<sub;dx++){const a=vertex(x+dx,z+dz),b=vertex(x+dx+1,z+dz),c=vertex(x+dx,z+dz+1),d2=vertex(x+dx+1,z+dz+1);idx.push(a,c,b,b,c,d2)}else{const a=j*(cx+1)+i,b=a+1,c=a+cx+1,d2=c+1,left=i>0&&fine[k-1],bottom=fine[k+cx],right=i<cx-1&&fine[k+1],top=fine[k-cx];if(!(left||bottom||right||top)){idx.push(a,c,b,b,c,d2);continue}const loop=[a];if(left)for(let t=1;t<sub;t++)loop.push(vertex(x,z+t));if(loop.push(c),bottom)for(let t=1;t<sub;t++)loop.push(vertex(x+t,z+sub));if(loop.push(d2),right)for(let t=sub-1;t>0;t--)loop.push(vertex(x+sub,z+t));if(loop.push(b),top)for(let t=sub-1;t>0;t--)loop.push(vertex(x+t,z));const centre=pos.length/3;pos.push((xs[i]+xs[i+1])*.5,0,(zs[j]+zs[j+1])*.5);for(let t=0;t<loop.length;t++)idx.push(centre,loop[t],loop[(t+1)%loop.length])}}const g=new THREE.BufferGeometry;g.userData.headwaterCells=headwaterCells,g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)),g.setIndex(new THREE.Uint32BufferAttribute(idx,1));const w=width+2*skirt,d=depth+2*skirt;return g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.8,0),Math.hypot(w,d)/2+3),g.boundingBox=new THREE.Box3(new THREE.Vector3(-w/2,0,-d/2),new THREE.Vector3(w/2,3,d/2)),g}function makeWatershedGlsl(noiseFn){return`
     float stLakeBasinR(vec2 p) {
       vec2 q = (p - vec2(0.122, -0.056)) / vec2(1.66, 1.42);
       float r = length(q);
@@ -291,12 +291,28 @@ import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-
       float dist = length(vec2(ds, endD));
       float wVar = 0.80 + 0.42 * bankRough;
       float w = mix(w0, w1, smoothstep(0.0, 1.0, u)) * wVar;
+      #ifdef STUDIO_HEADWATERS
+      // Alternate pools and narrow reaches. The first mouth remains aligned
+      // with the existing main channel; inner bends retain a shallow shelf.
+      float reach = smoothstep(0.12,1.45,tc);
+      float bend = clamp(sin(tc*freq+ph)+0.65*sin(tc*freq*2.13+ph*1.7),-1.0,1.0);
+      float bankSide = sign(s-meand);
+      float pool = 0.5+0.5*sin(tc*1.34+ph*1.9)*sin(tc*.61+ph);
+      w *= 1.0+reach*((pool-.5)*.34+bend*bankSide*.14);
+      #endif
       float wmS = 1.0 - smoothstep(w * 0.52, w * 1.02, dist);
       float shS = 1.0 - smoothstep(0.0, w * 1.02, dist);
       /* Flat valley riverbed floor strictly wider than water width -> outer river NEVER climbs canyon cliff walls! */
       float flatFloor = max(w * 1.38, 0.13);
       float vSlope = 1.0 - smoothstep(flatFloor, w * 4.4 + 1.55, dist);
       float carve = pow(clamp(vSlope, 0.0, 1.0), 1.65);
+      #ifdef STUDIO_HEADWATERS
+      float channel = 1.0-smoothstep(w*1.18,w*2.60+.08,dist);
+      float valley = 1.0-smoothstep(w*2.15+.06,w*5.8+.50,dist);
+      float carvedBank = channel*.72+valley*.28;
+      carve=mix(carve,carvedBank,reach*.94);
+      shS*=mix(1.0,.62+.34*pool,reach);
+      #endif
       if (wmS > 0.01) {
         vec2 downDir = -normalize(d + perp * clamp(dMeand, -1.2, 1.2));
         flowAcc += downDir * wmS;
@@ -356,7 +372,12 @@ import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-
         a *= 0.48;
       }
       float crag = 1.0 - abs(${noiseFn}(xz * 0.48 + vec2(-6.4, 3.9)) * 2.0 - 1.0);
-      return 0.16 + v * 0.36 + crag * crag * 0.16;
+      float mountain=0.16+v*.36+crag*crag*.16;
+      #ifdef STUDIO_HEADWATERS
+      float erosion=1.0-abs(${noiseFn}(xz*1.45+vec2(3.8,-7.2))*2.0-1.0);
+      mountain=.105+(mountain-.105)*1.20+erosion*erosion*.035;
+      #endif
+      return mountain;
     }
 
     float stOuterCarvedH(vec2 xz, vec3 ws) {
@@ -364,7 +385,7 @@ import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-
       float valleyH = mix(mH, 0.105, ws.y);
       return max(0.105, mix(valleyH, 0.105, smoothstep(0.04, 0.36, ws.x)));
     }
-  `}function patchTerrainAndWater(atlas,pbrTex,studioUniforms){let patched=!1;const seen=new Set;atlas.uniforms?.uSkirt&&atlas.uniforms.uSkirt.value.set(3.5/1494,3.5/836,0,0),atlas.uniforms?.uSkirtAir&&atlas.uniforms.uSkirtAir.value.set(99,120);const coreW=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.z:14,coreD=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.w:7.84;let reliefGrid;return atlas.terrain.traverse(obj=>{if(!obj.isMesh||!obj.material)return;if(obj.geometry&&!obj.userData.pbrExtended){const oldGeo=obj.geometry;reliefGrid??=buildExtendedReliefGrid(coreW,coreD,CORE_COLUMNS,CORE_ROWS,11.5,92,atlas.uniforms.tWater.value.image,matchMedia("(pointer: coarse)").matches?2:3),obj.geometry=reliefGrid,obj.frustumCulled=!1,obj.userData.pbrExtended=!0,oldGeo.dispose?.()}if(seen.has(obj.material))return;seen.add(obj.material);const mat=obj.material;if(!mat.fragmentShader||mat.fragmentShader.includes("uPbrStyle"))return;if(mat.defines&&(delete mat.defines.FOREST_LOGO,delete mat.defines.FOREST_GROW,delete mat.defines.FOREST_LAKEVIDEO,delete mat.defines.FOREST_WATER3D,delete mat.defines.FOREST_RIVER,delete mat.defines.FOREST_WATER,delete mat.defines.FOREST_DETAIL,delete mat.defines.FOREST_LIGHT),Object.assign(mat.uniforms,{tGrassAlb:{value:pbrTex.grassAlb},tGrassWildAlb:{value:pbrTex.grassWildAlb},tMossAlb:{value:pbrTex.mossAlb},tHeathAlb:{value:pbrTex.heathAlb},tGrassNrm:{value:pbrTex.grassNrm},tGrassNrm2:{value:pbrTex.grassNrm2},tRockAlb:{value:pbrTex.rockAlb},tRockBasaltAlb:{value:pbrTex.rockBasaltAlb},tRockMossAlb:{value:pbrTex.rockMossAlb},tRockNrm:{value:pbrTex.rockNrm},tRockNrm2:{value:pbrTex.rockNrm2},tWaterNrm:{value:pbrTex.waterNrm},uPbrStyle:studioUniforms.uPbrStyle,uPbrTerrainOn:studioUniforms.uPbrTerrainOn,uGrassPbr:studioUniforms.uGrassPbr,uGrassSat:studioUniforms.uGrassSat,uMeadowBase:studioUniforms.uMeadowBase,uMeadowTips:studioUniforms.uMeadowTips,uMeadowMoss:studioUniforms.uMeadowMoss,uMeadowDry:studioUniforms.uMeadowDry,uMeadowLayerCover:studioUniforms.uMeadowLayerCover,uRockBaseGain:studioUniforms.uRockBaseGain,uRockLayerGain:studioUniforms.uRockLayerGain,uGrassCover:studioUniforms.uGrassCover,uRockSlope:studioUniforms.uRockSlope,uShoreWet:studioUniforms.uShoreWet,uSunIntensity:studioUniforms.uSunIntensity,uSunShadow:studioUniforms.uSunShadow,uStudioMist:studioUniforms.uStudioMist,uBiomeContrast:studioUniforms.uBiomeContrast,uCavityDepth:studioUniforms.uCavityDepth,uStrataStrength:studioUniforms.uStrataStrength,uCloudLayer:studioUniforms.uCloudLayer,uCloudStrength:studioUniforms.uCloudStrength,uAirWhite:studioUniforms.uAirWhite,uBankShadow:studioUniforms.uBankShadow,uMistColor:studioUniforms.uMistColor,uValleyMist:studioUniforms.uValleyMist,uMistHeight:studioUniforms.uMistHeight,uArrival:studioUniforms.uArrival,uArrivalMap:studioUniforms.uArrivalMap,uTributaries:studioUniforms.uTributaries,uTributaryTexel:studioUniforms.uTributaryTexel,uContours:studioUniforms.uContours,uContourInterval:studioUniforms.uContourInterval,uEntrySurvey:studioUniforms.uEntrySurvey,uWaterDeep:studioUniforms.uWaterDeep,uWaterShallow:studioUniforms.uWaterShallow,uWaterSpeed:studioUniforms.uWaterSpeed,uWaterWave:studioUniforms.uWaterWave,uWaterClear:studioUniforms.uWaterClear,uWhitewater:studioUniforms.uWhitewater,uWaterGlow:studioUniforms.uWaterGlow,uWaterOn:studioUniforms.uWaterOn,uCurtainGlow:studioUniforms.uCurtainGlow,uCurtainCol:studioUniforms.uCurtainCol,uCurtainContact:studioUniforms.uCurtainContact,uCurtainLogo:studioUniforms.uCurtainLogo}),mat.vertexShader&&!mat.vertexShader.includes("stWatershed")){const vFuncs=`
+  `}function patchTerrainAndWater(atlas,pbrTex,studioUniforms){let patched=!1;const seen=new Set;atlas.uniforms?.uSkirt&&atlas.uniforms.uSkirt.value.set(3.5/1494,3.5/836,0,0),atlas.uniforms?.uSkirtAir&&atlas.uniforms.uSkirtAir.value.set(99,120);const coreW=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.z:14,coreD=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.w:7.84;let reliefGrid;return atlas.terrain.traverse(obj=>{if(!obj.isMesh||!obj.material)return;if(obj.geometry&&!obj.userData.pbrExtended){const oldGeo=obj.geometry;reliefGrid??=buildExtendedReliefGrid(coreW,coreD,CORE_COLUMNS,CORE_ROWS,11.5,92,atlas.uniforms.tWater.value.image,matchMedia("(pointer: coarse)").matches?2:3),obj.geometry=reliefGrid,obj.frustumCulled=!1,obj.userData.pbrExtended=!0,oldGeo.dispose?.()}if(seen.has(obj.material))return;seen.add(obj.material);const mat=obj.material;if(!mat.fragmentShader||mat.fragmentShader.includes("uPbrStyle"))return;if(REFINE_HEADWATERS&&(mat.defines.STUDIO_HEADWATERS=1),mat.defines&&(delete mat.defines.FOREST_LOGO,delete mat.defines.FOREST_GROW,delete mat.defines.FOREST_LAKEVIDEO,delete mat.defines.FOREST_WATER3D,delete mat.defines.FOREST_RIVER,delete mat.defines.FOREST_WATER,delete mat.defines.FOREST_DETAIL,delete mat.defines.FOREST_LIGHT),Object.assign(mat.uniforms,{tGrassAlb:{value:pbrTex.grassAlb},tGrassWildAlb:{value:pbrTex.grassWildAlb},tMossAlb:{value:pbrTex.mossAlb},tHeathAlb:{value:pbrTex.heathAlb},tGrassNrm:{value:pbrTex.grassNrm},tGrassNrm2:{value:pbrTex.grassNrm2},tRockAlb:{value:pbrTex.rockAlb},tRockBasaltAlb:{value:pbrTex.rockBasaltAlb},tRockMossAlb:{value:pbrTex.rockMossAlb},tRockNrm:{value:pbrTex.rockNrm},tRockNrm2:{value:pbrTex.rockNrm2},tWaterNrm:{value:pbrTex.waterNrm},uPbrStyle:studioUniforms.uPbrStyle,uPbrTerrainOn:studioUniforms.uPbrTerrainOn,uGrassPbr:studioUniforms.uGrassPbr,uGrassSat:studioUniforms.uGrassSat,uMeadowBase:studioUniforms.uMeadowBase,uMeadowTips:studioUniforms.uMeadowTips,uMeadowMoss:studioUniforms.uMeadowMoss,uMeadowDry:studioUniforms.uMeadowDry,uMeadowLayerCover:studioUniforms.uMeadowLayerCover,uRockBaseGain:studioUniforms.uRockBaseGain,uRockLayerGain:studioUniforms.uRockLayerGain,uGrassCover:studioUniforms.uGrassCover,uRockSlope:studioUniforms.uRockSlope,uShoreWet:studioUniforms.uShoreWet,uSunIntensity:studioUniforms.uSunIntensity,uSunShadow:studioUniforms.uSunShadow,uStudioMist:studioUniforms.uStudioMist,uBiomeContrast:studioUniforms.uBiomeContrast,uCavityDepth:studioUniforms.uCavityDepth,uStrataStrength:studioUniforms.uStrataStrength,uCloudLayer:studioUniforms.uCloudLayer,uCloudStrength:studioUniforms.uCloudStrength,uAirWhite:studioUniforms.uAirWhite,uBankShadow:studioUniforms.uBankShadow,uMistColor:studioUniforms.uMistColor,uValleyMist:studioUniforms.uValleyMist,uMistHeight:studioUniforms.uMistHeight,uArrival:studioUniforms.uArrival,uArrivalMap:studioUniforms.uArrivalMap,uTributaries:studioUniforms.uTributaries,uTributaryTexel:studioUniforms.uTributaryTexel,uContours:studioUniforms.uContours,uContourInterval:studioUniforms.uContourInterval,uEntrySurvey:studioUniforms.uEntrySurvey,uWaterDeep:studioUniforms.uWaterDeep,uWaterShallow:studioUniforms.uWaterShallow,uWaterSpeed:studioUniforms.uWaterSpeed,uWaterWave:studioUniforms.uWaterWave,uWaterClear:studioUniforms.uWaterClear,uWhitewater:studioUniforms.uWhitewater,uWaterGlow:studioUniforms.uWaterGlow,uWaterOn:studioUniforms.uWaterOn,uCurtainGlow:studioUniforms.uCurtainGlow,uCurtainCol:studioUniforms.uCurtainCol,uCurtainContact:studioUniforms.uCurtainContact,uCurtainLogo:studioUniforms.uCurtainLogo}),mat.vertexShader&&!mat.vertexShader.includes("stWatershed")){const vFuncs=`
         uniform sampler2D tWater;
         uniform float uTributaries;
         varying vec3 vStOutN;
@@ -397,6 +418,9 @@ import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-
           p.y = max(0.105, 0.105 + (targetY - 0.105) * rimEase);
           /* Outer normal and curvature share the existing per-vertex height taps. */
           float epsO = 0.12;
+          #ifdef STUDIO_HEADWATERS
+          epsO=0.055;
+          #endif
           vec2 pxL = p.xz - vec2(epsO, 0.0), pxR = p.xz + vec2(epsO, 0.0);
           vec2 pzD = p.xz - vec2(0.0, epsO), pzU = p.xz + vec2(0.0, epsO);
           float ohL = stOuterCarvedH(pxL, stWatershed(pxL, stOutD));
@@ -593,6 +617,11 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
         {
         float pxW = max(length(fwidth(wp)), 1e-4);
         float nearDetail = 1.0 - smoothstep(0.012, 0.068, pxW);
+        float headwaterMix=0.0;
+        #ifdef STUDIO_HEADWATERS
+        vec2 coreEdge=max(uBounds.xy-wp,wp-(uBounds.xy+1.0/uBounds.zw));
+        headwaterMix=smoothstep(-.80,1.30,max(coreEdge.x,coreEdge.y));
+        #endif
 
         /* Skip 13 outer watershed streams across the entire central valley & lake! */
         vec2 wsFlow = vec2(0.0);
@@ -616,6 +645,9 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
         // Differentiate the actual incision mask in world XZ. The uncut
         // height map alone would project top-face textures down a carved wall.
         float innerCut=max(lb.y,stCR0.y);
+        #ifdef STUDIO_HEADWATERS
+        innerCut=max(innerCut,ws.y*headwaterMix);
+        #endif
         vec2 px=dFdx(wp),py=dFdy(wp),cutDiff=vec2(dFdx(innerCut),dFdy(innerCut));
         float det=px.x*py.y-px.y*py.x;
         vec2 cutGrad=vec2(cutDiff.x*py.y-px.y*cutDiff.y,px.x*cutDiff.y-cutDiff.x*py.x)*
@@ -657,6 +689,15 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           }
           if (outDist > 0.0005) {
             sN = normalize(mix(sN, normalize(vStOutN), smoothstep(0.0, 2.25, outDist)));
+            #ifdef STUDIO_HEADWATERS
+            // The incision field is smooth between vertices; triangle face
+            // normals made repeated saw teeth across the far bank highlights.
+            float uncutHeight=clamp((vForestWorld.y-.105)/max(.06,1.0-ws.y),.08,.72);
+            vec2 bankSlope=-clamp(cutGrad,-18.0,18.0)*uncutHeight;
+            vec3 bankNormal=normalize(vec3(-bankSlope.x,1.0,-bankSlope.y));
+            float cutBank=smoothstep(.48,.82,ws.y)*(1.0-smoothstep(.96,1.0,ws.y));
+            sN=normalize(mix(sN,bankNormal,.72*cutBank*headwaterMix));
+            #endif
           }
           float sunMacro = clamp(dot(sN, sunNS), 0.0, 1.0);
 
@@ -692,6 +733,8 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           // inheriting the main canyon's continuous dark basalt waterline.
           wetCliff*=mix(1.0,0.65,stBranch);
           shoreCliff*=mix(1.0,0.48,stBranch);
+          wetCliff*=mix(1.0,.76,headwaterMix);
+          shoreCliff*=mix(1.0,.68,headwaterMix);
 
           /* Independent rotated anti-tiling UVs for each of the 4 pure 2K grass/ground biomes (zero double-exposure blur!) */
           vec2 uvG1 = rotP * wp * 0.88 + vec2(0.19, 0.53) + warp * 0.14;  /* G1: Lush Grass004 meadow */
@@ -848,6 +891,7 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           // Carve masks describe the newly exposed walls continuously across
           // mesh triangles. Their half-depth transition is the steepest part.
           float cutEdge=max(max(lb.y*(1.0-lb.y),stCR0.y*(1.0-stCR0.y)),stBranch*(1.0-stBranch));
+          cutEdge=max(cutEdge,ws.y*(1.0-ws.y)*headwaterMix);
           float bankFace=smoothstep(0.010,0.068,relY)*(1.0-smoothstep(0.27,0.60,relY));
           float rootingSlope=clamp(sN.y-cutEdge*1.32*bankFace,0.0,1.0);
           float rootPocket=(clumps-0.5)*0.10+(erosionRib-0.5)*0.12+(moisture-0.35)*0.05;
@@ -1015,6 +1059,8 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           float drift=smoothstep(0.31,0.67,patchMix*0.45+rockFineN*0.55);
           float gravelShelf=max(max(riverBank,creekBank),lakeBank*0.72)*
                             smoothstep(0.33,0.72,sN.y)*(0.29+0.71*drift)*clamp(uShoreWet,0.0,1.4);
+          float outerShelf=headwaterMix*smoothstep(.62,.96,ws.y)*(1.0-smoothstep(.018,.14,relY));
+          gravelShelf=max(gravelShelf,outerShelf*smoothstep(.42,.78,sN.y)*(.28+.51*drift)*clamp(uShoreWet,0.0,1.4));
           float emergedBar=smoothstep(0.93,0.997,stBranch)*(1.0-smoothstep(0.020,0.059,abs(relY)))*
                            (1.0-smoothstep(0.09,0.52,wt.r));
           gravelShelf=max(gravelShelf,emergedBar*clamp(uShoreWet,0.0,1.0));
@@ -1075,6 +1121,11 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           float riverSmoothD = smoothstep(0.04, 0.56, rawSh) * 0.95;
           float shoreDist = clamp(max(smoothstep(0.0, 0.36, rawSh), smoothstep(0.0, 0.22, lb.z) * inWideLake), 0.0, 1.0);
           float wDepth = mix(riverSmoothD,lakeSmoothD,inWideLake);
+          #ifdef STUDIO_HEADWATERS
+          // Preserve a darker thalweg, with visible mineral shallows at bends.
+          float outerDepth=mix(.16,.80,pow(clamp(ws.z,0.0,1.0),.78));
+          wDepth=mix(wDepth,outerDepth,headwaterMix);
+          #endif
           // The same optical depth controls clarity, color, and bottom light.
           // It converges to the receiving river's depth at the confluence.
           wDepth=mix(wDepth,clamp(wt.g+depthNoise*0.56,0.0,1.0),creekMix);
@@ -1095,12 +1146,13 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           /* Seamless world-space downstream advection (ZERO polyline-vertex UV cuts or rotated phase-shear stripes!) */
           mat2 crossR  = mat2(0.898, -0.438, 0.438, 0.898);
           mat2 crossRT = mat2(0.898,  0.438, -0.438, 0.898);
-          vec2 uvRiv1A = (wp - o1A) * 2.15;
-          vec2 uvRiv2A = (wp - o2A) * 2.15 + vec2(0.41, 0.27);
+          float rippleScale=mix(1.0,1.45,headwaterMix);
+          vec2 uvRiv1A = (wp - o1A) * 2.15*rippleScale;
+          vec2 uvRiv2A = (wp - o2A) * 2.15*rippleScale + vec2(0.41, 0.27);
           vec4 wMac1 = texture2D(tWaterNrm, uvRiv1A);
           vec4 wMac2 = texture2D(tWaterNrm, uvRiv2A);
-          vec4 wMic1 = texture2D(tWaterNrm, crossR * (wp - o1B) * 3.85 + vec2(0.17, 0.63));
-          vec4 wMic2 = texture2D(tWaterNrm, crossR * (wp - o2B) * 3.85 + vec2(0.73, 0.19));
+          vec4 wMic1 = texture2D(tWaterNrm, crossR * (wp - o1B) * 3.85*rippleScale + vec2(0.17, 0.63));
+          vec4 wMic2 = texture2D(tWaterNrm, crossR * (wp - o2B) * 3.85*rippleScale + vec2(0.73, 0.19));
 
           vec2 rivN1 = ((wMac1.rg - 0.5) * b1 + (wMac2.rg - 0.5) * b2) * bn * 1.08;
           vec2 rivN2 = crossRT * (((wMic1.rg - 0.5) * b1 + (wMic2.rg - 0.5) * b2) * bn);
@@ -1141,6 +1193,8 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           }
 
           vec2 sl = dualSlope * 0.68 * clamp(uWaterWave, 0.1, 2.5) * mix(0.42, 1.0, smoothstep(0.0, 0.38, shoreDist));
+          // Narrow headwaters need smaller ripples, not lake-sized facets.
+          sl*=mix(1.0,.48,headwaterMix);
           vec3 Nw = normalize(vec3(-sl.x, 1.0, -sl.y));
           float ndv = clamp(dot(Nw, viewV), 0.0, 1.0);
 
@@ -1228,10 +1282,14 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           specShimmer=mix(riverGlint/(1.0+riverGlint*.87),specShimmer/(1.0+specShimmer*.20),stLakeN);
           float shallowSpec=mix(1.0,0.42,exposedBed)*mix(1.0,0.69,creekMix);
           wc += vec3(0.94, 0.97, 1.00) * specShimmer * sunVis * clamp(uSunIntensity, 0.3, 2.0) * smoothstep(0.04, 0.26, shoreDist)*shallowSpec;
+          #ifdef STUDIO_HEADWATERS
+          wc=mix(wc,mix(waterBody,cliffShadeRefl,fres*.38)+vec3(.68,.81,.89)*
+            specShimmer*sunVis*.22*shallowSpec,headwaterMix);
+          #endif
 
           /* --- 2D. Holographic Light Curtain & Central LOGO Smooth Wave-Slope Water Reflection (ZERO cellular cobweb artifacts!) --- */
           if (uCurtainGlow > 0.002 && uWaterGlow > 0.002) {
-            float cg = uCurtainGlow * uWaterGlow;
+            float cg = uCurtainGlow * uWaterGlow * (1.0-headwaterMix);
             float grazingCap = mix(0.16, 1.0, smoothstep(0.20, 0.66, abs(viewV.y)));
             /* Physically smooth wave-slope specular catch driven strictly by Nw & sl (never cellular caustVal!) */
             float slopeCatch = smoothstep(0.06, 0.58, length(sl) * 3.2) * (0.45 + 0.55 * smoothstep(-0.25, 0.35, dot(sl, normalize(viewV.xz + vec2(1e-4)))));
@@ -1272,7 +1330,7 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
           vec2 threads=texture2D(tWaterNrm,streakUv1).ba*b1+texture2D(tWaterNrm,streakUv2).ba*b2;
           float threadVal=threads.y;
           float riverThreads = smoothstep(0.60, 0.90, threadVal) * (1.0 - stLakeN) * flowSpd * smoothstep(0.08, 0.42, shoreDist);
-          wc += vec3(0.46, 0.62, 0.82) * riverThreads * 0.16 * grazeAA;
+          wc += vec3(0.46, 0.62, 0.82) * riverThreads * 0.16 * grazeAA * mix(1.0,.55,headwaterMix);
 
           /* Delicate flow-advected rapid sheen strictly on sunlit river wave crests + whisper-thin shore lap */
           float narrowRapid = (1.0 - stLakeN) * smoothstep(0.48, 0.94, flowSpd) * (1.0 - smoothstep(0.10, 0.44, wDepth));
@@ -1300,7 +1358,7 @@ void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
                  smoothstep(0.37,0.85,stWmSafe)*(1.0-stLakeN);
             foam*=uWhitewater*(0.70+0.30*sunVis);
           }
-          float froth=rapidStreak+shoreLap+foam;
+          float froth=(rapidStreak+shoreLap+foam)*mix(1.0,.48,headwaterMix);
           wc=mix(wc,vec3(.76,.87,.93),min(.76,froth/(1.0+.28*froth)));
 
           wc = wc / (1.0 + wc * 0.14);

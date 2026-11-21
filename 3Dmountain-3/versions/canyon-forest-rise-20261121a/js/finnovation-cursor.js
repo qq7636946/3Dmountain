@@ -1,85 +1,10 @@
-import * as THREE from 'three';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-
-// Radius is measured relative to the viewport height; all controls are read live.
-export const CURSOR_DEFAULTS = Object.freeze({
-  radius: .052,
-  strength: 1,
-  refraction: 1,
-  relief: 1,
-  persistence: 1,
-  curl: 1,
-  // Detail layers (2026-09-22): capillary rings, vortex confinement, soft-box glints, spectral edge.
-  ripple: 1,
-  rippleSpeed: 1,
-  vortex: 1,
-  specular: 1,
-  dispersion: 1,
-});
-
-// Saze keeps the system pointer; movement leaves a short refractive wake in
-// its WebGL scene. This independent implementation leaves the DOM/UI untouched.
-//
-// Two fields drive the look:
-//  - the WAKE: a low-frequency velocity/density field (advected, with vorticity
-//    confinement so it rolls up into eddies instead of smearing out), which
-//    bends the picture like a lens of water dragged across it;
-//  - the RIPPLES: a finer height field solved with a damped wave equation and
-//    fed by the head of the stroke, so fine rings run out from the pointer and
-//    ring down. Its gradient refracts, its curvature focuses light (caustics),
-//    and a soft-box highlight slides over its crests.
-export function createFinnovationCursor({ renderer, reducedMotion = false, isBlocked = () => false, strength = 1, config = {} } = {}) {
-  if (!renderer) throw new Error('createFinnovationCursor requires a renderer');
-  // Retain the caller's object so tuning sliders take effect without rebuilding passes.
-  for (const [key, value] of Object.entries(CURSOR_DEFAULTS)) {
-    if (config[key] == null) config[key] = key === 'strength' ? strength : value;
-  }
-  const control = (key, low, high) => {
-    const value = Number(config[key]);
-    return Math.min(high, Math.max(low, Number.isFinite(value) ? value : CURSOR_DEFAULTS[key]));
-  };
-  const media = matchMedia('(hover: hover) and (pointer: fine)');
-  const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  const point = new THREE.Vector2(.5, .5);
-  const previous = point.clone();
-  const velocity = new THREE.Vector2();
-  const simulationSize = new THREE.Vector2();
-  const rippleSize = new THREE.Vector2();
-  const clearColor = new THREE.Color();
-  let width = innerWidth, height = innerHeight, aspect = width / height;
-  let hasPoint = false, pending = false, disposed = false, dirty = true;
-  let lastMove = 0, remaining = 0, time = 0, headSpeed = 0;
-  const eligible = () => !disposed && media.matches && !motion.matches && !reducedMotion && !document.hidden && !isBlocked();
-  const interactive = 'a,button,input,textarea,select,[contenteditable="true"],dialog[open],[role="button"],.lil-gui';
-  const makeTarget = () => new THREE.WebGLRenderTarget(1, 1, {
-    type: THREE.HalfFloatType, format: THREE.RGBAFormat,
-    minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
-    depthBuffer: false, stencilBuffer: false,
-  });
-  let read = makeTarget(), write = makeTarget();
-  let rippleRead = makeTarget(), rippleWrite = makeTarget();
-  const segmentGLSL = `
+import*as THREE from"three";import{ShaderPass}from"three/addons/postprocessing/ShaderPass.js";import{FullScreenQuad}from"three/addons/postprocessing/Pass.js";export const CURSOR_DEFAULTS=Object.freeze({radius:.052,strength:1,refraction:1,relief:1,persistence:1,curl:1,ripple:1,rippleSpeed:1,vortex:1,specular:1,dispersion:1});export function createFinnovationCursor({renderer,reducedMotion=!1,isBlocked=()=>!1,strength=1,config={}}={}){if(!renderer)throw new Error("createFinnovationCursor requires a renderer");for(const[key,value]of Object.entries(CURSOR_DEFAULTS))config[key]==null&&(config[key]=key==="strength"?strength:value);const control=(key,low,high)=>{const value=Number(config[key]);return Math.min(high,Math.max(low,Number.isFinite(value)?value:CURSOR_DEFAULTS[key]))},media=matchMedia("(hover: hover) and (pointer: fine)"),motion=matchMedia("(prefers-reduced-motion: reduce)"),point=new THREE.Vector2(.5,.5),previous=point.clone(),velocity=new THREE.Vector2,simulationSize=new THREE.Vector2,rippleSize=new THREE.Vector2,clearColor=new THREE.Color;let width=innerWidth,height=innerHeight,aspect=width/height,hasPoint=!1,pending=!1,disposed=!1,dirty=!0,lastMove=0,remaining=0,time=0,headSpeed=0;const eligible=()=>!disposed&&media.matches&&!motion.matches&&!reducedMotion&&!document.hidden&&!isBlocked(),interactive='a,button,input,textarea,select,[contenteditable="true"],dialog[open],[role="button"],.lil-gui',makeTarget=()=>new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,format:THREE.RGBAFormat,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:!1,stencilBuffer:!1});let read=makeTarget(),write=makeTarget(),rippleRead=makeTarget(),rippleWrite=makeTarget();const segmentGLSL=`
       float segmentDistance2(vec2 uv,vec2 a,vec2 b,float aspect){
         vec2 A=vec2(a.x*aspect,a.y),B=vec2(b.x*aspect,b.y),Q=vec2(uv.x*aspect,uv.y)-A,AB=B-A;
         float along=clamp(dot(Q,AB)/max(.000001,dot(AB,AB)),0.,1.);
         vec2 d=Q-AB*along;return dot(d,d);
-      }`;
-  const simulation = new THREE.ShaderMaterial({
-    depthTest: false, depthWrite: false, toneMapped: false,
-    uniforms: {
-      tField: { value: read.texture }, uPixel: { value: simulationSize },
-      uPoint: { value: point }, uPrevious: { value: previous },
-      uVelocity: { value: velocity }, uAspect: { value: aspect },
-      uDelta: { value: 1 / 60 }, uTime: { value: 0 }, uSplat: { value: 0 },
-      uRadius: { value: CURSOR_DEFAULTS.radius },
-      uPersistence: { value: CURSOR_DEFAULTS.persistence },
-      uCurl: { value: CURSOR_DEFAULTS.curl },
-      uVortex: { value: CURSOR_DEFAULTS.vortex },
-    },
-    vertexShader: `varying vec2 vUv;
-      void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
-    fragmentShader: `precision highp float;
+      }`,simulation=new THREE.ShaderMaterial({depthTest:!1,depthWrite:!1,toneMapped:!1,uniforms:{tField:{value:read.texture},uPixel:{value:simulationSize},uPoint:{value:point},uPrevious:{value:previous},uVelocity:{value:velocity},uAspect:{value:aspect},uDelta:{value:1/60},uTime:{value:0},uSplat:{value:0},uRadius:{value:CURSOR_DEFAULTS.radius},uPersistence:{value:CURSOR_DEFAULTS.persistence},uCurl:{value:CURSOR_DEFAULTS.curl},uVortex:{value:CURSOR_DEFAULTS.vortex}},vertexShader:`varying vec2 vUv;
+      void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,fragmentShader:`precision highp float;
       varying vec2 vUv;
       uniform sampler2D tField;
       uniform vec2 uPixel,uPoint,uPrevious,uVelocity;
@@ -119,18 +44,8 @@ export function createFinnovationCursor({ renderer, reducedMotion = false, isBlo
         next.xy=clamp(next.xy,vec2(-.28),vec2(.28));
         next.z=min(1.,next.z+splat*.7);
         gl_FragColor=vec4(next.xyz,1.);
-      }`,
-  });
-  const ripple = new THREE.ShaderMaterial({
-    depthTest: false, depthWrite: false, toneMapped: false,
-    uniforms: {
-      tRipple: { value: rippleRead.texture }, uPixel: { value: rippleSize },
-      uPoint: { value: new THREE.Vector2() }, uPrevious: { value: new THREE.Vector2() }, uAspect: { value: aspect },
-      uK: { value: .4 }, uDamp: { value: .985 }, uSource: { value: 0 }, uRadius: { value: .02 },
-    },
-    vertexShader: `varying vec2 vUv;
-      void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
-    fragmentShader: `precision highp float;
+      }`}),ripple=new THREE.ShaderMaterial({depthTest:!1,depthWrite:!1,toneMapped:!1,uniforms:{tRipple:{value:rippleRead.texture},uPixel:{value:rippleSize},uPoint:{value:new THREE.Vector2},uPrevious:{value:new THREE.Vector2},uAspect:{value:aspect},uK:{value:.4},uDamp:{value:.985},uSource:{value:0},uRadius:{value:.02}},vertexShader:`varying vec2 vUv;
+      void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,fragmentShader:`precision highp float;
       varying vec2 vUv;
       uniform sampler2D tRipple;
       uniform vec2 uPixel,uPoint,uPrevious;
@@ -140,7 +55,7 @@ export function createFinnovationCursor({ renderer, reducedMotion = false, isBlo
         vec2 s=texture2D(tRipple,vUv).xy;
         float sum=texture2D(tRipple,vUv+vec2(uPixel.x,0.)).x+texture2D(tRipple,vUv-vec2(uPixel.x,0.)).x
                  +texture2D(tRipple,vUv+vec2(0.,uPixel.y)).x+texture2D(tRipple,vUv-vec2(0.,uPixel.y)).x;
-        // Leapfrog wave equation: stable for k ≤ .5 on this 4-neighbour stencil.
+        // Leapfrog wave equation: stable for k \u2264 .5 on this 4-neighbour stencil.
         float h=(2.*s.x-s.y+uK*(sum-4.*s.x))*uDamp;
         // A touch of viscosity: the grid's shortest waves (a 2-texel comb that
         // reads as scratches) die first, the visible rings keep travelling.
@@ -148,24 +63,8 @@ export function createFinnovationCursor({ renderer, reducedMotion = false, isBlo
         // The stroke presses a trough into the surface; rings run out from it.
         h-=uSource*exp(-segmentDistance2(vUv,uPrevious,uPoint,uAspect)/(uRadius*uRadius));
         gl_FragColor=vec4(clamp(h,-1.,1.),s.x,0.,1.);
-      }`,
-  });
-  const quad = new FullScreenQuad(simulation);
-  const rippleQuad = new FullScreenQuad(ripple);
-  const pass = new ShaderPass({
-    uniforms: {
-      tDiffuse: { value: null }, tField: { value: null }, tRipple: { value: null },
-      uPixel: { value: simulationSize.clone() }, uRipplePixel: { value: rippleSize.clone() },
-      uAspect: { value: aspect }, uStrength: { value: strength },
-      uRefraction: { value: CURSOR_DEFAULTS.refraction },
-      uRelief: { value: CURSOR_DEFAULTS.relief },
-      uRipple: { value: CURSOR_DEFAULTS.ripple },
-      uSpecular: { value: CURSOR_DEFAULTS.specular },
-      uDispersion: { value: CURSOR_DEFAULTS.dispersion },
-    },
-    vertexShader: `varying vec2 vUv;
-      void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-    fragmentShader: `precision highp float;
+      }`}),quad=new FullScreenQuad(simulation),rippleQuad=new FullScreenQuad(ripple),pass=new ShaderPass({uniforms:{tDiffuse:{value:null},tField:{value:null},tRipple:{value:null},uPixel:{value:simulationSize.clone()},uRipplePixel:{value:rippleSize.clone()},uAspect:{value:aspect},uStrength:{value:strength},uRefraction:{value:CURSOR_DEFAULTS.refraction},uRelief:{value:CURSOR_DEFAULTS.relief},uRipple:{value:CURSOR_DEFAULTS.ripple},uSpecular:{value:CURSOR_DEFAULTS.specular},uDispersion:{value:CURSOR_DEFAULTS.dispersion}},vertexShader:`varying vec2 vUv;
+      void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`precision highp float;
       varying vec2 vUv;
       uniform sampler2D tDiffuse,tField,tRipple;
       uniform vec2 uPixel,uRipplePixel;
@@ -209,143 +108,4 @@ export function createFinnovationCursor({ renderer, reducedMotion = false, isBlo
         color+=vec3(.78,.9,1.)*clamp(-curvature*9.,0.,1.)*.16*uSpecular*uStrength;
         color=mix(color,color*vec3(.983,.993,1.015),min(1.,field.z*.35*uStrength*uRelief));
         gl_FragColor=vec4(color,1.);
-      }`,
-  });
-  pass.enabled = false;
-  pass.material.toneMapped = false;
-
-  function reset() {
-    hasPoint = false; pending = false; remaining = 0; velocity.set(0, 0); headSpeed = 0;
-    pass.enabled = false; dirty = true;
-  }
-  function move(event) {
-    if (event.pointerType !== 'mouse' || !eligible() || event.target.closest?.(interactive)) {
-      if (event.pointerType !== 'mouse' || !eligible()) reset();
-      else hasPoint = false;
-      return;
-    }
-    const now = performance.now();
-    const x = event.clientX / width, y = 1 - event.clientY / height;
-    if (!hasPoint) {
-      point.set(x, y); previous.copy(point); lastMove = now; hasPoint = true;
-      return;
-    }
-    if (!pending) previous.copy(point);
-    const dt = Math.max(1 / 240, (now - lastMove) / 1000);
-    velocity.set((x - point.x) / dt, (y - point.y) / dt).clampLength(0, 1.5);
-    const distance = Math.hypot((x - point.x) * aspect, y - point.y);
-    point.set(x, y); lastMove = now;
-    if (distance > .0002) { pending = true; remaining = 3.2; }
-  }
-  function leave(event) { if (!event.relatedTarget) reset(); }
-  const abort = new AbortController();
-  const listen = (target, name, callback, options = {}) => target.addEventListener(name, callback, { passive: true, signal: abort.signal, ...options });
-  listen(window, 'pointermove', move);
-  listen(document, 'pointerout', leave);
-  listen(window, 'blur', reset);
-  listen(document, 'visibilitychange', reset);
-  listen(document, 'pointercancel', reset);
-  listen(document, 'pointerdown', event => { if (event.pointerType !== 'mouse') reset(); });
-  listen(media, 'change', reset);
-  listen(motion, 'change', reset);
-
-  function resize(w = innerWidth, h = innerHeight) {
-    width = Math.max(1, w); height = Math.max(1, h); aspect = width / height;
-    // Twice the old resolution: the wake's edge is what reads as detail.
-    const simH = Math.max(72, Math.min(180, Math.round(height / 5)));
-    const simW = Math.max(72, Math.min(360, Math.round(simH * aspect)));
-    read.setSize(simW, simH); write.setSize(simW, simH);
-    simulationSize.set(1 / simW, 1 / simH);
-    // Ripples need finer cells than the wake: a ring is only a few texels wide.
-    const rH = Math.max(120, Math.min(340, Math.round(height / 2.6)));
-    const rW = Math.max(120, Math.min(640, Math.round(rH * aspect)));
-    rippleRead.setSize(rW, rH); rippleWrite.setSize(rW, rH);
-    rippleSize.set(1 / rW, 1 / rH);
-    simulation.uniforms.uAspect.value = aspect;
-    ripple.uniforms.uAspect.value = aspect;
-    pass.uniforms.uAspect.value = aspect;
-    pass.uniforms.uPixel.value.copy(simulationSize);
-    pass.uniforms.uRipplePixel.value.copy(rippleSize);
-    reset();
-  }
-  function update(delta = 1 / 60, elapsed) {
-    if (disposed) return;
-    if (!eligible()) { reset(); return; }
-    const effectStrength = control('strength', 0, 2);
-    const persistence = control('persistence', .25, 3);
-    const radius = control('radius', .008, .16);
-    const rippleAmount = control('ripple', 0, 2);
-    simulation.uniforms.uRadius.value = radius;
-    simulation.uniforms.uPersistence.value = persistence;
-    simulation.uniforms.uCurl.value = control('curl', 0, 3);
-    simulation.uniforms.uVortex.value = control('vortex', 0, 3);
-    pass.uniforms.uStrength.value = effectStrength;
-    pass.uniforms.uRefraction.value = control('refraction', 0, 2);
-    pass.uniforms.uRelief.value = control('relief', 0, 2);
-    pass.uniforms.uRipple.value = rippleAmount;
-    pass.uniforms.uSpecular.value = control('specular', 0, 2);
-    pass.uniforms.uDispersion.value = control('dispersion', 0, 2);
-    if (effectStrength === 0) { reset(); return; }
-    if (remaining <= 0) { pass.enabled = false; return; }
-    const dt = Math.min(.05, Math.max(0, delta));
-    time = Number.isFinite(elapsed) ? elapsed : time + dt;
-    const oldTarget = renderer.getRenderTarget();
-    const oldAutoClear = renderer.autoClear;
-    const oldAlpha = renderer.getClearAlpha();
-    renderer.getClearColor(clearColor);
-    renderer.autoClear = false;
-    try {
-      if (dirty) {
-        renderer.setClearColor(0x000000, 0);
-        for (const target of [read, write, rippleRead, rippleWrite]) { renderer.setRenderTarget(target); renderer.clear(); }
-        dirty = false;
-      }
-      const splat = pending ? Math.min(1, velocity.length() * 1.2 + .15) : 0;
-      simulation.uniforms.tField.value = read.texture;
-      simulation.uniforms.uDelta.value = dt;
-      simulation.uniforms.uTime.value = time;
-      simulation.uniforms.uSplat.value = splat;
-      renderer.setRenderTarget(write); quad.render(renderer);
-      let temp = read; read = write; write = temp;
-      // Ripples: fixed 120 Hz steps, so rings travel at the same speed at any
-      // frame rate; the speed dial scales the wave constant, capped for stability.
-      const speed = control('rippleSpeed', .3, 1.25);
-      const steps = Math.max(1, Math.min(4, Math.round(dt * 120)));
-      headSpeed += (velocity.length() * (pending ? 1 : 0) - headSpeed) * Math.min(1, dt * 18);
-      ripple.uniforms.uK.value = Math.min(.48, .40 * speed * speed);
-      ripple.uniforms.uDamp.value = Math.pow(.978, 1 / Math.max(.25, persistence));
-      ripple.uniforms.uRadius.value = radius * .42;
-      const press = pending && rippleAmount > 0 ? Math.min(.22, .05 + headSpeed * .14) : 0;
-      for (let s = 0; s < steps; s++) {
-        ripple.uniforms.tRipple.value = rippleRead.texture;
-        // The press is shared out along the stroke, one slice per sub-step, so a
-        // fast move leaves one continuous furrow instead of a string of dents.
-        ripple.uniforms.uPrevious.value.lerpVectors(previous, point, s / steps);
-        ripple.uniforms.uPoint.value.lerpVectors(previous, point, (s + 1) / steps);
-        ripple.uniforms.uSource.value = press * (steps > 1 ? 1.6 / steps : 1);
-        renderer.setRenderTarget(rippleWrite); rippleQuad.render(renderer);
-        temp = rippleRead; rippleRead = rippleWrite; rippleWrite = temp;
-      }
-      // Assign after ShaderPass construction: UniformsUtils must not clone an RT texture.
-      pass.uniforms.tField.value = read.texture;
-      pass.uniforms.tRipple.value = rippleRead.texture;
-      pass.enabled = true;
-      pending = false; previous.copy(point); remaining -= dt / persistence;
-    } finally {
-      renderer.setRenderTarget(oldTarget);
-      renderer.setClearColor(clearColor, oldAlpha);
-      renderer.autoClear = oldAutoClear;
-    }
-  }
-  resize();
-  return {
-    pass, update, resize, config,
-    get active() { return pass.enabled; },
-    dispose() {
-      if (disposed) return;
-      reset(); disposed = true; abort.abort();
-      read.dispose(); write.dispose(); rippleRead.dispose(); rippleWrite.dispose();
-      simulation.dispose(); ripple.dispose(); quad.dispose(); rippleQuad.dispose(); pass.dispose();
-    },
-  };
-}
+      }`});pass.enabled=!1,pass.material.toneMapped=!1;function reset(){hasPoint=!1,pending=!1,remaining=0,velocity.set(0,0),headSpeed=0,pass.enabled=!1,dirty=!0}function move(event){if(event.pointerType!=="mouse"||!eligible()||event.target.closest?.(interactive)){event.pointerType!=="mouse"||!eligible()?reset():hasPoint=!1;return}const now=performance.now(),x=event.clientX/width,y=1-event.clientY/height;if(!hasPoint){point.set(x,y),previous.copy(point),lastMove=now,hasPoint=!0;return}pending||previous.copy(point);const dt=Math.max(1/240,(now-lastMove)/1e3);velocity.set((x-point.x)/dt,(y-point.y)/dt).clampLength(0,1.5);const distance=Math.hypot((x-point.x)*aspect,y-point.y);point.set(x,y),lastMove=now,distance>2e-4&&(pending=!0,remaining=3.2)}function leave(event){event.relatedTarget||reset()}const abort=new AbortController,listen=(target,name,callback,options={})=>target.addEventListener(name,callback,{passive:!0,signal:abort.signal,...options});listen(window,"pointermove",move),listen(document,"pointerout",leave),listen(window,"blur",reset),listen(document,"visibilitychange",reset),listen(document,"pointercancel",reset),listen(document,"pointerdown",event=>{event.pointerType!=="mouse"&&reset()}),listen(media,"change",reset),listen(motion,"change",reset);function resize(w=innerWidth,h=innerHeight){width=Math.max(1,w),height=Math.max(1,h),aspect=width/height;const simH=Math.max(72,Math.min(180,Math.round(height/5))),simW=Math.max(72,Math.min(360,Math.round(simH*aspect)));read.setSize(simW,simH),write.setSize(simW,simH),simulationSize.set(1/simW,1/simH);const rH=Math.max(120,Math.min(340,Math.round(height/2.6))),rW=Math.max(120,Math.min(640,Math.round(rH*aspect)));rippleRead.setSize(rW,rH),rippleWrite.setSize(rW,rH),rippleSize.set(1/rW,1/rH),simulation.uniforms.uAspect.value=aspect,ripple.uniforms.uAspect.value=aspect,pass.uniforms.uAspect.value=aspect,pass.uniforms.uPixel.value.copy(simulationSize),pass.uniforms.uRipplePixel.value.copy(rippleSize),reset()}function update(delta=1/60,elapsed){if(disposed)return;if(!eligible()){reset();return}const effectStrength=control("strength",0,2),persistence=control("persistence",.25,3),radius=control("radius",.008,.16),rippleAmount=control("ripple",0,2);if(simulation.uniforms.uRadius.value=radius,simulation.uniforms.uPersistence.value=persistence,simulation.uniforms.uCurl.value=control("curl",0,3),simulation.uniforms.uVortex.value=control("vortex",0,3),pass.uniforms.uStrength.value=effectStrength,pass.uniforms.uRefraction.value=control("refraction",0,2),pass.uniforms.uRelief.value=control("relief",0,2),pass.uniforms.uRipple.value=rippleAmount,pass.uniforms.uSpecular.value=control("specular",0,2),pass.uniforms.uDispersion.value=control("dispersion",0,2),effectStrength===0){reset();return}if(remaining<=0){pass.enabled=!1;return}const dt=Math.min(.05,Math.max(0,delta));time=Number.isFinite(elapsed)?elapsed:time+dt;const oldTarget=renderer.getRenderTarget(),oldAutoClear=renderer.autoClear,oldAlpha=renderer.getClearAlpha();renderer.getClearColor(clearColor),renderer.autoClear=!1;try{if(dirty){renderer.setClearColor(0,0);for(const target of[read,write,rippleRead,rippleWrite])renderer.setRenderTarget(target),renderer.clear();dirty=!1}const splat=pending?Math.min(1,velocity.length()*1.2+.15):0;simulation.uniforms.tField.value=read.texture,simulation.uniforms.uDelta.value=dt,simulation.uniforms.uTime.value=time,simulation.uniforms.uSplat.value=splat,renderer.setRenderTarget(write),quad.render(renderer);let temp=read;read=write,write=temp;const speed=control("rippleSpeed",.3,1.25),steps=Math.max(1,Math.min(4,Math.round(dt*120)));headSpeed+=(velocity.length()*(pending?1:0)-headSpeed)*Math.min(1,dt*18),ripple.uniforms.uK.value=Math.min(.48,.4*speed*speed),ripple.uniforms.uDamp.value=Math.pow(.978,1/Math.max(.25,persistence)),ripple.uniforms.uRadius.value=radius*.42;const press=pending&&rippleAmount>0?Math.min(.22,.05+headSpeed*.14):0;for(let s=0;s<steps;s++)ripple.uniforms.tRipple.value=rippleRead.texture,ripple.uniforms.uPrevious.value.lerpVectors(previous,point,s/steps),ripple.uniforms.uPoint.value.lerpVectors(previous,point,(s+1)/steps),ripple.uniforms.uSource.value=press*(steps>1?1.6/steps:1),renderer.setRenderTarget(rippleWrite),rippleQuad.render(renderer),temp=rippleRead,rippleRead=rippleWrite,rippleWrite=temp;pass.uniforms.tField.value=read.texture,pass.uniforms.tRipple.value=rippleRead.texture,pass.enabled=!0,pending=!1,previous.copy(point),remaining-=dt/persistence}finally{renderer.setRenderTarget(oldTarget),renderer.setClearColor(clearColor,oldAlpha),renderer.autoClear=oldAutoClear}}return resize(),{pass,update,resize,config,get active(){return pass.enabled},dispose(){disposed||(reset(),disposed=!0,abort.abort(),read.dispose(),write.dispose(),rippleRead.dispose(),rippleWrite.dispose(),simulation.dispose(),ripple.dispose(),quad.dispose(),rippleQuad.dispose(),pass.dispose())}}}

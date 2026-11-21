@@ -1,50 +1,4 @@
-import * as THREE from 'three';
-
-// Four strategy markers: one instanced draw for the soft walls/contact rings,
-// one points draw for all sparks. Their arrival follows the river-light reveal.
-export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = false } = {}) {
-  const config = { enabled: true, particles: true, count: 24, height: .76, width: 1,
-    brightness: 1.2, filaments: .85, halo: .9, particleSize: 1.16, particleBrightness: 1.55,
-    speed: .7, color: '#b5e6ff' };
-  const coarse = matchMedia('(pointer: coarse)').matches;
-  const positions = [], uv = [], kinds = [], indices = [];
-  const sides = 48, rows = 8;
-  for (let row = 0; row <= rows; row++) for (let col = 0; col <= sides; col++) {
-    const a = col / sides * Math.PI * 2;
-    positions.push(Math.cos(a), row / rows, Math.sin(a));
-    uv.push(col / sides, row / rows); kinds.push(0);
-    if (row < rows && col < sides) {
-      const k = row * (sides + 1) + col, next = k + sides + 1;
-      indices.push(k, next, k + 1, next, next + 1, k + 1);
-    }
-  }
-  const foot = positions.length / 3;
-  positions.push(-1,0,-1, 1,0,-1, -1,0,1, 1,0,1);
-  uv.push(0,0, 1,0, 0,1, 1,1); kinds.push(1,1,1,1);
-  indices.push(foot,foot+2,foot+1, foot+1,foot+2,foot+3);
-  const geo = new THREE.InstancedBufferGeometry();
-  geo.setIndex(indices);
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  geo.setAttribute('aFoot', new THREE.Float32BufferAttribute(kinds, 1));
-  const sites = new THREE.InstancedBufferAttribute(new Float32Array(4 * 4), 4);
-  geo.setAttribute('aSite', sites);
-  geo.setAttribute('aIndex', new THREE.InstancedBufferAttribute(new Float32Array([0,1,2,3]), 1));
-  geo.instanceCount = 4;
-  const focus = new THREE.Vector4(), emitters = atlas.anchors.map(p => p.clone());
-  emitters.push((curtain?.logo?.group.position || atlas.lake.center).clone());
-  const shared = {
-    uTime: atlas.uniforms.uTime, uArrival: studio.uniforms.uArrival,
-    uProgress: curtain?.uniforms.uProgress || studio.uniforms.uArrival,
-    uLattice: atlas.uniforms.uLattice,
-    uTint: { value: new THREE.Color(config.color) }, uFocus: { value: focus },
-    uShape: { value: new THREE.Vector2(config.width, config.height) },
-    uSpeed: { value: reducedMotion ? 0 : config.speed },
-    uStrength: { value: config.brightness }, uFilaments: { value: config.filaments }, uHalo: { value: config.halo }
-  };
-  const mat = new THREE.ShaderMaterial({
-    uniforms: shared,
-    vertexShader: `
+import*as THREE from"three";export function createStrategyBeacons(atlas,studio,curtain,{reducedMotion=!1}={}){const config={enabled:!0,particles:!0,count:24,height:.76,width:1,brightness:1.2,filaments:.85,halo:.9,particleSize:1.16,particleBrightness:1.55,speed:.7,color:"#b5e6ff"},coarse=matchMedia("(pointer: coarse)").matches,positions=[],uv=[],kinds=[],indices=[],sides=48,rows=8;for(let row=0;row<=rows;row++)for(let col=0;col<=sides;col++){const a=col/sides*Math.PI*2;if(positions.push(Math.cos(a),row/rows,Math.sin(a)),uv.push(col/sides,row/rows),kinds.push(0),row<rows&&col<sides){const k=row*(sides+1)+col,next=k+sides+1;indices.push(k,next,k+1,next,next+1,k+1)}}const foot=positions.length/3;positions.push(-1,0,-1,1,0,-1,-1,0,1,1,0,1),uv.push(0,0,1,0,0,1,1,1),kinds.push(1,1,1,1),indices.push(foot,foot+2,foot+1,foot+1,foot+2,foot+3);const geo=new THREE.InstancedBufferGeometry;geo.setIndex(indices),geo.setAttribute("position",new THREE.Float32BufferAttribute(positions,3)),geo.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2)),geo.setAttribute("aFoot",new THREE.Float32BufferAttribute(kinds,1));const sites=new THREE.InstancedBufferAttribute(new Float32Array(16),4);geo.setAttribute("aSite",sites),geo.setAttribute("aIndex",new THREE.InstancedBufferAttribute(new Float32Array([0,1,2,3]),1)),geo.instanceCount=4;const focus=new THREE.Vector4,emitters=atlas.anchors.map(p=>p.clone());emitters.push((curtain?.logo?.group.position||atlas.lake.center).clone());const shared={uTime:atlas.uniforms.uTime,uArrival:studio.uniforms.uArrival,uProgress:curtain?.uniforms.uProgress||studio.uniforms.uArrival,uLattice:atlas.uniforms.uLattice,uTint:{value:new THREE.Color(config.color)},uFocus:{value:focus},uShape:{value:new THREE.Vector2(config.width,config.height)},uSpeed:{value:reducedMotion?0:config.speed},uStrength:{value:config.brightness},uFilaments:{value:config.filaments},uHalo:{value:config.halo}},mat=new THREE.ShaderMaterial({uniforms:shared,vertexShader:`
       attribute vec4 aSite; attribute float aFoot,aIndex;
       uniform vec2 uShape; uniform float uProgress,uArrival;
       uniform vec4 uFocus;
@@ -61,8 +15,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
         d=turn*d;
         vWorld=vec3(aSite.x+d.x,aSite.y+.008+position.y*uShape.y*(.8+.2*vShow),aSite.z+d.y);
         gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.0);
-      }`,
-    fragmentShader: `
+      }`,fragmentShader:`
       uniform float uTime,uSpeed,uStrength,uFilaments,uHalo,uLattice;
       uniform vec3 uTint;
       varying vec2 vUv; varying vec3 vWorld,vLocal;
@@ -94,31 +47,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
         vec3 color=mix(uTint,vec3(.91,.98,1.),vFoot>.5?.52:.27);
         gl_FragColor=vec4(color,alpha);
         #include <colorspace_fragment>
-      }`,
-    transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    forceSinglePass: true, depthTest: true, depthWrite: false, toneMapped: false
-  });
-  mat.userData.handlesArrival = true;
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.name = 'Four layered strategy light beacons'; mesh.frustumCulled = false; mesh.renderOrder = 15;
-
-  // A bounded pool lets the count slider respond immediately without reallocating
-  // geometry. Small devices draw fewer sparks, with the same four focal points.
-  const pointPositions = [], seeds = [];
-  const fract = x => x - Math.floor(x);
-  for (let site = 0; site < 5; site++) for (let j = 0; j < (site < 4 ? 48 : 16); j++) {
-    const i = site * 53 + j + 1;
-    pointPositions.push(site,j,0);
-    seeds.push(fract(j*.618034+site*.217),5.2+4.6*fract(i*.7549),Math.PI*2*fract(i*.56984),fract(i*.4231));
-  }
-  const pointGeo = new THREE.BufferGeometry();
-  pointGeo.setAttribute('position', new THREE.Float32BufferAttribute(pointPositions, 3));
-  pointGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 4));
-  const pointMat = new THREE.ShaderMaterial({
-    uniforms: { ...shared, uSites: { value: emitters }, uCount: { value: config.count },
-      uDensity: { value: coarse ? .6 : 1 }, uSize: { value: config.particleSize },
-      uBright: { value: config.particleBrightness }, uPixels: { value: innerHeight }, uDpr: { value: 1 } },
-    vertexShader: `
+      }`,transparent:!0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,forceSinglePass:!0,depthTest:!0,depthWrite:!1,toneMapped:!1});mat.userData.handlesArrival=!0;const mesh=new THREE.Mesh(geo,mat);mesh.name="Four layered strategy light beacons",mesh.frustumCulled=!1,mesh.renderOrder=15;const pointPositions=[],seeds=[],fract=x=>x-Math.floor(x);for(let site=0;site<5;site++)for(let j=0;j<(site<4?48:16);j++){const i=site*53+j+1;pointPositions.push(site,j,0),seeds.push(fract(j*.618034+site*.217),5.2+4.6*fract(i*.7549),Math.PI*2*fract(i*.56984),fract(i*.4231))}const pointGeo=new THREE.BufferGeometry;pointGeo.setAttribute("position",new THREE.Float32BufferAttribute(pointPositions,3)),pointGeo.setAttribute("aSeed",new THREE.Float32BufferAttribute(seeds,4));const pointMat=new THREE.ShaderMaterial({uniforms:{...shared,uSites:{value:emitters},uCount:{value:config.count},uDensity:{value:coarse?.6:1},uSize:{value:config.particleSize},uBright:{value:config.particleBrightness},uPixels:{value:innerHeight},uDpr:{value:1}},vertexShader:`
       uniform vec3 uSites[5]; uniform vec4 uFocus;
       uniform vec2 uShape;
       uniform float uTime,uSpeed,uArrival,uProgress,uLattice,uCount,uDensity,uSize,uBright,uPixels,uDpr;
@@ -144,8 +73,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
         vAlpha=life*reveal*twinkle*uBright*(.75+.38*aSeed.w)*mix(1.,.7,lake)*(1.+focus*.35);
         vHot=.3+.7*aSeed.w;
         if(mv.z>=0.)vAlpha=0.;
-      }`,
-    fragmentShader: `
+      }`,fragmentShader:`
       uniform vec3 uTint; varying float vAlpha,vHot;
       void main(){
         vec2 p=gl_PointCoord*2.-1.; float r2=dot(p,p);
@@ -155,54 +83,4 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
         if(alpha<.004)discard;
         gl_FragColor=vec4(mix(uTint,vec3(1.),core*.8+vHot*.16),alpha);
         #include <colorspace_fragment>
-      }`,
-    transparent: true, blending: THREE.AdditiveBlending, depthTest: true, depthWrite: false, toneMapped: false
-  });
-  pointMat.userData.handlesArrival = true;
-  const lights = new THREE.Points(pointGeo, pointMat), viewport = new THREE.Vector4();
-  lights.name = 'Strategy sparks with soft round halos'; lights.frustumCulled = false; lights.renderOrder = 16;
-  lights.onBeforeRender = renderer => {
-    renderer.getCurrentViewport(viewport);
-    pointMat.uniforms.uPixels.value = viewport.w;
-    pointMat.uniforms.uDpr.value = viewport.w / Math.max(1, innerHeight);
-  };
-  mesh.add(lights); atlas.scene.add(mesh);
-  let hovered = -1, selected = -1, previousTime = performance.now();
-  const diagnostics = new URLSearchParams(location.search).get('motionqa') === '1' ? document.createElement('output') : null;
-  if (diagnostics) { diagnostics.id = 'rise-beacons-qa'; diagnostics.hidden = true; document.body.append(diagnostics); }
-  let diagnosticAt = 0;
-  function apply() {
-    shared.uShape.value.set(Math.max(.4,config.width),Math.max(.2,config.height));
-    shared.uStrength.value = config.brightness;
-    shared.uFilaments.value = config.filaments; shared.uHalo.value = config.halo;
-    shared.uSpeed.value = reducedMotion ? 0 : config.speed;
-    shared.uTint.value.set(config.color);
-    pointMat.uniforms.uCount.value = THREE.MathUtils.clamp(Math.round(config.count),0,48);
-    pointMat.uniforms.uSize.value = config.particleSize; pointMat.uniforms.uBright.value = config.particleBrightness;
-    lights.visible = !!config.particles;
-  }
-  function sync() {
-    atlas.anchors.forEach((p,i) => {
-      const y = atlas.lake.center.y;
-      if(sites.getX(i)!==Math.fround(p.x) || sites.getY(i)!==Math.fround(y) || sites.getZ(i)!==Math.fround(p.z)) {
-        sites.setXYZW(i,p.x,y,p.z,Math.atan2(p.z-atlas.lake.center.z,p.x-atlas.lake.center.x)); sites.needsUpdate=true;
-      }
-      emitters[i].set(p.x,y,p.z);
-    });
-    emitters[4].copy(curtain?.logo?.group.position || atlas.lake.center);
-    const now = performance.now(), k = 1-Math.exp(-Math.min(.1,(now-previousTime)/1000)*8);
-    previousTime = now;
-    for (let i=0;i<4;i++) focus.setComponent(i,THREE.MathUtils.lerp(focus.getComponent(i),i===hovered||i===selected?1:0,k));
-    if(diagnostics && now-diagnosticAt>200){
-      diagnostics.textContent=JSON.stringify({enabled:config.enabled,particles:config.particles,
-        countPerSite:Math.ceil(pointMat.uniforms.uCount.value*pointMat.uniforms.uDensity.value),
-        pool:pointGeo.attributes.position.count,drawCalls:2,reveal:shared.uProgress.value,
-        focus:focus.toArray().map(x=>+x.toFixed(2)),time:shared.uTime.value}); diagnosticAt=now;
-    }
-  }
-  apply(); sync();
-  return { mesh, lights, config, apply, sync, focus,
-    setHovered(index){hovered=index;}, setSelected(index){selected=index;},
-    dispose(){mesh.removeFromParent();geo.dispose();mat.dispose();pointGeo.dispose();pointMat.dispose();diagnostics?.remove();}
-  };
-}
+      }`,transparent:!0,blending:THREE.AdditiveBlending,depthTest:!0,depthWrite:!1,toneMapped:!1});pointMat.userData.handlesArrival=!0;const lights=new THREE.Points(pointGeo,pointMat),viewport=new THREE.Vector4;lights.name="Strategy sparks with soft round halos",lights.frustumCulled=!1,lights.renderOrder=16,lights.onBeforeRender=renderer=>{renderer.getCurrentViewport(viewport),pointMat.uniforms.uPixels.value=viewport.w,pointMat.uniforms.uDpr.value=viewport.w/Math.max(1,innerHeight)},mesh.add(lights),atlas.scene.add(mesh);let hovered=-1,selected=-1,previousTime=performance.now();const diagnostics=new URLSearchParams(location.search).get("motionqa")==="1"?document.createElement("output"):null;diagnostics&&(diagnostics.id="rise-beacons-qa",diagnostics.hidden=!0,document.body.append(diagnostics));let diagnosticAt=0;function apply(){shared.uShape.value.set(Math.max(.4,config.width),Math.max(.2,config.height)),shared.uStrength.value=config.brightness,shared.uFilaments.value=config.filaments,shared.uHalo.value=config.halo,shared.uSpeed.value=reducedMotion?0:config.speed,shared.uTint.value.set(config.color),pointMat.uniforms.uCount.value=THREE.MathUtils.clamp(Math.round(config.count),0,48),pointMat.uniforms.uSize.value=config.particleSize,pointMat.uniforms.uBright.value=config.particleBrightness,lights.visible=!!config.particles}function sync(){atlas.anchors.forEach((p,i)=>{const y=atlas.lake.center.y;(sites.getX(i)!==Math.fround(p.x)||sites.getY(i)!==Math.fround(y)||sites.getZ(i)!==Math.fround(p.z))&&(sites.setXYZW(i,p.x,y,p.z,Math.atan2(p.z-atlas.lake.center.z,p.x-atlas.lake.center.x)),sites.needsUpdate=!0),emitters[i].set(p.x,y,p.z)}),emitters[4].copy(curtain?.logo?.group.position||atlas.lake.center);const now=performance.now(),k=1-Math.exp(-Math.min(.1,(now-previousTime)/1e3)*8);previousTime=now;for(let i=0;i<4;i++)focus.setComponent(i,THREE.MathUtils.lerp(focus.getComponent(i),i===hovered||i===selected?1:0,k));diagnostics&&now-diagnosticAt>200&&(diagnostics.textContent=JSON.stringify({enabled:config.enabled,particles:config.particles,countPerSite:Math.ceil(pointMat.uniforms.uCount.value*pointMat.uniforms.uDensity.value),pool:pointGeo.attributes.position.count,drawCalls:2,reveal:shared.uProgress.value,focus:focus.toArray().map(x=>+x.toFixed(2)),time:shared.uTime.value}),diagnosticAt=now)}return apply(),sync(),{mesh,lights,config,apply,sync,focus,setHovered(index){hovered=index},setSelected(index){selected=index},dispose(){mesh.removeFromParent(),geo.dispose(),mat.dispose(),pointGeo.dispose(),pointMat.dispose(),diagnostics?.remove()}}}

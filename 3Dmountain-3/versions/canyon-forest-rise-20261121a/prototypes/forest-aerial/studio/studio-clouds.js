@@ -1,20 +1,4 @@
-import * as THREE from 'three';
-
-// Thin mist in the valley, with deeper banks of broken cloud above the flanks.
-// Each entry is a world-space ellipsoid: centre, radii, optical thickness, cloud (1) or mist (0).
-export const BANKS = [
-  [ 2.4,1.06,-2.4, 3.4,0.12,1.9, 0.22,0], [-2.6,1.12,-2.6, 3.3,0.14,1.8, 0.22,0],
-  [ 3.8,0.98, 1.8, 2.5,0.12,1.5, 0.17,0], [-3.4,0.97, 1.5, 2.8,0.14,1.6, 0.18,0],
-  [-4.2,1.94,-2.5, 2.6,0.34,1.24,0.72,1], [-2.2,2.11,-3.4, 1.9,0.31,0.89,0.62,1],
-  [ 3.9,2.26, 2.8, 2.3,0.39,1.13,0.78,1], [ 5.3,2.49, 2.0, 1.6,0.30,0.90,0.66,1],
-  [ 5.3,2.18,-3.8, 2.9,0.32,1.00,0.65,1], [-5.1,2.22, 3.5, 2.2,0.37,1.13,0.66,1],
-  [-3.1,1.78, 8.3, 4.6,0.42,1.85,0.74,1], [ 2.0,1.96, 9.2, 3.8,0.46,1.35,0.67,1],
-  [ 2.8,1.94,-8.8, 4.8,0.39,1.52,0.72,1], [-2.8,1.61,-8.3, 3.4,0.35,1.64,0.67,1],
-  [10.5,1.63, 1.1, 2.8,0.48,3.00,0.68,1], [-10.3,1.70,-0.7, 2.3,0.44,3.30,0.70,1]
-];
-const LEFT_BANK = 9;
-
-const VERT = `
+import*as THREE from"three";export const BANKS=[[2.4,1.06,-2.4,3.4,.12,1.9,.22,0],[-2.6,1.12,-2.6,3.3,.14,1.8,.22,0],[3.8,.98,1.8,2.5,.12,1.5,.17,0],[-3.4,.97,1.5,2.8,.14,1.6,.18,0],[-4.2,1.94,-2.5,2.6,.34,1.24,.72,1],[-2.2,2.11,-3.4,1.9,.31,.89,.62,1],[3.9,2.26,2.8,2.3,.39,1.13,.78,1],[5.3,2.49,2,1.6,.3,.9,.66,1],[5.3,2.18,-3.8,2.9,.32,1,.65,1],[-5.1,2.22,3.5,2.2,.37,1.13,.66,1],[-3.1,1.78,8.3,4.6,.42,1.85,.74,1],[2,1.96,9.2,3.8,.46,1.35,.67,1],[2.8,1.94,-8.8,4.8,.39,1.52,.72,1],[-2.8,1.61,-8.3,3.4,.35,1.64,.67,1],[10.5,1.63,1.1,2.8,.48,3,.68,1],[-10.3,1.7,-.7,2.3,.44,3.3,.7,1]];const LEFT_BANK=9,VERT=`
   attribute vec3 aCenter,aRadius,aStyle;
   attribute float aLeftBank;
   uniform float uTime,uCloudLayer,uStudioMist;
@@ -34,9 +18,7 @@ const VERT = `
     gl_Position=projectionMatrix*viewMatrix*vec4(vPlane,1.0);
     if(vStyle.y<0.001) gl_Position=vec4(2.,2.,2.,1.);
   }
-`;
-
-const FRAG = `
+`,FRAG=`
   uniform float uTime,uArrival,uLattice;
   uniform vec3 uCloudLit,uCloudShade;
   uniform vec2 uCloudTone;
@@ -100,7 +82,7 @@ const FRAG = `
     vec3 face=normalize(local/vRadius);
     float sunward=cloudField(q+uSun.xz*0.27);
     float light=dot(face,normalize(uSun))*0.21 + (field-sunward)*1.20 + 0.50 + fringe*0.12;
-    // 2026-11-21 (client: 「雲霧要白一點 或是開顏色調整參數」): lit / shade colours, brightness and contrast are uniforms;
+    // 2026-11-21 (client: \u300C\u96F2\u9727\u8981\u767D\u4E00\u9EDE \u6216\u662F\u958B\u984F\u8272\u8ABF\u6574\u53C3\u6578\u300D): lit / shade colours, brightness and contrast are uniforms;
     // their defaults are the old constants, so other pages look as before (the rise page sets its own in flow2-studio-pbr-view.js).
     vec3 color=mix(uCloudShade,uCloudLit,clamp((light-0.5)*uCloudTone.y+0.5,0.0,1.0))*uCloudTone.x;
     color=mix(vec3(dot(color,vec3(0.2126,0.7152,0.0722))),color,smoothstep(0.12,0.93,uArrival));
@@ -109,36 +91,4 @@ const FRAG = `
     gl_FragColor=vec4(color,alpha);
     #include <colorspace_fragment>
   }
-`;
-
-export function createStudioClouds(atlas,studio) {
-  const quad=new THREE.PlaneGeometry(1,1);
-  const geometry=new THREE.InstancedBufferGeometry();
-  geometry.setIndex(quad.index);
-  geometry.setAttribute('position',quad.getAttribute('position'));
-  const attr=fn=>new THREE.InstancedBufferAttribute(new Float32Array(BANKS.flatMap(fn)),3);
-  geometry.setAttribute('aCenter',attr(b=>b.slice(0,3)));
-  geometry.setAttribute('aRadius',attr(b=>b.slice(3,6)));
-  geometry.setAttribute('aStyle',attr((b,i)=>[i*2.731,b[6],b[7]]));
-  geometry.setAttribute('aLeftBank',new THREE.InstancedBufferAttribute(Float32Array.from(BANKS, (_,i)=>i===LEFT_BANK?1:0),1));
-  geometry.instanceCount=BANKS.length;
-  const material=new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: atlas.uniforms.uTime, uSun: atlas.uniforms.uSun, uLattice: atlas.uniforms.uLattice,
-      tCanopy: atlas.uniforms.tCanopy, tWater: atlas.uniforms.tWater, uBounds: atlas.uniforms.uBounds,
-      uYRange: atlas.uniforms.uYRange, uRelief: atlas.uniforms.uRelief, uCanopy: atlas.uniforms.uCanopy,
-      uTributaries: studio.uTributaries,
-      uStudioMist: studio.uStudioMist, uCloudLayer: studio.uCloudLayer, uArrival: studio.uArrival,
-      uLeftFog: { value: new THREE.Vector3(1,1,1) }, uLeftFogOffset: { value: new THREE.Vector3() },
-      uCloudLit: { value: new THREE.Vector3(0.94,0.93,0.88) }, uCloudShade: { value: new THREE.Vector3(0.36,0.43,0.49) },
-      uCloudTone: { value: new THREE.Vector2(1,1) }
-    },
-    vertexShader: VERT,fragmentShader: FRAG,transparent: true,depthWrite: false
-  });
-  material.userData.handlesArrival=true;
-  const mesh=new THREE.Mesh(geometry,material);
-  mesh.name='Highland cloud banks and valley mist';
-  mesh.renderOrder=58;
-  mesh.frustumCulled=false;
-  return mesh;
-}
+`;export function createStudioClouds(atlas,studio){const quad=new THREE.PlaneGeometry(1,1),geometry=new THREE.InstancedBufferGeometry;geometry.setIndex(quad.index),geometry.setAttribute("position",quad.getAttribute("position"));const attr=fn=>new THREE.InstancedBufferAttribute(new Float32Array(BANKS.flatMap(fn)),3);geometry.setAttribute("aCenter",attr(b=>b.slice(0,3))),geometry.setAttribute("aRadius",attr(b=>b.slice(3,6))),geometry.setAttribute("aStyle",attr((b,i)=>[i*2.731,b[6],b[7]])),geometry.setAttribute("aLeftBank",new THREE.InstancedBufferAttribute(Float32Array.from(BANKS,(_,i)=>i===LEFT_BANK?1:0),1)),geometry.instanceCount=BANKS.length;const material=new THREE.ShaderMaterial({uniforms:{uTime:atlas.uniforms.uTime,uSun:atlas.uniforms.uSun,uLattice:atlas.uniforms.uLattice,tCanopy:atlas.uniforms.tCanopy,tWater:atlas.uniforms.tWater,uBounds:atlas.uniforms.uBounds,uYRange:atlas.uniforms.uYRange,uRelief:atlas.uniforms.uRelief,uCanopy:atlas.uniforms.uCanopy,uTributaries:studio.uTributaries,uStudioMist:studio.uStudioMist,uCloudLayer:studio.uCloudLayer,uArrival:studio.uArrival,uLeftFog:{value:new THREE.Vector3(1,1,1)},uLeftFogOffset:{value:new THREE.Vector3},uCloudLit:{value:new THREE.Vector3(.94,.93,.88)},uCloudShade:{value:new THREE.Vector3(.36,.43,.49)},uCloudTone:{value:new THREE.Vector2(1,1)}},vertexShader:VERT,fragmentShader:FRAG,transparent:!0,depthWrite:!1});material.userData.handlesArrival=!0;const mesh=new THREE.Mesh(geometry,material);return mesh.name="Highland cloud banks and valley mist",mesh.renderOrder=58,mesh.frustumCulled=!1,mesh}

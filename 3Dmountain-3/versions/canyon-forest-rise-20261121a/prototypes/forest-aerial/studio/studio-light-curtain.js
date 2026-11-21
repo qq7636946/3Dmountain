@@ -1,32 +1,4 @@
-/* studio-light-curtain.js — Japanese Architectural Spatial Diagramming / 3D GIS
-   Volumetric Light Curtain (Vertical Light Ribbon) along river & valley centerlines.
-   - Geometry: CatmullRomCurve3 sampled centerlines extruded cleanly along +Y, real-time aligned to terrain relief (tCanopy)
-   - Shader: Sharp ground-contact line (#d9f2ff), vertical pow(1-vUv.y, 2.2) fade, animated UV travelling pulses,
-             smooth head/tail & uProgress (0->1) growth wipe, and subtle architectural vertical survey scan lines.
-   - Render: transparent, depthWrite: false, DoubleSide, AdditiveBlending (1 batched draw call). */
-import * as THREE from 'three';
-import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-
-const WATER_Y = 0.107;
-
-export const DEFAULT_CURTAIN_CONFIG = {
-  enabled: true,
-  showTributaries: true,
-  showLogo: true,
-  height: 0.56,          /* world units (~4.5m architectural scale relative to 14u valley) */
-  speed: 0.28,           /* travelling pulse speed along vUv.x */
-  brightness: 0.78,      /* restrained translucent veil intensity */
-  progress: 1.0,         /* 0..1 path growth / scroll wipe */
-  scanIntensity: 0.50,   /* subtle 3D GIS vertical survey lines */
-  pulseStrength: 0.90,   /* travelling signal/flow pulse strength */
-  color: '#88ccf8',      /* cool ice-blue low-saturation curtain body */
-  contactColor: '#d9f2ff',/* sharp luminous ground/water contact filament */
-  logoScale: 1.40,       /* central load_logo2.svg world diameter floating cleanly inside open lake */
-  logoHeight: 0.42,      /* vertical holographic light-wall height along SVG contour */
-  logoRotation: 0        /* degrees */
-};
-
-const CURTAIN_VERT = /* glsl */`
+import*as THREE from"three";import{SVGLoader}from"three/addons/loaders/SVGLoader.js";const WATER_Y=.107;export const DEFAULT_CURTAIN_CONFIG={enabled:!0,showTributaries:!0,showLogo:!0,height:.56,speed:.28,brightness:.78,progress:1,scanIntensity:.5,pulseStrength:.9,color:"#88ccf8",contactColor:"#d9f2ff",logoScale:1.4,logoHeight:.42,logoRotation:0};const CURTAIN_VERT=`
   attribute vec4 aPath;    /* x = isTributary (0=main, 1=trib), y = pathSeed, z = heightScale, w = pathWorldLen */
   attribute vec3 aTangent; /* horizontal curve tangent (xz) for clean grazing-angle fade */
 
@@ -69,9 +41,7 @@ const CURTAIN_VERT = /* glsl */`
 
     gl_Position = projectionMatrix * viewMatrix * vec4(worldP, 1.0);
   }
-`;
-
-const CURTAIN_FRAG = /* glsl */`
+`,CURTAIN_FRAG=`
   precision highp float;
 
   uniform float uTime;
@@ -159,98 +129,7 @@ const CURTAIN_FRAG = /* glsl */`
 
     gl_FragColor = vec4(emission, 1.0);
   }
-`;
-
-/* Convert plate UV (origin top-left) -> world XZ */
-function uvToWorldXZ(u, v) {
-  return new THREE.Vector3(-7.0 + u * 14.0, WATER_Y, -3.917 + v * 7.834);
-}
-
-/* Short seamless lead-in extension (1.15u) right at the 4 core mouths where outer river alignment is exact */
-const EXT_MAIN_SPECS = {
-  NW: { dir: [-0.76, -0.65], len: 1.35 },
-  NE: { dir: [ 0.50, -0.86], len: 1.25 },
-  SW: { dir: [-0.88,  0.47], len: 1.15 },
-  SE: { dir: [ 0.42,  0.91], len: 1.25 }
-};
-
-function prependExtendedHead(name, corePts) {
-  const sp = EXT_MAIN_SPECS[name];
-  if (!sp || !corePts.length) return corePts;
-  const start = corePts[0];
-  const dl = Math.hypot(sp.dir[0], sp.dir[1]) || 1;
-  const dx = sp.dir[0] / dl, dz = sp.dir[1] / dl;
-  const ext = [];
-  const steps = 4;
-  for (let i = steps; i >= 1; i--) {
-    const t = (sp.len * i) / steps;
-    ext.push(new THREE.Vector3(start.x + dx * t, WATER_Y, start.z + dz * t));
-  }
-  return ext.concat(corePts);
-}
-
-/* Build ONE batched double-sided vertical curtain BufferGeometry from an array of path descriptors */
-function buildCurtainGeometry(pathSpecs) {
-  const positions = [];
-  const uvs = [];
-  const pathAttrs = [];
-  const tangents = [];
-  const indices = [];
-  let vBase = 0;
-
-  for (const spec of pathSpecs) {
-    if (!spec.points || spec.points.length < 3) continue;
-    const curve = new THREE.CatmullRomCurve3(spec.points, false, 'centripetal', 0.5);
-    const totalLen = Math.max(curve.getLength(), 0.25);
-    const segs = spec.segments || Math.max(48, Math.round(totalLen * 18));
-    const sampled = curve.getSpacedPoints(segs);
-
-    for (let i = 0; i <= segs; i++) {
-      const p = sampled[i];
-      const pPrev = sampled[Math.max(0, i - 1)];
-      const pNext = sampled[Math.min(segs, i + 1)];
-      let tx = pNext.x - pPrev.x;
-      let tz = pNext.z - pPrev.z;
-      const tl = Math.hypot(tx, tz) || 1;
-      tx /= tl; tz /= tl;
-
-      const u = i / segs;
-
-      /* Bottom vertex (uv.y = 0) */
-      positions.push(p.x, p.y, p.z);
-      uvs.push(u, 0.0);
-      pathAttrs.push(spec.isTrib ? 1.0 : 0.0, spec.seed, spec.heightScale, totalLen);
-      tangents.push(tx, 0.0, tz);
-
-      /* Top vertex (uv.y = 1; extruded upward in VERT by uHeight * uv.y * heightScale) */
-      positions.push(p.x, p.y, p.z);
-      uvs.push(u, 1.0);
-      pathAttrs.push(spec.isTrib ? 1.0 : 0.0, spec.seed, spec.heightScale, totalLen);
-      tangents.push(tx, 0.0, tz);
-
-      if (i < segs) {
-        const a = vBase + i * 2;
-        const b = a + 1;
-        const c = a + 2;
-        const d = a + 3;
-        indices.push(a, c, b, b, c, d);
-      }
-    }
-    vBase += (segs + 1) * 2;
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geo.setAttribute('aPath', new THREE.Float32BufferAttribute(pathAttrs, 4));
-  geo.setAttribute('aTangent', new THREE.Float32BufferAttribute(tangents, 3));
-  geo.setIndex(indices);
-  geo.computeBoundingSphere();
-  return geo;
-}
-
-/* ---------- Central load_logo2.svg Holographic Light-Curtain & Floating Emblem Shaders ---------- */
-const LOGO_WALL_VERT = /* glsl */`
+`;function uvToWorldXZ(u,v){return new THREE.Vector3(-7+u*14,WATER_Y,-3.917+v*7.834)}const EXT_MAIN_SPECS={NW:{dir:[-.76,-.65],len:1.35},NE:{dir:[.5,-.86],len:1.25},SW:{dir:[-.88,.47],len:1.15},SE:{dir:[.42,.91],len:1.25}};function prependExtendedHead(name,corePts){const sp=EXT_MAIN_SPECS[name];if(!sp||!corePts.length)return corePts;const start=corePts[0],dl=Math.hypot(sp.dir[0],sp.dir[1])||1,dx=sp.dir[0]/dl,dz=sp.dir[1]/dl,ext=[],steps=4;for(let i=steps;i>=1;i--){const t=sp.len*i/steps;ext.push(new THREE.Vector3(start.x+dx*t,WATER_Y,start.z+dz*t))}return ext.concat(corePts)}function buildCurtainGeometry(pathSpecs){const positions=[],uvs=[],pathAttrs=[],tangents=[],indices=[];let vBase=0;for(const spec of pathSpecs){if(!spec.points||spec.points.length<3)continue;const curve=new THREE.CatmullRomCurve3(spec.points,!1,"centripetal",.5),totalLen=Math.max(curve.getLength(),.25),segs=spec.segments||Math.max(48,Math.round(totalLen*18)),sampled=curve.getSpacedPoints(segs);for(let i=0;i<=segs;i++){const p=sampled[i],pPrev=sampled[Math.max(0,i-1)],pNext=sampled[Math.min(segs,i+1)];let tx=pNext.x-pPrev.x,tz=pNext.z-pPrev.z;const tl=Math.hypot(tx,tz)||1;tx/=tl,tz/=tl;const u=i/segs;if(positions.push(p.x,p.y,p.z),uvs.push(u,0),pathAttrs.push(spec.isTrib?1:0,spec.seed,spec.heightScale,totalLen),tangents.push(tx,0,tz),positions.push(p.x,p.y,p.z),uvs.push(u,1),pathAttrs.push(spec.isTrib?1:0,spec.seed,spec.heightScale,totalLen),tangents.push(tx,0,tz),i<segs){const a=vBase+i*2,b=a+1,c=a+2,d=a+3;indices.push(a,c,b,b,c,d)}}vBase+=(segs+1)*2}const geo=new THREE.BufferGeometry;return geo.setAttribute("position",new THREE.Float32BufferAttribute(positions,3)),geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2)),geo.setAttribute("aPath",new THREE.Float32BufferAttribute(pathAttrs,4)),geo.setAttribute("aTangent",new THREE.Float32BufferAttribute(tangents,3)),geo.setIndex(indices),geo.computeBoundingSphere(),geo}const LOGO_WALL_VERT=`
   attribute float aPart;   /* 0 = cyan signature blade (cls-1), 1 = architectural ring (cls-2) */
   attribute vec3 aTangent;
 
@@ -276,9 +155,7 @@ const LOGO_WALL_VERT = /* glsl */`
     vWorld = wPos.xyz;
     gl_Position = projectionMatrix * viewMatrix * wPos;
   }
-`;
-
-const LOGO_WALL_FRAG = /* glsl */`
+`,LOGO_WALL_FRAG=`
   precision highp float;
 
   uniform float uTime;
@@ -334,9 +211,7 @@ const LOGO_WALL_FRAG = /* glsl */`
 
     gl_FragColor = vec4(emission, 1.0);
   }
-`;
-
-const LOGO_FILL_VERT = /* glsl */`
+`,LOGO_FILL_VERT=`
   attribute float aPart;
   varying vec2 vLocalXZ;
   varying float vPart;
@@ -345,9 +220,7 @@ const LOGO_FILL_VERT = /* glsl */`
     vPart = aPart;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
-`;
-
-const LOGO_FILL_FRAG = /* glsl */`
+`,LOGO_FILL_FRAG=`
   precision highp float;
 
   uniform float uTime;
@@ -377,17 +250,13 @@ const LOGO_FILL_FRAG = /* glsl */`
     vec3 emission = col * breathe * grid * uBrightness * appear;
     gl_FragColor = vec4(emission, 1.0);
   }
-`;
-
-const LOGO_RING_VERT = /* glsl */`
+`,LOGO_RING_VERT=`
   varying vec2 vUv;
   void main() {
     vUv = uv;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
-`;
-
-const LOGO_RING_FRAG = /* glsl */`
+`,LOGO_RING_FRAG=`
   precision highp float;
   uniform float uTime;
   uniform float uSpeed;
@@ -430,340 +299,4 @@ const LOGO_RING_FRAG = /* glsl */`
     if (max(emission.r, max(emission.g, emission.b)) < 0.002) discard;
     gl_FragColor = vec4(emission, 1.0);
   }
-`;
-
-async function buildCentralSvgLogo(svgUrl, uniforms, centerXZ) {
-  const loader = new SVGLoader();
-  /* Fetch SVG text & replace CSS url(#gradient) with flat hex before SVGLoader.parse so console stays 100% warning-free */
-  const rawSvg = await fetch(svgUrl).then(r => r.text());
-  const cleanSvg = rawSvg.replace(/url\(#linear-gradient-1\)/g, '#009ce5');
-  const data = loader.parse(cleanSvg);
-
-  /* Compute combined SVG bounding box so load_logo2.svg centers & normalizes cleanly to unit diameter */
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  const partShapes = [];
-  data.paths.forEach((path, pIdx) => {
-    const shapes = SVGLoader.createShapes(path);
-    shapes.forEach(sh => {
-      partShapes.push({ shape: sh, part: pIdx === 0 ? 0.0 : 1.0 });
-      sh.getSpacedPoints(80).forEach(pt => {
-        if (pt.x < minX) minX = pt.x;
-        if (pt.x > maxX) maxX = pt.x;
-        if (pt.y < minY) minY = pt.y;
-        if (pt.y > maxY) maxY = pt.y;
-      });
-    });
-  });
-
-  const cx = (minX + maxX) * 0.5;
-  const cy = (minY + maxY) * 0.5;
-  const span = Math.max(maxX - minX, maxY - minY, 1.0);
-  const toNormXZ = pt => [(pt.x - cx) / span, (pt.y - cy) / span];
-
-  /* 1. Filled flat holographic emblem geometry (normalized XZ in [-0.5, +0.5], lying cleanly on Y = 0) */
-  const fillPos = [], fillPart = [], fillIdx = [];
-  let fBase = 0;
-
-  /* 2. Vertical holographic light-curtain wall along every outer contour AND inner hole of load_logo2.svg */
-  const wallPos = [], wallUv = [], wallPart = [], wallTan = [], wallIdx = [];
-  const outlines = [];
-  let wBase = 0;
-
-  const pushContourWall = (pts2d, partVal, segCount) => {
-    if (!pts2d || pts2d.length < 3) return;
-    /* Ensure closed loop */
-    const closed = pts2d.slice();
-    const first = closed[0], last = closed[closed.length - 1];
-    if (first.distanceTo(last) > 0.5) closed.push(first.clone());
-    const n = closed.length - 1;
-    let totalLen = 0;
-    const cum = [0];
-    for (let i = 0; i < n; i++) {
-      totalLen += closed[i].distanceTo(closed[i + 1]);
-      cum.push(totalLen);
-    }
-    if (totalLen < 1e-3) return;
-
-    for (let i = 0; i <= n; i++) {
-      const [x, z] = toNormXZ(closed[i]);
-      const pPrev = closed[i === 0 ? n - 1 : i - 1];
-      const pNext = closed[i === n ? 1 : i + 1];
-      let tx = pNext.x - pPrev.x, tz = pNext.y - pPrev.y;
-      const tl = Math.hypot(tx, tz) || 1;
-      tx /= tl; tz /= tl;
-      const u = cum[i] / totalLen;
-
-      wallPos.push(x, 0, z, x, 0, z);
-      wallUv.push(u, 0, u, 1);
-      wallPart.push(partVal, partVal);
-      wallTan.push(tx, 0, tz, tx, 0, tz);
-
-      if (i < n) {
-        const a = wBase + i * 2, b = a + 1, c = a + 2, d = a + 3;
-        wallIdx.push(a, c, b, b, c, d);
-      }
-    }
-    wBase += (n + 1) * 2;
-  };
-
-  for (const { shape, part } of partShapes) {
-    /* Flat filled emblem from THREE.ShapeGeometry (high curveSegments for crisp curves!) */
-    const sg = new THREE.ShapeGeometry(shape, 40);
-    const posA = sg.attributes.position;
-    for (let i = 0; i < posA.count; i++) {
-      const nx = (posA.getX(i) - cx) / span;
-      const nz = (posA.getY(i) - cy) / span;
-      fillPos.push(nx, 0.0, nz);
-      fillPart.push(part);
-    }
-    if (sg.index) {
-      const idxA = sg.index;
-      for (let i = 0; i < idxA.count; i += 3) {
-        /* Flip winding slightly or DoubleSide handles both */
-        fillIdx.push(fBase + idxA.getX(i), fBase + idxA.getX(i + 2), fBase + idxA.getX(i + 1));
-      }
-    } else {
-      for (let i = 0; i < posA.count; i += 3) {
-        fillIdx.push(fBase + i, fBase + i + 2, fBase + i + 1);
-      }
-    }
-    fBase += posA.count;
-    sg.dispose();
-
-    /* Outer contour light curtain + inner hole light curtain */
-    const outer = shape.getSpacedPoints(180);
-    outlines.push(outer.map(toNormXZ));
-    pushContourWall(outer, part, 180);
-    for (const hole of shape.holes) {
-      pushContourWall(hole.getSpacedPoints(140), part, 140);
-    }
-  }
-
-  const fillGeo = new THREE.BufferGeometry();
-  fillGeo.setAttribute('position', new THREE.Float32BufferAttribute(fillPos, 3));
-  fillGeo.setAttribute('aPart', new THREE.Float32BufferAttribute(fillPart, 1));
-  fillGeo.setIndex(fillIdx);
-
-  const wallGeo = new THREE.BufferGeometry();
-  wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(wallPos, 3));
-  wallGeo.setAttribute('uv', new THREE.Float32BufferAttribute(wallUv, 2));
-  wallGeo.setAttribute('aPart', new THREE.Float32BufferAttribute(wallPart, 1));
-  wallGeo.setAttribute('aTangent', new THREE.Float32BufferAttribute(wallTan, 3));
-  wallGeo.setIndex(wallIdx);
-
-  const ringGeo = new THREE.PlaneGeometry(1.75, 1.75);
-  ringGeo.rotateX(-Math.PI / 2);
-
-  const wallMat = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: LOGO_WALL_VERT,
-    fragmentShader: LOGO_WALL_FRAG,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false
-  });
-
-  const fillMat = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: LOGO_FILL_VERT,
-    fragmentShader: LOGO_FILL_FRAG,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false
-  });
-
-  const ringMat = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: LOGO_RING_VERT,
-    fragmentShader: LOGO_RING_FRAG,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false
-  });
-
-  const group = new THREE.Group();
-  group.name = 'Studio Central Holographic SVG Logo (load_logo2.svg)';
-  group.position.set(centerXZ.x, WATER_Y + 0.004, centerXZ.z);
-
-  const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-  ringMesh.position.y = -0.001;
-  ringMesh.renderOrder = 11;
-  ringMesh.frustumCulled = false;
-
-  const fillMesh = new THREE.Mesh(fillGeo, fillMat);
-  fillMesh.position.y = 0.002;
-  fillMesh.renderOrder = 13;
-  fillMesh.frustumCulled = false;
-
-  const wallMesh = new THREE.Mesh(wallGeo, wallMat);
-  wallMesh.renderOrder = 14;
-  wallMesh.frustumCulled = false;
-
-  group.add(ringMesh, fillMesh, wallMesh);
-
-  return {
-    group, outlines,
-    dispose() {
-      fillGeo.dispose(); wallGeo.dispose(); ringGeo.dispose();
-      fillMat.dispose(); wallMat.dispose(); ringMat.dispose();
-    }
-  };
-}
-
-export async function createStudioLightCurtain(atlas, initialConfig = {}) {
-  const cfg = { ...DEFAULT_CURTAIN_CONFIG, ...initialConfig };
-  const url = rel => new URL(rel, import.meta.url).href;
-
-  const [streamData, tribData] = await Promise.all([
-    fetch(url('../original/w2-streamlines.json')).then(r => r.json()),
-    fetch(url('../flow2-river-beams.json')).then(r => r.json()).catch(() => ({ tributaries: [] }))
-  ]);
-
-  const pathSpecs = [];
-
-  /* 1. 4 Main River Volumetric Light Curtains (extended outward + converging cleanly into central lake!) */
-  const rivers = streamData?.rivers || [];
-  rivers.forEach((rv, idx) => {
-    const raw = rv?.current?.middle || rv?.current?.pts || [];
-    if (raw.length < 4) return;
-    /* Decimate densely packed streamline points cleanly (~every 3rd pt) before CatmullRom spline smoothing */
-    const corePts = [];
-    for (let i = 0; i < raw.length; i += 3) corePts.push(uvToWorldXZ(raw[i][0], raw[i][1]));
-    const last = raw[raw.length - 1];
-    corePts.push(uvToWorldXZ(last[0], last[1]));
-    const fullPts = prependExtendedHead(rv.name, corePts);
-    pathSpecs.push({
-      name: rv.name || ('R' + idx),
-      points: fullPts,
-      isTrib: false,
-      seed: idx * 0.27 + 0.11,
-      heightScale: 1.0,
-      segments: 220
-    });
-  });
-
-  /* 2. Valley Tributary Curtains (shorter, delicate architectural diagram ribbons hugging terrain relief!) */
-  const tribs = tribData?.tributaries || [];
-  tribs.forEach((tr, idx) => {
-    const raw = tr?.uv || [];
-    if (raw.length < 4) return;
-    const pts = [];
-    for (let i = 0; i < raw.length; i += 2) pts.push(uvToWorldXZ(raw[i][0], raw[i][1]));
-    const last = raw[raw.length - 1];
-    pts.push(uvToWorldXZ(last[0], last[1]));
-    pathSpecs.push({
-      name: 'Trib' + idx,
-      points: pts,
-      isTrib: true,
-      seed: idx * 0.19 + 0.53,
-      heightScale: 0.55,
-      segments: 72
-    });
-  });
-
-  const geometry = buildCurtainGeometry(pathSpecs);
-
-  const uniforms = {
-    tCanopy: atlas.uniforms.tCanopy,
-    uBounds: atlas.uniforms.uBounds,
-    uYRange: atlas.uniforms.uYRange,
-    uRelief: atlas.uniforms.uRelief,
-    uTime: atlas.uniforms.uTime,
-    uHeight: { value: cfg.height },
-    uLogoHeight: { value: cfg.logoHeight },
-    uSpeed: { value: cfg.speed },
-    uBrightness: { value: cfg.brightness },
-    uRiverRefined: { value: cfg.refinedRivers ? 1 : 0 },
-    uProgress: { value: cfg.progress },
-    uScanIntensity: { value: cfg.scanIntensity },
-    uPulseStrength: { value: cfg.pulseStrength },
-    uShowTribs: { value: cfg.showTributaries ? 1.0 : 0.0 },
-    uColor: { value: new THREE.Color(cfg.color) },
-    uContactColor: { value: new THREE.Color(cfg.contactColor) }
-  };
-
-  const material = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: CURTAIN_VERT,
-    fragmentShader: CURTAIN_FRAG,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false
-  });
-
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = 'Studio Volumetric Light Curtain (3D GIS)';
-  mesh.frustumCulled = false;
-  mesh.renderOrder = 12;
-  mesh.visible = !!cfg.enabled;
-
-  atlas.scene.add(mesh);
-
-  /* 3. Build Central Holographic load_logo2.svg Emblem + Vertical Contour Light Curtain right at the lake convergence! */
-  const cUv = streamData?.centre || [0.5087, 0.4928];
-  const lakeCenter = uvToWorldXZ(cUv[0], cUv[1]);
-  let logo = null;
-  try {
-    logo = await buildCentralSvgLogo(url('../../../load_logo2.svg'), uniforms, lakeCenter);
-    atlas.scene.add(logo.group);
-  } catch (err) {
-    console.warn('[studio-light-curtain] load_logo2.svg failed to load', err);
-  }
-
-  function apply() {
-    mesh.visible = !!cfg.enabled;
-    uniforms.uHeight.value = Math.max(0.05, +cfg.height || 0.56);
-    uniforms.uLogoHeight.value = Math.max(0.0, +cfg.logoHeight);
-    uniforms.uSpeed.value = Math.max(0, +cfg.speed || 0);
-    uniforms.uBrightness.value = Math.max(0, +cfg.brightness || 0);
-    uniforms.uProgress.value = Math.max(0, Math.min(1, +cfg.progress));
-    uniforms.uScanIntensity.value = Math.max(0, +cfg.scanIntensity || 0);
-    uniforms.uPulseStrength.value = Math.max(0, +cfg.pulseStrength || 0);
-    uniforms.uShowTribs.value = cfg.showTributaries ? 1.0 : 0.0;
-    uniforms.uColor.value.set(cfg.color);
-    uniforms.uContactColor.value.set(cfg.contactColor);
-    if (logo) {
-      logo.group.visible = !!cfg.showLogo;
-      const s = Math.max(0.2, +cfg.logoScale || 1.65);
-      logo.group.scale.set(s, 1.0, s);
-      logo.group.rotation.y = (+cfg.logoRotation || 0) * Math.PI / 180;
-    }
-  }
-
-  apply();
-
-  return {
-    mesh,
-    logo,
-    material,
-    uniforms,
-    config: cfg,
-    pathCount: pathSpecs.length,
-    apply,
-    setProgress(p) {
-      cfg.progress = Math.max(0, Math.min(1, +p));
-      uniforms.uProgress.value = cfg.progress;
-    },
-    dispose() {
-      atlas.scene.remove(mesh);
-      geometry.dispose();
-      material.dispose();
-      if (logo) {
-        atlas.scene.remove(logo.group);
-        logo.dispose();
-      }
-    }
-  };
-}
+`;async function buildCentralSvgLogo(svgUrl,uniforms,centerXZ){const loader=new SVGLoader,cleanSvg=(await fetch(svgUrl).then(r=>r.text())).replace(/url\(#linear-gradient-1\)/g,"#009ce5"),data=loader.parse(cleanSvg);let minX=1/0,maxX=-1/0,minY=1/0,maxY=-1/0;const partShapes=[];data.paths.forEach((path,pIdx)=>{SVGLoader.createShapes(path).forEach(sh=>{partShapes.push({shape:sh,part:pIdx===0?0:1}),sh.getSpacedPoints(80).forEach(pt=>{pt.x<minX&&(minX=pt.x),pt.x>maxX&&(maxX=pt.x),pt.y<minY&&(minY=pt.y),pt.y>maxY&&(maxY=pt.y)})})});const cx=(minX+maxX)*.5,cy=(minY+maxY)*.5,span=Math.max(maxX-minX,maxY-minY,1),toNormXZ=pt=>[(pt.x-cx)/span,(pt.y-cy)/span],fillPos=[],fillPart=[],fillIdx=[];let fBase=0;const wallPos=[],wallUv=[],wallPart=[],wallTan=[],wallIdx=[],outlines=[];let wBase=0;const pushContourWall=(pts2d,partVal,segCount)=>{if(!pts2d||pts2d.length<3)return;const closed=pts2d.slice(),first=closed[0],last=closed[closed.length-1];first.distanceTo(last)>.5&&closed.push(first.clone());const n=closed.length-1;let totalLen=0;const cum=[0];for(let i=0;i<n;i++)totalLen+=closed[i].distanceTo(closed[i+1]),cum.push(totalLen);if(!(totalLen<.001)){for(let i=0;i<=n;i++){const[x,z]=toNormXZ(closed[i]),pPrev=closed[i===0?n-1:i-1],pNext=closed[i===n?1:i+1];let tx=pNext.x-pPrev.x,tz=pNext.y-pPrev.y;const tl=Math.hypot(tx,tz)||1;tx/=tl,tz/=tl;const u=cum[i]/totalLen;if(wallPos.push(x,0,z,x,0,z),wallUv.push(u,0,u,1),wallPart.push(partVal,partVal),wallTan.push(tx,0,tz,tx,0,tz),i<n){const a=wBase+i*2,b=a+1,c=a+2,d=a+3;wallIdx.push(a,c,b,b,c,d)}}wBase+=(n+1)*2}};for(const{shape,part}of partShapes){const sg=new THREE.ShapeGeometry(shape,40),posA=sg.attributes.position;for(let i=0;i<posA.count;i++){const nx=(posA.getX(i)-cx)/span,nz=(posA.getY(i)-cy)/span;fillPos.push(nx,0,nz),fillPart.push(part)}if(sg.index){const idxA=sg.index;for(let i=0;i<idxA.count;i+=3)fillIdx.push(fBase+idxA.getX(i),fBase+idxA.getX(i+2),fBase+idxA.getX(i+1))}else for(let i=0;i<posA.count;i+=3)fillIdx.push(fBase+i,fBase+i+2,fBase+i+1);fBase+=posA.count,sg.dispose();const outer=shape.getSpacedPoints(180);outlines.push(outer.map(toNormXZ)),pushContourWall(outer,part,180);for(const hole of shape.holes)pushContourWall(hole.getSpacedPoints(140),part,140)}const fillGeo=new THREE.BufferGeometry;fillGeo.setAttribute("position",new THREE.Float32BufferAttribute(fillPos,3)),fillGeo.setAttribute("aPart",new THREE.Float32BufferAttribute(fillPart,1)),fillGeo.setIndex(fillIdx);const wallGeo=new THREE.BufferGeometry;wallGeo.setAttribute("position",new THREE.Float32BufferAttribute(wallPos,3)),wallGeo.setAttribute("uv",new THREE.Float32BufferAttribute(wallUv,2)),wallGeo.setAttribute("aPart",new THREE.Float32BufferAttribute(wallPart,1)),wallGeo.setAttribute("aTangent",new THREE.Float32BufferAttribute(wallTan,3)),wallGeo.setIndex(wallIdx);const ringGeo=new THREE.PlaneGeometry(1.75,1.75);ringGeo.rotateX(-Math.PI/2);const wallMat=new THREE.ShaderMaterial({uniforms,vertexShader:LOGO_WALL_VERT,fragmentShader:LOGO_WALL_FRAG,transparent:!0,depthWrite:!1,depthTest:!0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:!1}),fillMat=new THREE.ShaderMaterial({uniforms,vertexShader:LOGO_FILL_VERT,fragmentShader:LOGO_FILL_FRAG,transparent:!0,depthWrite:!1,depthTest:!0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:!1}),ringMat=new THREE.ShaderMaterial({uniforms,vertexShader:LOGO_RING_VERT,fragmentShader:LOGO_RING_FRAG,transparent:!0,depthWrite:!1,depthTest:!0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:!1}),group=new THREE.Group;group.name="Studio Central Holographic SVG Logo (load_logo2.svg)",group.position.set(centerXZ.x,WATER_Y+.004,centerXZ.z);const ringMesh=new THREE.Mesh(ringGeo,ringMat);ringMesh.position.y=-.001,ringMesh.renderOrder=11,ringMesh.frustumCulled=!1;const fillMesh=new THREE.Mesh(fillGeo,fillMat);fillMesh.position.y=.002,fillMesh.renderOrder=13,fillMesh.frustumCulled=!1;const wallMesh=new THREE.Mesh(wallGeo,wallMat);return wallMesh.renderOrder=14,wallMesh.frustumCulled=!1,group.add(ringMesh,fillMesh,wallMesh),{group,outlines,dispose(){fillGeo.dispose(),wallGeo.dispose(),ringGeo.dispose(),fillMat.dispose(),wallMat.dispose(),ringMat.dispose()}}}export async function createStudioLightCurtain(atlas,initialConfig={}){const cfg={...DEFAULT_CURTAIN_CONFIG,...initialConfig},url=rel=>new URL(rel,import.meta.url).href,[streamData,tribData]=await Promise.all([fetch(url("../original/w2-streamlines.json")).then(r=>r.json()),fetch(url("../flow2-river-beams.json")).then(r=>r.json()).catch(()=>({tributaries:[]}))]),pathSpecs=[];(streamData?.rivers||[]).forEach((rv,idx)=>{const raw=rv?.current?.middle||rv?.current?.pts||[];if(raw.length<4)return;const corePts=[];for(let i=0;i<raw.length;i+=3)corePts.push(uvToWorldXZ(raw[i][0],raw[i][1]));const last=raw[raw.length-1];corePts.push(uvToWorldXZ(last[0],last[1]));const fullPts=prependExtendedHead(rv.name,corePts);pathSpecs.push({name:rv.name||"R"+idx,points:fullPts,isTrib:!1,seed:idx*.27+.11,heightScale:1,segments:220})}),(tribData?.tributaries||[]).forEach((tr,idx)=>{const raw=tr?.uv||[];if(raw.length<4)return;const pts=[];for(let i=0;i<raw.length;i+=2)pts.push(uvToWorldXZ(raw[i][0],raw[i][1]));const last=raw[raw.length-1];pts.push(uvToWorldXZ(last[0],last[1])),pathSpecs.push({name:"Trib"+idx,points:pts,isTrib:!0,seed:idx*.19+.53,heightScale:.55,segments:72})});const geometry=buildCurtainGeometry(pathSpecs),uniforms={tCanopy:atlas.uniforms.tCanopy,uBounds:atlas.uniforms.uBounds,uYRange:atlas.uniforms.uYRange,uRelief:atlas.uniforms.uRelief,uTime:atlas.uniforms.uTime,uHeight:{value:cfg.height},uLogoHeight:{value:cfg.logoHeight},uSpeed:{value:cfg.speed},uBrightness:{value:cfg.brightness},uRiverRefined:{value:cfg.refinedRivers?1:0},uProgress:{value:cfg.progress},uScanIntensity:{value:cfg.scanIntensity},uPulseStrength:{value:cfg.pulseStrength},uShowTribs:{value:cfg.showTributaries?1:0},uColor:{value:new THREE.Color(cfg.color)},uContactColor:{value:new THREE.Color(cfg.contactColor)}},material=new THREE.ShaderMaterial({uniforms,vertexShader:CURTAIN_VERT,fragmentShader:CURTAIN_FRAG,transparent:!0,depthWrite:!1,depthTest:!0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:!1}),mesh=new THREE.Mesh(geometry,material);mesh.name="Studio Volumetric Light Curtain (3D GIS)",mesh.frustumCulled=!1,mesh.renderOrder=12,mesh.visible=!!cfg.enabled,atlas.scene.add(mesh);const cUv=streamData?.centre||[.5087,.4928],lakeCenter=uvToWorldXZ(cUv[0],cUv[1]);let logo=null;try{logo=await buildCentralSvgLogo(url("../../../load_logo2.svg"),uniforms,lakeCenter),atlas.scene.add(logo.group)}catch(err){console.warn("[studio-light-curtain] load_logo2.svg failed to load",err)}function apply(){if(mesh.visible=!!cfg.enabled,uniforms.uHeight.value=Math.max(.05,+cfg.height||.56),uniforms.uLogoHeight.value=Math.max(0,+cfg.logoHeight),uniforms.uSpeed.value=Math.max(0,+cfg.speed||0),uniforms.uBrightness.value=Math.max(0,+cfg.brightness||0),uniforms.uProgress.value=Math.max(0,Math.min(1,+cfg.progress)),uniforms.uScanIntensity.value=Math.max(0,+cfg.scanIntensity||0),uniforms.uPulseStrength.value=Math.max(0,+cfg.pulseStrength||0),uniforms.uShowTribs.value=cfg.showTributaries?1:0,uniforms.uColor.value.set(cfg.color),uniforms.uContactColor.value.set(cfg.contactColor),logo){logo.group.visible=!!cfg.showLogo;const s=Math.max(.2,+cfg.logoScale||1.65);logo.group.scale.set(s,1,s),logo.group.rotation.y=(+cfg.logoRotation||0)*Math.PI/180}}return apply(),{mesh,logo,material,uniforms,config:cfg,pathCount:pathSpecs.length,apply,setProgress(p){cfg.progress=Math.max(0,Math.min(1,+p)),uniforms.uProgress.value=cfg.progress},dispose(){atlas.scene.remove(mesh),geometry.dispose(),material.dispose(),logo&&(atlas.scene.remove(logo.group),logo.dispose())}}}

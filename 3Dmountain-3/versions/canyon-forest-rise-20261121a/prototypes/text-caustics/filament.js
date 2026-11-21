@@ -1,71 +1,15 @@
-/* Text reveal · the #16 "Filament" effect, ported for index1-5-canyon-forest.html (Team TX, 2026-11-17; client: 「字體特效使用16號」).
-
-   From Codrops' "Text Character Animations with GSAP" (js/variations/filament.js), MIT License,
-   Copyright (c) 2009 - 2026 Codrops (https://codrops.com); the full notice is in LICENSE-codrops-MIT.txt next to this file.
-
-   The letters catch one after another in reading order, each line starting a moment after the one before, like lamps along a wall.
-   A letter warms up like a filament: a dim, deep red glow on its strokes, heating through orange to a warm yellow-white, with a soft
-   halo around it that's brightest when the letter is hottest. Then it cools to the plain text colour and the halo fades. Some letters
-   flicker as they catch, two or three quick dips in brightness. Drawn by gl-text.js over the page text.
-
-   What changed from the demo: the shader is the demo's, word for word, except that its output is multiplied by uAlpha (the chapter's
-   own scroll-led opacity, and the hand-over fade), and that the heat colours are a palette: 'white' by default (client: 「這文案特效
-   不要帶顏色 都是白色的漸層」: a dim cool grey glow brightening to a luminous white, no hue), 'original' = the demo's red → orange →
-   warm white (?filament=red), 'gold' = amber → gold → warm white-gold (?filament=gold). Catch order, timing, flicker and halo are the
-   demo's in every palette. The cooled end is paint(uColor.a): exactly the page text's colour.
-   The timings are the demo's. */
-
-export const settings = {
-    // seconds each letter takes to warm up and cool down
-    duration: 1,
-    // seconds between two letters catching, and between the starts of two lines
-    letter: 0.04,
-    line: 0.3,
-    overlap: true,
-    // how soft the letters the halo is made from are, in em
-    blur: 0.12,
-    // no blending of the letters' starts: each letter keeps its own seed (its flicker)
-    smoothStart: 0,
-    // the halo spreads that blur over a disc this wide across, in em
-    haloRadius: 0.32,
-    // places on the disc the halo is gathered from
-    haloTaps: 24,
-    // how far the drawing reaches past the text, in em: room for the halo to fade out. The demo's 1em; the halo is zero beyond
-    // haloRadius + the blur's reach (about .32 + .36 = .68em), so .75em draws the same picture on about a fifth fewer pixels
-    pad: 0.75,
-};
-
-// The halo's taps, spread evenly over the disc on a sunflower spiral, in em
-const taps = Array.from({length: settings.haloTaps}, (_, i) => {
-    const k = i + 0.5;
-    const radius = Math.sqrt(k / settings.haloTaps) * settings.haloRadius;
-    const angle = k * 2.39996;
-    return `vec2(${(Math.cos(angle) * radius).toFixed(4)}, ${(Math.sin(angle) * radius).toFixed(4)})`;
-});
-
-// The filament's light as it heats, 0 cold to 1 hottest
-const GLOW = {
-    // the page's default (client: 「這文案特效不要帶顏色 都是白色的漸層」): no hue, only a white ramp: a dim, barely cool grey glow
-    // brightening to a luminous white a little brighter than the text colour; the cooled end is still exactly the text colour
-    white: `vec3(0.955, 0.975, 1.0) * smoothstep(0.0, 0.8, heat)`,
-    // the demo's: dark red, deep red, orange, warm white
-    original: `vec3(
+export const settings={duration:1,letter:.04,line:.3,overlap:!0,blur:.12,smoothStart:0,haloRadius:.32,haloTaps:24,pad:.75};const taps=Array.from({length:settings.haloTaps},(_,i)=>{const k=i+.5,radius=Math.sqrt(k/settings.haloTaps)*settings.haloRadius,angle=k*2.39996;return`vec2(${(Math.cos(angle)*radius).toFixed(4)}, ${(Math.sin(angle)*radius).toFixed(4)})`}),GLOW={white:"vec3(0.955, 0.975, 1.0) * smoothstep(0.0, 0.8, heat)",original:`vec3(
         smoothstep(0.0, 0.4, heat),
         0.88 * smoothstep(0.3, 0.95, heat),
         0.72 * smoothstep(0.65, 1.0, heat)
-    )`,
-    // the variant for the client to compare: the same ramp moved toward amber, gold and a warm white-gold (less red over the blue canyon)
-    gold: `vec3(
+    )`,gold:`vec3(
         smoothstep(0.0, 0.35, heat),
         0.92 * smoothstep(0.0, 0.75, heat),
         0.74 * smoothstep(0.4, 1.0, heat)
-    )`,
-};
-
-export const fragmentFor = (palette = 'white') => `
+    )`};export const fragmentFor=(palette="white")=>`
 // The halo's taps, in em from this pixel, and its strength at the hottest
 const int HALO_TAPS = ${settings.haloTaps};
-const vec2 TAPS[HALO_TAPS] = vec2[HALO_TAPS](${taps.join(', ')});
+const vec2 TAPS[HALO_TAPS] = vec2[HALO_TAPS](${taps.join(", ")});
 const float HALO = 1.2;
 // Shares of a letter's time: hottest at HOT, cooling from COOL to the end
 const float HOT = 0.45;
@@ -85,7 +29,7 @@ float coolAt(float t) {
 
 // The filament's light as it heats
 vec3 glow(float heat) {
-    return ${GLOW[palette] || GLOW.white};
+    return ${GLOW[palette]||GLOW.white};
 }
 
 // Two or three quick dips in brightness in the first third, for the letters that flicker

@@ -1,83 +1,4 @@
-/* studio-forest-layer.js — Image 1 (5-Layer Ecological Workflow) + Image 2 (Sunlit Emerald/Turquoise Style)
-   Modular overlay for index-topdown-studio.html (keeps flow2-original-scene.js untouched):
-   - Layer 1: Volumetric sunlit mountain mist (off by default for crystal-clear view; 1-click toggleable)
-   - Layer 2: REAL 3D tree models directly from user assets 樹1 (A/B), 樹2 (Common Fig), 樹3 (Oak)
-              optimized into studio-real-trees.glb + studio-real-trees-atlas.webp with AAA Normal Transfer & baked Canopy AO
-   - Layer 3: Reference-image crystal emerald-turquoise lagoon, submerged sandy shoals & white river rapids
-   - Layer 4: Full Splat-Map PBR terrain (草皮1 Moss / 草皮2 Aerial Grass-Rock / 草皮3 Meadow Grass + Poly Haven dark_rock_02
-              Triplanar cliffs) + 1,630 Poly Haven CC0 3D photogrammetry cliff crags, shoreline outcrops & river boulders
-   - Layer 5: Heightmap relief with real Studio camera distance tracking (zero milky fog when zooming/tilting) */
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-/* Organic widened central lake basin (identical math in JS scatter filter & GLSL VERT/FRAG)
-   Gives the central load_logo2.svg & floating ripples generous open glacial lake water on all sides! */
-export function jsLakeBasinR(x, z) {
-  const qx = (x - 0.122) / 1.66;
-  const qz = (z + 0.056) / 1.42;
-  const r = Math.hypot(qx, qz);
-  const ang = Math.atan2(qz, qx);
-  const wobble = 0.085 * Math.sin(ang * 3.0 + 0.7) + 0.055 * Math.cos(ang * 5.0 - 1.2) + 0.035 * Math.sin(ang * 7.0 + 2.4);
-  return r + wobble;
-}
-
-/* Continuous core river polylines from w2-streamlines.json (bridges canopy-occluded dry gaps in tWater!) */
-const JS_CORE_RIVERS = [
-  [[-6.34, -3.65], [-5.85, -3.23], [-5.15, -3.21], [-4.55, -3.03], [-4.26, -2.59], [-3.51, -2.30], [-2.86, -1.99], [-2.64, -1.58], [-2.10, -1.39], [-1.39, -1.24], [-0.79, -0.83]],
-  [[5.66, -3.76], [5.34, -3.23], [5.25, -2.80], [4.82, -2.57], [4.24, -2.49], [3.70, -2.26], [3.62, -1.91], [3.42, -1.46], [2.91, -1.31], [2.36, -1.20], [1.72, -1.19], [1.18, -0.88]],
-  [[6.80, 3.78], [6.26, 3.14], [5.67, 2.78], [5.17, 2.68], [4.56, 2.41], [3.90, 2.30], [3.25, 2.33], [2.65, 2.17], [2.53, 1.60], [2.26, 1.15], [1.58, 0.91], [1.12, 0.58]],
-  [[-6.98, 1.50], [-6.47, 1.38], [-6.00, 1.41], [-5.43, 1.27], [-4.95, 1.05], [-4.41, 0.70], [-4.04, 0.58], [-3.48, 0.53], [-2.98, 0.52], [-2.53, 0.50], [-2.27, 0.19], [-1.42, 0.06]]
-];
-export function jsCoreRiverDist(x, z) {
-  let minD = 99;
-  for (let r = 0; r < JS_CORE_RIVERS.length; r++) {
-    const pts = JS_CORE_RIVERS[r];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const ax = pts[i][0], az = pts[i][1], bx = pts[i + 1][0], bz = pts[i + 1][1];
-      const dx = bx - ax, dz = bz - az;
-      const len2 = dx * dx + dz * dz || 1e-6;
-      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2));
-      const d = Math.hypot(x - (ax + dx * t), z - (az + dz * t));
-      if (d < minD) minD = d;
-    }
-  }
-  return minD;
-}
-
-const STUDIO_VER = 'st-20261119-40';
-
-/* Warm golden upper-right (NE) sun matching Image 2 & studio-shadow-map.png */
-export const STUDIO_SUN = new THREE.Vector3(0.6198, 0.5599, -0.5499).normalize();
-
-/* Cap real 3D tree instances cleanly so 100% density runs smoothly with full ~1,100-tri real 3D meshes */
-const MAX_REAL_TREES = 15000;
-
-/* Default Image-2 visual preset */
-export const DEFAULT_STUDIO_CONFIG = {
-  style: 1.0,          /* 0 = original bake look, 1 = full Image-2 style */
-  density: 1.0,        /* 0.1 .. 1.0 fraction of priority-sorted REAL 3D 樹1/樹2/樹3 instances */
-  crownScale: 1.45,    /* horizontal canopy fullness */
-  heightScale: 1.38,   /* vertical tree height */
-  sunGlow: 1.00,       /* sunlit warm-olive crown rim / SSS */
-  shadow: 1.05,        /* ground cast shadow + canopy AO strength */
-  grassPbr: 1.0,       /* Layer 4: Splat-Map PBR terrain textures (草皮1-3 + Poly Haven dark_rock_02) */
-  relief: 1.32,        /* Layer 5: terrain vertical relief */
-  waterClear: 0.96,    /* Layer 3: turquoise shallows clarity */
-  mist: 0.0,           /* Layer 1: crystal clear by default (0 = zero fog/haze veil) */
-  wind: 0.90,          /* gentle leaf breeze */
-  layers: {
-    atmosphere: false, /* Layer 1: 大氣雲霧預設關閉，保持銳利清晰 */
-    ecoTrees: true,    /* Layer 2: 真實 3D 生態樹 (樹1 / 樹2 / 樹3) */
-    grass3d: true,     /* Layer 2+: 17,584 叢 3D 多色草叢、野草與蕨類 */
-    rocks3d: true,     /* Layer 4+: Poly Haven 3D 實景掃描崖岩、河岸岩礁與巨石 */
-    legacyTrees: false,/* Optional A/B: 舊版樹 */
-    water: true,       /* Layer 3: 翡翠青水體與白浪急流 */
-    terrainStyle: true /* Layer 4: Splat Map 多層次草石地形材質與樹影 */
-  },
-  species: [true, true, true, true] /* [樹1A, 樹1B, 樹2無花果, 樹3橡樹] */
-};
-
-/* ---------- Real 3D Tree Shaders (Actual 樹1 / 樹2 / 樹3 GLB Meshes + AAA Normal Transfer) ---------- */
-const REAL_TREE_VERT = `
+import*as THREE from"three";import{GLTFLoader}from"three/addons/loaders/GLTFLoader.js";export function jsLakeBasinR(x,z){const qx=(x-.122)/1.66,qz=(z+.056)/1.42,r=Math.hypot(qx,qz),ang=Math.atan2(qz,qx),wobble=.085*Math.sin(ang*3+.7)+.055*Math.cos(ang*5-1.2)+.035*Math.sin(ang*7+2.4);return r+wobble}const JS_CORE_RIVERS=[[[-6.34,-3.65],[-5.85,-3.23],[-5.15,-3.21],[-4.55,-3.03],[-4.26,-2.59],[-3.51,-2.3],[-2.86,-1.99],[-2.64,-1.58],[-2.1,-1.39],[-1.39,-1.24],[-.79,-.83]],[[5.66,-3.76],[5.34,-3.23],[5.25,-2.8],[4.82,-2.57],[4.24,-2.49],[3.7,-2.26],[3.62,-1.91],[3.42,-1.46],[2.91,-1.31],[2.36,-1.2],[1.72,-1.19],[1.18,-.88]],[[6.8,3.78],[6.26,3.14],[5.67,2.78],[5.17,2.68],[4.56,2.41],[3.9,2.3],[3.25,2.33],[2.65,2.17],[2.53,1.6],[2.26,1.15],[1.58,.91],[1.12,.58]],[[-6.98,1.5],[-6.47,1.38],[-6,1.41],[-5.43,1.27],[-4.95,1.05],[-4.41,.7],[-4.04,.58],[-3.48,.53],[-2.98,.52],[-2.53,.5],[-2.27,.19],[-1.42,.06]]];export function jsCoreRiverDist(x,z){let minD=99;for(let r=0;r<JS_CORE_RIVERS.length;r++){const pts=JS_CORE_RIVERS[r];for(let i=0;i<pts.length-1;i++){const ax=pts[i][0],az=pts[i][1],bx=pts[i+1][0],bz=pts[i+1][1],dx=bx-ax,dz=bz-az,len2=dx*dx+dz*dz||1e-6,t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/len2)),d=Math.hypot(x-(ax+dx*t),z-(az+dz*t));d<minD&&(minD=d)}}return minD}const STUDIO_VER="st-20261119-40";export const STUDIO_SUN=new THREE.Vector3(.6198,.5599,-.5499).normalize();const MAX_REAL_TREES=15e3;export const DEFAULT_STUDIO_CONFIG={style:1,density:1,crownScale:1.45,heightScale:1.38,sunGlow:1,shadow:1.05,grassPbr:1,relief:1.32,waterClear:.96,mist:0,wind:.9,layers:{atmosphere:!1,ecoTrees:!0,grass3d:!0,rocks3d:!0,legacyTrees:!1,water:!0,terrainStyle:!0},species:[!0,!0,!0,!0]};const REAL_TREE_VERT=`
   attribute vec4 color;       /* glTF COLOR_0: r = baked 3D canopy AO, g = isLeaf (1=leaf, 0=bark), b = crown height */
   attribute vec4 aInstData;   /* rgb = ecological grove tint, a = yaw radians */
 
@@ -144,9 +65,7 @@ const REAL_TREE_VERT = `
 
     gl_Position = projectionMatrix * viewMatrix * vec4(worldP, 1.0);
   }
-`;
-
-const REAL_TREE_FRAG = `
+`,REAL_TREE_FRAG=`
   uniform sampler2D tRealTreeAtlas, tStudioShadow, tPlate;
   uniform vec3 uSun;
   uniform vec4 uBounds, uView;
@@ -176,7 +95,7 @@ const REAL_TREE_FRAG = `
     float hillSun = smoothstep(0.10, 0.86, vTerrSun);
     vec3 shMap = texture2D(tStudioShadow, clamp(vFootUv, 0.0, 1.0)).rgb;
 
-    /* Real 3D Bark / Trunk / Main Branches from 樹1, 樹2, 樹3 (soft warm-grey bark, never crushed black) */
+    /* Real 3D Bark / Trunk / Main Branches from \u6A391, \u6A392, \u6A393 (soft warm-grey bark, never crushed black) */
     if (vIsLeaf < 0.5) {
       float bLit = clamp((dot(N, sunDir) + 0.35) / 1.35, 0.0, 1.0);
       float bShade = 1.0 - max(shMap.r * 0.36, shMap.g * 0.34) * uStudioShadow;
@@ -248,10 +167,7 @@ const REAL_TREE_FRAG = `
     gl_FragColor = vec4(col, cov);
     #include <colorspace_fragment>
   }
-`;
-
-/* ---------- Watertight Poly Haven CC0 2K 3D Valley Rocks & Cliff Crags Shaders ---------- */
-const STUDIO_ROCK_VERT = `
+`,STUDIO_ROCK_VERT=`
   attribute float aYOff;
 
   uniform sampler2D tCanopy;
@@ -358,9 +274,7 @@ const STUDIO_ROCK_VERT = `
 
     gl_Position = projectionMatrix * viewMatrix * vec4(worldP, 1.0);
   }
-`;
-
-const STUDIO_ROCK_FRAG = `
+`,STUDIO_ROCK_FRAG=`
   uniform sampler2D tRockAtlas, tRockNrm, tRockDetail, tRockDetailNrm, tStudioShadow;
   uniform vec3 uSun;
   uniform vec4 uView;
@@ -478,10 +392,7 @@ const STUDIO_ROCK_FRAG = `
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
   }
-`;
-
-/* ---------- Real Poly Haven 3D Photogrammetry Ferns (fern_02) & Meadow Grass (grass_medium_01) Shaders ---------- */
-const STUDIO_GRASS_VERT = `
+`,STUDIO_GRASS_VERT=`
   attribute vec3 aGrassCol;
 
   uniform sampler2D tCanopy;
@@ -528,9 +439,7 @@ const STUDIO_GRASS_VERT = `
 
     gl_Position = projectionMatrix * viewMatrix * vec4(worldP, 1.0);
   }
-`;
-
-const STUDIO_GRASS_FRAG = `
+`,STUDIO_GRASS_FRAG=`
   uniform sampler2D tGroundCoverAtlas, tStudioShadow;
   uniform vec3 uSun;
   uniform vec4 uView;
@@ -570,10 +479,7 @@ const STUDIO_GRASS_FRAG = `
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
   }
-`;
-
-/* ---------- Layer 1: Volumetric Sunlit Mountain Mist Shaders ---------- */
-const MIST_VERT = `
+`,MIST_VERT=`
   varying vec2 vUv;
   varying vec3 vWorld;
   void main() {
@@ -582,9 +488,7 @@ const MIST_VERT = `
     vWorld = w.xyz;
     gl_Position = projectionMatrix * viewMatrix * w;
   }
-`;
-
-const MIST_FRAG = `
+`,MIST_FRAG=`
   uniform float uTime, uMist, uSeed, uWarm;
   varying vec2 vUv;
   varying vec3 vWorld;
@@ -615,51 +519,7 @@ const MIST_FRAG = `
     gl_FragColor = vec4(col, alpha);
     #include <colorspace_fragment>
   }
-`;
-
-/* ---------- Adaptive High-Res Extended Relief Grid (10.4x Area: 37.0 x 30.84 World Units, Dense Near Core & Tributaries!) ---------- */
-function buildExtendedReliefGrid(width, depth, nx, nz, skirt, sn) {
-  /* Gentle quadratic spacing outward so river mouths & tributary gorges stay razor-sharp while spanning +11.5u on all 4 sides */
-  const easeOut = t => (t * 0.65 + t * t * 0.35);
-  const line = (n, size) => {
-    const a = [];
-    for (let i = 0; i < sn; i++) {
-      const f = (sn - i) / sn;
-      a.push(-size / 2 - skirt * easeOut(f));
-    }
-    for (let i = 0; i <= n; i++) a.push(-size / 2 + (size * i) / n);
-    for (let i = 1; i <= sn; i++) {
-      const f = i / sn;
-      a.push(size / 2 + skirt * easeOut(f));
-    }
-    return a;
-  };
-  const xs = line(nx, width), zs = line(nz, depth), cx = xs.length - 1, cz = zs.length - 1;
-  const pos = new Float32Array(xs.length * zs.length * 3);
-  const idx = new Uint32Array(cx * cz * 6);
-  let p = 0, q = 0;
-  for (const z of zs) for (const x of xs) { pos[p++] = x; pos[p++] = 0; pos[p++] = z; }
-  for (let j = 0; j < cz; j++) for (let i = 0; i < cx; i++) {
-    const a = j * (cx + 1) + i, b = a + 1, c = a + cx + 1, d = c + 1;
-    idx[q++] = a; idx[q++] = c; idx[q++] = b; idx[q++] = b; idx[q++] = c; idx[q++] = d;
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setIndex(new THREE.BufferAttribute(idx, 1));
-  const w = width + 2 * skirt, d = depth + 2 * skirt;
-  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.8, 0), Math.hypot(w, d) / 2 + 3);
-  g.boundingBox = new THREE.Box3(new THREE.Vector3(-w / 2, 0, -d / 2), new THREE.Vector3(w / 2, 3.0, d / 2));
-  return g;
-}
-
-
-/* Shared GLSL Organic Domain-Warped Alpine Watershed:
-   - Widened Central Confluence Lake Basin (organic coves + smooth rocky shore)
-   - 4 Continuous Core River Channels (bridges every canopy-occluded gap on NW/NE/SW/SE all the way into the lake!)
-   - 4 Continuing Outer Main Rivers + 9 Acute-Angle Mountain Tributaries (with exact analytical downstream flow vectors!)
-   Uses 0 extra texture units! */
-export function makeWatershedGlsl(noiseFn) {
-  return `
+`;function buildExtendedReliefGrid(width,depth,nx,nz,skirt,sn){const easeOut=t=>t*.65+t*t*.35,line=(n,size)=>{const a=[];for(let i=0;i<sn;i++){const f=(sn-i)/sn;a.push(-size/2-skirt*easeOut(f))}for(let i=0;i<=n;i++)a.push(-size/2+size*i/n);for(let i=1;i<=sn;i++){const f=i/sn;a.push(size/2+skirt*easeOut(f))}return a},xs=line(nx,width),zs=line(nz,depth),cx=xs.length-1,cz=zs.length-1,pos=new Float32Array(xs.length*zs.length*3),idx=new Uint32Array(cx*cz*6);let p=0,q=0;for(const z of zs)for(const x of xs)pos[p++]=x,pos[p++]=0,pos[p++]=z;for(let j=0;j<cz;j++)for(let i=0;i<cx;i++){const a=j*(cx+1)+i,b=a+1,c=a+cx+1,d2=c+1;idx[q++]=a,idx[q++]=c,idx[q++]=b,idx[q++]=b,idx[q++]=c,idx[q++]=d2}const g=new THREE.BufferGeometry;g.setAttribute("position",new THREE.BufferAttribute(pos,3)),g.setIndex(new THREE.BufferAttribute(idx,1));const w=width+2*skirt,d=depth+2*skirt;return g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.8,0),Math.hypot(w,d)/2+3),g.boundingBox=new THREE.Box3(new THREE.Vector3(-w/2,0,-d/2),new THREE.Vector3(w/2,3,d/2)),g}export function makeWatershedGlsl(noiseFn){return`
     /* Widened organic central confluence lake basin around load_logo2.svg center (0.122, -0.056) */
     float stLakeBasinR(vec2 p) {
       vec2 q = (p - vec2(0.122, -0.056)) / vec2(1.66, 1.42);
@@ -840,7 +700,7 @@ export function makeWatershedGlsl(noiseFn) {
       r = stCombineStream(r, stStreamEx(pw, vec2(-6.86,  1.47), normalize(vec2(-0.88,  0.47)), 12.0, 0.155, 0.095, 0.74, 0.46, 3.1, bankRough, fAcc, fW));  /* SW Main */
       r = stCombineStream(r, stStreamEx(pw, vec2( 6.72,  3.68), normalize(vec2( 0.62,  0.78)), 12.0, 0.165, 0.105, 0.82, 0.40, 5.2, bankRough, fAcc, fW));  /* SE Main */
 
-      /* 9 Natural Acute-Angle Mountain Tributary Creeks (小支流) — all flow downstream into the 4 main rivers */
+      /* 9 Natural Acute-Angle Mountain Tributary Creeks (\u5C0F\u652F\u6D41) \u2014 all flow downstream into the 4 main rivers */
       r = stCombineStream(r, stStreamEx(pw, vec2(-8.20, -5.15), normalize(vec2(-0.22, -0.97)),  8.8, 0.13, 0.048, 0.62, 0.68, 1.1, bankRough, fAcc, fW)); /* T1: NW -> North valley */
       r = stCombineStream(r, stStreamEx(pw, vec2(-9.65, -6.30), normalize(vec2(-0.98, -0.18)),  8.2, 0.12, 0.048, 0.56, 0.74, 2.6, bankRough, fAcc, fW)); /* T2: NW -> Far West creek */
       r = stCombineStream(r, stStreamEx(pw, vec2( 6.85, -5.65), normalize(vec2(-0.18, -0.98)),  8.4, 0.14, 0.048, 0.66, 0.64, 4.0, bankRough, fAcc, fW)); /* T3: NE -> North-Center gorge */
@@ -880,61 +740,7 @@ export function makeWatershedGlsl(noiseFn) {
       float valleyH = mix(mH, 0.105, ws.y);
       return max(0.105, mix(valleyH, 0.105, smoothstep(0.04, 0.36, ws.x)));
     }
-  `;
-}
-
-/* ---------- Patch Terrain Material (Extended 37x31 Alpine Watershed + 7x 2K PBR Grass, Basalt Cliffs & Slate Riverbanks) ---------- */
-function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
-  let patched = false;
-  const seen = new Set();
-
-  /* Enable crisp seamless outward mirroring across the immediate boundary without muddy legacy skirt fog */
-  if (atlas.uniforms?.uSkirt) atlas.uniforms.uSkirt.value.set(3.5 / 1494, 3.5 / 836, 0.0, 0.0);
-  if (atlas.uniforms?.uSkirtAir) atlas.uniforms.uSkirtAir.value.set(99.0, 120.0);
-
-  const coreW = atlas.uniforms?.uBounds ? (1.0 / atlas.uniforms.uBounds.value.z) : 14.0;
-  const coreD = atlas.uniforms?.uBounds ? (1.0 / atlas.uniforms.uBounds.value.w) : 7.84;
-
-  atlas.terrain.traverse(obj => {
-    if (!obj.isMesh || !obj.material) return;
-    /* Upgrade the relief grid geometry to massive seamless 37.0 x 30.84 extended mountain watershed (core 240x136 + 11.5u outer range) */
-    if (obj.geometry && !obj.userData.studioExtended) {
-      const oldGeo = obj.geometry;
-      obj.geometry = buildExtendedReliefGrid(coreW, coreD, 240, 136, 11.5, 76);
-      obj.frustumCulled = false;
-      obj.userData.studioExtended = true;
-      oldGeo.dispose?.();
-    }
-
-    if (seen.has(obj.material)) return;
-    seen.add(obj.material);
-    const mat = obj.material;
-    if (!mat.fragmentShader || mat.fragmentShader.includes('uStudioStyle')) return;
-
-    /* Free 2 unused Studio samplers (FOREST_LOGO & FOREST_GROW) so 7 full 2K PBR materials fit within WebGL's 16-unit limit! */
-    if (mat.defines) {
-      delete mat.defines.FOREST_LOGO;
-      delete mat.defines.FOREST_GROW;
-    }
-
-    Object.assign(mat.uniforms, {
-      tStudioShadow: { value: shadowTex },
-      tMossCol: { value: pbrTex.mossCol },
-      tAerialCol: { value: pbrTex.aerialCol },
-      tGrassCol: { value: pbrTex.grassCol },
-      tRockCol: { value: pbrTex.rockCol },
-      tMossyRockCol: { value: pbrTex.mossyRockCol },
-      tRiverBankCol: { value: pbrTex.riverBankCol },
-      tPbrNrm: { value: pbrTex.pbrNrm },
-      uStudioStyle: studioUniforms.uStudioStyle,
-      uStudioShadow: studioUniforms.uStudioShadow,
-      uStudioGrassPbr: studioUniforms.uStudioGrassPbr,
-      uStudioTerrainOn: studioUniforms.uStudioTerrainOn
-    });
-
-    /* Patch VERT: True 3D extended alpine mountain range + carved gorges for all 4 continuing rivers & 9 mountain tributaries! */
-    if (mat.vertexShader && !mat.vertexShader.includes('stWatershed')) {
-      const vFuncs = `
+  `}function patchTerrainMaterial(atlas,shadowTex,pbrTex,studioUniforms){let patched=!1;const seen=new Set;atlas.uniforms?.uSkirt&&atlas.uniforms.uSkirt.value.set(3.5/1494,3.5/836,0,0),atlas.uniforms?.uSkirtAir&&atlas.uniforms.uSkirtAir.value.set(99,120);const coreW=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.z:14,coreD=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.w:7.84;return atlas.terrain.traverse(obj=>{if(!obj.isMesh||!obj.material)return;if(obj.geometry&&!obj.userData.studioExtended){const oldGeo=obj.geometry;obj.geometry=buildExtendedReliefGrid(coreW,coreD,240,136,11.5,76),obj.frustumCulled=!1,obj.userData.studioExtended=!0,oldGeo.dispose?.()}if(seen.has(obj.material))return;seen.add(obj.material);const mat=obj.material;if(!mat.fragmentShader||mat.fragmentShader.includes("uStudioStyle"))return;if(mat.defines&&(delete mat.defines.FOREST_LOGO,delete mat.defines.FOREST_GROW),Object.assign(mat.uniforms,{tStudioShadow:{value:shadowTex},tMossCol:{value:pbrTex.mossCol},tAerialCol:{value:pbrTex.aerialCol},tGrassCol:{value:pbrTex.grassCol},tRockCol:{value:pbrTex.rockCol},tMossyRockCol:{value:pbrTex.mossyRockCol},tRiverBankCol:{value:pbrTex.riverBankCol},tPbrNrm:{value:pbrTex.pbrNrm},uStudioStyle:studioUniforms.uStudioStyle,uStudioShadow:studioUniforms.uStudioShadow,uStudioGrassPbr:studioUniforms.uStudioGrassPbr,uStudioTerrainOn:studioUniforms.uStudioTerrainOn}),mat.vertexShader&&!mat.vertexShader.includes("stWatershed")){const vFuncs=`
         float stVHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float stVNoise(vec2 p) {
           vec2 i = floor(p), f = fract(p);
@@ -942,9 +748,8 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
           return mix(mix(stVHash(i), stVHash(i + vec2(1.0, 0.0)), f.x),
                      mix(stVHash(i + vec2(0.0, 1.0)), stVHash(i + vec2(1.0, 1.0)), f.x), f.y);
         }
-        ${makeWatershedGlsl('stVNoise')}
-      `;
-      const vInject = `
+        ${makeWatershedGlsl("stVNoise")}
+      `,vInject=`
         #ifdef FOREST_RELIEF
         float stOutD = forestOut(uvR);
         vec3 stWS = stWatershed(p.xz, stOutD);
@@ -971,23 +776,17 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
         }
         #endif
         vec4 w=modelMatrix*vec4(p,1.);
-      `;
-      mat.vertexShader = mat.vertexShader
-        .replace('void main(){', vFuncs + '\nvoid main(){')
-        .replace('vec4 w=modelMatrix*vec4(p,1.);', vInject);
-    }
-
-    const decls = `
+      `;mat.vertexShader=mat.vertexShader.replace("void main(){",vFuncs+`
+void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
       uniform sampler2D tStudioShadow, tMossCol, tAerialCol, tGrassCol, tRockCol, tMossyRockCol, tRiverBankCol, tPbrNrm;
       uniform float uStudioStyle, uStudioShadow, uStudioGrassPbr, uStudioTerrainOn;
       vec3 stUnpackNrm(vec2 rg) {
         vec2 xy = rg * 2.0 - 1.0;
         return vec3(xy, sqrt(max(0.02, 1.0 - dot(xy, xy))));
       }
-      ${makeWatershedGlsl('forestNoise')}
-    `;
-    const inject = `
-      /* STUDIO ALPINE WATERSHED (IMAGE 2 & 3 BOTTOM STYLE) · 37x31 EXTENDED TERRAIN + 9 TRIBUTARIES + 7x 2K PBR */
+      ${makeWatershedGlsl("forestNoise")}
+    `,inject=`
+      /* STUDIO ALPINE WATERSHED (IMAGE 2 & 3 BOTTOM STYLE) \xB7 37x31 EXTENDED TERRAIN + 9 TRIBUTARIES + 7x 2K PBR */
       if (uStudioTerrainOn > 0.001) {
         float stAmt = clamp(uStudioStyle, 0.0, 1.25) * uStudioTerrainOn;
         float pbrAmt = clamp(uStudioGrassPbr, 0.0, 1.5) * uStudioTerrainOn;
@@ -1191,7 +990,7 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
             vec3 wNZ = vec3(tNZ.x * sign(sN.z), tNZ.y, sN.z);
             vec3 triRockN = normalize(wNX * triW.x + wNY * triW.y + wNZ * triW.z);
 
-            /* Coarse fractured cliff-foot rock ledges (Rocks007 at bold 0.68x slab scale — ZERO fine sand or sparkles!) */
+            /* Coarse fractured cliff-foot rock ledges (Rocks007 at bold 0.68x slab scale \u2014 ZERO fine sand or sparkles!) */
             float cliffFoot = clamp(shoreCliff * 0.72 + wetCliff * 0.55, 0.0, 1.0);
             vec4 ledgeAlb = rockAlbR;
             if (cliffFoot > 0.04) {
@@ -1235,7 +1034,7 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
           /* --- C. Subtle damp moss overhang rim right above rocky cliff lip (NO sandy/sparkling gravel beach!) --- */
           col *= mix(1.0, 0.82, dampRim * 0.65 * landM * min(stAmt, 1.0));
 
-          /* --- D. Live Cluster Canopy AO (34%–40% Darkening Strictly Under Surviving Tree Groves!) + Directional Cast Shadows --- */
+          /* --- D. Live Cluster Canopy AO (34%\u201340% Darkening Strictly Under Surviving Tree Groves!) + Directional Cast Shadows --- */
           float shAmt = clamp(uStudioShadow, 0.0, 1.5) * landM;
           col = mix(col, col * vec3(0.58, 0.64, 0.62), shS.r * 0.88 * shAmt);
           col = mix(col, col * vec3(0.62, 0.68, 0.74), shS.g * 0.65 * shAmt * (1.0 - shS.r * 0.40));
@@ -1325,9 +1124,7 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
         float horizonFade = smoothstep(7.40, 11.20, outDist + horizonNoise);
         col = mix(col, vec3(0.0052, 0.0097, 0.0144), horizonFade);
       }
-    `;
-
-    const waterExpandReplace = `
+    `,waterExpandReplace=`
       float stOut0 = forestOut(uvR);
       vec3 stLB0 = (stOut0 <= 0.0005 && uStudioTerrainOn > 0.001) ? stCentralLakeBasin(vForestWorld.xz) : vec3(0.0);
       vec2 stCRFlow = vec2(0.0);
@@ -1335,14 +1132,12 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
       float wm = max(max(wt.r, stLB0.x), stCR0.x);
       float shore = max(max(wt.g, stLB0.z * 0.94 * smoothstep(0.05, 0.35, stLB0.x)), stCR0.z * 0.58 * smoothstep(0.05, 0.35, stCR0.x));
       float lakeN = max(wt.b, smoothstep(0.05, 0.42, stLB0.x));
-    `;
-    const flowReplace = `
+    `,flowReplace=`
       vec2 F=fl.rg*2.-1.;
       if (stCR0.x > 0.05 && length(F) < 0.22 && length(stCRFlow) > 0.01) {
         F = mix(F, stCRFlow * 0.72, smoothstep(0.05, 0.40, stCR0.x));
       }
-    `;
-    const bedReplace = `
+    `,bedReplace=`
       vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;
       if (uStudioTerrainOn > 0.001 && uStudioGrassPbr > 0.01) {
         float tbAmt = clamp(uStudioStyle, 0.0, 1.0) * clamp(uStudioGrassPbr, 0.0, 1.0) * uStudioTerrainOn;
@@ -1355,39 +1150,9 @@ function patchTerrainMaterial(atlas, shadowTex, pbrTex, studioUniforms) {
         vec3 alpBed = mix(vec3(0.12, 0.22, 0.30), cobBed * vec3(0.76, 0.94, 1.12), 0.84);
         bed = mix(bed, alpBed, max(tbAmt * (0.58 + 0.42 * shW), smoothstep(0.05, 0.35, max(stLB0.x, stCR0.x))));
       }
-    `;
-
-    mat.fragmentShader = mat.fragmentShader
-      .replace('void main(){', decls + '\nvoid main(){')
-      .replace('float wm=wt.r, shore=wt.g, lakeN=wt.b;', waterExpandReplace)
-      .replace('vec2 F=fl.rg*2.-1.;', flowReplace)
-      .replace('vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;', bedReplace)
-      .replace('col=forestHaze(col,vForestWorld);', inject + '\ncol=forestHaze(col,vForestWorld);');
-    mat.needsUpdate = true;
-    patched = true;
-  });
-  return patched;
-}
-
-/* ---------- Patch Live Water Surface Mesh (Refracted 2K Dark Slate Riverbed Cobbles + Seamless Widened Lake Blend!) ---------- */
-function patchWaterSurfaceMaterial(atlas, riverBankCol, studioUniforms) {
-  let patched = false;
-  const seen = new Set();
-  atlas.scene.traverse(obj => {
-    if (!obj.isMesh || !obj.material || seen.has(obj.material)) return;
-    seen.add(obj.material);
-    const mat = obj.material;
-    if (!mat.fragmentShader || !mat.fragmentShader.includes('vW1World') || !mat.fragmentShader.includes('vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;')) return;
-    if (mat.fragmentShader.includes('tStudioRiverBed')) return;
-
-    Object.assign(mat.uniforms, {
-      tStudioRiverBed: { value: riverBankCol },
-      uStudioStyle: studioUniforms.uStudioStyle,
-      uStudioGrassPbr: studioUniforms.uStudioGrassPbr,
-      uStudioTerrainOn: studioUniforms.uStudioTerrainOn
-    });
-
-    const wDecls = `
+    `;mat.fragmentShader=mat.fragmentShader.replace("void main(){",decls+`
+void main(){`).replace("float wm=wt.r, shore=wt.g, lakeN=wt.b;",waterExpandReplace).replace("vec2 F=fl.rg*2.-1.;",flowReplace).replace("vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;",bedReplace).replace("col=forestHaze(col,vForestWorld);",inject+`
+col=forestHaze(col,vForestWorld);`),mat.needsUpdate=!0,patched=!0}),patched}function patchWaterSurfaceMaterial(atlas,riverBankCol,studioUniforms){let patched=!1;const seen=new Set;return atlas.scene.traverse(obj=>{if(!obj.isMesh||!obj.material||seen.has(obj.material))return;seen.add(obj.material);const mat=obj.material;if(!mat.fragmentShader||!mat.fragmentShader.includes("vW1World")||!mat.fragmentShader.includes("vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;")||mat.fragmentShader.includes("tStudioRiverBed"))return;Object.assign(mat.uniforms,{tStudioRiverBed:{value:riverBankCol},uStudioStyle:studioUniforms.uStudioStyle,uStudioGrassPbr:studioUniforms.uStudioGrassPbr,uStudioTerrainOn:studioUniforms.uStudioTerrainOn});const wDecls=`
       uniform sampler2D tStudioRiverBed;
       uniform float uStudioStyle, uStudioGrassPbr, uStudioTerrainOn;
       float stWLakeR(vec2 p) {
@@ -1400,16 +1165,14 @@ function patchWaterSurfaceMaterial(atlas, riverBankCol, studioUniforms) {
         float lr = stWLakeR(p);
         return vec3(1.0 - smoothstep(0.86, 1.00, lr), 0.0, 1.0 - smoothstep(0.0, 1.02, lr));
       }
-    `;
-    const wMaskReplace = `
+    `,wMaskReplace=`
       vec3 stLBw = (uStudioTerrainOn > 0.001) ? stWCentralLake(wq) : vec3(0.0);
       float wm=wt.r;
       float shore=max(wt.g, stLBw.z * 0.94 * smoothstep(0.05, 0.35, stLBw.x));
       float lakeN=max(wt.b, smoothstep(0.05, 0.42, stLBw.x));
       float sh2=shore*shore, shoreN=clamp(sh2*4.,0.,1.);
       float body=smoothstep(.2,.7,wm), rim=smoothstep(.02,.3,wm)*(1.-body)*uW1B.z*(1.0 - smoothstep(0.10, 0.45, stLBw.x));
-    `;
-    const wBedReplace = `
+    `,wBedReplace=`
       vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;
       if (uStudioTerrainOn > 0.001 && uStudioGrassPbr > 0.01) {
         float wBedAmt = clamp(uStudioStyle, 0.0, 1.0) * clamp(uStudioGrassPbr, 0.0, 1.0) * uStudioTerrainOn;
@@ -1426,628 +1189,6 @@ function patchWaterSurfaceMaterial(atlas, riverBankCol, studioUniforms) {
         vec3 alpineBed = mix(vec3(0.12, 0.22, 0.30), cobbleBed * vec3(0.76, 0.94, 1.12), 0.84) + vec3(0.14, 0.20, 0.26) * caust * 0.55;
         bed = mix(bed, alpineBed, wBedAmt * (0.58 + 0.42 * shallW));
       }
-    `;
-
-    mat.fragmentShader = mat.fragmentShader
-      .replace('void main(){', wDecls + '\nvoid main(){')
-      .replace('float wm=wt.r, shore=wt.g, lakeN=wt.b, sh2=shore*shore, shoreN=clamp(sh2*4.,0.,1.);\n    float body=smoothstep(.2,.7,wm), rim=smoothstep(.02,.3,wm)*(1.-body)*uW1B.z;', wMaskReplace)
-      .replace('vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;', wBedReplace);
-    mat.needsUpdate = true;
-    patched = true;
-  });
-  return patched;
-}
-
-/* ---------- Create the Full Studio Ecological Forest & Image-2 Style System ---------- */
-export async function createStudioForestLayer(renderer, atlas, initialConfig = {}) {
-  const cfg = {
-    ...DEFAULT_STUDIO_CONFIG,
-    ...initialConfig,
-    layers: { ...DEFAULT_STUDIO_CONFIG.layers, ...(initialConfig.layers || {}) },
-    species: [...(initialConfig.species || DEFAULT_STUDIO_CONFIG.species)]
-  };
-
-  const baseUrl = name => new URL('./' + name + '?v=' + STUDIO_VER, import.meta.url).href;
-
-  const texLoader = new THREE.TextureLoader();
-  const gltfLoader = new GLTFLoader();
-  const loadTex = (name, { srgb = false, mips = true, repeat = false } = {}) => new Promise((resolve, reject) => {
-    texLoader.load(baseUrl(name), tex => {
-      tex.flipY = false;
-      tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-      tex.generateMipmaps = mips;
-      tex.minFilter = mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.wrapS = tex.wrapT = repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-      if (mips) tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      resolve(tex);
-    }, undefined, reject);
-  });
-
-  const [meta, head, binBuf, realTreeGltf, realTreeAtlas, shadowTex, mossCol, aerialCol, grassCol, rockCol, mossyRockCol, riverBankCol, pbrNrm, rockMeta, rockBin, rockGltf, rockAtlasTex, rockNrmTex, grassMeta, grassBin, gcGltf, gcAtlasTex] = await Promise.all([
-    fetch(baseUrl('studio-trees-meta.json')).then(r => r.json()),
-    fetch(baseUrl('studio-trees.json')).then(r => r.json()),
-    fetch(baseUrl('studio-trees.bin')).then(r => r.arrayBuffer()),
-    gltfLoader.loadAsync(baseUrl('studio-real-trees.glb')),
-    loadTex('studio-real-trees-atlas.webp', { srgb: true, mips: true }),
-    loadTex('studio-shadow-map.png', { srgb: false, mips: true }),
-    loadTex('pbr-moss-albedo.webp', { srgb: true, mips: true, repeat: true }),
-    loadTex('pbr-grass-wild.webp', { srgb: true, mips: true, repeat: true }),
-    loadTex('pbr-grass-albedo.webp', { srgb: true, mips: true, repeat: true }),
-    loadTex('pbr-rock-albedo.webp', { srgb: true, mips: true, repeat: true }),
-    loadTex('pbr-rock-nrm.webp', { srgb: false, mips: true, repeat: true }),
-    loadTex('pbr-rock-basalt.webp', { srgb: true, mips: true, repeat: true }),
-    loadTex('pbr-grass-nrm.webp', { srgb: false, mips: true, repeat: true }),
-    fetch(baseUrl('studio-rocks.json')).then(r => r.json()).catch(() => null),
-    fetch(baseUrl('studio-rocks.bin')).then(r => r.arrayBuffer()).catch(() => null),
-    gltfLoader.loadAsync(baseUrl('studio-rocks.glb')).catch(() => null),
-    loadTex('studio-rocks-atlas.webp', { srgb: true, mips: true }).catch(() => null),
-    loadTex('studio-rocks-nrm.webp', { srgb: false, mips: true }).catch(() => null),
-    fetch(baseUrl('studio-grass.json')).then(r => r.json()).catch(() => null),
-    fetch(baseUrl('studio-grass.bin')).then(r => r.arrayBuffer()).catch(() => null),
-    gltfLoader.loadAsync(baseUrl('studio-groundcover.glb')).catch(() => null),
-    loadTex('studio-groundcover-atlas.webp', { srgb: true, mips: true }).catch(() => null)
-  ]);
-
-  /* ---------- 1. Rewrite 樹1/樹2/樹3 Leaf Crown Normals -> Smooth Spherical + Upward-Biased Normals (Zero Black Card Noise!) ---------- */
-  function rewriteSphericalCrownNormals(geo) {
-    const posAttr = geo.attributes.position;
-    const nrmAttr = geo.attributes.normal;
-    const colAttr = geo.attributes.color;
-    if (!posAttr || !nrmAttr || !colAttr) return;
-    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, minZ = 1e9, maxZ = -1e9, cnt = 0;
-    for (let i = 0; i < posAttr.count; i++) {
-      if (colAttr.getY(i) < 0.5) continue; /* foliage vertices only (color.g > 0.5) */
-      const x = posAttr.getX(i), y = posAttr.getY(i), z = posAttr.getZ(i);
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
-      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
-      cnt++;
-    }
-    if (!cnt) return;
-    const cx = (minX + maxX) * 0.5;
-    const cy = minY + (maxY - minY) * 0.42; /* slightly below crown mid so upper dome radiates smoothly upward */
-    const cz = (minZ + maxZ) * 0.5;
-    const rx = Math.max((maxX - minX) * 0.5, 0.05);
-    const ry = Math.max((maxY - minY) * 0.5, 0.05);
-    const rz = Math.max((maxZ - minZ) * 0.5, 0.05);
-
-    for (let i = 0; i < posAttr.count; i++) {
-      if (colAttr.getY(i) < 0.5) continue;
-      const dx = (posAttr.getX(i) - cx) / rx;
-      const dy = (posAttr.getY(i) - cy) / ry;
-      const dz = (posAttr.getZ(i) - cz) / rz;
-      const rad = Math.min(1.0, Math.hypot(dx, dy, dz));
-      /* Spherical outward direction + upward sky bias (0.60) blended 84% over original leaf normal */
-      let sx = dx, sy = dy + 0.60, sz = dz;
-      const sl = Math.hypot(sx, sy, sz) || 1;
-      sx /= sl; sy /= sl; sz /= sl;
-      let nx = sx * 0.84 + nrmAttr.getX(i) * 0.16;
-      let ny = sy * 0.84 + nrmAttr.getY(i) * 0.16;
-      let nz = sz * 0.84 + nrmAttr.getZ(i) * 0.16;
-      const nl = Math.hypot(nx, ny, nz) || 1;
-      nrmAttr.setXYZ(i, nx / nl, ny / nl, nz / nl);
-      /* Lift inner crown AO floor so shadows stay soft mossy green (never crushed black!) */
-      const hNorm = Math.max(0, Math.min(1, (posAttr.getY(i) - minY) / Math.max(maxY - minY, 0.05)));
-      const softAO = 0.42 + 0.58 * Math.min(1.0, rad * 0.55 + hNorm * 0.55);
-      colAttr.setX(i, Math.max(colAttr.getX(i), softAO));
-      colAttr.setZ(i, hNorm);
-    }
-    nrmAttr.needsUpdate = true;
-    colAttr.needsUpdate = true;
-  }
-
-  /* ---------- 2. Curated Nordic Highlands Cluster-Noise Grove Scatter (-65%~70% Trees, Focused on Riverbanks & Framing Edges!) ---------- */
-  const jsHash2 = (ix, iz) => {
-    const s = Math.sin(ix * 127.1 + iz * 311.7) * 43758.5453123;
-    return s - Math.floor(s);
-  };
-  const jsNoise2 = (x, z) => {
-    const ix = Math.floor(x), iz = Math.floor(z);
-    let fx = x - ix, fz = z - iz;
-    fx = fx * fx * (3 - 2 * fx); fz = fz * fz * (3 - 2 * fz);
-    const a = jsHash2(ix, iz), b = jsHash2(ix + 1, iz);
-    const c = jsHash2(ix, iz + 1), d = jsHash2(ix + 1, iz + 1);
-    return (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz;
-  };
-  const jsFbm2 = (x, z) =>
-    jsNoise2(x, z) * 0.54 +
-    jsNoise2(x * 2.07 + 7.3, z * 2.07 - 4.1) * 0.30 +
-    jsNoise2(x * 4.21 - 3.9, z * 4.21 + 9.2) * 0.16;
-  const smoothstep = (e0, e1, v) => {
-    const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0)));
-    return t * t * (3 - 2 * t);
-  };
-
-  /* Unpack candidates & apply Nordic Highlands Cluster-Noise ecological filter */
-  const totalInFile = head.count;
-  const useCount = Math.min(totalInFile, MAX_REAL_TREES);
-  const R = head.ranges;
-  const q16 = new Uint16Array(binBuf, 0, totalInFile * 5);
-  const q8 = new Uint8Array(binBuf, totalInFile * 10, totalInFile * 4);
-  const dq = (v, k) => R[k][0] + (v / 65535) * (R[k][1] - R[k][0]);
-  const tintMax = R.tintMax || 1.5;
-
-  const bySpecies = [[], [], [], []];
-  const keptTrees = [];
-  for (let i = 0; i < useCount; i++) {
-    const k = q8[i * 4];
-    const x = dq(q16[i * 5], 'x'), z = dq(q16[i * 5 + 1], 'z');
-    /* Keep central widened lake + holographic light-curtain corridors completely clean & legible */
-    if (jsLakeBasinR(x, z) < 1.24) continue;
-    const rDist = jsCoreRiverDist(x, z);
-    if (rDist < 0.21) continue;
-
-    /* Cluster Noise: groves gather organically in (1) sheltered riverbank/valley hollows & (2) left/right foreground framing edges */
-    const cMacro = jsFbm2(x * 0.56 + 2.4, z * 0.56 - 3.8);
-    const cDetail = jsFbm2(x * 1.55 - 5.1, z * 1.55 + 4.3);
-    const riverHollow = smoothstep(0.20, 0.44, rDist) * (1.0 - smoothstep(0.68, 1.46, rDist));
-    const flankFrame = smoothstep(3.35, 5.70, Math.abs(x)) * (0.58 + 0.42 * smoothstep(-1.4, 2.6, z));
-    const fgBottom = smoothstep(1.95, 3.45, z) * (1.0 - smoothstep(1.8, 3.6, Math.abs(x)) * 0.25);
-
-    const h1 = riverHollow * (cMacro * 1.22 + cDetail * 0.26 - 0.14);
-    const h2 = Math.max(flankFrame, fgBottom * 0.72) * (cMacro * 1.15 + cDetail * 0.28 - 0.12);
-    const groveScore = Math.max(h1, h2);
-    if (groveScore < 0.445) continue;
-
-    /* Soft grove-edge scale hierarchy (0.6x ~ 1.5x): shorter shrubs/saplings at outer edge, tall mixed canopy inside grove heart! */
-    const edgeCore = smoothstep(0.445, 0.76, groveScore);
-    const rndA = jsHash2(i * 0.73 + 1.1, k * 3.7 + 5.3);
-    const rndB = jsHash2(i * 1.19 + 9.4, x * 2.1 - z * 1.7);
-    /* Thin outer edge softly so groves feather organically into open grass slopes */
-    if (edgeCore < 0.28 && rndB > (0.38 + edgeCore * 2.2)) continue;
-    const sizeMul = edgeCore < 0.32
-      ? (0.58 + edgeCore * 0.95 + rndA * 0.24)     /* outer transition saplings/shrubs: ~0.60x .. 0.95x */
-      : (0.72 + rndA * 0.76 * (0.72 + 0.28 * edgeCore)); /* core grove mixed small/mid/tall: ~0.72x .. 1.48x */
-
-    const h = dq(q16[i * 5 + 2], 'h') * sizeMul;
-    const w = dq(q16[i * 5 + 3], 'w') * (0.92 + 0.16 * rndB) * sizeMul;
-    const rot = dq(q16[i * 5 + 4], 'rot');
-    if (bySpecies[k]) {
-      bySpecies[k].push({ i, x, z, h, w, rot });
-      keptTrees.push({ x, z, h, w });
-    }
-  }
-
-  /* ---------- 3. Live 512x288 Cluster Canopy AO Ground Shadow Map (Matches Surviving Groves 100%, Zero Ghost Shadows!) ---------- */
-  function buildLiveClusterShadowTex(trees) {
-    const W = 512, H = 288;
-    const ao = new Float32Array(W * H);
-    const cast = new Float32Array(W * H);
-    const moss = new Float32Array(W * H);
-    const b = atlas.uniforms.uBounds.value; /* (x0, z0, 1/coreW, 1/coreD) */
-    const x0 = b.x, z0 = b.y, invW = b.z, invD = b.w;
-    const sunOffX = -STUDIO_SUN.x * 0.22;
-    const sunOffZ = -STUDIO_SUN.z * 0.22;
-
-    const splat = (buf, cx, cz, radW, strength) => {
-      const pu = (cx - x0) * invW * W;
-      const pv = (cz - z0) * invD * H;
-      const rx = Math.max(1.5, radW * invW * W);
-      const ry = Math.max(1.5, radW * invD * H);
-      const ix0 = Math.max(0, Math.floor(pu - rx)), ix1 = Math.min(W - 1, Math.ceil(pu + rx));
-      const iy0 = Math.max(0, Math.floor(pv - ry)), iy1 = Math.min(H - 1, Math.ceil(pv + ry));
-      const irx = 1 / rx, iry = 1 / ry;
-      for (let py = iy0; py <= iy1; py++) {
-        const dy = (py - pv) * iry, dy2 = dy * dy;
-        const row = py * W;
-        for (let px = ix0; px <= ix1; px++) {
-          const dx = (px - pu) * irx;
-          const d2 = dx * dx + dy2;
-          if (d2 >= 1.0) continue;
-          const k = (1.0 - d2) * (1.0 - d2) * strength;
-          const idx = row + px;
-          buf[idx] = 1.0 - (1.0 - buf[idx]) * (1.0 - k);
-        }
-      }
-    };
-
-    for (let t = 0; t < trees.length; t++) {
-      const tr = trees[t];
-      const rad = Math.max(0.055, tr.w * cfg.crownScale * 0.58);
-      splat(ao, tr.x, tr.z, rad * 1.45, 0.58);
-      splat(cast, tr.x + sunOffX * tr.h * cfg.heightScale, tr.z + sunOffZ * tr.h * cfg.heightScale, rad * 1.35, 0.48);
-      splat(moss, tr.x, tr.z, rad * 2.55, 0.42);
-    }
-
-    const data = new Uint8Array(W * H * 4);
-    for (let i = 0; i < W * H; i++) {
-      data[i * 4] = Math.min(255, Math.round(ao[i] * 255));
-      data[i * 4 + 1] = Math.min(255, Math.round(cast[i] * 255));
-      data[i * 4 + 2] = Math.min(255, Math.round(moss[i] * 255));
-      data[i * 4 + 3] = 255;
-    }
-    const tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat);
-    tex.flipY = false;
-    tex.colorSpace = THREE.NoColorSpace;
-    tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.needsUpdate = true;
-    return tex;
-  }
-
-  const liveShadowTex = buildLiveClusterShadowTex(keptTrees);
-  shadowTex.dispose?.();
-
-  /* Align scene background & sun cleanly to Nordic Highlands / Scottish Valley palette */
-  atlas.scene.background = new THREE.Color(0x101920);
-  const origSun = atlas.uniforms.uSun.value.clone();
-  atlas.uniforms.uSun.value.copy(STUDIO_SUN);
-
-  const studioUniforms = {
-    tRealTreeAtlas: { value: realTreeAtlas },
-    tStudioShadow: { value: liveShadowTex },
-    tCanopy: atlas.uniforms.tCanopy,
-    tPlate: atlas.uniforms.tPlate,
-    uBounds: atlas.uniforms.uBounds,
-    uYRange: atlas.uniforms.uYRange,
-    uRelief: atlas.uniforms.uRelief,
-    uTime: atlas.uniforms.uTime,
-    uSun: atlas.uniforms.uSun,
-    uView: atlas.uniforms.uView,
-    uHaze: atlas.uniforms.uHaze,
-    uDist: atlas.uniforms.uDist,
-    uVig: atlas.uniforms.uVig,
-    uMirror: atlas.uniforms.uMirror || { value: 0 },
-    uStudioStyle: { value: cfg.style },
-    uCrownScale: { value: cfg.crownScale },
-    uTreeHeight: { value: cfg.heightScale },
-    uSunGlow: { value: cfg.sunGlow },
-    uStudioShadow: { value: cfg.shadow },
-    uStudioGrassPbr: { value: cfg.grassPbr },
-    uStudioTerrainOn: { value: cfg.layers.terrainStyle ? 1 : 0 },
-    uWind: { value: cfg.wind }
-  };
-
-  /* Patch terrain material (7-material 2K Scottish Highlands PBR + live Cluster Canopy AO) + live water mesh */
-  const terrainPatched = patchTerrainMaterial(atlas, liveShadowTex, { mossCol, aerialCol, grassCol, rockCol, mossyRockCol, riverBankCol, pbrNrm }, studioUniforms);
-  const waterPatched = patchWaterSurfaceMaterial(atlas, riverBankCol, studioUniforms);
-
-  const legacyMeshes = [...atlas.trees.children];
-
-  /* Extract the 4 real 3D meshes from studio-real-trees.glb & rewrite foliage normals to smooth spherical domes! */
-  const realTreeGeos = [];
-  realTreeGltf.scene.traverse(o => {
-    if (o.isMesh && o.geometry) {
-      rewriteSphericalCrownNormals(o.geometry);
-      realTreeGeos.push(o.geometry);
-    }
-  });
-
-  const treeMaterial = new THREE.ShaderMaterial({
-    uniforms: studioUniforms,
-    vertexShader: REAL_TREE_VERT,
-    fragmentShader: REAL_TREE_FRAG,
-    side: THREE.DoubleSide,
-    alphaToCoverage: true,
-    toneMapped: false
-  });
-
-  const view4 = new THREE.Vector4();
-  const beforeRender = r => {
-    r.getCurrentViewport(view4);
-    atlas.uniforms.uView.value.copy(view4);
-  };
-
-  const matrix = new THREE.Matrix4();
-  const pos = new THREE.Vector3();
-  const quat = new THREE.Quaternion();
-  const scl = new THREE.Vector3();
-  const yAxis = new THREE.Vector3(0, 1, 0);
-
-  const speciesMeshes = [];
-  const speciesFullCounts = [];
-
-  meta.species.forEach((sp, sIdx) => {
-    const entries = bySpecies[sIdx];
-    const srcGeo = realTreeGeos[sIdx] || realTreeGeos[0];
-    if (!srcGeo || !entries.length) return;
-    const geo = srcGeo.clone();
-    const instData = new Float32Array(entries.length * 4);
-    const mesh = new THREE.InstancedMesh(geo, treeMaterial, entries.length);
-    mesh.name = 'Real 3D tree · ' + sp.id;
-    mesh.frustumCulled = false;
-    mesh.onBeforeRender = beforeRender;
-
-    for (let n = 0; n < entries.length; n++) {
-      const e = entries[n];
-      const o8 = e.i * 4;
-      /* Real 3D models are normalized to height=1.0 -> scale uniformly in XZ by w, Y by h */
-      matrix.compose(pos.set(e.x, 0, e.z), quat.setFromAxisAngle(yAxis, e.rot), scl.set(e.w, e.h, e.w));
-      mesh.setMatrixAt(n, matrix);
-
-      instData[n * 4] = (q8[o8 + 1] / 255) * tintMax;
-      instData[n * 4 + 1] = (q8[o8 + 2] / 255) * tintMax;
-      instData[n * 4 + 2] = (q8[o8 + 3] / 255) * tintMax;
-      instData[n * 4 + 3] = e.rot;
-    }
-
-    geo.setAttribute('aInstData', new THREE.InstancedBufferAttribute(instData, 4));
-    mesh.instanceMatrix.needsUpdate = true;
-
-    atlas.trees.add(mesh);
-    speciesMeshes.push(mesh);
-    speciesFullCounts.push(entries.length);
-  });
-
-  /* ---------- Watertight Poly Haven CC0 2K 3D Cliff Crags, Shoreline Outcrops & Talus Boulders ---------- */
-  const rockMeshes = [];
-  if (rockMeta && rockBin && rockGltf && rockAtlasTex && rockNrmTex) {
-    const rCount = rockMeta.count;
-    const stride = rockMeta.strideFloats || 9;
-    const rf32 = new Float32Array(rockBin, 0, rCount * stride);
-    const rKind = new Uint8Array(rockBin, rCount * stride * 4, rCount);
-    const numKinds = rockMeta.names.length;
-    const byRock = Array.from({ length: numKinds }, () => []);
-    for (let i = 0; i < rCount; i++) {
-      const rx = rf32[i * stride], rz = rf32[i * stride + 1];
-      if (jsLakeBasinR(rx, rz) < 1.02 || jsCoreRiverDist(rx, rz) < 0.14) continue;
-      byRock[rKind[i]]?.push(i);
-    }
-
-    const rockGeoMap = new Map();
-    rockGltf.scene.traverse(o => { if (o.isMesh && o.geometry) rockGeoMap.set(o.name, o.geometry); });
-
-    const rockMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        ...studioUniforms,
-        tRockAtlas: { value: rockAtlasTex },
-        tRockNrm: { value: rockNrmTex },
-        tRockDetail: { value: rockCol },
-        tRockDetailNrm: { value: pbrNrm }
-      },
-      vertexShader: STUDIO_ROCK_VERT,
-      fragmentShader: STUDIO_ROCK_FRAG,
-      side: THREE.FrontSide,
-      toneMapped: false
-    });
-
-    const upVec = new THREE.Vector3(0, 1, 0);
-    const slopeVec = new THREE.Vector3();
-    const qSlope = new THREE.Quaternion();
-    const qYaw = new THREE.Quaternion();
-    rockMeta.names.forEach((name, k) => {
-      const srcGeo = rockGeoMap.get(name);
-      const ids = byRock[k];
-      if (!srcGeo || !ids.length) return;
-      const geo = srcGeo.clone();
-      const yOffs = new Float32Array(ids.length);
-      const mesh = new THREE.InstancedMesh(geo, rockMaterial, ids.length);
-      mesh.name = 'Studio 3D rock · ' + name;
-      mesh.frustumCulled = false;
-      mesh.onBeforeRender = beforeRender;
-
-      for (let n = 0; n < ids.length; n++) {
-        const i = ids[n], o = i * stride;
-        const x = rf32[o], z = rf32[o + 1], sx = rf32[o + 2], sy = rf32[o + 3], rot = rf32[o + 4];
-        const nx = rf32[o + 5], nz = rf32[o + 6], yoff = rf32[o + 7], szr = stride >= 9 ? rf32[o + 8] : 1.0;
-        /* Align rock base naturally to the local carved terrain normal so zero edges ever float on cliffs! */
-        const ny = Math.sqrt(Math.max(0.08, 1.0 - nx * nx - nz * nz));
-        slopeVec.set(nx * 0.68, ny + 0.32, nz * 0.68).normalize();
-        qSlope.setFromUnitVectors(upVec, slopeVec);
-        qYaw.setFromAxisAngle(upVec, rot);
-        quat.copy(qSlope).multiply(qYaw);
-        matrix.compose(pos.set(x, 0, z), quat, scl.set(sx, sy, sx * szr));
-        mesh.setMatrixAt(n, matrix);
-        yOffs[n] = yoff;
-      }
-      geo.setAttribute('aYOff', new THREE.InstancedBufferAttribute(yOffs, 1));
-      mesh.instanceMatrix.needsUpdate = true;
-      atlas.trees.add(mesh);
-      rockMeshes.push(mesh);
-    });
-  }
-
-  /* ---------- Real Poly Haven 3D Photogrammetry Ferns (fern_02) & Meadow Grass Clumps (grass_medium_01) ---------- */
-  const grassMeshes = [];
-  if (grassMeta && grassBin && gcGltf && gcAtlasTex) {
-    const gCount = grassMeta.count;
-    const gR = grassMeta.ranges;
-    const gq16 = new Uint16Array(grassBin, 0, gCount * 5);
-    const gq8 = new Uint8Array(grassBin, gCount * 10, gCount * 4);
-    const gdq = (v, k) => gR[k][0] + (v / 65535) * (gR[k][1] - gR[k][0]);
-    const gColMax = gR.colMax || 1.5;
-
-    const gcGeos = {};
-    gcGltf.scene.traverse(o => { if (o.isMesh && o.geometry) gcGeos[o.name] = o.geometry; });
-
-    /* Biome 2 (Deep Emerald Forest-Edge Fern) -> RealFern; Biomes 0,1,3 (Meadow / Wildgrass / Reed) -> RealGrass */
-    const fernIds = [], grassIds = [];
-    for (let i = 0; i < gCount; i++) {
-      const gx = gdq(gq16[i * 5], 'x'), gz = gdq(gq16[i * 5 + 1], 'z');
-      if (jsLakeBasinR(gx, gz) < 1.05 || jsCoreRiverDist(gx, gz) < 0.14) continue;
-      if (gq8[i * 4] === 2) fernIds.push(i);
-      else grassIds.push(i);
-    }
-
-    const gMat = new THREE.ShaderMaterial({
-      uniforms: {
-        ...studioUniforms,
-        tGroundCoverAtlas: { value: gcAtlasTex }
-      },
-      vertexShader: STUDIO_GRASS_VERT,
-      fragmentShader: STUDIO_GRASS_FRAG,
-      side: THREE.DoubleSide,
-      toneMapped: false
-    });
-
-    const buildGC = (srcGeo, ids, name, scaleMul) => {
-      if (!srcGeo || !ids.length) return;
-      const geo = srcGeo.clone();
-      const cols = new Float32Array(ids.length * 3);
-      const mesh = new THREE.InstancedMesh(geo, gMat, ids.length);
-      mesh.name = name;
-      mesh.frustumCulled = false;
-      mesh.onBeforeRender = beforeRender;
-      for (let n = 0; n < ids.length; n++) {
-        const i = ids[n], o16 = i * 5, o8 = i * 4;
-        const x = gdq(gq16[o16], 'x');
-        const z = gdq(gq16[o16 + 1], 'z');
-        const h = gdq(gq16[o16 + 2], 'h') * scaleMul;
-        const w = gdq(gq16[o16 + 3], 'w') * scaleMul;
-        const rot = gdq(gq16[o16 + 4], 'rot');
-        matrix.compose(pos.set(x, 0, z), quat.setFromAxisAngle(yAxis, rot), scl.set(w, h, w));
-        mesh.setMatrixAt(n, matrix);
-        cols[n * 3] = (gq8[o8 + 1] / 255) * gColMax;
-        cols[n * 3 + 1] = (gq8[o8 + 2] / 255) * gColMax;
-        cols[n * 3 + 2] = (gq8[o8 + 3] / 255) * gColMax;
-      }
-      geo.setAttribute('aGrassCol', new THREE.InstancedBufferAttribute(cols, 3));
-      mesh.instanceMatrix.needsUpdate = true;
-      atlas.scene.add(mesh);
-      grassMeshes.push(mesh);
-    };
-
-    buildGC(gcGeos.RealFern, fernIds, 'Studio 3D photogrammetry ferns (fern_02)', 1.55);
-    buildGC(gcGeos.RealGrass, grassIds, 'Studio 3D photogrammetry grass (grass_medium_01)', 1.35);
-  }
-
-  /* ---------- Layer 1: Volumetric Sunlit Mountain Mist Group ---------- */
-  const mistGroup = new THREE.Group();
-  mistGroup.name = 'Studio Atmosphere & Mist (Layer 1)';
-  const mistPlane = new THREE.PlaneGeometry(1, 1);
-  const mistMats = [];
-  const mistSpecs = [
-    { x: 2.4, y: 1.06, z: -2.4, sx: 6.8, sz: 3.8, alpha: 0.42, warm: 0.95, seed: 1.4 },
-    { x: -2.6, y: 1.12, z: -2.6, sx: 6.6, sz: 3.6, alpha: 0.34, warm: 0.65, seed: 4.7 },
-    { x: 4.6, y: 0.96, z: -1.5, sx: 5.2, sz: 3.6, alpha: 0.28, warm: 0.90, seed: 8.2 },
-    { x: -4.8, y: 0.98, z: -1.4, sx: 5.0, sz: 3.4, alpha: 0.24, warm: 0.45, seed: 11.9 },
-    { x: 0.8, y: 1.22, z: -2.9, sx: 8.2, sz: 3.2, alpha: 0.38, warm: 0.98, seed: 15.3 }
-  ];
-  mistSpecs.forEach(s => {
-    const m = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: atlas.uniforms.uTime,
-        uMist: { value: s.alpha * cfg.mist },
-        uSeed: { value: s.seed },
-        uWarm: { value: s.warm }
-      },
-      vertexShader: MIST_VERT,
-      fragmentShader: MIST_FRAG,
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide
-    });
-    const mesh = new THREE.Mesh(mistPlane, m);
-    mesh.position.set(s.x, s.y, s.z);
-    mesh.rotation.x = -Math.PI * 0.5;
-    mesh.scale.set(s.sx, s.sz, 1);
-    mesh.renderOrder = 15;
-    mistGroup.add(mesh);
-    mistMats.push({ mat: m, baseAlpha: s.alpha });
-  });
-  atlas.scene.add(mistGroup);
-
-  const origTune = {
-    relief: atlas.tune.relief,
-    strata: atlas.tune.strata,
-    moss: atlas.tune.moss,
-    reliefShade: atlas.tune.reliefShade,
-    haze: atlas.tune.haze,
-    rv: atlas.tune.rv,
-    rvDeep: atlas.tune.rvDeep,
-    rvShallow: atlas.tune.rvShallow,
-    rvSky: atlas.tune.rvSky,
-    rvClear: atlas.tune.rvClear,
-    rvRapids: atlas.tune.rvRapids,
-    rvFoam: atlas.tune.rvFoam,
-    rvSun: atlas.tune.rvSun,
-    rvRefl: atlas.tune.rvRefl,
-    rvBed: atlas.tune.rvBed,
-    rvSparkle: atlas.tune.rvSparkle
-  };
-
-  function apply() {
-    const s = Math.max(0, Math.min(1.25, cfg.style));
-    const lerpHex = (aHex, bHex, t) => '#' + new THREE.Color(aHex).lerp(new THREE.Color(bHex), Math.max(0, Math.min(1, t))).getHexString();
-
-    atlas.uniforms.uSun.value.copy(origSun).lerp(STUDIO_SUN, Math.min(1, s)).normalize();
-
-    studioUniforms.uStudioStyle.value = s;
-    studioUniforms.uCrownScale.value = cfg.crownScale;
-    studioUniforms.uTreeHeight.value = cfg.heightScale;
-    studioUniforms.uSunGlow.value = cfg.sunGlow;
-    studioUniforms.uStudioShadow.value = cfg.layers.ecoTrees ? cfg.shadow : 0.0;
-    studioUniforms.uStudioGrassPbr.value = cfg.grassPbr;
-    studioUniforms.uStudioTerrainOn.value = cfg.layers.terrainStyle ? 1.0 : 0.0;
-    studioUniforms.uWind.value = cfg.wind;
-
-    atlas.tune.relief = cfg.relief;
-    atlas.tune.strata = 1.0 + 0.55 * Math.min(1, s);
-    atlas.tune.moss = 1.0 + 0.35 * Math.min(1, s);
-    atlas.tune.reliefShade = 1.0 + 0.45 * Math.min(1, s);
-    atlas.tune.haze = cfg.layers.atmosphere ? Math.max(0, cfg.mist * 0.35) : 0.0;
-
-    if (cfg.layers.water) {
-      atlas.tune.rv = 1.0;
-      /* Deep canyon steel-indigo river & lake aligned with index1-5-canyon-forest.html */
-      atlas.tune.rvDeep = lerpHex(origTune.rvDeep, '#0a182c', s);
-      atlas.tune.rvShallow = lerpHex(origTune.rvShallow, '#244264', s);
-      atlas.tune.rvSky = lerpHex(origTune.rvSky, '#7ea0c6', s);
-      atlas.tune.rvClear = Math.max(0, Math.min(1.2, cfg.waterClear * Math.min(1, s) + origTune.rvClear * (1 - Math.min(1, s))));
-      atlas.tune.rvRapids = 2.8 + 0.9 * Math.min(1, s);
-      atlas.tune.rvFoam = 1.35 + 0.38 * Math.min(1, s);
-      atlas.tune.rvSun = 1.25 + 0.45 * Math.min(1, s);
-      atlas.tune.rvRefl = 0.54 - 0.02 * Math.min(1, s);
-      atlas.tune.rvBed = 0.52 + 0.18 * Math.min(1, s);
-      atlas.tune.rvSparkle = 0.45 + 0.15 * Math.min(1, s);
-    } else {
-      atlas.tune.rv = 0.0;
-    }
-
-    const dFrac = Math.max(0.05, Math.min(1.0, cfg.density));
-    speciesMeshes.forEach((mesh, idx) => {
-      mesh.visible = !!(cfg.layers.ecoTrees && cfg.species[idx]);
-      mesh.count = Math.max(1, Math.round(speciesFullCounts[idx] * dFrac));
-    });
-    rockMeshes.forEach(mesh => {
-      mesh.visible = !!cfg.layers.rocks3d;
-    });
-    grassMeshes.forEach(mesh => {
-      mesh.visible = !!cfg.layers.grass3d;
-    });
-    legacyMeshes.forEach(mesh => {
-      mesh.visible = !!cfg.layers.legacyTrees;
-    });
-
-    mistGroup.visible = !!cfg.layers.atmosphere && cfg.mist > 0.005;
-    mistMats.forEach(({ mat, baseAlpha }) => {
-      mat.uniforms.uMist.value = baseAlpha * cfg.mist;
-    });
-  }
-
-  apply();
-
-  return {
-    config: cfg,
-    meta,
-    head,
-    terrainPatched,
-    waterPatched,
-    speciesMeshes,
-    rockMeshes,
-    legacyMeshes,
-    mistGroup,
-    uniforms: studioUniforms,
-    apply,
-    getStats() {
-      let activeTrees = 0, activeRocks = 0;
-      speciesMeshes.forEach(m => { if (m.visible) activeTrees += m.count; });
-      rockMeshes.forEach(m => { if (m.visible) activeRocks += m.count; });
-      return {
-        totalScattered: useCount,
-        activeTrees,
-        activeRocks,
-        activeGrassTufts: grassMeshes.reduce((s, m) => s + (m.visible ? m.count : 0), 0),
-        realTreeMeshes: realTreeGeos.length,
-        species: meta.species.map((sp, i) => ({
-          id: sp.id,
-          label: sp.label,
-          total: speciesFullCounts[i] || 0,
-          active: speciesMeshes[i]?.visible ? speciesMeshes[i].count : 0
-        }))
-      };
-    }
-  };
-}
+    `;mat.fragmentShader=mat.fragmentShader.replace("void main(){",wDecls+`
+void main(){`).replace(`float wm=wt.r, shore=wt.g, lakeN=wt.b, sh2=shore*shore, shoreN=clamp(sh2*4.,0.,1.);
+    float body=smoothstep(.2,.7,wm), rim=smoothstep(.02,.3,wm)*(1.-body)*uW1B.z;`,wMaskReplace).replace("vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;",wBedReplace),mat.needsUpdate=!0,patched=!0}),patched}export async function createStudioForestLayer(renderer,atlas,initialConfig={}){const cfg={...DEFAULT_STUDIO_CONFIG,...initialConfig,layers:{...DEFAULT_STUDIO_CONFIG.layers,...initialConfig.layers||{}},species:[...initialConfig.species||DEFAULT_STUDIO_CONFIG.species]},baseUrl=name=>new URL("./"+name+"?v="+STUDIO_VER,import.meta.url).href,texLoader=new THREE.TextureLoader,gltfLoader=new GLTFLoader,loadTex=(name,{srgb=!1,mips=!0,repeat=!1}={})=>new Promise((resolve,reject)=>{texLoader.load(baseUrl(name),tex=>{tex.flipY=!1,tex.colorSpace=srgb?THREE.SRGBColorSpace:THREE.NoColorSpace,tex.generateMipmaps=mips,tex.minFilter=mips?THREE.LinearMipmapLinearFilter:THREE.LinearFilter,tex.magFilter=THREE.LinearFilter,tex.wrapS=tex.wrapT=repeat?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping,mips&&(tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy())),resolve(tex)},void 0,reject)}),[meta,head,binBuf,realTreeGltf,realTreeAtlas,shadowTex,mossCol,aerialCol,grassCol,rockCol,mossyRockCol,riverBankCol,pbrNrm,rockMeta,rockBin,rockGltf,rockAtlasTex,rockNrmTex,grassMeta,grassBin,gcGltf,gcAtlasTex]=await Promise.all([fetch(baseUrl("studio-trees-meta.json")).then(r=>r.json()),fetch(baseUrl("studio-trees.json")).then(r=>r.json()),fetch(baseUrl("studio-trees.bin")).then(r=>r.arrayBuffer()),gltfLoader.loadAsync(baseUrl("studio-real-trees.glb")),loadTex("studio-real-trees-atlas.webp",{srgb:!0,mips:!0}),loadTex("studio-shadow-map.png",{srgb:!1,mips:!0}),loadTex("pbr-moss-albedo.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-grass-wild.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-grass-albedo.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-rock-albedo.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-rock-nrm.webp",{srgb:!1,mips:!0,repeat:!0}),loadTex("pbr-rock-basalt.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-grass-nrm.webp",{srgb:!1,mips:!0,repeat:!0}),fetch(baseUrl("studio-rocks.json")).then(r=>r.json()).catch(()=>null),fetch(baseUrl("studio-rocks.bin")).then(r=>r.arrayBuffer()).catch(()=>null),gltfLoader.loadAsync(baseUrl("studio-rocks.glb")).catch(()=>null),loadTex("studio-rocks-atlas.webp",{srgb:!0,mips:!0}).catch(()=>null),loadTex("studio-rocks-nrm.webp",{srgb:!1,mips:!0}).catch(()=>null),fetch(baseUrl("studio-grass.json")).then(r=>r.json()).catch(()=>null),fetch(baseUrl("studio-grass.bin")).then(r=>r.arrayBuffer()).catch(()=>null),gltfLoader.loadAsync(baseUrl("studio-groundcover.glb")).catch(()=>null),loadTex("studio-groundcover-atlas.webp",{srgb:!0,mips:!0}).catch(()=>null)]);function rewriteSphericalCrownNormals(geo){const posAttr=geo.attributes.position,nrmAttr=geo.attributes.normal,colAttr=geo.attributes.color;if(!posAttr||!nrmAttr||!colAttr)return;let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9,minZ=1e9,maxZ=-1e9,cnt=0;for(let i=0;i<posAttr.count;i++){if(colAttr.getY(i)<.5)continue;const x=posAttr.getX(i),y=posAttr.getY(i),z=posAttr.getZ(i);x<minX&&(minX=x),x>maxX&&(maxX=x),y<minY&&(minY=y),y>maxY&&(maxY=y),z<minZ&&(minZ=z),z>maxZ&&(maxZ=z),cnt++}if(!cnt)return;const cx=(minX+maxX)*.5,cy=minY+(maxY-minY)*.42,cz=(minZ+maxZ)*.5,rx=Math.max((maxX-minX)*.5,.05),ry=Math.max((maxY-minY)*.5,.05),rz=Math.max((maxZ-minZ)*.5,.05);for(let i=0;i<posAttr.count;i++){if(colAttr.getY(i)<.5)continue;const dx=(posAttr.getX(i)-cx)/rx,dy=(posAttr.getY(i)-cy)/ry,dz=(posAttr.getZ(i)-cz)/rz,rad=Math.min(1,Math.hypot(dx,dy,dz));let sx=dx,sy=dy+.6,sz=dz;const sl=Math.hypot(sx,sy,sz)||1;sx/=sl,sy/=sl,sz/=sl;let nx=sx*.84+nrmAttr.getX(i)*.16,ny=sy*.84+nrmAttr.getY(i)*.16,nz=sz*.84+nrmAttr.getZ(i)*.16;const nl=Math.hypot(nx,ny,nz)||1;nrmAttr.setXYZ(i,nx/nl,ny/nl,nz/nl);const hNorm=Math.max(0,Math.min(1,(posAttr.getY(i)-minY)/Math.max(maxY-minY,.05))),softAO=.42+.58*Math.min(1,rad*.55+hNorm*.55);colAttr.setX(i,Math.max(colAttr.getX(i),softAO)),colAttr.setZ(i,hNorm)}nrmAttr.needsUpdate=!0,colAttr.needsUpdate=!0}const jsHash2=(ix,iz)=>{const s=Math.sin(ix*127.1+iz*311.7)*43758.5453123;return s-Math.floor(s)},jsNoise2=(x,z)=>{const ix=Math.floor(x),iz=Math.floor(z);let fx=x-ix,fz=z-iz;fx=fx*fx*(3-2*fx),fz=fz*fz*(3-2*fz);const a=jsHash2(ix,iz),b=jsHash2(ix+1,iz),c=jsHash2(ix,iz+1),d=jsHash2(ix+1,iz+1);return(a*(1-fx)+b*fx)*(1-fz)+(c*(1-fx)+d*fx)*fz},jsFbm2=(x,z)=>jsNoise2(x,z)*.54+jsNoise2(x*2.07+7.3,z*2.07-4.1)*.3+jsNoise2(x*4.21-3.9,z*4.21+9.2)*.16,smoothstep=(e0,e1,v)=>{const t=Math.max(0,Math.min(1,(v-e0)/(e1-e0)));return t*t*(3-2*t)},totalInFile=head.count,useCount=Math.min(totalInFile,MAX_REAL_TREES),R=head.ranges,q16=new Uint16Array(binBuf,0,totalInFile*5),q8=new Uint8Array(binBuf,totalInFile*10,totalInFile*4),dq=(v,k)=>R[k][0]+v/65535*(R[k][1]-R[k][0]),tintMax=R.tintMax||1.5,bySpecies=[[],[],[],[]],keptTrees=[];for(let i=0;i<useCount;i++){const k=q8[i*4],x=dq(q16[i*5],"x"),z=dq(q16[i*5+1],"z");if(jsLakeBasinR(x,z)<1.24)continue;const rDist=jsCoreRiverDist(x,z);if(rDist<.21)continue;const cMacro=jsFbm2(x*.56+2.4,z*.56-3.8),cDetail=jsFbm2(x*1.55-5.1,z*1.55+4.3),riverHollow=smoothstep(.2,.44,rDist)*(1-smoothstep(.68,1.46,rDist)),flankFrame=smoothstep(3.35,5.7,Math.abs(x))*(.58+.42*smoothstep(-1.4,2.6,z)),fgBottom=smoothstep(1.95,3.45,z)*(1-smoothstep(1.8,3.6,Math.abs(x))*.25),h1=riverHollow*(cMacro*1.22+cDetail*.26-.14),h2=Math.max(flankFrame,fgBottom*.72)*(cMacro*1.15+cDetail*.28-.12),groveScore=Math.max(h1,h2);if(groveScore<.445)continue;const edgeCore=smoothstep(.445,.76,groveScore),rndA=jsHash2(i*.73+1.1,k*3.7+5.3),rndB=jsHash2(i*1.19+9.4,x*2.1-z*1.7);if(edgeCore<.28&&rndB>.38+edgeCore*2.2)continue;const sizeMul=edgeCore<.32?.58+edgeCore*.95+rndA*.24:.72+rndA*.76*(.72+.28*edgeCore),h=dq(q16[i*5+2],"h")*sizeMul,w=dq(q16[i*5+3],"w")*(.92+.16*rndB)*sizeMul,rot=dq(q16[i*5+4],"rot");bySpecies[k]&&(bySpecies[k].push({i,x,z,h,w,rot}),keptTrees.push({x,z,h,w}))}function buildLiveClusterShadowTex(trees){const ao=new Float32Array(147456),cast=new Float32Array(512*288),moss=new Float32Array(512*288),b=atlas.uniforms.uBounds.value,x0=b.x,z0=b.y,invW=b.z,invD=b.w,sunOffX=-STUDIO_SUN.x*.22,sunOffZ=-STUDIO_SUN.z*.22,splat=(buf,cx,cz,radW,strength)=>{const pu=(cx-x0)*invW*512,pv=(cz-z0)*invD*288,rx=Math.max(1.5,radW*invW*512),ry=Math.max(1.5,radW*invD*288),ix0=Math.max(0,Math.floor(pu-rx)),ix1=Math.min(511,Math.ceil(pu+rx)),iy0=Math.max(0,Math.floor(pv-ry)),iy1=Math.min(287,Math.ceil(pv+ry)),irx=1/rx,iry=1/ry;for(let py=iy0;py<=iy1;py++){const dy=(py-pv)*iry,dy2=dy*dy,row=py*512;for(let px=ix0;px<=ix1;px++){const dx=(px-pu)*irx,d2=dx*dx+dy2;if(d2>=1)continue;const k=(1-d2)*(1-d2)*strength,idx=row+px;buf[idx]=1-(1-buf[idx])*(1-k)}}};for(let t=0;t<trees.length;t++){const tr=trees[t],rad=Math.max(.055,tr.w*cfg.crownScale*.58);splat(ao,tr.x,tr.z,rad*1.45,.58),splat(cast,tr.x+sunOffX*tr.h*cfg.heightScale,tr.z+sunOffZ*tr.h*cfg.heightScale,rad*1.35,.48),splat(moss,tr.x,tr.z,rad*2.55,.42)}const data=new Uint8Array(512*288*4);for(let i=0;i<512*288;i++)data[i*4]=Math.min(255,Math.round(ao[i]*255)),data[i*4+1]=Math.min(255,Math.round(cast[i]*255)),data[i*4+2]=Math.min(255,Math.round(moss[i]*255)),data[i*4+3]=255;const tex=new THREE.DataTexture(data,512,288,THREE.RGBAFormat);return tex.flipY=!1,tex.colorSpace=THREE.NoColorSpace,tex.minFilter=THREE.LinearFilter,tex.magFilter=THREE.LinearFilter,tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping,tex.needsUpdate=!0,tex}const liveShadowTex=buildLiveClusterShadowTex(keptTrees);shadowTex.dispose?.(),atlas.scene.background=new THREE.Color(1055008);const origSun=atlas.uniforms.uSun.value.clone();atlas.uniforms.uSun.value.copy(STUDIO_SUN);const studioUniforms={tRealTreeAtlas:{value:realTreeAtlas},tStudioShadow:{value:liveShadowTex},tCanopy:atlas.uniforms.tCanopy,tPlate:atlas.uniforms.tPlate,uBounds:atlas.uniforms.uBounds,uYRange:atlas.uniforms.uYRange,uRelief:atlas.uniforms.uRelief,uTime:atlas.uniforms.uTime,uSun:atlas.uniforms.uSun,uView:atlas.uniforms.uView,uHaze:atlas.uniforms.uHaze,uDist:atlas.uniforms.uDist,uVig:atlas.uniforms.uVig,uMirror:atlas.uniforms.uMirror||{value:0},uStudioStyle:{value:cfg.style},uCrownScale:{value:cfg.crownScale},uTreeHeight:{value:cfg.heightScale},uSunGlow:{value:cfg.sunGlow},uStudioShadow:{value:cfg.shadow},uStudioGrassPbr:{value:cfg.grassPbr},uStudioTerrainOn:{value:cfg.layers.terrainStyle?1:0},uWind:{value:cfg.wind}},terrainPatched=patchTerrainMaterial(atlas,liveShadowTex,{mossCol,aerialCol,grassCol,rockCol,mossyRockCol,riverBankCol,pbrNrm},studioUniforms),waterPatched=patchWaterSurfaceMaterial(atlas,riverBankCol,studioUniforms),legacyMeshes=[...atlas.trees.children],realTreeGeos=[];realTreeGltf.scene.traverse(o=>{o.isMesh&&o.geometry&&(rewriteSphericalCrownNormals(o.geometry),realTreeGeos.push(o.geometry))});const treeMaterial=new THREE.ShaderMaterial({uniforms:studioUniforms,vertexShader:REAL_TREE_VERT,fragmentShader:REAL_TREE_FRAG,side:THREE.DoubleSide,alphaToCoverage:!0,toneMapped:!1}),view4=new THREE.Vector4,beforeRender=r=>{r.getCurrentViewport(view4),atlas.uniforms.uView.value.copy(view4)},matrix=new THREE.Matrix4,pos=new THREE.Vector3,quat=new THREE.Quaternion,scl=new THREE.Vector3,yAxis=new THREE.Vector3(0,1,0),speciesMeshes=[],speciesFullCounts=[];meta.species.forEach((sp,sIdx)=>{const entries=bySpecies[sIdx],srcGeo=realTreeGeos[sIdx]||realTreeGeos[0];if(!srcGeo||!entries.length)return;const geo=srcGeo.clone(),instData=new Float32Array(entries.length*4),mesh=new THREE.InstancedMesh(geo,treeMaterial,entries.length);mesh.name="Real 3D tree \xB7 "+sp.id,mesh.frustumCulled=!1,mesh.onBeforeRender=beforeRender;for(let n=0;n<entries.length;n++){const e=entries[n],o8=e.i*4;matrix.compose(pos.set(e.x,0,e.z),quat.setFromAxisAngle(yAxis,e.rot),scl.set(e.w,e.h,e.w)),mesh.setMatrixAt(n,matrix),instData[n*4]=q8[o8+1]/255*tintMax,instData[n*4+1]=q8[o8+2]/255*tintMax,instData[n*4+2]=q8[o8+3]/255*tintMax,instData[n*4+3]=e.rot}geo.setAttribute("aInstData",new THREE.InstancedBufferAttribute(instData,4)),mesh.instanceMatrix.needsUpdate=!0,atlas.trees.add(mesh),speciesMeshes.push(mesh),speciesFullCounts.push(entries.length)});const rockMeshes=[];if(rockMeta&&rockBin&&rockGltf&&rockAtlasTex&&rockNrmTex){const rCount=rockMeta.count,stride=rockMeta.strideFloats||9,rf32=new Float32Array(rockBin,0,rCount*stride),rKind=new Uint8Array(rockBin,rCount*stride*4,rCount),numKinds=rockMeta.names.length,byRock=Array.from({length:numKinds},()=>[]);for(let i=0;i<rCount;i++){const rx=rf32[i*stride],rz=rf32[i*stride+1];jsLakeBasinR(rx,rz)<1.02||jsCoreRiverDist(rx,rz)<.14||byRock[rKind[i]]?.push(i)}const rockGeoMap=new Map;rockGltf.scene.traverse(o=>{o.isMesh&&o.geometry&&rockGeoMap.set(o.name,o.geometry)});const rockMaterial=new THREE.ShaderMaterial({uniforms:{...studioUniforms,tRockAtlas:{value:rockAtlasTex},tRockNrm:{value:rockNrmTex},tRockDetail:{value:rockCol},tRockDetailNrm:{value:pbrNrm}},vertexShader:STUDIO_ROCK_VERT,fragmentShader:STUDIO_ROCK_FRAG,side:THREE.FrontSide,toneMapped:!1}),upVec=new THREE.Vector3(0,1,0),slopeVec=new THREE.Vector3,qSlope=new THREE.Quaternion,qYaw=new THREE.Quaternion;rockMeta.names.forEach((name,k)=>{const srcGeo=rockGeoMap.get(name),ids=byRock[k];if(!srcGeo||!ids.length)return;const geo=srcGeo.clone(),yOffs=new Float32Array(ids.length),mesh=new THREE.InstancedMesh(geo,rockMaterial,ids.length);mesh.name="Studio 3D rock \xB7 "+name,mesh.frustumCulled=!1,mesh.onBeforeRender=beforeRender;for(let n=0;n<ids.length;n++){const i=ids[n],o=i*stride,x=rf32[o],z=rf32[o+1],sx=rf32[o+2],sy=rf32[o+3],rot=rf32[o+4],nx=rf32[o+5],nz=rf32[o+6],yoff=rf32[o+7],szr=stride>=9?rf32[o+8]:1,ny=Math.sqrt(Math.max(.08,1-nx*nx-nz*nz));slopeVec.set(nx*.68,ny+.32,nz*.68).normalize(),qSlope.setFromUnitVectors(upVec,slopeVec),qYaw.setFromAxisAngle(upVec,rot),quat.copy(qSlope).multiply(qYaw),matrix.compose(pos.set(x,0,z),quat,scl.set(sx,sy,sx*szr)),mesh.setMatrixAt(n,matrix),yOffs[n]=yoff}geo.setAttribute("aYOff",new THREE.InstancedBufferAttribute(yOffs,1)),mesh.instanceMatrix.needsUpdate=!0,atlas.trees.add(mesh),rockMeshes.push(mesh)})}const grassMeshes=[];if(grassMeta&&grassBin&&gcGltf&&gcAtlasTex){const gCount=grassMeta.count,gR=grassMeta.ranges,gq16=new Uint16Array(grassBin,0,gCount*5),gq8=new Uint8Array(grassBin,gCount*10,gCount*4),gdq=(v,k)=>gR[k][0]+v/65535*(gR[k][1]-gR[k][0]),gColMax=gR.colMax||1.5,gcGeos={};gcGltf.scene.traverse(o=>{o.isMesh&&o.geometry&&(gcGeos[o.name]=o.geometry)});const fernIds=[],grassIds=[];for(let i=0;i<gCount;i++){const gx=gdq(gq16[i*5],"x"),gz=gdq(gq16[i*5+1],"z");jsLakeBasinR(gx,gz)<1.05||jsCoreRiverDist(gx,gz)<.14||(gq8[i*4]===2?fernIds.push(i):grassIds.push(i))}const gMat=new THREE.ShaderMaterial({uniforms:{...studioUniforms,tGroundCoverAtlas:{value:gcAtlasTex}},vertexShader:STUDIO_GRASS_VERT,fragmentShader:STUDIO_GRASS_FRAG,side:THREE.DoubleSide,toneMapped:!1}),buildGC=(srcGeo,ids,name,scaleMul)=>{if(!srcGeo||!ids.length)return;const geo=srcGeo.clone(),cols=new Float32Array(ids.length*3),mesh=new THREE.InstancedMesh(geo,gMat,ids.length);mesh.name=name,mesh.frustumCulled=!1,mesh.onBeforeRender=beforeRender;for(let n=0;n<ids.length;n++){const i=ids[n],o16=i*5,o8=i*4,x=gdq(gq16[o16],"x"),z=gdq(gq16[o16+1],"z"),h=gdq(gq16[o16+2],"h")*scaleMul,w=gdq(gq16[o16+3],"w")*scaleMul,rot=gdq(gq16[o16+4],"rot");matrix.compose(pos.set(x,0,z),quat.setFromAxisAngle(yAxis,rot),scl.set(w,h,w)),mesh.setMatrixAt(n,matrix),cols[n*3]=gq8[o8+1]/255*gColMax,cols[n*3+1]=gq8[o8+2]/255*gColMax,cols[n*3+2]=gq8[o8+3]/255*gColMax}geo.setAttribute("aGrassCol",new THREE.InstancedBufferAttribute(cols,3)),mesh.instanceMatrix.needsUpdate=!0,atlas.scene.add(mesh),grassMeshes.push(mesh)};buildGC(gcGeos.RealFern,fernIds,"Studio 3D photogrammetry ferns (fern_02)",1.55),buildGC(gcGeos.RealGrass,grassIds,"Studio 3D photogrammetry grass (grass_medium_01)",1.35)}const mistGroup=new THREE.Group;mistGroup.name="Studio Atmosphere & Mist (Layer 1)";const mistPlane=new THREE.PlaneGeometry(1,1),mistMats=[];[{x:2.4,y:1.06,z:-2.4,sx:6.8,sz:3.8,alpha:.42,warm:.95,seed:1.4},{x:-2.6,y:1.12,z:-2.6,sx:6.6,sz:3.6,alpha:.34,warm:.65,seed:4.7},{x:4.6,y:.96,z:-1.5,sx:5.2,sz:3.6,alpha:.28,warm:.9,seed:8.2},{x:-4.8,y:.98,z:-1.4,sx:5,sz:3.4,alpha:.24,warm:.45,seed:11.9},{x:.8,y:1.22,z:-2.9,sx:8.2,sz:3.2,alpha:.38,warm:.98,seed:15.3}].forEach(s=>{const m=new THREE.ShaderMaterial({uniforms:{uTime:atlas.uniforms.uTime,uMist:{value:s.alpha*cfg.mist},uSeed:{value:s.seed},uWarm:{value:s.warm}},vertexShader:MIST_VERT,fragmentShader:MIST_FRAG,transparent:!0,depthWrite:!1,side:THREE.DoubleSide}),mesh=new THREE.Mesh(mistPlane,m);mesh.position.set(s.x,s.y,s.z),mesh.rotation.x=-Math.PI*.5,mesh.scale.set(s.sx,s.sz,1),mesh.renderOrder=15,mistGroup.add(mesh),mistMats.push({mat:m,baseAlpha:s.alpha})}),atlas.scene.add(mistGroup);const origTune={relief:atlas.tune.relief,strata:atlas.tune.strata,moss:atlas.tune.moss,reliefShade:atlas.tune.reliefShade,haze:atlas.tune.haze,rv:atlas.tune.rv,rvDeep:atlas.tune.rvDeep,rvShallow:atlas.tune.rvShallow,rvSky:atlas.tune.rvSky,rvClear:atlas.tune.rvClear,rvRapids:atlas.tune.rvRapids,rvFoam:atlas.tune.rvFoam,rvSun:atlas.tune.rvSun,rvRefl:atlas.tune.rvRefl,rvBed:atlas.tune.rvBed,rvSparkle:atlas.tune.rvSparkle};function apply(){const s=Math.max(0,Math.min(1.25,cfg.style)),lerpHex=(aHex,bHex,t)=>"#"+new THREE.Color(aHex).lerp(new THREE.Color(bHex),Math.max(0,Math.min(1,t))).getHexString();atlas.uniforms.uSun.value.copy(origSun).lerp(STUDIO_SUN,Math.min(1,s)).normalize(),studioUniforms.uStudioStyle.value=s,studioUniforms.uCrownScale.value=cfg.crownScale,studioUniforms.uTreeHeight.value=cfg.heightScale,studioUniforms.uSunGlow.value=cfg.sunGlow,studioUniforms.uStudioShadow.value=cfg.layers.ecoTrees?cfg.shadow:0,studioUniforms.uStudioGrassPbr.value=cfg.grassPbr,studioUniforms.uStudioTerrainOn.value=cfg.layers.terrainStyle?1:0,studioUniforms.uWind.value=cfg.wind,atlas.tune.relief=cfg.relief,atlas.tune.strata=1+.55*Math.min(1,s),atlas.tune.moss=1+.35*Math.min(1,s),atlas.tune.reliefShade=1+.45*Math.min(1,s),atlas.tune.haze=cfg.layers.atmosphere?Math.max(0,cfg.mist*.35):0,cfg.layers.water?(atlas.tune.rv=1,atlas.tune.rvDeep=lerpHex(origTune.rvDeep,"#0a182c",s),atlas.tune.rvShallow=lerpHex(origTune.rvShallow,"#244264",s),atlas.tune.rvSky=lerpHex(origTune.rvSky,"#7ea0c6",s),atlas.tune.rvClear=Math.max(0,Math.min(1.2,cfg.waterClear*Math.min(1,s)+origTune.rvClear*(1-Math.min(1,s)))),atlas.tune.rvRapids=2.8+.9*Math.min(1,s),atlas.tune.rvFoam=1.35+.38*Math.min(1,s),atlas.tune.rvSun=1.25+.45*Math.min(1,s),atlas.tune.rvRefl=.54-.02*Math.min(1,s),atlas.tune.rvBed=.52+.18*Math.min(1,s),atlas.tune.rvSparkle=.45+.15*Math.min(1,s)):atlas.tune.rv=0;const dFrac=Math.max(.05,Math.min(1,cfg.density));speciesMeshes.forEach((mesh,idx)=>{mesh.visible=!!(cfg.layers.ecoTrees&&cfg.species[idx]),mesh.count=Math.max(1,Math.round(speciesFullCounts[idx]*dFrac))}),rockMeshes.forEach(mesh=>{mesh.visible=!!cfg.layers.rocks3d}),grassMeshes.forEach(mesh=>{mesh.visible=!!cfg.layers.grass3d}),legacyMeshes.forEach(mesh=>{mesh.visible=!!cfg.layers.legacyTrees}),mistGroup.visible=!!cfg.layers.atmosphere&&cfg.mist>.005,mistMats.forEach(({mat,baseAlpha})=>{mat.uniforms.uMist.value=baseAlpha*cfg.mist})}return apply(),{config:cfg,meta,head,terrainPatched,waterPatched,speciesMeshes,rockMeshes,legacyMeshes,mistGroup,uniforms:studioUniforms,apply,getStats(){let activeTrees=0,activeRocks=0;return speciesMeshes.forEach(m=>{m.visible&&(activeTrees+=m.count)}),rockMeshes.forEach(m=>{m.visible&&(activeRocks+=m.count)}),{totalScattered:useCount,activeTrees,activeRocks,activeGrassTufts:grassMeshes.reduce((s,m)=>s+(m.visible?m.count:0),0),realTreeMeshes:realTreeGeos.length,species:meta.species.map((sp,i)=>({id:sp.id,label:sp.label,total:speciesFullCounts[i]||0,active:speciesMeshes[i]?.visible?speciesMeshes[i].count:0}))}}}}

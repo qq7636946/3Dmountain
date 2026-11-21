@@ -1,48 +1,4 @@
-import * as THREE from 'three';
-import { BANKS } from './studio-clouds.js?v=look1';
-
-// Reuse the canyon's authored lake-to-ridge arrival field in the unused height
-// alpha channel. Raw RGBA bytes preserve height precision (no canvas premultiply).
-// Terrain stays within its existing 16 fragment samplers.
-export function packArrivalField(atlas) {
-  const height = atlas.uniforms.tCanopy?.value;
-  const growth = atlas.uniforms.tGrow?.value;
-  if (!height?.image || !growth?.image) return false;
-  const { width, height: h } = height.image;
-  const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = h;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  let pixels;
-  if (height.image.data) pixels = new Uint8ClampedArray(height.image.data);
-  else {
-    ctx.drawImage(height.image, 0, 0, width, h);
-    pixels = ctx.getImageData(0, 0, width, h).data;
-  }
-  ctx.clearRect(0, 0, width, h);
-  ctx.drawImage(growth.image, 0, 0, width, h);
-  const arrival = ctx.getImageData(0, 0, width, h).data;
-  for (let i = 0; i < pixels.length; i += 4) {
-    pixels[i + 3] = Math.round(255 * (.26 + .26 * arrival[i] / 255 + .52 * Math.pow(arrival[i + 1] / 255, .8)) / 1.04);
-  }
-  const packed = new THREE.DataTexture(new Uint8Array(pixels.buffer), width, h, THREE.RGBAFormat);
-  for (const key of ['flipY', 'wrapS', 'wrapT', 'minFilter', 'magFilter', 'generateMipmaps', 'anisotropy', 'colorSpace']) packed[key] = height[key];
-  packed.name = 'Height + authored canyon arrival';
-  packed.needsUpdate = true;
-  atlas.scene.traverse(object => {
-    for (const mat of [].concat(object.material || [])) {
-      for (const uniform of Object.values(mat.uniforms || {})) if (uniform.value === height) uniform.value = packed;
-    }
-  });
-  atlas.uniforms.tCanopy.value = packed;
-  height.dispose();
-  return true;
-}
-
-const f3 = v => (+v).toFixed(3);
-const BANK_C = BANKS.map(b => `vec4(${f3(b[0])},${f3(b[1])},${f3(b[2])},${f3(b[6])})`).join(',');
-const BANK_R = BANKS.map(b => `vec4(${f3(b[3])},${f3(b[4])},${f3(b[5])},${f3(b[7])})`).join(',');
-
-export const HIGHLAND_GLSL = `
+import*as THREE from"three";import{BANKS}from"./studio-clouds.js?v=look1";export function packArrivalField(atlas){const height=atlas.uniforms.tCanopy?.value,growth=atlas.uniforms.tGrow?.value;if(!height?.image||!growth?.image)return!1;const{width,height:h}=height.image,canvas=document.createElement("canvas");canvas.width=width,canvas.height=h;const ctx=canvas.getContext("2d",{willReadFrequently:!0});let pixels;height.image.data?pixels=new Uint8ClampedArray(height.image.data):(ctx.drawImage(height.image,0,0,width,h),pixels=ctx.getImageData(0,0,width,h).data),ctx.clearRect(0,0,width,h),ctx.drawImage(growth.image,0,0,width,h);const arrival=ctx.getImageData(0,0,width,h).data;for(let i=0;i<pixels.length;i+=4)pixels[i+3]=Math.round(255*(.26+.26*arrival[i]/255+.52*Math.pow(arrival[i+1]/255,.8))/1.04);const packed=new THREE.DataTexture(new Uint8Array(pixels.buffer),width,h,THREE.RGBAFormat);for(const key of["flipY","wrapS","wrapT","minFilter","magFilter","generateMipmaps","anisotropy","colorSpace"])packed[key]=height[key];return packed.name="Height + authored canyon arrival",packed.needsUpdate=!0,atlas.scene.traverse(object=>{for(const mat of[].concat(object.material||[]))for(const uniform of Object.values(mat.uniforms||{}))uniform.value===height&&(uniform.value=packed)}),atlas.uniforms.tCanopy.value=packed,height.dispose(),!0}const f3=v=>(+v).toFixed(3),BANK_C=BANKS.map(b=>`vec4(${f3(b[0])},${f3(b[1])},${f3(b[2])},${f3(b[6])})`).join(","),BANK_R=BANKS.map(b=>`vec4(${f3(b[3])},${f3(b[4])},${f3(b[5])},${f3(b[7])})`).join(",");export const HIGHLAND_GLSL=`
   uniform float uBiomeContrast, uCavityDepth, uCloudStrength;
   uniform vec4 uBankShadow;   /* xyz: direction to the sun, w: how dark the cloud banks' shadows are (0 = none) */
   uniform vec3 uMistColor;
@@ -52,7 +8,7 @@ export const HIGHLAND_GLSL = `
   float stBkNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(stBkHash(i),stBkHash(i+vec2(1,0)),f.x),mix(stBkHash(i+vec2(0,1)),stBkHash(i+1.0),f.x),f.y);}
   float stBkField(vec2 p){mat2 rot=mat2(0.8,-0.6,0.6,0.8);float b=stBkNoise(p);p=rot*p*2.13+3.71;float c=stBkNoise(p);p=rot*p*2.06+7.27;return b*0.50+c*0.29+stBkNoise(p)*0.15+stBkNoise(rot*p*2.11)*0.06;}
 
-  // 2026-11-21 (client: 「雲霧反射出來的影子在山谷上也要做出」): the shadow of the cloud banks actually drawn by studio-clouds.js.
+  // 2026-11-21 (client: \u300C\u96F2\u9727\u53CD\u5C04\u51FA\u4F86\u7684\u5F71\u5B50\u5728\u5C71\u8C37\u4E0A\u4E5F\u8981\u505A\u51FA\u300D): the shadow of the cloud banks actually drawn by studio-clouds.js.
   // From the ground point, go toward the sun; where that line crosses a bank, its chord and the same billow field as the cloud
   // give the density. Banks drift and the billows move with the same clocks as the clouds, so the shadows follow them.
   float stBankShadow(vec3 P) {
@@ -118,29 +74,14 @@ export const HIGHLAND_GLSL = `
     float lip = exp(-pow((front - 0.045) / 0.029, 2.0));
     return mix(stone, color, life) + vec3(0.023, 0.027, 0.012) * lip;
   }
-`;
-
-// Apply the same spatial arrival to the existing light curtain, logo and mist.
-// Only runs during entry; no extra geometry, render target or permanent pass.
-export function bindAtmosphereArrival(atlas, uniforms) {
-  const seen = new Set();
-  atlas.scene.traverse(object => {
-    for (const mat of [].concat(object.material || [])) {
-      if (!mat.isShaderMaterial || seen.has(mat) || mat.userData.handlesArrival || mat.fragmentShader.includes('col=stArrivalColor(')) continue;
-      seen.add(mat);
-      const frag = mat.fragmentShader;
-      if (!frag.includes('gl_FragColor')) continue;
-      mat.uniforms.stArrival = uniforms.uArrival;
-      mat.uniforms.stArrivalMap = uniforms.uArrivalMap;
-      mat.uniforms.stArrivalHeight = atlas.uniforms.tCanopy;
-      mat.uniforms.stArrivalBounds = atlas.uniforms.uBounds;
-      mat.vertexShader = 'varying vec2 vStArrivalXZ;\n' + mat.vertexShader.replace(/}\s*$/, '\n vStArrivalXZ = (modelMatrix * vec4(position, 1.0)).xz;\n}');
-      const header = `varying vec2 vStArrivalXZ;
+`;export function bindAtmosphereArrival(atlas,uniforms){const seen=new Set;atlas.scene.traverse(object=>{for(const mat of[].concat(object.material||[])){if(!mat.isShaderMaterial||seen.has(mat)||mat.userData.handlesArrival||mat.fragmentShader.includes("col=stArrivalColor("))continue;seen.add(mat);const frag=mat.fragmentShader;if(!frag.includes("gl_FragColor"))continue;mat.uniforms.stArrival=uniforms.uArrival,mat.uniforms.stArrivalMap=uniforms.uArrivalMap,mat.uniforms.stArrivalHeight=atlas.uniforms.tCanopy,mat.uniforms.stArrivalBounds=atlas.uniforms.uBounds,mat.vertexShader=`varying vec2 vStArrivalXZ;
+`+mat.vertexShader.replace(/}\s*$/,`
+ vStArrivalXZ = (modelMatrix * vec4(position, 1.0)).xz;
+}`);const header=`varying vec2 vStArrivalXZ;
         uniform sampler2D stArrivalHeight;
         uniform vec4 stArrivalBounds;
         uniform float stArrival, stArrivalMap;
-      `;
-      const color = `
+      `,color=`
         if (stArrival < 0.9999) {
           vec2 agUv = (vStArrivalXZ - stArrivalBounds.xy) * stArrivalBounds.zw;
           float agField = texture2D(stArrivalHeight, clamp(agUv, 0.0, 1.0)).a;
@@ -149,11 +90,6 @@ export function bindAtmosphereArrival(atlas, uniforms) {
           float agLum = dot(gl_FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
           gl_FragColor.rgb = mix(vec3(agLum), gl_FragColor.rgb, agLife);
         }
-      `;
-      mat.fragmentShader = header + (frag.includes('#include <colorspace_fragment>')
-        ? frag.replace('#include <colorspace_fragment>', color + '\n#include <colorspace_fragment>')
-        : frag.replace(/}\s*$/, color + '\n}'));
-      mat.needsUpdate = true;
-    }
-  });
-}
+      `;mat.fragmentShader=header+(frag.includes("#include <colorspace_fragment>")?frag.replace("#include <colorspace_fragment>",color+`
+#include <colorspace_fragment>`):frag.replace(/}\s*$/,color+`
+}`)),mat.needsUpdate=!0}})}

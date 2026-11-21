@@ -1,52 +1,11 @@
-/* Text caustics · the #19 "Caustics" effect, ported for index1-5-canyon-forest.html (Team TX, 2026-11-17).
-
-   From Codrops' "Text Character Animations with GSAP" (js/variations/caustics.js), MIT License,
-   Copyright (c) 2009 - 2026 Codrops (https://codrops.com); the full notice is in LICENSE-codrops-MIT.txt next to this file.
-
-   The letters arrive as caustic light, the bright shifting network a moving water surface throws onto the bottom of a pool,
-   one after another in reading order, the lines overlapping. Each letter's light comes only through its own shape, refracted by
-   the rippling surface into soft, wandering bands and bright filaments. Then the water calms, the ripples slow and flatten, and
-   the light gathers into the crisp letter. Drawn by gl-text.js over the page text.
-
-   What changed from the demo: the shader is the demo's, word for word, except that its light is multiplied by uAlpha (the
-   chapter's own scroll-led opacity, and the hand-over fade); the timings are the demo's. Nothing here runs by itself: gl-text.js
-   compiles it once and draws it only while a reveal plays. */
-
-export const settings = {
-    // seconds the water over a letter takes to calm
-    duration: 1.2,
-    // seconds between two letters starting, and between the starts of two lines
-    letter: 0.035,
-    line: 0.3,
-    // em the letters' starts are blended over, so the water calms smoothly across the text
-    smoothStart: 0.35,
-    // how far the drawing reaches past the text, in em: room for the light that lands off the letters
-    // (the demo's 1.2em; the light is thrown at most STRENGTH × the wave slope ≈ .7em, mostly under .35em)
-    pad: 0.9,
-    // the water: plane waves at these angles (radians) and lengths (em), with these phases
-    waves: [
-        {angle: 0.35, length: 1.3, phase: 0},
-        {angle: 1.25, length: 1, phase: 2.1},
-        {angle: 2.05, length: 0.85, phase: 4.4},
-        {angle: 2.9, length: 0.72, phase: 1.3},
-        {angle: 3.95, length: 0.62, phase: 5.6},
-        {angle: 5.1, length: 0.55, phase: 3.7},
-    ],
-    // how fast the waves run: longer waves run slower, as on real water
-    flow: 1.4,
-};
-
-const glsl = values => values.map(value => value.toFixed(4)).join(', ');
-const {waves} = settings;
-
-export const fragment = `
+export const settings={duration:1.2,letter:.035,line:.3,smoothStart:.35,pad:.9,waves:[{angle:.35,length:1.3,phase:0},{angle:1.25,length:1,phase:2.1},{angle:2.05,length:.85,phase:4.4},{angle:2.9,length:.72,phase:1.3},{angle:3.95,length:.62,phase:5.6},{angle:5.1,length:.55,phase:3.7}],flow:1.4};const glsl=values=>values.map(value=>value.toFixed(4)).join(", "),{waves}=settings;export const fragment=`
 // The water: plane waves, each with its direction, its wavenumber per em,
 // its speed (radians per second) and its phase
 const int WAVES = ${waves.length};
-const vec2 DIRECTION[WAVES] = vec2[WAVES](${waves.map(({angle}) => `vec2(${glsl([Math.cos(angle), Math.sin(angle)])})`).join(', ')});
-const float NUMBER[WAVES] = float[WAVES](${glsl(waves.map(({length}) => (2 * Math.PI) / length))});
-const float SPEED[WAVES] = float[WAVES](${glsl(waves.map(({length}) => settings.flow * Math.sqrt((2 * Math.PI) / length)))});
-const float OFFSET[WAVES] = float[WAVES](${glsl(waves.map(({phase}) => phase))});
+const vec2 DIRECTION[WAVES] = vec2[WAVES](${waves.map(({angle})=>`vec2(${glsl([Math.cos(angle),Math.sin(angle)])})`).join(", ")});
+const float NUMBER[WAVES] = float[WAVES](${glsl(waves.map(({length})=>2*Math.PI/length))});
+const float SPEED[WAVES] = float[WAVES](${glsl(waves.map(({length})=>settings.flow*Math.sqrt(2*Math.PI/length)))});
+const float OFFSET[WAVES] = float[WAVES](${glsl(waves.map(({phase})=>phase))});
 // em the light is thrown, at most, while the water is rough
 const float STRENGTH = 0.28;
 // The water's speed once calm, as a share of its speed while rough

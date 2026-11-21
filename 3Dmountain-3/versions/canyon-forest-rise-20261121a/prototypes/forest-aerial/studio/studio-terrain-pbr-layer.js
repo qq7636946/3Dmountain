@@ -1,29 +1,4 @@
-/* studio-terrain-pbr-layer.js — Standalone High-Detail Aerial Terrain PBR + Unified Dual-Normal Water
-   + Alpine Canyon Sunlight, Real-Time Terrain Shadows & Volumetric Sunbeams (extending index1-5-canyon-forest.html)
-   Used exclusively by index-topdown-studio-pbr.html (keeps index-topdown-studio.html, flow2-original-scene.js & flow2-scene-water.js 100% untouched):
-   - No added 3D trees / ground props: terrain PBR and water share the existing draw path.
-   - PBR maps: ambientCG grass, moss and rock, a shore scan, and spectral water normals:
-       * Dual-scale (Macro + Micro rotated + domain-warped) anti-tiling Grass004 & Moss002 with deep canyon-emerald zoning & 2K NormalGL
-       * WorldNormal.y slope-driven + ridge-crest auto cliff cutting with 1:1 isotropic Triplanar Rock051 Color + 2K NormalGL + Disp + AO
-       * Wet gravel shelves and transparent shoals from a reprojected shore scan (see pbr-shore-credits.txt)
-   - Unified Glacial Water Engine (Central Lake + 4 Core Rivers + 4 Outer Rivers + 9 Tributaries):
-       * Depth gradient: clear turquoise shallows (refracted riverbed pebbles & caustics) -> deep glacial blue-teal lake center
-       * Animated Dual-Layer Seamless FFT Water NormalGL advected downstream along river tangents + top-down wave slope lighting
-       * Physically grounded Fresnel sky/bank reflection (oblique-weighted, zero top-down reflection smudges)
-       * Live Holographic Light Curtain & Central LOGO ice-blue wave-broken specular & diffuse water glow bounce
-       * Feathered shore edges + subtle narrow/bend whitewater streaks & delicate broken foam
-   - Sunlight & Atmosphere extending index1-5-canyon-forest.html:
-       * Low-raking warm golden-ivory daylight key + luminous periwinkle-slate sky fill + 5-tap real-time mountain self-shadows
-       * Batched volumetric diagonal sunlight shafts aligned to live sun vector + alpine daylight sky dome with solar halo */
-import * as THREE from 'three';
-import { HIGHLAND_GLSL, packArrivalField } from './studio-highland-ecology.js?v=weather1-bank1';
-import { createStudioClouds } from './studio-clouds.js?v=look1';
-import { createShoreCobbles } from './studio-shore-cobbles.js?v=weather1';
-
-const PBR_VER = 'pbr-20261119-09';
-const SHORE_VER = 'shore-2';
-const CORE_COLUMNS = 256, CORE_ROWS = 144;
-const SHORE_ATLAS_GLSL = `
+import*as THREE from"three";import{HIGHLAND_GLSL,packArrivalField}from"./studio-highland-ecology.js?v=weather1-bank1";import{createStudioClouds}from"./studio-clouds.js?v=look1";import{createShoreCobbles}from"./studio-shore-cobbles.js?v=weather1";const PBR_VER="pbr-20261119-09",SHORE_VER="shore-2",CORE_COLUMNS=256,CORE_ROWS=144,SHORE_ATLAS_GLSL=`
   // Both tiles have a periodic gutter equal to 1/16 of their width. Use the unwrapped
   // derivatives so a tile seam cannot select a coarse mip across the atlas.
   vec4 stTileGrad(sampler2D materialMap, vec2 uv, float tile, vec2 du, vec2 dv) {
@@ -42,11 +17,7 @@ const SHORE_ATLAS_GLSL = `
     vec2 n=normalXY*2.0-1.0;
     return transpose(stGravelAxes)*n/max(0.38,sqrt(max(0.0,1.0-dot(n,n))));
   }
-`;
-
-// The relief, normals, albedo and occlusion all come from the same shore scan.
-// Trace the relief only where individual stones resolve to several pixels.
-const GRAVEL_RELIEF_GLSL = `
+`,GRAVEL_RELIEF_GLSL=`
   void stCobbleSurface(vec2 p, vec3 N, vec3 V, vec3 L, out vec4 color, out vec4 detail, out float contact) {
     vec2 uv=stGravelUV(p), du=dFdx(uv), dv=dFdy(uv);
     float footprint=max(length(du),length(dv))*672.0;
@@ -67,81 +38,14 @@ const GRAVEL_RELIEF_GLSL = `
     }
     color=stTileGrad(tRockBasaltAlb,uv,1.0,du,dv);
   }
-`;
-
-export function sunVecFromAngles(azDeg, elDeg, out = new THREE.Vector3()) {
-  const az = (azDeg || 0) * Math.PI / 180;
-  const el = Math.max(6, Math.min(82, elDeg || 19)) * Math.PI / 180;
-  return out.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)).normalize();
-}
-
-export const DEFAULT_PBR_CONFIG = {
-  style: 1.0,             /* 0 = original bake, 1 = full CC0 2K PBR matching index1-5-canyon-forest.html */
-  /* 一、地形材質（深邃冷綠苔草＋大片風化層狀峽谷灰岩＋濕潤黑岩岸） */
-  grassSat: 0.84,
-  grassCoverage: 84,
-  grassColor: '#346b5d',
-  grassTipColor: '#829b79',
-  grassMossColor: '#405a39',
-  grassDryColor: '#ad9566',
-  grassMossCoverage: 72,
-  grassDryCoverage: 62,
-  grassTipCoverage: 64,
-  rockColor: '#56616a',
-  rockLayerColor: '#adb0af',
-  grassPbr: 1.18,
-  rockSlope: 0.88,
-  biomeContrast: 1.04,    /* 乾燥山脊／冷濕凹谷的生態色差 */
-  cavityDepth: 0.48,      /* 相鄰高度場曲率的凹槽遮蔽強度 */
-  strataStrength: 1.0,
-  shoreWet: 1.12,         /* 河岸濕潤黑岩帶強度 */
-  relief: 1.50,           /* 地形立體起伏（峽谷山脈感） */
-  /* 二、河道與中央湖泊水體（延伸 index1-5-canyon-forest 深鋼靛藍河水＋銀白日照波光） */
-  waterDeep: '#0a182c',   /* 深水區／湖心深鋼靛藍（flow2-valley3-water 同色系） */
-  waterShallow: '#264468',/* 淺灘／岸邊冷鋼藍（去除亮青綠，與峽谷河水統一） */
-  waterSpeed: 1.10,       /* 雙層水波流速 */
-  waterWave: 1.48,        /* 雙層水波法線與縱向湧浪強度 */
-  waterClear: 0.94,       /* 透過淺水看見礫石河床 */
-  whitewater: 1.0,
-  waterGlow: 0.88,        /* 全息光幕與 LOGO 水面反光光暈 */
-  /* 三、陽光光線與峽谷氛圍（對齊 index1-5-canyon-forest.html 清冷白陽＋鋼藍天空霧氣） */
-  sunIntensity: 1.28,     /* 陽光強度 */
-  sunShadow: 0.92,        /* 山脈真實陽光投射陰影 */
-  sunRays: 0.42,
-  sunAzimuth: 62,
-  sunElevation: 24,
-  mist: 0.36,             /* 遠景空氣透視，與低谷高度霧分開 */
-  cloudStrength: 0.34,
-  cloudShadow: 0,         /* 雲團投在地面的影子（0 = 無；rise 頁另設） */
-  airWhite: 0,            /* 遠景霧白度（0 = 舊的藍灰） */
-  mistColor: '#a8b8c7',   /* 谷底霧顏色（舊值） */
-  valleyMist: 0.28,
-  mistHeight: 0.64,       /* 水面以上的薄霧高度（場景單位） */
-  contourOpacity: 0.07,
-  contourInterval: 0.105,
-  layers: {
-    tributaries: true,
-    contours: true,
-    terrainStyle: true,
-    water: true,
-    sunbeams: true,
-    atmosphere: true,
-    clouds: true,
-    gulls: true
-  }
-};
-
-/* ---------- Alpine sky: cool canyon fill with a warmer solar halo ---------- */
-const SKY_DOME_VERT = `
+`;export function sunVecFromAngles(azDeg,elDeg,out=new THREE.Vector3){const az=(azDeg||0)*Math.PI/180,el=Math.max(6,Math.min(82,elDeg||19))*Math.PI/180;return out.set(Math.sin(az)*Math.cos(el),Math.sin(el),-Math.cos(az)*Math.cos(el)).normalize()}export const DEFAULT_PBR_CONFIG={style:1,grassSat:.84,grassCoverage:84,grassColor:"#346b5d",grassTipColor:"#829b79",grassMossColor:"#405a39",grassDryColor:"#ad9566",grassMossCoverage:72,grassDryCoverage:62,grassTipCoverage:64,rockColor:"#56616a",rockLayerColor:"#adb0af",grassPbr:1.18,rockSlope:.88,biomeContrast:1.04,cavityDepth:.48,strataStrength:1,shoreWet:1.12,relief:1.5,waterDeep:"#0a182c",waterShallow:"#264468",waterSpeed:1.1,waterWave:1.48,waterClear:.94,whitewater:1,waterGlow:.88,sunIntensity:1.28,sunShadow:.92,sunRays:.42,sunAzimuth:62,sunElevation:24,mist:.36,cloudStrength:.34,cloudShadow:0,airWhite:0,mistColor:"#a8b8c7",valleyMist:.28,mistHeight:.64,contourOpacity:.07,contourInterval:.105,layers:{tributaries:!0,contours:!0,terrainStyle:!0,water:!0,sunbeams:!0,atmosphere:!0,clouds:!0,gulls:!0}};const SKY_DOME_VERT=`
   varying vec3 vDir;
   void main() {
     vDir = normalize(position);
     vec4 wp = vec4(position + cameraPosition, 1.0);
     gl_Position = projectionMatrix * viewMatrix * wp;
   }
-`;
-
-const ALPINE_SKY_GLSL = `
+`,ALPINE_SKY_GLSL=`
   float skHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float skNoise(vec2 p) {
     vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -184,9 +88,7 @@ const ALPINE_SKY_GLSL = `
     sky = mix(vec3(0.005, 0.010, 0.015), sky, clamp(style, 0.0, 1.0));
     return mix(vec3(dot(sky,vec3(0.2126,0.7152,0.0722))),sky,smoothstep(0.12,0.93,arrival));
   }
-`;
-
-const SKY_DOME_FRAG = `
+`,SKY_DOME_FRAG=`
   uniform vec3 uSun;
   uniform float uTime,uSunIntensity,uLattice,uStyle,uCloudLayer,uArrival;
   varying vec3 vDir;
@@ -195,10 +97,7 @@ const SKY_DOME_FRAG = `
     gl_FragColor=vec4(stAlpineSky(normalize(vDir),uStyle,uCloudLayer,uArrival),1.0);
     #include <colorspace_fragment>
   }
-`;
-
-/* ---------- Volumetric Alpine Sunlight Shafts (陽光光線 — visible dreamy golden-ivory shafts!) ---------- */
-const SUNBEAM_VERT = `
+`,SUNBEAM_VERT=`
   attribute vec4 aRay; /* x = seed, y = intensity, z = widthScale, w = layer */
   varying vec2 vUv;
   varying vec4 vRay;
@@ -212,9 +111,7 @@ const SUNBEAM_VERT = `
     vNormalW = normalize(mat3(modelMatrix) * normal);
     gl_Position = projectionMatrix * viewMatrix * wp;
   }
-`;
-
-const SUNBEAM_FRAG = `
+`,SUNBEAM_FRAG=`
   uniform float uTime, uRayStrength, uSunIntensity, uLattice;
   varying vec2 vUv;
   varying vec4 vRay;
@@ -255,84 +152,7 @@ const SUNBEAM_FRAG = `
     vec3 rayCol = mix(vec3(0.76, 0.84, 0.94), vec3(1.00, 0.99, 0.94), 0.35 + 0.65 * vUv.y);
     gl_FragColor = vec4(rayCol * alpha, 1.0);
   }
-`;
-
-
-/* ---------- Adaptive High-Res Extended Relief Grid (37.0 x 30.84 World Units) ---------- */
-function buildExtendedReliefGrid(width, depth, nx, nz, skirt, sn, water, sub) {
-  const easeOut = t => (t * 0.40 + t * t * 0.60);
-  const line = (n, size) => {
-    const a = [];
-    for (let i = 0; i < sn; i++) a.push(-size / 2 - skirt * easeOut((sn - i) / sn));
-    for (let i = 0; i <= n; i++) a.push(-size / 2 + (size * i) / n);
-    for (let i = 1; i <= sn; i++) a.push(size / 2 + skirt * easeOut(i / sn));
-    return a;
-  };
-  const xs = line(nx, width), zs = line(nz, depth), cx = xs.length - 1, cz = zs.length - 1;
-  const pos = [], idx = [];
-  for (const z of zs) for (const x of xs) pos.push(x,0,z);
-  // Spend vertices on the tributary banks. Coarse neighbours share the fine
-  // edge vertices so a sloping bank stays closed even at a grazing angle.
-  const fine = new Uint8Array(cx*cz), extra = new Map();
-  if (water?.data) {
-    for (let z=0;z<nz;z++) for (let x=0;x<nx;x++) {
-      let low=255, high=0;
-      for (const dz of [.12,.50,.88]) for (const dx of [.12,.50,.88]) {
-        const px=Math.floor((x+dx)/nx*water.width), pz=Math.floor((z+dz)/nz*water.height);
-        const cut=water.data[(pz*water.width+px)*4+3];
-        low=Math.min(low,cut); high=Math.max(high,cut);
-      }
-      if (high-low>27 || (high>207 && high-low>12)) fine[(z+sn)*cx+x+sn]=1;
-    }
-  }
-  function vertex(x,z) {
-    const i=Math.floor(x/sub), j=Math.floor(z/sub), fx=x%sub, fz=z%sub;
-    if (!fx && !fz) return j*(cx+1)+i;
-    const key=z*(cx*sub+1)+x;
-    if(extra.has(key)) return extra.get(key);
-    const id=pos.length/3;
-    pos.push(fx?THREE.MathUtils.lerp(xs[i],xs[i+1],fx/sub):xs[i],0,
-             fz?THREE.MathUtils.lerp(zs[j],zs[j+1],fz/sub):zs[j]);
-    extra.set(key,id);
-    return id;
-  }
-  for (let j = 0; j < cz; j++) for (let i = 0; i < cx; i++) {
-    const k=j*cx+i, x=i*sub, z=j*sub;
-    if (fine[k]) {
-      for(let dz=0;dz<sub;dz++) for(let dx=0;dx<sub;dx++) {
-        const a=vertex(x+dx,z+dz), b=vertex(x+dx+1,z+dz);
-        const c=vertex(x+dx,z+dz+1), d=vertex(x+dx+1,z+dz+1);
-        idx.push(a,c,b,b,c,d);
-      }
-    } else {
-      const a=j*(cx+1)+i, b=a+1, c=a+cx+1, d=c+1;
-      const left=i>0 && fine[k-1], bottom=fine[k+cx], right=i<cx-1 && fine[k+1], top=fine[k-cx];
-      if (!(left||bottom||right||top)) { idx.push(a,c,b,b,c,d); continue; }
-      const loop=[a];
-      if (left) for(let t=1;t<sub;t++) loop.push(vertex(x,z+t));
-      loop.push(c);
-      if (bottom) for(let t=1;t<sub;t++) loop.push(vertex(x+t,z+sub));
-      loop.push(d);
-      if (right) for(let t=sub-1;t>0;t--) loop.push(vertex(x+sub,z+t));
-      loop.push(b);
-      if (top) for(let t=sub-1;t>0;t--) loop.push(vertex(x+t,z));
-      const centre=pos.length/3;
-      pos.push((xs[i]+xs[i+1])*.5,0,(zs[j]+zs[j+1])*.5);
-      for(let t=0;t<loop.length;t++) idx.push(centre,loop[t],loop[(t+1)%loop.length]);
-    }
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
-  const w = width + 2 * skirt, d = depth + 2 * skirt;
-  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.8, 0), Math.hypot(w, d) / 2 + 3);
-  g.boundingBox = new THREE.Box3(new THREE.Vector3(-w / 2, 0, -d / 2), new THREE.Vector3(w / 2, 3.0, d / 2));
-  return g;
-}
-
-/* Shared GLSL Watershed (exact geometry alignment with studio-light-curtain.js & studio-3d-lines.js) */
-function makeWatershedGlsl(noiseFn) {
-  return `
+`;function buildExtendedReliefGrid(width,depth,nx,nz,skirt,sn,water,sub){const easeOut=t=>t*.4+t*t*.6,line=(n,size)=>{const a=[];for(let i=0;i<sn;i++)a.push(-size/2-skirt*easeOut((sn-i)/sn));for(let i=0;i<=n;i++)a.push(-size/2+size*i/n);for(let i=1;i<=sn;i++)a.push(size/2+skirt*easeOut(i/sn));return a},xs=line(nx,width),zs=line(nz,depth),cx=xs.length-1,cz=zs.length-1,pos=[],idx=[];for(const z of zs)for(const x of xs)pos.push(x,0,z);const fine=new Uint8Array(cx*cz),extra=new Map;if(water?.data)for(let z=0;z<nz;z++)for(let x=0;x<nx;x++){let low=255,high=0;for(const dz of[.12,.5,.88])for(const dx of[.12,.5,.88]){const px=Math.floor((x+dx)/nx*water.width),pz=Math.floor((z+dz)/nz*water.height),cut=water.data[(pz*water.width+px)*4+3];low=Math.min(low,cut),high=Math.max(high,cut)}(high-low>27||high>207&&high-low>12)&&(fine[(z+sn)*cx+x+sn]=1)}function vertex(x,z){const i=Math.floor(x/sub),j=Math.floor(z/sub),fx=x%sub,fz=z%sub;if(!fx&&!fz)return j*(cx+1)+i;const key=z*(cx*sub+1)+x;if(extra.has(key))return extra.get(key);const id=pos.length/3;return pos.push(fx?THREE.MathUtils.lerp(xs[i],xs[i+1],fx/sub):xs[i],0,fz?THREE.MathUtils.lerp(zs[j],zs[j+1],fz/sub):zs[j]),extra.set(key,id),id}for(let j=0;j<cz;j++)for(let i=0;i<cx;i++){const k=j*cx+i,x=i*sub,z=j*sub;if(fine[k])for(let dz=0;dz<sub;dz++)for(let dx=0;dx<sub;dx++){const a=vertex(x+dx,z+dz),b=vertex(x+dx+1,z+dz),c=vertex(x+dx,z+dz+1),d2=vertex(x+dx+1,z+dz+1);idx.push(a,c,b,b,c,d2)}else{const a=j*(cx+1)+i,b=a+1,c=a+cx+1,d2=c+1,left=i>0&&fine[k-1],bottom=fine[k+cx],right=i<cx-1&&fine[k+1],top=fine[k-cx];if(!(left||bottom||right||top)){idx.push(a,c,b,b,c,d2);continue}const loop=[a];if(left)for(let t=1;t<sub;t++)loop.push(vertex(x,z+t));if(loop.push(c),bottom)for(let t=1;t<sub;t++)loop.push(vertex(x+t,z+sub));if(loop.push(d2),right)for(let t=sub-1;t>0;t--)loop.push(vertex(x+sub,z+t));if(loop.push(b),top)for(let t=sub-1;t>0;t--)loop.push(vertex(x+t,z));const centre=pos.length/3;pos.push((xs[i]+xs[i+1])*.5,0,(zs[j]+zs[j+1])*.5);for(let t=0;t<loop.length;t++)idx.push(centre,loop[t],loop[(t+1)%loop.length])}}const g=new THREE.BufferGeometry;g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)),g.setIndex(new THREE.Uint32BufferAttribute(idx,1));const w=width+2*skirt,d=depth+2*skirt;return g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.8,0),Math.hypot(w,d)/2+3),g.boundingBox=new THREE.Box3(new THREE.Vector3(-w/2,0,-d/2),new THREE.Vector3(w/2,3,d/2)),g}function makeWatershedGlsl(noiseFn){return`
     float stLakeBasinR(vec2 p) {
       vec2 q = (p - vec2(0.122, -0.056)) / vec2(1.66, 1.42);
       float r = length(q);
@@ -544,114 +364,7 @@ function makeWatershedGlsl(noiseFn) {
       float valleyH = mix(mH, 0.105, ws.y);
       return max(0.105, mix(valleyH, 0.105, smoothstep(0.04, 0.36, ws.x)));
     }
-  `;
-}
-
-/* ---------- Patch Terrain + Unified Water Material (15/16 WebGL Texture Units!) ---------- */
-function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
-  let patched = false;
-  const seen = new Set();
-
-  if (atlas.uniforms?.uSkirt) atlas.uniforms.uSkirt.value.set(3.5 / 1494, 3.5 / 836, 0.0, 0.0);
-  if (atlas.uniforms?.uSkirtAir) atlas.uniforms.uSkirtAir.value.set(99.0, 120.0);
-
-  const coreW = atlas.uniforms?.uBounds ? (1.0 / atlas.uniforms.uBounds.value.z) : 14.0;
-  const coreD = atlas.uniforms?.uBounds ? (1.0 / atlas.uniforms.uBounds.value.w) : 7.84;
-  let reliefGrid;
-
-  atlas.terrain.traverse(obj => {
-    if (!obj.isMesh || !obj.material) return;
-    if (obj.geometry && !obj.userData.pbrExtended) {
-      const oldGeo = obj.geometry;
-      reliefGrid ??= buildExtendedReliefGrid(coreW,coreD,CORE_COLUMNS,CORE_ROWS,11.5,92,
-        atlas.uniforms.tWater.value.image,matchMedia('(pointer: coarse)').matches?2:3);
-      obj.geometry = reliefGrid;
-      obj.frustumCulled = false;
-      obj.userData.pbrExtended = true;
-      oldGeo.dispose?.();
-    }
-
-    if (seen.has(obj.material)) return;
-    seen.add(obj.material);
-    const mat = obj.material;
-    if (!mat.fragmentShader || mat.fragmentShader.includes('uPbrStyle')) return;
-
-    /* Free ALL unused native passes & samplers (only 4 native remain: tPlate, tWater, tCanopy, tRefl!)
-       -> 4 native + 12 Studio Pure 2K CC0 PBR/Water = 16/16 WebGL texture units, ZERO atlas bleeding! */
-    if (mat.defines) {
-      delete mat.defines.FOREST_LOGO;
-      delete mat.defines.FOREST_GROW;
-      delete mat.defines.FOREST_LAKEVIDEO;
-      delete mat.defines.FOREST_WATER3D;
-      delete mat.defines.FOREST_RIVER;
-      delete mat.defines.FOREST_WATER;
-      delete mat.defines.FOREST_DETAIL;
-      delete mat.defines.FOREST_LIGHT;
-    }
-
-    Object.assign(mat.uniforms, {
-      tGrassAlb:      { value: pbrTex.grassAlb },
-      tGrassWildAlb:  { value: pbrTex.grassWildAlb },
-      tMossAlb:       { value: pbrTex.mossAlb },
-      tHeathAlb:      { value: pbrTex.heathAlb },
-      tGrassNrm:      { value: pbrTex.grassNrm },
-      tGrassNrm2:     { value: pbrTex.grassNrm2 },
-      tRockAlb:       { value: pbrTex.rockAlb },
-      tRockBasaltAlb: { value: pbrTex.rockBasaltAlb },
-      tRockMossAlb:   { value: pbrTex.rockMossAlb },
-      tRockNrm:       { value: pbrTex.rockNrm },
-      tRockNrm2:      { value: pbrTex.rockNrm2 },
-      tWaterNrm:      { value: pbrTex.waterNrm },
-      uPbrStyle:     studioUniforms.uPbrStyle,
-      uPbrTerrainOn: studioUniforms.uPbrTerrainOn,
-      uGrassPbr: studioUniforms.uGrassPbr,
-      uGrassSat: studioUniforms.uGrassSat,
-      uMeadowBase: studioUniforms.uMeadowBase,
-      uMeadowTips: studioUniforms.uMeadowTips,
-      uMeadowMoss: studioUniforms.uMeadowMoss,
-      uMeadowDry: studioUniforms.uMeadowDry,
-      uMeadowLayerCover: studioUniforms.uMeadowLayerCover,
-      uRockBaseGain: studioUniforms.uRockBaseGain,
-      uRockLayerGain: studioUniforms.uRockLayerGain,
-      uGrassCover: studioUniforms.uGrassCover,
-      uRockSlope: studioUniforms.uRockSlope,
-      uShoreWet: studioUniforms.uShoreWet,
-      uSunIntensity: studioUniforms.uSunIntensity,
-      uSunShadow: studioUniforms.uSunShadow,
-      uStudioMist: studioUniforms.uStudioMist,
-      uBiomeContrast: studioUniforms.uBiomeContrast,
-      uCavityDepth: studioUniforms.uCavityDepth,
-      uStrataStrength: studioUniforms.uStrataStrength,
-      uCloudLayer: studioUniforms.uCloudLayer,
-      uCloudStrength: studioUniforms.uCloudStrength,
-      uAirWhite: studioUniforms.uAirWhite,
-      uBankShadow: studioUniforms.uBankShadow,
-      uMistColor: studioUniforms.uMistColor,
-      uValleyMist: studioUniforms.uValleyMist,
-      uMistHeight: studioUniforms.uMistHeight,
-      uArrival: studioUniforms.uArrival,
-      uArrivalMap: studioUniforms.uArrivalMap,
-      uTributaries: studioUniforms.uTributaries,
-      uTributaryTexel: studioUniforms.uTributaryTexel,
-      uContours: studioUniforms.uContours,
-      uContourInterval: studioUniforms.uContourInterval,
-      uEntrySurvey: studioUniforms.uEntrySurvey,
-      uWaterDeep: studioUniforms.uWaterDeep,
-      uWaterShallow: studioUniforms.uWaterShallow,
-      uWaterSpeed: studioUniforms.uWaterSpeed,
-      uWaterWave: studioUniforms.uWaterWave,
-      uWaterClear: studioUniforms.uWaterClear,
-      uWhitewater: studioUniforms.uWhitewater,
-      uWaterGlow: studioUniforms.uWaterGlow,
-      uWaterOn: studioUniforms.uWaterOn,
-      uCurtainGlow: studioUniforms.uCurtainGlow,
-      uCurtainCol: studioUniforms.uCurtainCol,
-      uCurtainContact: studioUniforms.uCurtainContact,
-      uCurtainLogo: studioUniforms.uCurtainLogo
-    });
-
-    if (mat.vertexShader && !mat.vertexShader.includes('stWatershed')) {
-      const vFuncs = `
+  `}function patchTerrainAndWater(atlas,pbrTex,studioUniforms){let patched=!1;const seen=new Set;atlas.uniforms?.uSkirt&&atlas.uniforms.uSkirt.value.set(3.5/1494,3.5/836,0,0),atlas.uniforms?.uSkirtAir&&atlas.uniforms.uSkirtAir.value.set(99,120);const coreW=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.z:14,coreD=atlas.uniforms?.uBounds?1/atlas.uniforms.uBounds.value.w:7.84;let reliefGrid;return atlas.terrain.traverse(obj=>{if(!obj.isMesh||!obj.material)return;if(obj.geometry&&!obj.userData.pbrExtended){const oldGeo=obj.geometry;reliefGrid??=buildExtendedReliefGrid(coreW,coreD,CORE_COLUMNS,CORE_ROWS,11.5,92,atlas.uniforms.tWater.value.image,matchMedia("(pointer: coarse)").matches?2:3),obj.geometry=reliefGrid,obj.frustumCulled=!1,obj.userData.pbrExtended=!0,oldGeo.dispose?.()}if(seen.has(obj.material))return;seen.add(obj.material);const mat=obj.material;if(!mat.fragmentShader||mat.fragmentShader.includes("uPbrStyle"))return;if(mat.defines&&(delete mat.defines.FOREST_LOGO,delete mat.defines.FOREST_GROW,delete mat.defines.FOREST_LAKEVIDEO,delete mat.defines.FOREST_WATER3D,delete mat.defines.FOREST_RIVER,delete mat.defines.FOREST_WATER,delete mat.defines.FOREST_DETAIL,delete mat.defines.FOREST_LIGHT),Object.assign(mat.uniforms,{tGrassAlb:{value:pbrTex.grassAlb},tGrassWildAlb:{value:pbrTex.grassWildAlb},tMossAlb:{value:pbrTex.mossAlb},tHeathAlb:{value:pbrTex.heathAlb},tGrassNrm:{value:pbrTex.grassNrm},tGrassNrm2:{value:pbrTex.grassNrm2},tRockAlb:{value:pbrTex.rockAlb},tRockBasaltAlb:{value:pbrTex.rockBasaltAlb},tRockMossAlb:{value:pbrTex.rockMossAlb},tRockNrm:{value:pbrTex.rockNrm},tRockNrm2:{value:pbrTex.rockNrm2},tWaterNrm:{value:pbrTex.waterNrm},uPbrStyle:studioUniforms.uPbrStyle,uPbrTerrainOn:studioUniforms.uPbrTerrainOn,uGrassPbr:studioUniforms.uGrassPbr,uGrassSat:studioUniforms.uGrassSat,uMeadowBase:studioUniforms.uMeadowBase,uMeadowTips:studioUniforms.uMeadowTips,uMeadowMoss:studioUniforms.uMeadowMoss,uMeadowDry:studioUniforms.uMeadowDry,uMeadowLayerCover:studioUniforms.uMeadowLayerCover,uRockBaseGain:studioUniforms.uRockBaseGain,uRockLayerGain:studioUniforms.uRockLayerGain,uGrassCover:studioUniforms.uGrassCover,uRockSlope:studioUniforms.uRockSlope,uShoreWet:studioUniforms.uShoreWet,uSunIntensity:studioUniforms.uSunIntensity,uSunShadow:studioUniforms.uSunShadow,uStudioMist:studioUniforms.uStudioMist,uBiomeContrast:studioUniforms.uBiomeContrast,uCavityDepth:studioUniforms.uCavityDepth,uStrataStrength:studioUniforms.uStrataStrength,uCloudLayer:studioUniforms.uCloudLayer,uCloudStrength:studioUniforms.uCloudStrength,uAirWhite:studioUniforms.uAirWhite,uBankShadow:studioUniforms.uBankShadow,uMistColor:studioUniforms.uMistColor,uValleyMist:studioUniforms.uValleyMist,uMistHeight:studioUniforms.uMistHeight,uArrival:studioUniforms.uArrival,uArrivalMap:studioUniforms.uArrivalMap,uTributaries:studioUniforms.uTributaries,uTributaryTexel:studioUniforms.uTributaryTexel,uContours:studioUniforms.uContours,uContourInterval:studioUniforms.uContourInterval,uEntrySurvey:studioUniforms.uEntrySurvey,uWaterDeep:studioUniforms.uWaterDeep,uWaterShallow:studioUniforms.uWaterShallow,uWaterSpeed:studioUniforms.uWaterSpeed,uWaterWave:studioUniforms.uWaterWave,uWaterClear:studioUniforms.uWaterClear,uWhitewater:studioUniforms.uWhitewater,uWaterGlow:studioUniforms.uWaterGlow,uWaterOn:studioUniforms.uWaterOn,uCurtainGlow:studioUniforms.uCurtainGlow,uCurtainCol:studioUniforms.uCurtainCol,uCurtainContact:studioUniforms.uCurtainContact,uCurtainLogo:studioUniforms.uCurtainLogo}),mat.vertexShader&&!mat.vertexShader.includes("stWatershed")){const vFuncs=`
         uniform sampler2D tWater;
         uniform float uTributaries;
         varying vec3 vStOutN;
@@ -664,9 +377,8 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           return mix(mix(stVHash(i), stVHash(i + vec2(1.0, 0.0)), f.x),
                      mix(stVHash(i + vec2(0.0, 1.0)), stVHash(i + vec2(1.0, 1.0)), f.x), f.y);
         }
-        ${makeWatershedGlsl('stVNoise')}
-      `;
-      const vInject = `
+        ${makeWatershedGlsl("stVNoise")}
+      `,vInject=`
         vStOutN = vec3(0.0, 1.0, 0.0);
         vStCurvature = vec2(0.0);
         #ifdef FOREST_RELIEF
@@ -720,13 +432,8 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
         }
         #endif
         vec4 w=modelMatrix*vec4(p,1.);
-      `;
-      mat.vertexShader = mat.vertexShader
-        .replace('void main(){', vFuncs + '\nvoid main(){')
-        .replace('vec4 w=modelMatrix*vec4(p,1.);', vInject);
-    }
-
-    const decls = `
+      `;mat.vertexShader=mat.vertexShader.replace("void main(){",vFuncs+`
+void main(){`).replace("vec4 w=modelMatrix*vec4(p,1.);",vInject)}const decls=`
       varying vec3 vStOutN;
       varying vec2 vStCurvature;
       varying float vStArrival;
@@ -806,7 +513,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
       ${ALPINE_SKY_GLSL}
       ${SHORE_ATLAS_GLSL}
       ${GRAVEL_RELIEF_GLSL}
-      ${makeWatershedGlsl('forestNoise')}
+      ${makeWatershedGlsl("forestNoise")}
 
       /* Two height-field taps for terrain self-shadow. */
       float stTerrainSunShadow(vec3 wPos, vec3 sunDir, float outD, float branch) {
@@ -832,9 +539,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
         float vis = 1.0 - max(o1, o2) * 0.84;
         return mix(1.0, vis, clamp(uSunShadow, 0.0, 1.2) * fadeOut);
       }
-    `;
-
-    const inject = `
+    `,inject=`
       /* =============================================================================================
          STANDALONE CC0 2K PBR TERRAIN + UNIFIED DUAL-NORMAL GLACIAL WATER + CANYON-FOREST SUNLIGHT
          ============================================================================================= */
@@ -1626,7 +1331,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           vec3 airCol = mix(vec3(0.32, 0.44, 0.62), vec3(0.86, 0.90, 0.95), sunSide * 0.60);
           float ridgeAir=outerRidge*obliqueFactor*exp(-max(0.0,vForestWorld.y-.105)*.32);
           airCol=mix(airCol,vec3(.42,.52,.65),ridgeAir*.30);
-          airCol=mix(airCol,vec3(.86,.90,.94),uAirWhite);   /* 2026-11-21 遠景霧白度 (0 = as before) */
+          airCol=mix(airCol,vec3(.86,.90,.94),uAirWhite);   /* 2026-11-21 \u9060\u666F\u9727\u767D\u5EA6 (0 = as before) */
           float mistAmt=clamp(farA*((.28+.66*obliqueFactor)*.64+.17*ridgeAir)*uStudioMist,0.0,.74);
           col = mix(col, airCol, mistAmt);
         }
@@ -1635,9 +1340,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
 
         }
       }
-    `;
-
-    const waterExpandReplace = `
+    `,waterExpandReplace=`
       float stOut0 = forestOut(uvR);
       float stBranch = uTributaries > 0.5 && stOut0 < 0.0005 ? wt.a : 0.0;
       vec3 stLB0 = (stOut0 <= 0.0005 && uPbrTerrainOn > 0.001) ? stCentralLakeBasin(vForestWorld.xz) : vec3(0.0);
@@ -1647,22 +1350,15 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
       float wm = max(max(wt.r, stLB0.x), stCR0.x);
       float shore = max(max(wt.g, stLB0.z * 0.94 * smoothstep(0.05, 0.35, stLB0.x)), stCR0.z * 0.58 * smoothstep(0.05, 0.35, stCR0.x));
       float lakeN = max(stBranch > 0.001 ? 0.0 : wt.b, smoothstep(0.05, 0.42, stLB0.x));
-    `;
-    const flowReplace = `
+    `,flowReplace=`
       vec2 F=fl.rg*2.-1.;
       if (stCR0.x > 0.05 && length(F) < 0.22 && length(stCRFlow) > 0.01) {
         F = mix(F, stCRFlow * 0.72, smoothstep(0.05, 0.40, stCR0.x));
       }
-    `;
-
-    mat.fragmentShader = mat.fragmentShader
-      .replace('void main(){', decls + '\nvoid main(){')
-      .replace('vec3 wt=texture2D(tWater,uv).rgb;', 'vec4 wt=texture2D(tWater,uv);')
-      .replace('float wm=wt.r, shore=wt.g, lakeN=wt.b;', waterExpandReplace)
-      .replace('vec2 F=fl.rg*2.-1.;', flowReplace)
-      .replace('float cshadow=smoothstep(.48,.78,forestFbm(vForestWorld.xz*.34+vec2(uTime*.004,-uTime*.002)));', 'float cshadow=uCloud>.001?smoothstep(.48,.78,forestFbm(vForestWorld.xz*.34+vec2(uTime*.004,-uTime*.002))):0.;')
-      .replace('col=forestHaze(col,vForestWorld);', inject + '\ncol=forestHaze(col,vForestWorld);\ncol=stArrivalColor(col,vForestWorld.xz,vStArrival);')
-      .replace('gl_FragColor=vec4(col,1.);', `
+    `;mat.fragmentShader=mat.fragmentShader.replace("void main(){",decls+`
+void main(){`).replace("vec3 wt=texture2D(tWater,uv).rgb;","vec4 wt=texture2D(tWater,uv);").replace("float wm=wt.r, shore=wt.g, lakeN=wt.b;",waterExpandReplace).replace("vec2 F=fl.rg*2.-1.;",flowReplace).replace("float cshadow=smoothstep(.48,.78,forestFbm(vForestWorld.xz*.34+vec2(uTime*.004,-uTime*.002)));","float cshadow=uCloud>.001?smoothstep(.48,.78,forestFbm(vForestWorld.xz*.34+vec2(uTime*.004,-uTime*.002))):0.;").replace("col=forestHaze(col,vForestWorld);",inject+`
+col=forestHaze(col,vForestWorld);
+col=stArrivalColor(col,vForestWorld.xz,vStArrival);`).replace("gl_FragColor=vec4(col,1.);",`
         // Feather each side before the last row of the 11.5-unit skirt.
         // Evaluate the sky on this exact camera ray, after all land grading.
         vec2 past=max(max(-uvR,uvR-1.0),0.0)/uBounds.zw;
@@ -1685,37 +1381,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           surveyInk = contour * reach * land * mix(0.51, 0.90, indexLine);
           surveyInk *= 1.0 - smoothstep(3.0, 8.2, rim);
         }
-        gl_FragColor=vec4(col,1.0-surveyInk);`);
-    mat.needsUpdate = true;
-    patched = true;
-  });
-  return patched;
-}
-
-/* ---------- Patch Optional W1 Water Surface Mesh (if user opens 俯視水面 N) ---------- */
-function patchWaterSurfaceMaterial(atlas, shoreAlb, studioUniforms) {
-  let patched = false;
-  const seen = new Set();
-  atlas.scene.traverse(obj => {
-    if (!obj.isMesh || !obj.material || seen.has(obj.material)) return;
-    seen.add(obj.material);
-    const mat = obj.material;
-    if (!mat.fragmentShader || !mat.fragmentShader.includes('vW1World') || !mat.fragmentShader.includes('vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;')) return;
-    if (mat.fragmentShader.includes('tPbrRiverBed')) return;
-
-    Object.assign(mat.uniforms, {
-      tPbrRiverBed: { value: shoreAlb },
-      uPbrStyle: studioUniforms.uPbrStyle,
-      uPbrTerrainOn: studioUniforms.uPbrTerrainOn,
-      uTributaries: studioUniforms.uTributaries,
-      uCloudStrength: studioUniforms.uCloudStrength,
-      uBankShadow: studioUniforms.uBankShadow,
-      uMistColor: studioUniforms.uMistColor,
-      uValleyMist: studioUniforms.uValleyMist,
-      uMistHeight: studioUniforms.uMistHeight
-    });
-
-    const wDecls = `
+        gl_FragColor=vec4(col,1.0-surveyInk);`),mat.needsUpdate=!0,patched=!0}),patched}function patchWaterSurfaceMaterial(atlas,shoreAlb,studioUniforms){let patched=!1;const seen=new Set;return atlas.scene.traverse(obj=>{if(!obj.isMesh||!obj.material||seen.has(obj.material))return;seen.add(obj.material);const mat=obj.material;if(!mat.fragmentShader||!mat.fragmentShader.includes("vW1World")||!mat.fragmentShader.includes("vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;")||mat.fragmentShader.includes("tPbrRiverBed"))return;Object.assign(mat.uniforms,{tPbrRiverBed:{value:shoreAlb},uPbrStyle:studioUniforms.uPbrStyle,uPbrTerrainOn:studioUniforms.uPbrTerrainOn,uTributaries:studioUniforms.uTributaries,uCloudStrength:studioUniforms.uCloudStrength,uBankShadow:studioUniforms.uBankShadow,uMistColor:studioUniforms.uMistColor,uValleyMist:studioUniforms.uValleyMist,uMistHeight:studioUniforms.uMistHeight});const wDecls=`
       uniform sampler2D tPbrRiverBed;
       uniform float uPbrStyle, uPbrTerrainOn, uTributaries;
       float forestHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -1738,8 +1404,7 @@ function patchWaterSurfaceMaterial(atlas, shoreAlb, studioUniforms) {
         float lr = stWLakeR(p);
         return vec3(1.0 - smoothstep(0.86, 1.00, lr), 0.0, 1.0 - smoothstep(0.0, 1.02, lr));
       }
-    `;
-    const wMaskReplace = `
+    `,wMaskReplace=`
       vec3 stLBw = (uPbrTerrainOn > 0.001) ? stWCentralLake(wq) : vec3(0.0);
       // This optional plane is at the lake datum. Let the conforming terrain
       // water shade elevated branches and fade the plane back in at the mouth.
@@ -1749,8 +1414,7 @@ function patchWaterSurfaceMaterial(atlas, shoreAlb, studioUniforms) {
       float lakeN=max(uTributaries>0.5 && wt.a>0.005 ? 0.0 : wt.b, smoothstep(0.05, 0.42, stLBw.x));
       float sh2=shore*shore, shoreN=clamp(sh2*4.,0.,1.);
       float body=smoothstep(.2,.7,wm), rim=smoothstep(.02,.3,wm)*(1.-body)*uW1B.z*(1.0 - smoothstep(0.10, 0.45, stLBw.x));
-    `;
-    const wBedReplace = `
+    `,wBedReplace=`
       vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;
       if (uPbrTerrainOn > 0.001) {
         float wBedAmt = clamp(uPbrStyle, 0.0, 1.0) * uPbrTerrainOn;
@@ -1759,469 +1423,5 @@ function patchWaterSurfaceMaterial(atlas, shoreAlb, studioUniforms) {
         vec3 alpineBed = mix(vec3(0.07, 0.18, 0.26), cobbleBed * vec3(0.62, 0.92, 1.02), 0.84);
         bed = mix(bed, alpineBed, wBedAmt * (0.58 + 0.42 * shallW));
       }
-    `;
-
-    mat.fragmentShader = mat.fragmentShader
-      .replace('void main(){', wDecls + '\nvoid main(){')
-      .replace('*uRvSun*(1.-shade)', '*uRvSun*stCloudVisibility(wq)*(1.-shade)')
-      .replace('bodyC*=1.+clamp(dot(-ws,normalize(uSun.xz))*1.6*uW1A.z,-.25,.3);', 'bodyC*=1.+clamp(dot(-ws,normalize(uSun.xz))*1.6*uW1A.z,-.25,.3)*stCloudVisibility(wq);')
-      .replace('col=forestHaze(col,vW1World);', 'col=forestHaze(col,vW1World); col=stValleyAir(col,vW1World,cameraPosition);')
-      .replace('vec3 wt=texture2D(tWater,uv).rgb;', 'vec4 wt=texture2D(tWater,uv);')
-      .replace(/float wm=wt\.r, shore=wt\.g, lakeN=wt\.b, sh2=shore\*shore, shoreN=clamp\(sh2\*4\.,0\.,1\.\);\r?\n\s*float body=smoothstep\(\.2,\.7,wm\), rim=smoothstep\(\.02,\.3,wm\)\*\(1\.-body\)\*uW1B\.z;/, wMaskReplace)
-      .replace('vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;', wBedReplace);
-    mat.needsUpdate = true;
-    patched = true;
-  });
-  return patched;
-}
-
-/* ---------- Build Batched Volumetric Alpine Sunlight Shafts (1 draw call) ---------- */
-function buildSunbeamGroup(atlas, studioUniforms) {
-  const specs = [
-    { ox: 3.0, oz: -2.2, w: 6.4, h: 10.2, rotY: 0.00, intensity: 1.00, seed: 1.1 },
-    { ox: -1.2, oz: -1.8, w: 5.8, h: 9.6, rotY: 0.28, intensity: 0.85, seed: 2.7 },
-    { ox: 4.8, oz: 1.0, w: 6.0, h: 9.2, rotY: -0.24, intensity: 0.82, seed: 4.3 },
-    { ox: 0.6, oz: 0.2, w: 7.0, h: 10.6, rotY: 0.52, intensity: 0.78, seed: 6.1 },
-    { ox: -3.6, oz: 1.4, w: 5.2, h: 8.8, rotY: -0.45, intensity: 0.68, seed: 8.5 },
-    { ox: 2.0, oz: -3.5, w: 6.2, h: 9.8, rotY: 0.85, intensity: 0.80, seed: 10.2 }
-  ];
-
-  const pos = [], uvs = [], nrm = [], rays = [], idx = [];
-  let vBase = 0;
-
-  for (const s of specs) {
-    for (let k = 0; k < 2; k++) {
-      const ang = s.rotY + k * (Math.PI * 0.5);
-      const ca = Math.cos(ang), sa = Math.sin(ang);
-      const hw = s.w * 0.5;
-      const nx = -sa, nz = ca;
-      const corners = [[-hw, 0, 0, 0], [hw, 0, 1, 0], [-hw, s.h, 0, 1], [hw, s.h, 1, 1]];
-      for (const [lx, ly, u, v] of corners) {
-        pos.push(lx * ca + s.ox, ly, lx * sa + s.oz);
-        uvs.push(u, v);
-        nrm.push(nx, 0, nz);
-        rays.push(s.seed + k * 0.37, s.intensity, s.w, k);
-      }
-      idx.push(vBase, vBase + 1, vBase + 2, vBase + 1, vBase + 3, vBase + 2);
-      vBase += 4;
-    }
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
-  geo.setAttribute('aRay', new THREE.Float32BufferAttribute(rays, 4));
-  geo.setIndex(idx);
-
-  const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: atlas.uniforms.uTime,
-      uRayStrength: studioUniforms.uSunRays,
-      uSunIntensity: studioUniforms.uSunIntensity,
-      uLattice: atlas.uniforms.uLattice || { value: 0 }
-    },
-    vertexShader: SUNBEAM_VERT,
-    fragmentShader: SUNBEAM_FRAG,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false
-  });
-
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.name = 'Studio Alpine Sunlight Shafts';
-  mesh.frustumCulled = false;
-  mesh.renderOrder = 16;
-
-  const pivot = new THREE.Group();
-  pivot.name = 'Studio Sunbeam Pivot';
-  pivot.position.set(0, 0.12, 0);
-  pivot.add(mesh);
-
-  const up = new THREE.Vector3(0, 1, 0);
-  function alignToSun(sunVec) {
-    pivot.quaternion.setFromUnitVectors(up, sunVec);
-  }
-
-  return { group: pivot, mesh, mat, alignToSun };
-}
-
-/* ---------- Create the Standalone CC0 2K PBR Terrain + Unified Water + Alpine Sunlight Layer ---------- */
-export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig = {}) {
-  const cfg = {
-    ...DEFAULT_PBR_CONFIG,
-    ...initialConfig,
-    layers: { ...DEFAULT_PBR_CONFIG.layers, ...(initialConfig.layers || {}) }
-  };
-  const arrivalPacked = packArrivalField(atlas);
-
-  /* Hide ALL legacy 3D trees completely per brief (pure planar terrain & water pass!) */
-  if (atlas.trees) {
-    atlas.trees.visible = false;
-    atlas.trees.children.forEach(m => { m.visible = false; });
-  }
-
-  const baseUrl = name => new URL('./' + name + '?v=' + (name.includes('-shore') ? SHORE_VER : PBR_VER), import.meta.url).href;
-  const texLoader = new THREE.TextureLoader();
-  const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  /* PERF (strike team PIPE, 2026-11-21; rise page only, ?perf=0 = as before). TextureLoader hands three an <img>: each tile was decoded AND
-     uploaded on the main thread at its first draw, 145-182 ms per 2048 x 2048 tile, all twelve in one 1.3-1.5 s frame while the opening is
-     already live. Here the same file is decoded by createImageBitmap (off the main thread; no premultiply, no colour conversion: the bytes
-     three asked the <img> for), and its first upload is asked for here, one picture per frame, so flow2-tex-engine.js sends it in strips
-     (userData.flow2Strips). Same texture settings as below. Any failure falls back to the loader.
-     Tier step (medium / low start only): tiles wider than 1024 are halved while decoding (a quarter of their memory). */
-  const PERF_ON = new URLSearchParams(location.search).get('perf') !== '0' && document.documentElement.hasAttribute('data-rise-studio-pbr') && typeof createImageBitmap === 'function';
-  const perfHalf = PERF_ON && new URLSearchParams(location.search).get('perfTiles') !== 'full' && (q => !!q && (q.start === 'medium' || q.start === 'low'))(window.__FLOW2_QUALITY__);
-  const perfState = window.__RISE_PERF_TILES__ = { on: PERF_ON, half: perfHalf, decoded: 0, fallback: 0, initMs: [] };
-  const perfFrame = () => new Promise(done => { let over = false; const go = () => { if (!over) { over = true; done(); } }; requestAnimationFrame(go); setTimeout(go, 120); });
-  let perfChain = Promise.resolve();
-  const loadTexDecoded = async (name, { srgb = false, mips = true, repeat = true } = {}) => {
-    const response = await fetch(baseUrl(name));
-    if (!response.ok) throw new Error(name + ' ' + response.status);
-    const options = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
-    let bitmap = await createImageBitmap(await response.blob(), options);
-    if (perfHalf && bitmap.width > 1024) {
-      const half = await createImageBitmap(bitmap, { ...options, resizeWidth: bitmap.width >> 1, resizeHeight: bitmap.height >> 1, resizeQuality: 'high' });
-      bitmap.close(); bitmap = half;
-    }
-    const tex = new THREE.Texture(bitmap);
-    tex.flipY = false;
-    tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-    tex.generateMipmaps = mips;
-    tex.minFilter = mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.wrapS = tex.wrapT = repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-    if (mips) tex.anisotropy = maxAniso;
-    tex.userData.flow2Strips = true;
-    tex.needsUpdate = true;
-    perfState.decoded++;
-    perfChain = perfChain.then(perfFrame).then(() => { const t0 = performance.now(); try { renderer.initTexture?.(tex); } catch (error) { /* uploaded at its first draw instead */ } perfState.initMs.push(+(performance.now() - t0).toFixed(1)); });
-    await perfChain;
-    return tex;
-  };
-  const loadTexPerf = (name, options) => PERF_ON
-    ? loadTexDecoded(name, options).catch(error => { perfState.fallback++; perfState.error = String(error?.message || error); return loadTexImage(name, options); })
-    : loadTexImage(name, options);
-  /* KTX2 (PIPE, 2026-11-21; client: 「KTX2 貼圖壓縮…同意你做」; rise page only; ?perf=0 or ?ktx2=0 = no). The same twelve tiles as GPU-compressed
-     pictures (studio/ktx2/*.ktx2, made by tools/ktx2/scripts: UASTC for the normal / data tiles, ETC1S for the colour tiles, mip-maps inside).
-     They stay compressed on the GPU: a quarter of the memory at the full 2048 size, so the lower tiers get the full-size tiles back instead
-     of the halved ones, and nothing is decoded on the main thread (three's KTX2Loader transcodes in its worker).
-     WHO: a medium or low start and phones. The HIGH tier keeps today's pictures exactly (?ktx2=1 forces KTX2 there, for comparison only).
-     A GPU without ASTC / BC7 / ETC2, or any failure for a tile: that tile loads as above (webp), silently. */
-  const pageQuery = new URLSearchParams(location.search);
-  const KTX2_VER = 'ktx2-20261121-1';
-  const ktx2Phone = (() => { try { return matchMedia('(pointer: coarse)').matches && Math.min(innerWidth, innerHeight) < 900; } catch (error) { return false; } })();
-  const ktx2Want = PERF_ON && pageQuery.get('ktx2') !== '0'
-    && (pageQuery.get('ktx2') === '1' || ktx2Phone || (q => !!q && (q.start === 'medium' || q.start === 'low'))(window.__FLOW2_QUALITY__));
-  const ktx2State = perfState.ktx2 = { want: ktx2Want, phone: ktx2Phone, loaded: 0, fallback: 0, formats: {}, bytesGPU: 0 };
-  const ktx2Loader = !ktx2Want ? null : import('three/addons/loaders/KTX2Loader.js').then(module => {
-    const loader = new module.KTX2Loader().setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/basis/').detectSupport(renderer);
-    const c = loader.workerConfig || {};
-    if (!(c.astcSupported || c.bptcSupported || c.etc2Supported)) throw new Error('no ASTC / BC7 / ETC2 on this GPU');
-    return loader;
-  });
-  ktx2Loader?.catch(error => { ktx2State.error = String(error?.message || error); });
-  const loadTexKtx2 = async (name, { srgb = false, mips = true, repeat = true } = {}) => {
-    const loader = await ktx2Loader;
-    const tex = await loader.loadAsync(new URL('./ktx2/' + name.replace(/.webp$/, '.ktx2') + '?v=' + KTX2_VER, import.meta.url).href);
-    if (!tex || !tex.isCompressedTexture || !(tex.mipmaps && tex.mipmaps.length > 1)) { tex?.dispose?.(); throw new Error(name + ': not a compressed picture with mip-maps'); }
-    tex.flipY = false;
-    tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-    tex.generateMipmaps = false;
-    tex.minFilter = mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.wrapS = tex.wrapT = repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-    if (mips) tex.anisotropy = maxAniso;
-    tex.needsUpdate = true;
-    ktx2State.loaded++; ktx2State.formats[tex.format] = (ktx2State.formats[tex.format] || 0) + 1;
-    for (const level of tex.mipmaps) ktx2State.bytesGPU += level.data ? level.data.byteLength : 0;
-    perfChain = perfChain.then(perfFrame).then(() => { const t0 = performance.now(); try { renderer.initTexture?.(tex); } catch (error) { /* uploaded at its first draw instead */ } perfState.initMs.push(+(performance.now() - t0).toFixed(1)); });
-    await perfChain;
-    return tex;
-  };
-  const loadTex = (name, options) => ktx2Want
-    ? loadTexKtx2(name, options).catch(error => { ktx2State.fallback++; ktx2State.lastError = String(error?.message || error); return loadTexPerf(name, options); })
-    : loadTexPerf(name, options);
-  const loadTexImage = (name, { srgb = false, mips = true, repeat = true } = {}) => new Promise((resolve, reject) => {
-    texLoader.load(baseUrl(name), tex => {
-      tex.flipY = false;
-      tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-      tex.generateMipmaps = mips;
-      tex.minFilter = mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.wrapS = tex.wrapT = repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-      if (mips) tex.anisotropy = maxAniso;
-      resolve(tex);
-    }, undefined, reject);
-  });
-
-  // Reuse the existing 12 material samplers. The two rock atlases include
-  // the basalt and moss layers alongside the new scan-derived gravel.
-  const [grassAlb, grassWildAlb, mossAlb, heathAlb, grassNrm, grassNrm2, rockAlb, rockBasaltAlb, rockMossAlb, rockNrm, rockNrm2, waterNrm] = await Promise.all([
-    loadTex('pbr-sward-relief.webp', { mips: true, repeat: true }),
-    loadTex('pbr-grass-wild.webp',   { srgb: true,  mips: true, repeat: true }),
-    loadTex('pbr-moss-albedo.webp',  { srgb: true,  mips: true, repeat: true }),
-    loadTex('pbr-heath-scree.webp',  { srgb: true,  mips: true, repeat: true }),
-    loadTex('pbr-grass-nrm.webp',    { srgb: false, mips: true, repeat: true }),
-    loadTex('pbr-grass-nrm2.webp',   { srgb: false, mips: true, repeat: true }),
-    loadTex('pbr-rock-albedo.webp',  { srgb: true,  mips: true, repeat: true }),
-    loadTex('pbr-basalt-shore.webp', { srgb: true,  mips: true, repeat: false }),
-    loadTex('pbr-rock-mossy.webp',   { srgb: true,  mips: true, repeat: true }),
-    loadTex('pbr-rock-nrm.webp',     { srgb: false, mips: true, repeat: true }),
-    loadTex('pbr-rock-shore-detail.webp', { srgb: false, mips: true, repeat: false }),
-    loadTex('pbr-water-nrm.webp',    { srgb: false, mips: true, repeat: true })
-  ]);
-
-  atlas.scene.background = new THREE.Color(0x142438);
-  const origSun = atlas.uniforms.uSun.value.clone();
-  const liveSun = sunVecFromAngles(cfg.sunAzimuth, cfg.sunElevation);
-  atlas.uniforms.uSun.value.copy(liveSun);
-
-  const studioUniforms = {
-    uPbrStyle: { value: cfg.style },
-    uPbrTerrainOn: { value: cfg.layers.terrainStyle ? 1.0 : 0.0 },
-    uGrassPbr: { value: cfg.grassPbr },
-    uGrassSat: { value: cfg.grassSat },
-    uMeadowBase: { value: new THREE.Color(cfg.grassColor) },
-    uMeadowTips: { value: new THREE.Color(cfg.grassTipColor) },
-    uMeadowMoss: { value: new THREE.Color(cfg.grassMossColor) },
-    uMeadowDry: { value: new THREE.Color(cfg.grassDryColor) },
-    uMeadowLayerCover: { value: new THREE.Vector3() },
-    uRockBaseGain: { value: new THREE.Color(1,1,1) },
-    uRockLayerGain: { value: new THREE.Color(1,1,1) },
-    uGrassCover: { value: cfg.grassCoverage/100 },
-    uRockSlope: { value: cfg.rockSlope },
-    uShoreWet: { value: cfg.shoreWet },
-    uSunIntensity: { value: cfg.sunIntensity },
-    uSunShadow: { value: cfg.sunShadow },
-    uSunRays: { value: cfg.sunRays },
-    uStudioMist: { value: cfg.mist },
-    uBiomeContrast: { value: cfg.biomeContrast },
-    uCavityDepth: { value: cfg.cavityDepth },
-    uStrataStrength: { value: cfg.strataStrength },
-    uCloudLayer: { value: cfg.layers.clouds ? 1 : 0 },
-    uCloudStrength: { value: cfg.cloudStrength },
-    uBankShadow: { value: new THREE.Vector4(0, 1, 0, 0) },
-    uAirWhite: { value: 0 },
-    uMistColor: { value: new THREE.Color(cfg.mistColor || '#a8b8c7') },
-    uValleyMist: { value: cfg.valleyMist },
-    uMistHeight: { value: cfg.mistHeight },
-    uArrival: { value: 1 },
-    uArrivalMap: { value: arrivalPacked ? 1 : 0 },
-    uTributaries: { value: atlas.studioHydrology ? 1 : 0 },
-    uTributaryTexel: { value: atlas.studioHydrology?.texel || new THREE.Vector2(1/1494,1/836) },
-    uContours: { value: cfg.contourOpacity },
-    uContourInterval: { value: cfg.contourInterval },
-    uEntrySurvey: { value: 0 },
-    uWaterDeep: { value: new THREE.Color(cfg.waterDeep) },
-    uWaterShallow: { value: new THREE.Color(cfg.waterShallow) },
-    uWaterSpeed: { value: cfg.waterSpeed },
-    uWaterWave: { value: cfg.waterWave },
-    uWaterClear: { value: cfg.waterClear },
-    uWhitewater: { value: cfg.whitewater },
-    uWaterGlow: { value: cfg.waterGlow },
-    uWaterOn: { value: cfg.layers.water ? 1.0 : 0.0 },
-    uCurtainGlow: { value: 0.78 },
-    uCurtainCol: { value: new THREE.Color('#88ccf8') },
-    uCurtainContact: { value: new THREE.Color('#d9f2ff') },
-    uCurtainLogo: { value: new THREE.Vector4(1.0, 1.40, 0.28, 1.0) }
-  };
-
-  const terrainPatched = patchTerrainAndWater(atlas, {
-    grassAlb, grassWildAlb, mossAlb, heathAlb, grassNrm, grassNrm2,
-    rockAlb, rockBasaltAlb, rockMossAlb, rockNrm, rockNrm2, waterNrm
-  }, studioUniforms);
-  const waterPatched = patchWaterSurfaceMaterial(atlas, rockBasaltAlb, studioUniforms);
-  const cobbles = createShoreCobbles(atlas,studioUniforms,rockBasaltAlb);
-  atlas.scene.add(cobbles);
-
-  /* Alpine Daylight Sky Horizon Dome */
-  const skyDomeGeo = new THREE.SphereGeometry(185, 32, 20);
-  const skyDomeMat = new THREE.ShaderMaterial({
-    uniforms: {
-      uSun: atlas.uniforms.uSun,
-      uTime: atlas.uniforms.uTime,
-      uSunIntensity: studioUniforms.uSunIntensity,
-      uLattice: atlas.uniforms.uLattice || { value: 0 },
-      uStyle: studioUniforms.uPbrStyle,
-      uCloudLayer: studioUniforms.uCloudLayer,
-      uArrival: studioUniforms.uArrival
-    },
-    vertexShader: SKY_DOME_VERT,
-    fragmentShader: SKY_DOME_FRAG,
-    side: THREE.BackSide,
-    depthWrite: false,
-    depthTest: true,
-    toneMapped: false
-  });
-  const skyDome = new THREE.Mesh(skyDomeGeo, skyDomeMat);
-  skyDomeMat.userData.handlesArrival = true;
-  skyDome.name = 'Studio Alpine Sky Dome';
-  skyDome.frustumCulled = false;
-  skyDome.renderOrder = -10;
-  atlas.scene.add(skyDome);
-
-  /* Volumetric Alpine Sunlight Shafts */
-  const sunbeams = buildSunbeamGroup(atlas, studioUniforms);
-  sunbeams.alignToSun(liveSun);
-  atlas.scene.add(sunbeams.group);
-
-  const mistGroup = createStudioClouds(atlas,studioUniforms);
-  atlas.scene.add(mistGroup);
-
-  const origTune = {
-    relief: atlas.tune.relief, land: atlas.tune.land, rvDeep: atlas.tune.rvDeep, rvShallow: atlas.tune.rvShallow,
-    rvSky: atlas.tune.rvSky, rvClear: atlas.tune.rvClear
-  };
-
-  let linkedCurtain = null;
-  function syncCurtain() {
-    if (!linkedCurtain) return;
-    const cc = linkedCurtain.config;
-    const on = cc.enabled ? 1.0 : 0.0;
-    studioUniforms.uCurtainGlow.value = on * Math.max(0, +cc.brightness || 0);
-    studioUniforms.uCurtainCol.value.set(cc.color || '#88ccf8');
-    studioUniforms.uCurtainContact.value.set(cc.contactColor || '#d9f2ff');
-    studioUniforms.uCurtainLogo.value.set(
-      cc.showLogo ? 1.0 : 0.0,
-      Math.max(0.2, +cc.logoScale || 1.40),
-      Math.max(0.0, +cc.speed || 0.28),
-      Math.max(0.0, Math.min(1.0, +cc.progress))
-    );
-  }
-  function bindCurtain(curtainApi) {
-    linkedCurtain = curtainApi || null;
-    syncCurtain();
-  }
-
-  // Each default swatch gives unity gain, preserving the scanned mineral colours.
-  function inverseSwatch(hex) {
-    const c=new THREE.Color(hex);
-    return c.setRGB(1/c.r,1/c.g,1/c.b);
-  }
-  const baseReference=inverseSwatch(DEFAULT_PBR_CONFIG.rockColor);
-  const layerReference=inverseSwatch(DEFAULT_PBR_CONFIG.rockLayerColor);
-  function apply() {
-    const s = Math.max(0, Math.min(1.25, cfg.style));
-    const lerpHex = (aHex, bHex, t) => '#' + new THREE.Color(aHex).lerp(new THREE.Color(bHex), Math.max(0, Math.min(1, t))).getHexString();
-
-    sunVecFromAngles(cfg.sunAzimuth, cfg.sunElevation, liveSun);
-    atlas.uniforms.uSun.value.copy(origSun).lerp(liveSun, Math.min(1, s)).normalize();
-    sunbeams.alignToSun(atlas.uniforms.uSun.value);
-
-    studioUniforms.uPbrStyle.value = s;
-    studioUniforms.uPbrTerrainOn.value = cfg.layers.terrainStyle ? 1.0 : 0.0;
-    studioUniforms.uGrassPbr.value = Math.max(0, Math.min(1.6, +cfg.grassPbr || 0));
-    studioUniforms.uGrassSat.value = Math.max(0.2, Math.min(2.0, +cfg.grassSat || 1.0));
-    studioUniforms.uMeadowBase.value.set(cfg.grassColor);
-    studioUniforms.uMeadowTips.value.set(cfg.grassTipColor);
-    studioUniforms.uMeadowMoss.value.set(cfg.grassMossColor);
-    studioUniforms.uMeadowDry.value.set(cfg.grassDryColor);
-    studioUniforms.uMeadowLayerCover.value.set(cfg.grassMossCoverage,cfg.grassDryCoverage,cfg.grassTipCoverage)
-      .multiplyScalar(.01).clampScalar(0,1);
-    studioUniforms.uRockBaseGain.value.set(cfg.rockColor).multiply(baseReference);
-    studioUniforms.uRockLayerGain.value.set(cfg.rockLayerColor).multiply(layerReference);
-    studioUniforms.uGrassCover.value = THREE.MathUtils.clamp(Number(cfg.grassCoverage ?? DEFAULT_PBR_CONFIG.grassCoverage)/100,0,1);
-    studioUniforms.uRockSlope.value = Math.max(0.45, Math.min(0.98, +cfg.rockSlope || 0.86));
-    studioUniforms.uShoreWet.value = Math.max(0.0, Math.min(1.8, +cfg.shoreWet || 0.0));
-    studioUniforms.uSunIntensity.value = Math.max(0.2, Math.min(2.2, +cfg.sunIntensity || 1.24));
-    studioUniforms.uSunShadow.value = Math.max(0.0, Math.min(1.2, +cfg.sunShadow || 0.0));
-    studioUniforms.uSunRays.value = (cfg.layers.sunbeams && cfg.layers.terrainStyle) ? Math.max(0, +cfg.sunRays || 0) : 0.0;
-    studioUniforms.uStudioMist.value = cfg.layers.atmosphere ? Math.max(0, +cfg.mist || 0) : 0.0;
-    studioUniforms.uBiomeContrast.value = THREE.MathUtils.clamp(+cfg.biomeContrast || 0, 0, 1.8);
-    studioUniforms.uCavityDepth.value = THREE.MathUtils.clamp(+cfg.cavityDepth || 0, 0, 1);
-    studioUniforms.uStrataStrength.value = THREE.MathUtils.clamp(+cfg.strataStrength || 0, 0, 1.4);
-    studioUniforms.uCloudLayer.value = cfg.layers.clouds && cfg.layers.terrainStyle ? 1 : 0;
-    studioUniforms.uCloudStrength.value = cfg.layers.terrainStyle ? THREE.MathUtils.clamp(+cfg.cloudStrength || 0, 0, 0.6) : 0;
-    { const L = atlas.uniforms.uSun.value; studioUniforms.uBankShadow.value.set(L.x, L.y, L.z, cfg.layers.clouds && cfg.layers.terrainStyle ? THREE.MathUtils.clamp(+cfg.cloudShadow || 0, 0, 1) : 0); }
-    studioUniforms.uMistColor.value.set(cfg.mistColor || '#a8b8c7');
-    studioUniforms.uAirWhite.value = THREE.MathUtils.clamp(+cfg.airWhite || 0, 0, 1);
-    studioUniforms.uValleyMist.value = cfg.layers.atmosphere ? THREE.MathUtils.clamp(+cfg.valleyMist || 0, 0, 1.2) : 0;
-    studioUniforms.uMistHeight.value = THREE.MathUtils.clamp(+cfg.mistHeight || 0.1, 0.1, 1.8);
-    studioUniforms.uTributaries.value = atlas.studioHydrology && cfg.layers.tributaries && cfg.layers.terrainStyle ? 1 : 0;
-    atlas.studioHydrology?.setEnabled(studioUniforms.uTributaries.value > 0.5);
-    studioUniforms.uContours.value = cfg.layers.contours ? THREE.MathUtils.clamp(+cfg.contourOpacity || 0,0,0.8) : 0;
-    studioUniforms.uContourInterval.value = THREE.MathUtils.clamp(+cfg.contourInterval || 0.105,0.04,0.22);
-    studioUniforms.uWaterDeep.value.set(cfg.waterDeep || '#071c33');
-    studioUniforms.uWaterShallow.value.set(cfg.waterShallow || '#217582');
-    studioUniforms.uWaterSpeed.value = Math.max(0, +cfg.waterSpeed || 0);
-    studioUniforms.uWaterWave.value = Math.max(0.1, +cfg.waterWave || 1.0);
-    studioUniforms.uWaterClear.value = THREE.MathUtils.clamp(+cfg.waterClear || 0, 0, 1.3);
-    studioUniforms.uWhitewater.value = THREE.MathUtils.clamp(+cfg.whitewater || 0, 0, 1.5);
-    studioUniforms.uWaterGlow.value = Math.max(0, +cfg.waterGlow || 0);
-    studioUniforms.uWaterOn.value = cfg.layers.water ? 1.0 : 0.0;
-
-    atlas.tune.relief = cfg.relief;
-    atlas.uniforms.uRelief.value = atlas.tune.relief;
-    atlas.uniforms.uCanopy.value = atlas.tune.canopy;
-    atlas.tune.haze = 0.0;
-    /* Skip native 3x3 Voronoi D1 LAND loop whenever our PBR terrain fully replaces col (massive GPU speedup!) */
-    atlas.tune.land = (cfg.layers.terrainStyle && s >= 0.98) ? 0.0 : origTune.land;
-
-    if (cfg.layers.water) {
-      atlas.tune.rv = 1.0;
-      atlas.tune.rvDeep = lerpHex(origTune.rvDeep, cfg.waterDeep || '#071c33', s);
-      atlas.tune.rvShallow = lerpHex(origTune.rvShallow, cfg.waterShallow || '#217582', s);
-      atlas.tune.rvSky = lerpHex(origTune.rvSky, '#86a6cd', s);
-      atlas.tune.rvSpeed = Math.max(0, +cfg.waterSpeed || 1.0);
-      atlas.tune.rvWave = Math.max(0.1, +cfg.waterWave || 1.0);
-      atlas.tune.rvClear = Math.max(0, Math.min(1.3, cfg.waterClear * Math.min(1, s) + origTune.rvClear * (1 - Math.min(1, s))));
-    } else {
-      atlas.tune.rv = 0.0;
-    }
-
-    if (atlas.trees) atlas.trees.visible = false;
-    cobbles.visible = !!(cfg.layers.terrainStyle && s > 0.01 && cfg.shoreWet > 0.0);
-    skyDome.visible = !!cfg.layers.terrainStyle;
-    sunbeams.group.visible = !!(cfg.layers.sunbeams && cfg.layers.terrainStyle && cfg.sunRays > 0.005);
-    mistGroup.visible = studioUniforms.uCloudLayer.value > 0 || studioUniforms.uStudioMist.value > 0.005;
-
-    syncCurtain();
-  }
-
-  apply();
-
-  return {
-    config: cfg,
-    terrainPatched,
-    waterPatched,
-    skyDome,
-    sunbeams,
-    mistGroup,
-    uniforms: studioUniforms,
-    bindCurtain,
-    syncCurtain,
-    apply,
-    disposeTextures() {
-      for (const tex of [grassAlb, grassWildAlb, mossAlb, heathAlb, grassNrm, grassNrm2, rockAlb, rockBasaltAlb, rockMossAlb, rockNrm, rockNrm2, waterNrm]) tex.dispose();
-      if (arrivalPacked) atlas.uniforms.tCanopy.value.dispose();
-    },
-    getStats() {
-      return {
-        mode: 'pure-pbr-terrain-water',
-        ecology: 'height / aspect / finite-difference curvature / moisture',
-        arrival: arrivalPacked ? 'authored canyon field in height alpha' : 'procedural fallback',
-        activeTrees: 0,
-        activeRocks: cobbles.visible ? cobbles.userData.stoneCount : 0,
-        tributaries: atlas.studioHydrology?.stats || null,
-        textures: [
-          'pbr-sward-relief.webp (1536px Grass004 reflectance, blade height, cavity, roughness)',
-          'pbr-grass-wild.webp (SRGB, 2K Pure forrest_ground_01)',
-          'pbr-moss-albedo.webp (SRGB, 2K Pure Moss002)',
-          'pbr-heath-scree.webp (SRGB, 2K Pure aerial_rocks_04)',
-          'pbr-grass-nrm.webp (NoColorSpace, 2K Grass004+Moss002)',
-          'pbr-grass-nrm2.webp (NoColorSpace, 2K forrest_ground_01+aerial_rocks_04)',
-          'pbr-rock-albedo.webp (SRGB, 2K Pure Rock051)',
-          'pbr-basalt-shore.webp (sRGB atlas: Rock035 + Pers Scans shore gravel)',
-          'pbr-rock-mossy.webp (SRGB, 2K Pure mossy_rock)',
-          'pbr-rock-nrm.webp (NoColorSpace, 2K Rock051)',
-          'pbr-rock-shore-detail.webp (linear atlas: basalt/moss normals + gravel relief)',
-          'pbr-water-nrm.webp (NoColorSpace, 1K Silky Spectral Water)'
-        ]
-      };
-    }
-  };
-}
+    `;mat.fragmentShader=mat.fragmentShader.replace("void main(){",wDecls+`
+void main(){`).replace("*uRvSun*(1.-shade)","*uRvSun*stCloudVisibility(wq)*(1.-shade)").replace("bodyC*=1.+clamp(dot(-ws,normalize(uSun.xz))*1.6*uW1A.z,-.25,.3);","bodyC*=1.+clamp(dot(-ws,normalize(uSun.xz))*1.6*uW1A.z,-.25,.3)*stCloudVisibility(wq);").replace("col=forestHaze(col,vW1World);","col=forestHaze(col,vW1World); col=stValleyAir(col,vW1World,cameraPosition);").replace("vec3 wt=texture2D(tWater,uv).rgb;","vec4 wt=texture2D(tWater,uv);").replace(/float wm=wt\.r, shore=wt\.g, lakeN=wt\.b, sh2=shore\*shore, shoreN=clamp\(sh2\*4\.,0\.,1\.\);\r?\n\s*float body=smoothstep\(\.2,\.7,wm\), rim=smoothstep\(\.02,\.3,wm\)\*\(1\.-body\)\*uW1B\.z;/,wMaskReplace).replace("vec3 bed=texture2D(tPlate,uv+sl*.010).rgb;",wBedReplace),mat.needsUpdate=!0,patched=!0}),patched}function buildSunbeamGroup(atlas,studioUniforms){const specs=[{ox:3,oz:-2.2,w:6.4,h:10.2,rotY:0,intensity:1,seed:1.1},{ox:-1.2,oz:-1.8,w:5.8,h:9.6,rotY:.28,intensity:.85,seed:2.7},{ox:4.8,oz:1,w:6,h:9.2,rotY:-.24,intensity:.82,seed:4.3},{ox:.6,oz:.2,w:7,h:10.6,rotY:.52,intensity:.78,seed:6.1},{ox:-3.6,oz:1.4,w:5.2,h:8.8,rotY:-.45,intensity:.68,seed:8.5},{ox:2,oz:-3.5,w:6.2,h:9.8,rotY:.85,intensity:.8,seed:10.2}],pos=[],uvs=[],nrm=[],rays=[],idx=[];let vBase=0;for(const s of specs)for(let k=0;k<2;k++){const ang=s.rotY+k*(Math.PI*.5),ca=Math.cos(ang),sa=Math.sin(ang),hw=s.w*.5,nx=-sa,nz=ca,corners=[[-hw,0,0,0],[hw,0,1,0],[-hw,s.h,0,1],[hw,s.h,1,1]];for(const[lx,ly,u,v]of corners)pos.push(lx*ca+s.ox,ly,lx*sa+s.oz),uvs.push(u,v),nrm.push(nx,0,nz),rays.push(s.seed+k*.37,s.intensity,s.w,k);idx.push(vBase,vBase+1,vBase+2,vBase+1,vBase+3,vBase+2),vBase+=4}const geo=new THREE.BufferGeometry;geo.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)),geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2)),geo.setAttribute("normal",new THREE.Float32BufferAttribute(nrm,3)),geo.setAttribute("aRay",new THREE.Float32BufferAttribute(rays,4)),geo.setIndex(idx);const mat=new THREE.ShaderMaterial({uniforms:{uTime:atlas.uniforms.uTime,uRayStrength:studioUniforms.uSunRays,uSunIntensity:studioUniforms.uSunIntensity,uLattice:atlas.uniforms.uLattice||{value:0}},vertexShader:SUNBEAM_VERT,fragmentShader:SUNBEAM_FRAG,transparent:!0,depthWrite:!1,depthTest:!0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:!1}),mesh=new THREE.Mesh(geo,mat);mesh.name="Studio Alpine Sunlight Shafts",mesh.frustumCulled=!1,mesh.renderOrder=16;const pivot=new THREE.Group;pivot.name="Studio Sunbeam Pivot",pivot.position.set(0,.12,0),pivot.add(mesh);const up=new THREE.Vector3(0,1,0);function alignToSun(sunVec){pivot.quaternion.setFromUnitVectors(up,sunVec)}return{group:pivot,mesh,mat,alignToSun}}export async function createStudioTerrainPbrLayer(renderer,atlas,initialConfig={}){const cfg={...DEFAULT_PBR_CONFIG,...initialConfig,layers:{...DEFAULT_PBR_CONFIG.layers,...initialConfig.layers||{}}},arrivalPacked=packArrivalField(atlas);atlas.trees&&(atlas.trees.visible=!1,atlas.trees.children.forEach(m=>{m.visible=!1}));const baseUrl=name=>new URL("./"+name+"?v="+(name.includes("-shore")?SHORE_VER:PBR_VER),import.meta.url).href,texLoader=new THREE.TextureLoader,maxAniso=Math.min(8,renderer.capabilities.getMaxAnisotropy()),PERF_ON=new URLSearchParams(location.search).get("perf")!=="0"&&document.documentElement.hasAttribute("data-rise-studio-pbr")&&typeof createImageBitmap=="function",perfHalf=PERF_ON&&new URLSearchParams(location.search).get("perfTiles")!=="full"&&(q=>!!q&&(q.start==="medium"||q.start==="low"))(window.__FLOW2_QUALITY__),perfState=window.__RISE_PERF_TILES__={on:PERF_ON,half:perfHalf,decoded:0,fallback:0,initMs:[]},perfFrame=()=>new Promise(done=>{let over=!1;const go=()=>{over||(over=!0,done())};requestAnimationFrame(go),setTimeout(go,120)});let perfChain=Promise.resolve();const loadTexDecoded=async(name,{srgb=!1,mips=!0,repeat=!0,url:urlT="",tiered=!1}={})=>{const response=await fetch(urlT||baseUrl(name));if(!response.ok)throw new Error(name+" "+response.status);const options={premultiplyAlpha:"none",colorSpaceConversion:"none"};let bitmap=await createImageBitmap(await response.blob(),options);if(perfHalf&&!tiered&&bitmap.width>1024){const half=await createImageBitmap(bitmap,{...options,resizeWidth:bitmap.width>>1,resizeHeight:bitmap.height>>1,resizeQuality:"high"});bitmap.close(),bitmap=half}const tex=new THREE.Texture(bitmap);return tex.flipY=!1,tex.colorSpace=srgb?THREE.SRGBColorSpace:THREE.NoColorSpace,tex.generateMipmaps=mips,tex.minFilter=mips?THREE.LinearMipmapLinearFilter:THREE.LinearFilter,tex.magFilter=THREE.LinearFilter,tex.wrapS=tex.wrapT=repeat?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping,mips&&(tex.anisotropy=maxAniso),tex.userData.flow2Strips=!0,tex.needsUpdate=!0,perfState.decoded++,perfChain=perfChain.then(perfFrame).then(()=>{const t0=performance.now();try{renderer.initTexture?.(tex)}catch{}perfState.initMs.push(+(performance.now()-t0).toFixed(1))}),await perfChain,tex},loadTexPerf=(name,options)=>PERF_ON?loadTexDecoded(name,options).catch(error=>(perfState.fallback++,perfState.error=String(error?.message||error),loadTexImage(name,options))):loadTexImage(name,options),pageQuery=new URLSearchParams(location.search),KTX2_VER="ktx2-20261121-1",ktx2Phone=(()=>{try{return matchMedia("(pointer: coarse)").matches&&Math.min(innerWidth,innerHeight)<900}catch{return!1}})(),optT=PERF_ON&&pageQuery.get("optT")!=="0",texFmt=pageQuery.get("texFmt"),tierT=(()=>{const tt=window.__FLOW2_TEX_TIER__;if(tt&&(tt.tier==="medium"||tt.tier==="low"))return tt.tier;const q=window.__FLOW2_QUALITY__;return q&&(q.start==="medium"||q.start==="low")?q.start:ktx2Phone?"phone":"high"})(),scaleT=!optT||pageQuery.get("perfTiles")==="full"||tierT==="high"?1:window.__FLOW2_TEX_TIER__&&window.__FLOW2_TEX_TIER__.tier==="low"?.25:.5,ktx2Want=PERF_ON&&pageQuery.get("ktx2")!=="0"&&!(optT&&texFmt==="webp")&&(pageQuery.get("ktx2")==="1"||optT&&/^ktx2[ue]?$/.test(texFmt||"")||ktx2Phone||(q=>!!q&&(q.start==="medium"||q.start==="low"))(window.__FLOW2_QUALITY__)),ktx2State=perfState.ktx2={want:ktx2Want,phone:ktx2Phone,loaded:0,fallback:0,formats:{},bytesGPU:0},ktx2Loader=ktx2Want?import("three/addons/loaders/KTX2Loader.js").then(module=>{const loader=new module.KTX2Loader().setTranscoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/basis/").detectSupport(renderer),c=loader.workerConfig||{};if(!(c.astcSupported||c.bptcSupported||c.etc2Supported))throw new Error("no ASTC / BC7 / ETC2 on this GPU");return loader}):null;ktx2Loader?.catch(error=>{ktx2State.error=String(error?.message||error)});const loadTexKtx2=async(name,{srgb=!1,mips=!0,repeat=!0,url:urlT=""}={})=>{const tex=await(await ktx2Loader).loadAsync(urlT||new URL("./ktx2/"+name.replace(/.webp$/,".ktx2")+"?v="+KTX2_VER,import.meta.url).href);if(!tex||!tex.isCompressedTexture||!(tex.mipmaps&&tex.mipmaps.length>1))throw tex?.dispose?.(),new Error(name+": not a compressed picture with mip-maps");tex.flipY=!1,tex.colorSpace=srgb?THREE.SRGBColorSpace:THREE.NoColorSpace,tex.generateMipmaps=!1,tex.minFilter=mips?THREE.LinearMipmapLinearFilter:THREE.LinearFilter,tex.magFilter=THREE.LinearFilter,tex.wrapS=tex.wrapT=repeat?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping,mips&&(tex.anisotropy=maxAniso),tex.needsUpdate=!0,ktx2State.loaded++,ktx2State.formats[tex.format]=(ktx2State.formats[tex.format]||0)+1;for(const level of tex.mipmaps)ktx2State.bytesGPU+=level.data?level.data.byteLength:0;return perfChain=perfChain.then(perfFrame).then(()=>{const t0=performance.now();try{renderer.initTexture?.(tex)}catch{}perfState.initMs.push(+(performance.now()-t0).toFixed(1))}),await perfChain,tex},loadTexOlder=(name,options)=>ktx2Want?loadTexKtx2(name,options).catch(error=>(ktx2State.fallback++,ktx2State.lastError=String(error?.message||error),loadTexPerf(name,options))):loadTexPerf(name,options),T_VER="tiers-20261121-1",T_COLOUR_MODE="-u",T_FULL_W={"pbr-sward-relief":1536,"pbr-basalt-shore":1536,"pbr-rock-shore-detail":1536,"pbr-water-nrm":1024},tState=perfState.t={on:optT,tier:tierT,scale:scaleT,fmt:texFmt||"auto",ktx2:0,webp:0,older:0,files:[]},loadTex=(name,options)=>{if(!optT||scaleT===1&&!/^ktx2[ue]?$/.test(texFmt||""))return loadTexOlder(name,options);const base=name.replace(/\.webp$/,""),w=Math.max(256,Math.round((T_FULL_W[base]||2048)*scaleT)),url=(suffix,ext)=>new URL("./tiers/"+base+"-"+w+suffix+"."+ext+"?v="+T_VER,import.meta.url).href,webp=()=>{const u=scaleT===1?baseUrl(name):url("","webp");return loadTexPerf(name,{...options,url:u,tiered:scaleT<1}).then(tx=>(tState.webp++,tState.files.push(u.replace(/^.*\/studio\//,"").replace(/\?.*/,"")),tx))},mode=options&&options.srgb?texFmt==="ktx2u"?"-u":texFmt==="ktx2e"?"-e":T_COLOUR_MODE:"-u";return(ktx2Want?loadTexKtx2(name,{...options,url:url(mode,"ktx2")}).then(tx=>(tState.ktx2++,tState.files.push(base+"-"+w+mode+".ktx2"),tx)):Promise.reject(new Error("no ktx2"))).catch(error=>(ktx2Want&&(ktx2State.fallback++,ktx2State.lastError=String(error?.message||error)),webp())).catch(error=>(tState.older++,tState.lastError=String(error?.message||error),loadTexOlder(name,options)))},loadTexImage=(name,{srgb=!1,mips=!0,repeat=!0}={})=>new Promise((resolve,reject)=>{texLoader.load(baseUrl(name),tex=>{tex.flipY=!1,tex.colorSpace=srgb?THREE.SRGBColorSpace:THREE.NoColorSpace,tex.generateMipmaps=mips,tex.minFilter=mips?THREE.LinearMipmapLinearFilter:THREE.LinearFilter,tex.magFilter=THREE.LinearFilter,tex.wrapS=tex.wrapT=repeat?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping,mips&&(tex.anisotropy=maxAniso),resolve(tex)},void 0,reject)}),[grassAlb,grassWildAlb,mossAlb,heathAlb,grassNrm,grassNrm2,rockAlb,rockBasaltAlb,rockMossAlb,rockNrm,rockNrm2,waterNrm]=await Promise.all([loadTex("pbr-sward-relief.webp",{mips:!0,repeat:!0}),loadTex("pbr-grass-wild.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-moss-albedo.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-heath-scree.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-grass-nrm.webp",{srgb:!1,mips:!0,repeat:!0}),loadTex("pbr-grass-nrm2.webp",{srgb:!1,mips:!0,repeat:!0}),loadTex("pbr-rock-albedo.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-basalt-shore.webp",{srgb:!0,mips:!0,repeat:!1}),loadTex("pbr-rock-mossy.webp",{srgb:!0,mips:!0,repeat:!0}),loadTex("pbr-rock-nrm.webp",{srgb:!1,mips:!0,repeat:!0}),loadTex("pbr-rock-shore-detail.webp",{srgb:!1,mips:!0,repeat:!1}),loadTex("pbr-water-nrm.webp",{srgb:!1,mips:!0,repeat:!0})]);atlas.scene.background=new THREE.Color(1319992);const origSun=atlas.uniforms.uSun.value.clone(),liveSun=sunVecFromAngles(cfg.sunAzimuth,cfg.sunElevation);atlas.uniforms.uSun.value.copy(liveSun);const studioUniforms={uPbrStyle:{value:cfg.style},uPbrTerrainOn:{value:cfg.layers.terrainStyle?1:0},uGrassPbr:{value:cfg.grassPbr},uGrassSat:{value:cfg.grassSat},uMeadowBase:{value:new THREE.Color(cfg.grassColor)},uMeadowTips:{value:new THREE.Color(cfg.grassTipColor)},uMeadowMoss:{value:new THREE.Color(cfg.grassMossColor)},uMeadowDry:{value:new THREE.Color(cfg.grassDryColor)},uMeadowLayerCover:{value:new THREE.Vector3},uRockBaseGain:{value:new THREE.Color(1,1,1)},uRockLayerGain:{value:new THREE.Color(1,1,1)},uGrassCover:{value:cfg.grassCoverage/100},uRockSlope:{value:cfg.rockSlope},uShoreWet:{value:cfg.shoreWet},uSunIntensity:{value:cfg.sunIntensity},uSunShadow:{value:cfg.sunShadow},uSunRays:{value:cfg.sunRays},uStudioMist:{value:cfg.mist},uBiomeContrast:{value:cfg.biomeContrast},uCavityDepth:{value:cfg.cavityDepth},uStrataStrength:{value:cfg.strataStrength},uCloudLayer:{value:cfg.layers.clouds?1:0},uCloudStrength:{value:cfg.cloudStrength},uBankShadow:{value:new THREE.Vector4(0,1,0,0)},uAirWhite:{value:0},uMistColor:{value:new THREE.Color(cfg.mistColor||"#a8b8c7")},uValleyMist:{value:cfg.valleyMist},uMistHeight:{value:cfg.mistHeight},uArrival:{value:1},uArrivalMap:{value:arrivalPacked?1:0},uTributaries:{value:atlas.studioHydrology?1:0},uTributaryTexel:{value:atlas.studioHydrology?.texel||new THREE.Vector2(1/1494,1/836)},uContours:{value:cfg.contourOpacity},uContourInterval:{value:cfg.contourInterval},uEntrySurvey:{value:0},uWaterDeep:{value:new THREE.Color(cfg.waterDeep)},uWaterShallow:{value:new THREE.Color(cfg.waterShallow)},uWaterSpeed:{value:cfg.waterSpeed},uWaterWave:{value:cfg.waterWave},uWaterClear:{value:cfg.waterClear},uWhitewater:{value:cfg.whitewater},uWaterGlow:{value:cfg.waterGlow},uWaterOn:{value:cfg.layers.water?1:0},uCurtainGlow:{value:.78},uCurtainCol:{value:new THREE.Color("#88ccf8")},uCurtainContact:{value:new THREE.Color("#d9f2ff")},uCurtainLogo:{value:new THREE.Vector4(1,1.4,.28,1)}},terrainPatched=patchTerrainAndWater(atlas,{grassAlb,grassWildAlb,mossAlb,heathAlb,grassNrm,grassNrm2,rockAlb,rockBasaltAlb,rockMossAlb,rockNrm,rockNrm2,waterNrm},studioUniforms),waterPatched=patchWaterSurfaceMaterial(atlas,rockBasaltAlb,studioUniforms),cobbles=createShoreCobbles(atlas,studioUniforms,rockBasaltAlb);atlas.scene.add(cobbles);const skyDomeGeo=new THREE.SphereGeometry(185,32,20),skyDomeMat=new THREE.ShaderMaterial({uniforms:{uSun:atlas.uniforms.uSun,uTime:atlas.uniforms.uTime,uSunIntensity:studioUniforms.uSunIntensity,uLattice:atlas.uniforms.uLattice||{value:0},uStyle:studioUniforms.uPbrStyle,uCloudLayer:studioUniforms.uCloudLayer,uArrival:studioUniforms.uArrival},vertexShader:SKY_DOME_VERT,fragmentShader:SKY_DOME_FRAG,side:THREE.BackSide,depthWrite:!1,depthTest:!0,toneMapped:!1}),skyDome=new THREE.Mesh(skyDomeGeo,skyDomeMat);skyDomeMat.userData.handlesArrival=!0,skyDome.name="Studio Alpine Sky Dome",skyDome.frustumCulled=!1,skyDome.renderOrder=-10,atlas.scene.add(skyDome);const sunbeams=buildSunbeamGroup(atlas,studioUniforms);sunbeams.alignToSun(liveSun),atlas.scene.add(sunbeams.group);const mistGroup=createStudioClouds(atlas,studioUniforms);atlas.scene.add(mistGroup);const origTune={relief:atlas.tune.relief,land:atlas.tune.land,rvDeep:atlas.tune.rvDeep,rvShallow:atlas.tune.rvShallow,rvSky:atlas.tune.rvSky,rvClear:atlas.tune.rvClear};let linkedCurtain=null;function syncCurtain(){if(!linkedCurtain)return;const cc=linkedCurtain.config,on=cc.enabled?1:0;studioUniforms.uCurtainGlow.value=on*Math.max(0,+cc.brightness||0),studioUniforms.uCurtainCol.value.set(cc.color||"#88ccf8"),studioUniforms.uCurtainContact.value.set(cc.contactColor||"#d9f2ff"),studioUniforms.uCurtainLogo.value.set(cc.showLogo?1:0,Math.max(.2,+cc.logoScale||1.4),Math.max(0,+cc.speed||.28),Math.max(0,Math.min(1,+cc.progress)))}function bindCurtain(curtainApi){linkedCurtain=curtainApi||null,syncCurtain()}function inverseSwatch(hex){const c=new THREE.Color(hex);return c.setRGB(1/c.r,1/c.g,1/c.b)}const baseReference=inverseSwatch(DEFAULT_PBR_CONFIG.rockColor),layerReference=inverseSwatch(DEFAULT_PBR_CONFIG.rockLayerColor);function apply(){const s=Math.max(0,Math.min(1.25,cfg.style)),lerpHex=(aHex,bHex,t)=>"#"+new THREE.Color(aHex).lerp(new THREE.Color(bHex),Math.max(0,Math.min(1,t))).getHexString();sunVecFromAngles(cfg.sunAzimuth,cfg.sunElevation,liveSun),atlas.uniforms.uSun.value.copy(origSun).lerp(liveSun,Math.min(1,s)).normalize(),sunbeams.alignToSun(atlas.uniforms.uSun.value),studioUniforms.uPbrStyle.value=s,studioUniforms.uPbrTerrainOn.value=cfg.layers.terrainStyle?1:0,studioUniforms.uGrassPbr.value=Math.max(0,Math.min(1.6,+cfg.grassPbr||0)),studioUniforms.uGrassSat.value=Math.max(.2,Math.min(2,+cfg.grassSat||1)),studioUniforms.uMeadowBase.value.set(cfg.grassColor),studioUniforms.uMeadowTips.value.set(cfg.grassTipColor),studioUniforms.uMeadowMoss.value.set(cfg.grassMossColor),studioUniforms.uMeadowDry.value.set(cfg.grassDryColor),studioUniforms.uMeadowLayerCover.value.set(cfg.grassMossCoverage,cfg.grassDryCoverage,cfg.grassTipCoverage).multiplyScalar(.01).clampScalar(0,1),studioUniforms.uRockBaseGain.value.set(cfg.rockColor).multiply(baseReference),studioUniforms.uRockLayerGain.value.set(cfg.rockLayerColor).multiply(layerReference),studioUniforms.uGrassCover.value=THREE.MathUtils.clamp(Number(cfg.grassCoverage??DEFAULT_PBR_CONFIG.grassCoverage)/100,0,1),studioUniforms.uRockSlope.value=Math.max(.45,Math.min(.98,+cfg.rockSlope||.86)),studioUniforms.uShoreWet.value=Math.max(0,Math.min(1.8,+cfg.shoreWet||0)),studioUniforms.uSunIntensity.value=Math.max(.2,Math.min(2.2,+cfg.sunIntensity||1.24)),studioUniforms.uSunShadow.value=Math.max(0,Math.min(1.2,+cfg.sunShadow||0)),studioUniforms.uSunRays.value=cfg.layers.sunbeams&&cfg.layers.terrainStyle?Math.max(0,+cfg.sunRays||0):0,studioUniforms.uStudioMist.value=cfg.layers.atmosphere?Math.max(0,+cfg.mist||0):0,studioUniforms.uBiomeContrast.value=THREE.MathUtils.clamp(+cfg.biomeContrast||0,0,1.8),studioUniforms.uCavityDepth.value=THREE.MathUtils.clamp(+cfg.cavityDepth||0,0,1),studioUniforms.uStrataStrength.value=THREE.MathUtils.clamp(+cfg.strataStrength||0,0,1.4),studioUniforms.uCloudLayer.value=cfg.layers.clouds&&cfg.layers.terrainStyle?1:0,studioUniforms.uCloudStrength.value=cfg.layers.terrainStyle?THREE.MathUtils.clamp(+cfg.cloudStrength||0,0,.6):0;{const L=atlas.uniforms.uSun.value;studioUniforms.uBankShadow.value.set(L.x,L.y,L.z,cfg.layers.clouds&&cfg.layers.terrainStyle?THREE.MathUtils.clamp(+cfg.cloudShadow||0,0,1):0)}studioUniforms.uMistColor.value.set(cfg.mistColor||"#a8b8c7"),studioUniforms.uAirWhite.value=THREE.MathUtils.clamp(+cfg.airWhite||0,0,1),studioUniforms.uValleyMist.value=cfg.layers.atmosphere?THREE.MathUtils.clamp(+cfg.valleyMist||0,0,1.2):0,studioUniforms.uMistHeight.value=THREE.MathUtils.clamp(+cfg.mistHeight||.1,.1,1.8),studioUniforms.uTributaries.value=atlas.studioHydrology&&cfg.layers.tributaries&&cfg.layers.terrainStyle?1:0,atlas.studioHydrology?.setEnabled(studioUniforms.uTributaries.value>.5),studioUniforms.uContours.value=cfg.layers.contours?THREE.MathUtils.clamp(+cfg.contourOpacity||0,0,.8):0,studioUniforms.uContourInterval.value=THREE.MathUtils.clamp(+cfg.contourInterval||.105,.04,.22),studioUniforms.uWaterDeep.value.set(cfg.waterDeep||"#071c33"),studioUniforms.uWaterShallow.value.set(cfg.waterShallow||"#217582"),studioUniforms.uWaterSpeed.value=Math.max(0,+cfg.waterSpeed||0),studioUniforms.uWaterWave.value=Math.max(.1,+cfg.waterWave||1),studioUniforms.uWaterClear.value=THREE.MathUtils.clamp(+cfg.waterClear||0,0,1.3),studioUniforms.uWhitewater.value=THREE.MathUtils.clamp(+cfg.whitewater||0,0,1.5),studioUniforms.uWaterGlow.value=Math.max(0,+cfg.waterGlow||0),studioUniforms.uWaterOn.value=cfg.layers.water?1:0,atlas.tune.relief=cfg.relief,atlas.uniforms.uRelief.value=atlas.tune.relief,atlas.uniforms.uCanopy.value=atlas.tune.canopy,atlas.tune.haze=0,atlas.tune.land=cfg.layers.terrainStyle&&s>=.98?0:origTune.land,cfg.layers.water?(atlas.tune.rv=1,atlas.tune.rvDeep=lerpHex(origTune.rvDeep,cfg.waterDeep||"#071c33",s),atlas.tune.rvShallow=lerpHex(origTune.rvShallow,cfg.waterShallow||"#217582",s),atlas.tune.rvSky=lerpHex(origTune.rvSky,"#86a6cd",s),atlas.tune.rvSpeed=Math.max(0,+cfg.waterSpeed||1),atlas.tune.rvWave=Math.max(.1,+cfg.waterWave||1),atlas.tune.rvClear=Math.max(0,Math.min(1.3,cfg.waterClear*Math.min(1,s)+origTune.rvClear*(1-Math.min(1,s))))):atlas.tune.rv=0,atlas.trees&&(atlas.trees.visible=!1),cobbles.visible=!!(cfg.layers.terrainStyle&&s>.01&&cfg.shoreWet>0),skyDome.visible=!!cfg.layers.terrainStyle,sunbeams.group.visible=!!(cfg.layers.sunbeams&&cfg.layers.terrainStyle&&cfg.sunRays>.005),mistGroup.visible=studioUniforms.uCloudLayer.value>0||studioUniforms.uStudioMist.value>.005,syncCurtain()}return apply(),{config:cfg,terrainPatched,waterPatched,skyDome,sunbeams,mistGroup,uniforms:studioUniforms,bindCurtain,syncCurtain,apply,disposeTextures(){for(const tex of[grassAlb,grassWildAlb,mossAlb,heathAlb,grassNrm,grassNrm2,rockAlb,rockBasaltAlb,rockMossAlb,rockNrm,rockNrm2,waterNrm])tex.dispose();arrivalPacked&&atlas.uniforms.tCanopy.value.dispose()},getStats(){return{mode:"pure-pbr-terrain-water",ecology:"height / aspect / finite-difference curvature / moisture",arrival:arrivalPacked?"authored canyon field in height alpha":"procedural fallback",activeTrees:0,activeRocks:cobbles.visible?cobbles.userData.stoneCount:0,tributaries:atlas.studioHydrology?.stats||null,textures:["pbr-sward-relief.webp (1536px Grass004 reflectance, blade height, cavity, roughness)","pbr-grass-wild.webp (SRGB, 2K Pure forrest_ground_01)","pbr-moss-albedo.webp (SRGB, 2K Pure Moss002)","pbr-heath-scree.webp (SRGB, 2K Pure aerial_rocks_04)","pbr-grass-nrm.webp (NoColorSpace, 2K Grass004+Moss002)","pbr-grass-nrm2.webp (NoColorSpace, 2K forrest_ground_01+aerial_rocks_04)","pbr-rock-albedo.webp (SRGB, 2K Pure Rock051)","pbr-basalt-shore.webp (sRGB atlas: Rock035 + Pers Scans shore gravel)","pbr-rock-mossy.webp (SRGB, 2K Pure mossy_rock)","pbr-rock-nrm.webp (NoColorSpace, 2K Rock051)","pbr-rock-shore-detail.webp (linear atlas: basalt/moss normals + gravel relief)","pbr-water-nrm.webp (NoColorSpace, 1K Silky Spectral Water)"]}}}}

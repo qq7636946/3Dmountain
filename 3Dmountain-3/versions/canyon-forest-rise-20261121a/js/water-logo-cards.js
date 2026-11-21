@@ -1,25 +1,4 @@
-/** Curved, open card helix adapted from slide.js, sharing the Logo scene camera. */
-export const LOGO_CARD_DEFAULTS={
-  enabled:1,radius:.94,size:.9,gap:.12,spacing:.78,pitch:.18,
-  turns:1,phase:40,tiltX:-8,tiltZ:-7,offsetY:-.02,
-  tailTaper:.18,tailDepth:.18,wave:.035,autoSpeed:0,
-  opacity:1,tintStrength:.94,saturation:.08,contrast:1.08,brightness:1,
-  mobileScale:.68
-};
-const ARTWORK=[
-  ['loose-sketches.jpg','Loose Sketches'],['imagination.jpg','Imagination'],
-  ['swank-flat.jpg','SWANK'],['watch-reference.jpg','DFZ Watch'],
-  ['style-reference.jpg','Style — 2026'],['novaglam.jpg','Novaglam'],
-  ['headphones.jpg','Every Note'],['editorial.jpg','Selected Work']
-];
-const STRIP_ORDER=[0,1,3,7,2,5,4,6];
-export function createLogoCards(THREE,{config,renderer,deferTextures=false,progressiveTextures=false}){
-  const group=new THREE.Group();group.name='logo-slide-card-helix';group.visible=false;
-  const geometry=new THREE.PlaneGeometry(1,1,48,4),meshes=[],textures=[];
-  const fallbackCanvas=document.createElement('canvas');fallbackCanvas.width=2;fallbackCanvas.height=2;
-  const context=fallbackCanvas.getContext('2d');context.fillStyle='#becfe0';context.fillRect(0,0,2,2);
-  const placeholder=new THREE.CanvasTexture(fallbackCanvas);placeholder.colorSpace=THREE.SRGBColorSpace;
-  const vertexShader=/* glsl */`
+export const LOGO_CARD_DEFAULTS={enabled:1,radius:.94,size:.9,gap:.12,spacing:.78,pitch:.18,turns:1,phase:40,tiltX:-8,tiltZ:-7,offsetY:-.02,tailTaper:.18,tailDepth:.18,wave:.035,autoSpeed:0,opacity:1,tintStrength:.94,saturation:.08,contrast:1.08,brightness:1,mobileScale:.68};const ARTWORK=[["loose-sketches.jpg","Loose Sketches"],["imagination.jpg","Imagination"],["swank-flat.jpg","SWANK"],["watch-reference.jpg","DFZ Watch"],["style-reference.jpg","Style \u2014 2026"],["novaglam.jpg","Novaglam"],["headphones.jpg","Every Note"],["editorial.jpg","Selected Work"]],STRIP_ORDER=[0,1,3,7,2,5,4,6];export function createLogoCards(THREE,{config,renderer,deferTextures=!1,progressiveTextures=!1}){const group=new THREE.Group;group.name="logo-slide-card-helix",group.visible=!1;const geometry=new THREE.PlaneGeometry(1,1,48,4),meshes=[],textures=[],fallbackCanvas=document.createElement("canvas");fallbackCanvas.width=2,fallbackCanvas.height=2;const context=fallbackCanvas.getContext("2d");context.fillStyle="#becfe0",context.fillRect(0,0,2,2);const placeholder=new THREE.CanvasTexture(fallbackCanvas);placeholder.colorSpace=THREE.SRGBColorSpace;const vertexShader=`
     uniform float uRadius,uArc,uHeight,uPitch,uWave,uAngle,uPathAngle,uRadiusSlope,uDepthSlope;
     varying vec2 vUv;varying vec3 vWorld;
     float pathY(float a){return -uPitch*a+uWave*sin(a*1.6);}
@@ -34,8 +13,7 @@ export function createLogoCards(THREE,{config,renderer,deferTextures=false,progr
       vec4 world=modelMatrix*vec4(p,1.);vWorld=world.xyz;
       gl_Position=projectionMatrix*viewMatrix*world;
     }
-  `;
-  const fragmentShader=/* glsl */`
+  `,fragmentShader=`
     uniform sampler2D uTexture;
     uniform vec2 uCrop;
     uniform vec3 uPaper,uInk;
@@ -59,59 +37,4 @@ export function createLogoCards(THREE,{config,renderer,deferTextures=false,progr
       color=mix(color,uPaper*.9,border*.35);
       gl_FragColor=vec4(color,uOpacity*coverage);
     }
-  `;
-  for(let index=0;index<ARTWORK.length;index++){
-    const uniforms={uTexture:{value:placeholder},uCrop:{value:new THREE.Vector2(1,1)},uPaper:{value:new THREE.Color()},uInk:{value:new THREE.Color()},uOpacity:{value:0},uTintStrength:{value:1},uSaturation:{value:0},uContrast:{value:1},uBrightness:{value:1}};
-    for(const name of ['Radius','Arc','Height','Pitch','Wave','Angle','PathAngle','RadiusSlope','DepthSlope'])uniforms['u'+name]={value:0};
-    const material=new THREE.ShaderMaterial({name:'Silver-blue card · '+ARTWORK[index][1],uniforms,vertexShader,fragmentShader,side:THREE.DoubleSide,transparent:true,depthWrite:true});
-    const mesh=new THREE.Mesh(geometry,material);mesh.name=ARTWORK[index][1];mesh.frustumCulled=false;
-    mesh.userData.slot=STRIP_ORDER.indexOf(index);mesh.userData.aspect=1.46;
-    // Draw the cards before the glass; their depth keeps foreground cards in front.
-    mesh.renderOrder=4;group.add(mesh);meshes.push(mesh);
-  }
-  const loader=new THREE.TextureLoader();
-  let ready=null,disposed=false,lastTime=null;
-  function loadAssets(){
-    if(disposed)return Promise.resolve([]);
-    if(ready)return ready;
-    ready=Promise.all(ARTWORK.map(([file],index)=>new Promise(resolve=>{
-    loader.load('./images/slides/'+file,texture=>{
-      if(disposed){texture.dispose();resolve(false);return;}
-      texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-      textures.push(texture);meshes[index].material.uniforms.uTexture.value=texture;
-      meshes[index].userData.aspect=texture.image.width/texture.image.height;meshes[index].userData.loadedAt=lastTime??0;resolve(true);
-    },undefined,error=>{console.warn('Logo card image unavailable:',file,error);resolve(false)});
-  })));
-    return ready;
-  }
-  if(!deferTextures)loadAssets();
-  const rotation=new THREE.Euler(),orientation=new THREE.Quaternion();
-  let autoAngle=0;
-  function update({progress=0,reveal=1,exit=0,time=0,reducedMotion=false,palette,mobile=false}={}){
-    const C=config,dt=lastTime===null?0:Math.min(.05,Math.max(0,time-lastTime));lastTime=time;
-    // Optional autoplay is integrated: changing its speed cannot jump the card positions.
-    if(!reducedMotion)autoAngle=(autoAngle+dt*C.autoSpeed)%(Math.PI*2);
-    const fade=reveal*(1-exit)*C.opacity;
-    group.visible=C.enabled>.5&&fade>.001;
-    if(!group.visible)return;
-    loadAssets();
-    const fit=mobile?C.mobileScale:1;group.scale.setScalar(fit);
-    rotation.set(THREE.MathUtils.degToRad(C.tiltX),0,THREE.MathUtils.degToRad(C.tiltZ));orientation.setFromEuler(rotation);
-    const phase=THREE.MathUtils.degToRad(C.phase),spin=phase-progress*C.turns*Math.PI*2;
-    const centering=C.pitch*(phase-Math.PI*C.turns)+C.offsetY;
-    const arc=C.spacing*(1-C.gap)*C.size;
-    for(const mesh of meshes){
-      const slot=mesh.userData.slot,frac=slot/(meshes.length-1);
-      const radius=C.radius*(1-C.tailTaper+frac*C.tailTaper),pathAngle=(slot-(meshes.length-1)/2)*C.spacing+spin,angle=pathAngle+autoAngle;
-      mesh.position.set(Math.sin(angle)*radius,-C.pitch*pathAngle+C.wave*Math.sin(pathAngle*1.6),Math.cos(angle)*radius-C.tailDepth*(1-frac));
-      mesh.position.applyQuaternion(orientation);mesh.position.y+=centering;mesh.quaternion.copy(orientation);
-      const u=mesh.material.uniforms;
-      const photoFade=!progressiveTextures?1:mesh.userData.loadedAt===undefined?0:reducedMotion?1:THREE.MathUtils.smoothstep(time-mesh.userData.loadedAt,0,.28);
-      const values={Radius:radius,Arc:arc,Height:radius*arc/1.46,Pitch:C.pitch,Wave:C.wave,Angle:angle,PathAngle:pathAngle,RadiusSlope:C.radius*C.tailTaper/((meshes.length-1)*C.spacing),DepthSlope:C.tailDepth/((meshes.length-1)*C.spacing),Opacity:fade*photoFade,TintStrength:C.tintStrength,Saturation:C.saturation,Contrast:C.contrast,Brightness:C.brightness};
-      for(const [key,value] of Object.entries(values))u['u'+key].value=value;
-      const aspect=mesh.userData.aspect;u.uCrop.value.set(Math.min(1,1.46/aspect),Math.min(1,aspect/1.46));
-      if(palette){u.uPaper.value.set(palette.horizon);u.uInk.value.set(palette.ink);}
-    }
-  }
-  return {group,meshes,get ready(){return loadAssets();},loadAssets,update,dispose(){disposed=true;geometry.dispose();placeholder.dispose();textures.forEach(t=>t.dispose());meshes.forEach(m=>m.material.dispose());}};
-}
+  `;for(let index=0;index<ARTWORK.length;index++){const uniforms={uTexture:{value:placeholder},uCrop:{value:new THREE.Vector2(1,1)},uPaper:{value:new THREE.Color},uInk:{value:new THREE.Color},uOpacity:{value:0},uTintStrength:{value:1},uSaturation:{value:0},uContrast:{value:1},uBrightness:{value:1}};for(const name of["Radius","Arc","Height","Pitch","Wave","Angle","PathAngle","RadiusSlope","DepthSlope"])uniforms["u"+name]={value:0};const material=new THREE.ShaderMaterial({name:"Silver-blue card \xB7 "+ARTWORK[index][1],uniforms,vertexShader,fragmentShader,side:THREE.DoubleSide,transparent:!0,depthWrite:!0}),mesh=new THREE.Mesh(geometry,material);mesh.name=ARTWORK[index][1],mesh.frustumCulled=!1,mesh.userData.slot=STRIP_ORDER.indexOf(index),mesh.userData.aspect=1.46,mesh.renderOrder=4,group.add(mesh),meshes.push(mesh)}const loader=new THREE.TextureLoader;let ready=null,disposed=!1,lastTime=null;function loadAssets(){return disposed?Promise.resolve([]):ready||(ready=Promise.all(ARTWORK.map(([file],index)=>new Promise(resolve=>{loader.load("./images/slides/"+file,texture=>{if(disposed){texture.dispose(),resolve(!1);return}texture.colorSpace=THREE.SRGBColorSpace,texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()),textures.push(texture),meshes[index].material.uniforms.uTexture.value=texture,meshes[index].userData.aspect=texture.image.width/texture.image.height,meshes[index].userData.loadedAt=lastTime??0,resolve(!0)},void 0,error=>{console.warn("Logo card image unavailable:",file,error),resolve(!1)})}))),ready)}deferTextures||loadAssets();const rotation=new THREE.Euler,orientation=new THREE.Quaternion;let autoAngle=0;function update({progress=0,reveal=1,exit=0,time=0,reducedMotion=!1,palette,mobile=!1}={}){const C=config,dt=lastTime===null?0:Math.min(.05,Math.max(0,time-lastTime));lastTime=time,reducedMotion||(autoAngle=(autoAngle+dt*C.autoSpeed)%(Math.PI*2));const fade=reveal*(1-exit)*C.opacity;if(group.visible=C.enabled>.5&&fade>.001,!group.visible)return;loadAssets();const fit=mobile?C.mobileScale:1;group.scale.setScalar(fit),rotation.set(THREE.MathUtils.degToRad(C.tiltX),0,THREE.MathUtils.degToRad(C.tiltZ)),orientation.setFromEuler(rotation);const phase=THREE.MathUtils.degToRad(C.phase),spin=phase-progress*C.turns*Math.PI*2,centering=C.pitch*(phase-Math.PI*C.turns)+C.offsetY,arc=C.spacing*(1-C.gap)*C.size;for(const mesh of meshes){const slot=mesh.userData.slot,frac=slot/(meshes.length-1),radius=C.radius*(1-C.tailTaper+frac*C.tailTaper),pathAngle=(slot-(meshes.length-1)/2)*C.spacing+spin,angle=pathAngle+autoAngle;mesh.position.set(Math.sin(angle)*radius,-C.pitch*pathAngle+C.wave*Math.sin(pathAngle*1.6),Math.cos(angle)*radius-C.tailDepth*(1-frac)),mesh.position.applyQuaternion(orientation),mesh.position.y+=centering,mesh.quaternion.copy(orientation);const u=mesh.material.uniforms,photoFade=progressiveTextures?mesh.userData.loadedAt===void 0?0:reducedMotion?1:THREE.MathUtils.smoothstep(time-mesh.userData.loadedAt,0,.28):1,values={Radius:radius,Arc:arc,Height:radius*arc/1.46,Pitch:C.pitch,Wave:C.wave,Angle:angle,PathAngle:pathAngle,RadiusSlope:C.radius*C.tailTaper/((meshes.length-1)*C.spacing),DepthSlope:C.tailDepth/((meshes.length-1)*C.spacing),Opacity:fade*photoFade,TintStrength:C.tintStrength,Saturation:C.saturation,Contrast:C.contrast,Brightness:C.brightness};for(const[key,value]of Object.entries(values))u["u"+key].value=value;const aspect=mesh.userData.aspect;u.uCrop.value.set(Math.min(1,1.46/aspect),Math.min(1,aspect/1.46)),palette&&(u.uPaper.value.set(palette.horizon),u.uInk.value.set(palette.ink))}}return{group,meshes,get ready(){return loadAssets()},loadAssets,update,dispose(){disposed=!0,geometry.dispose(),placeholder.dispose(),textures.forEach(t=>t.dispose()),meshes.forEach(m=>m.material.dispose())}}}

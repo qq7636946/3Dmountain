@@ -1,0 +1,1 @@
+export function globeScrollDegrees(y,globalStart,globalHeight,degreesPerSection=34){if(![y,globalStart,globalHeight].every(Number.isFinite))return 0;const span=Math.max(1,globalHeight);return Math.max(0,(y-globalStart)/span)*(Number.isFinite(degreesPerSection)?degreesPerSection:34)}

@@ -1,63 +1,4 @@
-/* Flow2 · after FOUR PATHS: the view becomes 3D lines, the lens dives into the lake, the next block (team F3, 2026-11-16). index1-5-canyon-forest.html.
-   Client: 「往下滾直接往湖泊放大+轉場到下一頁就好 不要放大又縮小，往下滾的流程是變成3D線條如圖1，然後往湖泊放大後 …oceanx… 這種中間放大Webgl放大轉場，
-   然後下個區塊你隨便用假文案假區塊先放就好」 and 「但都要注意效能問題」.
-
-   When the journey stands at its end (FOUR PATHS), the wheel / keys / touch that flow2-scope.js used to swallow drive one more progress, A (0 → 1):
-     A 0   → .34  LINES  the view turns into 3D lines (team F2: window.__FLOW2_LATTICE__.set; feature-detected) and the chapter's copy, labels and
-                         rail step aside (the header stays);
-     A .34 → .82  ZOOM   the lens dives straight into the lake's centre (the scene's setZoom: aim to the lake, tilt to straight down, distance to 6 %;
-                         it only ever gets closer) and, as at OceanX, a round window in the middle magnifies the water under a fine blue grid with
-                         cross ticks and grows until it fills the screen; the lines give way to the lake's real water on the way down;
-     A .82 → 1    NEXT   the next block (placeholder copy, plain HTML/CSS) comes up over the water; at 1 it is a normal scrolling page.
-   Scrolling back at the top of the next block runs it all backwards. Nothing moves on its own: A eases to where the hand put it, then the loop stops.
-   Cost: the lens is ONE full-screen pass, only while the zoom runs (flow2-forest-atlas.js calls lens() after drawing the view); once the next
-   block covers the screen the view is not drawn at all (the atlas reads .covered). ?after=0 = the page ends at FOUR PATHS as before.
-   Live: window.__FLOW2_AFTER__ = { state, tune, set(a), … }.
-
-   SINCE THE SAME DAY (client: 「俯視的轉場直接跟山道>俯視的方法一樣就好，只是俯視的轉場是中間打開， 網格跟放大就不用了」) the default is the
-   'open' mode: the same hand-over as the canyon → view (flow2-lift-cut.js's brush: its duration, its ease, its feathered bristled edge, both
-   pictures dragged a little where the brush is), only it OPENS FROM THE CENTRE outward. The first turn of the wheel past FOUR PATHS starts it
-   and it plays on time (the visitor's input meanwhile is absorbed); the view is painted away to the next block's ground, then the block's
-   HTML takes over and its content comes in. At the top of the block, about two notches up (the stroke's own threshold) close it the same
-   way, towards the centre, and the view is back as it was. No lines, no dive, no window, no tilt. While it plays html[data-flow2-brush] is
-   set ('after-in' / 'after-out'), as the canyon's stroke does. ?after=lines = the lines → dive → window segment above. */
-(() => {
-  'use strict';
-  const Q = new URLSearchParams(location.search);
-  if (Q.get('after') === '0') return;
-  /* team LZ (2026-11-17): the default is now THE DIVE (flow2-lake-dive.js, OceanX-style continuous dive into the screen centre); ?after=open = the
-     centre-opening brush of 11-16 unchanged; ?after=lines = the lines → dive → window segment. The dive reuses the open mode's clock, hand and block. */
-  const DIVE = window.__FLOW2_LAKE_DIVE__ || null;
-  const MODE = Q.get('after') === 'lines' ? 'lines' : (Q.get('after') === 'open' || !DIVE) ? 'open' : 'dive';
-  const OPENLIKE = MODE !== 'lines';
-  const html = document.documentElement;
-  const reduced = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (error) { return false; } })();
-  const num = (k, d) => { const v = parseFloat(Q.get(k)); return Number.isFinite(v) ? v : d; };
-  const T = {
-    travel: num('afterTravel', 1500),   // wheel pixels for the whole of A (about 15 notches)
-    follow: 5.5,                         // how fast A follows the hand (1/s)
-    lines: [0, .34], zoom: [.34, .82], next: [.82, 1],
-    lensFrom: .17,                       // the window's radius at the start of the zoom (share of the screen's short side)
-    lensTo: 1.95,                        // … at its end (beyond every corner, the feather included, on wide and tall screens)
-    feather: [.10, .42],                 // the feather's width at the start and the end of the zoom (short-side units)
-    edgeNoise: .22,                      // how far the noise breaks the edge (share of the radius); it calms toward the end
-    tilt: num('afterTilt', 30),       // degrees the lens tilts up during the lines (eased back during the dive)
-    mag: .85,                            // extra magnification in the middle of the zoom (1 + mag at the peak, back to 1 at the end)
-    grid: 1,                             // the grid's strength
-    linesOut: [.12, .6]                  // during the zoom (share of the zoom) the lines dissolve as the window spreads
-  };
-  const NOLENS = Q.get('afterLens') === '0';
-  const S = { a: 0, target: 0, stage: 'off', covered: false, lens: 0, lattice: 0, zoom: 0, loop: false, steps: 0 };
-  const clamp01 = v => Math.min(1, Math.max(0, v)), seg = (a, r) => clamp01((a - r[0]) / (r[1] - r[0])), smooth = t => t * t * (3 - 2 * t);
-  const study = () => window.__MONTIS_STUDY__, forest = () => window.__FLOW2_FOREST_ATLAS__?.scene || null;
-
-  /* ---------------- the next block (placeholder copy; plain HTML/CSS) ---------------- */
-  let block = null, scroller = null;
-  let styled = false;
-  function buildStyle() {
-    if (styled) return; styled = true;
-    const style = document.createElement('style');
-    style.textContent = `
+(()=>{"use strict";const Q=new URLSearchParams(location.search);if(Q.get("after")==="0")return;const DIVE=window.__FLOW2_LAKE_DIVE__||null,MODE=Q.get("after")==="lines"?"lines":Q.get("after")==="open"||!DIVE?"open":"dive",OPENLIKE=MODE!=="lines",html=document.documentElement,reduced=(()=>{try{return matchMedia("(prefers-reduced-motion: reduce)").matches}catch{return!1}})(),num=(k,d)=>{const v=parseFloat(Q.get(k));return Number.isFinite(v)?v:d},T={travel:num("afterTravel",1500),follow:5.5,lines:[0,.34],zoom:[.34,.82],next:[.82,1],lensFrom:.17,lensTo:1.95,feather:[.1,.42],edgeNoise:.22,tilt:num("afterTilt",30),mag:.85,grid:1,linesOut:[.12,.6]},NOLENS=Q.get("afterLens")==="0",S={a:0,target:0,stage:"off",covered:!1,lens:0,lattice:0,zoom:0,loop:!1,steps:0},clamp01=v=>Math.min(1,Math.max(0,v)),seg=(a,r)=>clamp01((a-r[0])/(r[1]-r[0])),smooth=t=>t*t*(3-2*t),study=()=>window.__MONTIS_STUDY__,forest=()=>window.__FLOW2_FOREST_ATLAS__?.scene||null;let block=null,scroller=null,styled=!1;function buildStyle(){if(styled)return;styled=!0;const style=document.createElement("style");style.textContent=`
       .f2-next { position: fixed; inset: 0; z-index: 6; opacity: 0; visibility: hidden; pointer-events: none; transform: translate3d(0, 6vh, 0);
         background: radial-gradient(120% 90% at 50% 0%, #10314f 0%, #0a1d33 46%, #061222 100%); color: #e9f2ff; }
       .f2-next.is-on { visibility: visible; }
@@ -91,41 +32,26 @@
       /* THE DIVE: the interface leaves quickly (the dive itself is 1.5 s) */
       :root:not(#a1):not(#a2):not(#a3):not(#a4):not(#a5):not(#a6):not(#a7):not(#a8)[data-flow2-after][data-flow2-dive]:not([data-flow2-after="off"]) :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .f2td-layer, .alp-labels, #flow2-canyon-atlas, .fi-copy-panel) {
         transition: opacity .3s ease !important; }
-      /* …and the next block stands on the dive's last picture (the close water sunk into navy): a light veil of its own ground, no grid; its copy rises in */
+      /* \u2026and the next block stands on the dive's last picture (the close water sunk into navy): a light veil of its own ground, no grid; its copy rises in */
       .f2-next.is-dive { background: radial-gradient(120% 90% at 50% 0%, rgb(16 49 79 / .34) 0%, rgb(10 29 51 / .3) 46%, rgb(6 18 34 / .42) 100%); }
       .f2-next.is-dive::before { display: none; }
       .f2-next.is-dive .f2n-wrap { transition: transform 1.1s cubic-bezier(.2, .7, .2, 1), opacity .8s ease; }
       .f2-next.is-dive:not(.is-in) .f2n-wrap { transform: translate3d(0, 28px, 0); opacity: 0; }
-      /* …and nothing inside them takes the pointer or a touch (a faded button's inner spans kept pointer-events: auto and caught the finger) */
-      :root:not(#a1):not(#a2):not(#a3):not(#a4):not(#a5):not(#a6):not(#a7):not(#a8)[data-flow2-after]:not([data-flow2-after="off"]) :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .f2td-layer, .alp-labels, #flow2-canyon-atlas, .fi-copy-panel) * { pointer-events: none !important; }`;
-    document.head.append(style);
-  }
-  function buildBlock() {
-    if (block) return;
-    buildStyle();
-    block = document.createElement('section');
-    block.className = 'f2-next'; block.setAttribute('aria-label', '下一個區塊（暫用文案）'); block.setAttribute('aria-hidden', 'true'); block.inert = true;
-    block.innerHTML = `<div class="f2-next-scroll"><div class="f2n-wrap">
-      <p class="f2n-kicker">03 · Why Finnovation · 暫用文案</p>
+      /* \u2026and nothing inside them takes the pointer or a touch (a faded button's inner spans kept pointer-events: auto and caught the finger) */
+      :root:not(#a1):not(#a2):not(#a3):not(#a4):not(#a5):not(#a6):not(#a7):not(#a8)[data-flow2-after]:not([data-flow2-after="off"]) :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .f2td-layer, .alp-labels, #flow2-canyon-atlas, .fi-copy-panel) * { pointer-events: none !important; }`,document.head.append(style)}function buildBlock(){block||(buildStyle(),block=document.createElement("section"),block.className="f2-next",block.setAttribute("aria-label","\u4E0B\u4E00\u500B\u5340\u584A\uFF08\u66AB\u7528\u6587\u6848\uFF09"),block.setAttribute("aria-hidden","true"),block.inert=!0,block.innerHTML=`<div class="f2-next-scroll"><div class="f2n-wrap">
+      <p class="f2n-kicker">03 \xB7 Why Finnovation \xB7 \u66AB\u7528\u6587\u6848</p>
       <h2 class="f2n-title">Depth beneath<br>the surface</h2>
-      <p class="f2n-lead">在水面之下，看見價值真正的流向</p>
-      <p class="f2n-body">這裡是下一個區塊的暫用文案。恒灝以研究為本、以紀律為綱，從四大投資領域的交會處出發，尋找能長期累積的價值。正式內容確認後替換。</p>
-      <a class="f2n-cta" href="#" onclick="return false">了解我們的方法<i>→</i></a>
+      <p class="f2n-lead">\u5728\u6C34\u9762\u4E4B\u4E0B\uFF0C\u770B\u898B\u50F9\u503C\u771F\u6B63\u7684\u6D41\u5411</p>
+      <p class="f2n-body">\u9019\u88E1\u662F\u4E0B\u4E00\u500B\u5340\u584A\u7684\u66AB\u7528\u6587\u6848\u3002\u6052\u705D\u4EE5\u7814\u7A76\u70BA\u672C\u3001\u4EE5\u7D00\u5F8B\u70BA\u7DB1\uFF0C\u5F9E\u56DB\u5927\u6295\u8CC7\u9818\u57DF\u7684\u4EA4\u6703\u8655\u51FA\u767C\uFF0C\u5C0B\u627E\u80FD\u9577\u671F\u7D2F\u7A4D\u7684\u50F9\u503C\u3002\u6B63\u5F0F\u5167\u5BB9\u78BA\u8A8D\u5F8C\u66FF\u63DB\u3002</p>
+      <a class="f2n-cta" href="#" onclick="return false">\u4E86\u89E3\u6211\u5011\u7684\u65B9\u6CD5<i>\u2192</i></a>
       <div class="f2n-cards">
-        <div class="f2n-card"><b>01</b><h3>洞察 Insight</h3><p>暫用文案：以科技與研究洞察市場，從資料裡看見趨勢的起點。</p></div>
-        <div class="f2n-card"><b>02</b><h3>紀律 Discipline</h3><p>暫用文案：以一致的流程與風險控管，讓每一次決策都經得起時間。</p></div>
-        <div class="f2n-card"><b>03</b><h3>長期 Long term</h3><p>暫用文案：與企業、人才與資本一起成長，讓價值持續流向它該去的地方。</p></div>
+        <div class="f2n-card"><b>01</b><h3>\u6D1E\u5BDF Insight</h3><p>\u66AB\u7528\u6587\u6848\uFF1A\u4EE5\u79D1\u6280\u8207\u7814\u7A76\u6D1E\u5BDF\u5E02\u5834\uFF0C\u5F9E\u8CC7\u6599\u88E1\u770B\u898B\u8DA8\u52E2\u7684\u8D77\u9EDE\u3002</p></div>
+        <div class="f2n-card"><b>02</b><h3>\u7D00\u5F8B Discipline</h3><p>\u66AB\u7528\u6587\u6848\uFF1A\u4EE5\u4E00\u81F4\u7684\u6D41\u7A0B\u8207\u98A8\u96AA\u63A7\u7BA1\uFF0C\u8B93\u6BCF\u4E00\u6B21\u6C7A\u7B56\u90FD\u7D93\u5F97\u8D77\u6642\u9593\u3002</p></div>
+        <div class="f2n-card"><b>03</b><h3>\u9577\u671F Long term</h3><p>\u66AB\u7528\u6587\u6848\uFF1A\u8207\u4F01\u696D\u3001\u4EBA\u624D\u8207\u8CC7\u672C\u4E00\u8D77\u6210\u9577\uFF0C\u8B93\u50F9\u503C\u6301\u7E8C\u6D41\u5411\u5B83\u8A72\u53BB\u7684\u5730\u65B9\u3002</p></div>
       </div>
-      <div class="f2n-band"><div><strong>4</strong><span>大投資領域（暫用）</span></div><div><strong>12+</strong><span>年研究累積（暫用）</span></div><div><strong>100%</strong><span>長期導向（暫用）</span></div></div>
-      <p class="f2n-note">PLACEHOLDER · 內容準備中</p>
-    </div></div>`;
-    document.body.append(block);
-    scroller = block.querySelector('.f2-next-scroll');
-  }
-
-  /* ---------------- the lens pass (built on first use; one full-screen pass, only while the zoom runs) ---------------- */
-  let lensMat = null, lensScene = null, lensCam = null, lensRT = null, forestTex = null, passRef = null, THREEref = null;
-  const LENS_FRAG = `
+      <div class="f2n-band"><div><strong>4</strong><span>\u5927\u6295\u8CC7\u9818\u57DF\uFF08\u66AB\u7528\uFF09</span></div><div><strong>12+</strong><span>\u5E74\u7814\u7A76\u7D2F\u7A4D\uFF08\u66AB\u7528\uFF09</span></div><div><strong>100%</strong><span>\u9577\u671F\u5C0E\u5411\uFF08\u66AB\u7528\uFF09</span></div></div>
+      <p class="f2n-note">PLACEHOLDER \xB7 \u5167\u5BB9\u6E96\u5099\u4E2D</p>
+    </div></div>`,document.body.append(block),scroller=block.querySelector(".f2-next-scroll"))}let lensMat=null,lensScene=null,lensCam=null,lensRT=null,forestTex=null,passRef=null,THREEref=null;const LENS_FRAG=`
     uniform sampler2D tSrc; uniform vec2 uRes, uCenter; uniform vec4 uLens, uLens2; varying vec2 vUv;
     /* uLens = (amount, radius, magnification, grid); uLens2 = (feather width, edge noise, progress, -) */
     float lzHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -154,107 +80,7 @@
       float tick = (1. - smoothstep(.6, 1.4, min(tf.x, tf.y))) * (1. - smoothstep(5., 6.5, max(tf.x, tf.y)));
       col += vec3(.42, .70, 1.) * (line * .14 + tick * .5) * uLens.w * smoothstep(.55, 1., open);
       gl_FragColor = vec4(col, 1.);
-    }`;
-  function buildLens(THREE) {
-    THREEref = THREE;
-    lensMat = new THREE.ShaderMaterial({ uniforms: { tSrc: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uCenter: { value: new THREE.Vector2(.5, .5) }, uLens: { value: new THREE.Vector4() }, uLens2: { value: new THREE.Vector4() } },
-      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: LENS_FRAG, depthTest: false, depthWrite: false, toneMapped: false });
-    lensScene = new THREE.Scene(); lensCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), lensMat); quad.frustumCulled = false; lensScene.add(quad);
-    lensRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
-  }
-  const projected = { x: .5, y: .5 };
-  /* called by flow2-forest-atlas.js right after it drew the view into its buffer (that buffer bound, tone mapping off) */
-  function lens(renderer, src, pass, atlas, THREE) {
-    if (!pass || !src) return;
-    passRef = pass; if (!forestTex) forestTex = src.texture;
-    if (MODE === 'open') { openPass(renderer, src, pass, THREE); return; }
-    if (MODE === 'dive') { divePass(renderer, src, pass, atlas, THREE); return; }
-    if (S.lens <= .001) { if (pass.uniforms.tForest.value !== src.texture) pass.uniforms.tForest.value = src.texture; return; }
-    if (!lensMat) buildLens(THREE);
-    if (lensRT.width !== src.width || lensRT.height !== src.height) lensRT.setSize(src.width, src.height);
-    const F = forest();
-    if (F && F.lake && F.camera && THREE) { const v = new THREE.Vector3().copy(F.lake.center).project(F.camera); if (Number.isFinite(v.x)) { projected.x = v.x * .5 + .5; projected.y = v.y * .5 + .5; } }
-    const U = lensMat.uniforms, z = S.zoomT;
-    U.tSrc.value = src.texture; U.uRes.value.set(src.width, src.height); U.uCenter.value.set(projected.x, projected.y);
-    const grow = smooth(z);
-    U.uLens.value.set(S.lens, T.lensFrom + (T.lensTo - T.lensFrom) * grow * grow, 1 + T.mag * Math.sin(Math.PI * z), T.grid * S.lens * (1 - smooth(clamp01((z - .65) / .3))));
-    U.uLens2.value.set(T.feather[0] + (T.feather[1] - T.feather[0]) * grow, T.edgeNoise * (1 - .7 * grow), z, 0);
-    const prev = renderer.getRenderTarget();
-    renderer.setRenderTarget(lensRT); renderer.render(lensScene, lensCam); renderer.setRenderTarget(prev);
-    pass.uniforms.tForest.value = lensRT.texture;
-  }
-
-  /* ---------------- A → the scene ---------------- */
-  function apply() {
-    const a = S.a;
-    const lines = smooth(seg(a, T.lines)), zt = seg(a, T.zoom), nx = smooth(seg(a, T.next));
-    S.zoomT = zt;
-    const stage = a <= 1e-4 ? 'off' : a < T.lines[1] ? 'lines' : a < T.zoom[1] ? 'zoom' : a < .999 ? 'next' : 'in';
-    if (stage !== S.stage) { S.stage = stage; html.dataset.flow2After = stage; }
-    /* the lines (F2), giving way to the lake's real water during the dive */
-    const giveWay = smooth(clamp01((zt - T.linesOut[0]) / (T.linesOut[1] - T.linesOut[0])));
-    S.lattice = lines * (1 - giveWay);
-    try { window.__FLOW2_LATTICE__?.set?.(S.lattice); } catch (error) { }
-    /* the dive */
-    S.zoom = smooth(zt);
-    try { forest()?.setZoom?.(S.zoom); } catch (error) { }
-    /* the lines are seen from an oblique lens (the client's picture 1: rolling wire terrain): the lens tilts up with the lines, then the tilt
-       eases back while the dive takes it straight down — one move, never away from the lake. The entry offsets are shared with the canyon → view
-       entrance (flow2-aerial-entry.js uses them only during its arrival); this file holds them only while A > 0 and lets go once at 0. */
-    const F = forest();
-    if (F && typeof F.setEntry === 'function') {
-      if (a > 1e-4) { const tilt = T.tilt * lines * (1 - smooth(clamp01(zt / .7))); try { F.setEntry({ fore: tilt, side: 0, turn: 0, dist: 1 - .08 * lines * (1 - zt) }); } catch (error) { } S.entry = +tilt.toFixed(2); S.holding = true; }
-      else if (S.holding) { try { F.setEntry(null); } catch (error) { } S.holding = false; S.entry = 0; }
-    }
-    /* the window: grows in over the first sixth of the zoom, gone at its end (the picture is then the plain dive) */
-    S.lens = zt <= 0 || zt >= 1 ? 0 : smooth(clamp01(zt / .16)) * (1 - smooth(clamp01((zt - .9) / .1)));
-    if (NOLENS) S.lens = 0;   /* ?afterLens=0: the dive without the window (to compare its cost) */
-    /* the next block */
-    if (nx > 0 || block) buildBlock();
-    if (block) {
-      block.style.opacity = nx.toFixed(3);
-      block.style.transform = `translate3d(0, ${((1 - nx) * 6).toFixed(2)}vh, 0)`;
-      block.classList.toggle('is-on', nx > 0);
-      const inNow = a >= .999;
-      if (block.classList.contains('is-in') !== inNow) { block.classList.toggle('is-in', inNow); block.inert = !inNow; block.setAttribute('aria-hidden', inNow ? 'false' : 'true'); }
-    }
-    const covered = a >= .995;
-    if (covered !== S.covered) { S.covered = covered; if (covered && passRef && forestTex) passRef.uniforms.tForest.value = forestTex; }
-  }
-  let last = 0;
-  function tick(now) {
-    const dt = last ? Math.min(.1, (now - last) / 1000) : 1 / 60; last = now;
-    const k = reduced ? 1 : 1 - Math.exp(-dt * T.follow);
-    S.a += (S.target - S.a) * k;
-    if (Math.abs(S.target - S.a) < 2e-4) S.a = S.target;
-    S.steps++;
-    apply();
-    if (S.a !== S.target) requestAnimationFrame(tick); else { S.loop = false; last = 0; }
-  }
-  function setTarget(v) {
-    S.target = clamp01(v);
-    if (!S.loop) { S.loop = true; last = 0; requestAnimationFrame(tick); }
-    if (S.target > 0) watchJourney();
-  }
-  /* if the journey leaves its end while A is open (the menu, the rail), A closes */
-  let watching = 0;
-  function watchJourney() {
-    if (watching) return;
-    watching = setInterval(() => {
-      const J = study()?.journey;
-      if (OPENLIKE) { if (O.phase === 'off') { clearInterval(watching); watching = 0; return; } if (J && J.target < J.max - .01 && O.phase === 'in') startClose(); return; }
-      if (S.target <= 0 && S.a <= 0) { clearInterval(watching); watching = 0; return; }
-      if (J && J.target < J.max - .01) setTarget(0);
-    }, 400);
-  }
-
-  /* ---------------- OPEN MODE: the canyon → view brush, opening from the centre ---------------- */
-  const O = { nativeAt: 0, phase: 'off', t: 0, brush: 0, t0: 0, upAsk: 0, upAt: 0, fadeUntil: 0 };
-  S.open = O;
-  const cutTune = () => (window.__FLOW2_LIFT_CUT__ && window.__FLOW2_LIFT_CUT__.tune) || {};
-  const span = () => Math.max(.05, reduced ? (+cutTune().reduceFade || .3) : MODE === 'dive' ? (O.phase === 'closing' ? +DIVE.tune.closeTime || 1.2 : +DIVE.tune.time || 1.5) : (+cutTune().brushTime || 1.15));
-  const BRUSH_FRAG = `
+    }`;function buildLens(THREE){THREEref=THREE,lensMat=new THREE.ShaderMaterial({uniforms:{tSrc:{value:null},uRes:{value:new THREE.Vector2(1,1)},uCenter:{value:new THREE.Vector2(.5,.5)},uLens:{value:new THREE.Vector4},uLens2:{value:new THREE.Vector4}},vertexShader:"varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }",fragmentShader:LENS_FRAG,depthTest:!1,depthWrite:!1,toneMapped:!1}),lensScene=new THREE.Scene,lensCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),lensMat);quad.frustumCulled=!1,lensScene.add(quad),lensRT=new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType,depthBuffer:!1})}const projected={x:.5,y:.5};function lens(renderer,src,pass,atlas,THREE){if(!pass||!src)return;if(passRef=pass,forestTex||(forestTex=src.texture),MODE==="open"){openPass(renderer,src,pass,THREE);return}if(MODE==="dive"){divePass(renderer,src,pass,atlas,THREE);return}if(S.lens<=.001){pass.uniforms.tForest.value!==src.texture&&(pass.uniforms.tForest.value=src.texture);return}lensMat||buildLens(THREE),(lensRT.width!==src.width||lensRT.height!==src.height)&&lensRT.setSize(src.width,src.height);const F=forest();if(F&&F.lake&&F.camera&&THREE){const v=new THREE.Vector3().copy(F.lake.center).project(F.camera);Number.isFinite(v.x)&&(projected.x=v.x*.5+.5,projected.y=v.y*.5+.5)}const U=lensMat.uniforms,z=S.zoomT;U.tSrc.value=src.texture,U.uRes.value.set(src.width,src.height),U.uCenter.value.set(projected.x,projected.y);const grow=smooth(z);U.uLens.value.set(S.lens,T.lensFrom+(T.lensTo-T.lensFrom)*grow*grow,1+T.mag*Math.sin(Math.PI*z),T.grid*S.lens*(1-smooth(clamp01((z-.65)/.3)))),U.uLens2.value.set(T.feather[0]+(T.feather[1]-T.feather[0])*grow,T.edgeNoise*(1-.7*grow),z,0);const prev=renderer.getRenderTarget();renderer.setRenderTarget(lensRT),renderer.render(lensScene,lensCam),renderer.setRenderTarget(prev),pass.uniforms.tForest.value=lensRT.texture}function apply(){const a=S.a,lines=smooth(seg(a,T.lines)),zt=seg(a,T.zoom),nx=smooth(seg(a,T.next));S.zoomT=zt;const stage=a<=1e-4?"off":a<T.lines[1]?"lines":a<T.zoom[1]?"zoom":a<.999?"next":"in";stage!==S.stage&&(S.stage=stage,html.dataset.flow2After=stage);const giveWay=smooth(clamp01((zt-T.linesOut[0])/(T.linesOut[1]-T.linesOut[0])));S.lattice=lines*(1-giveWay);try{window.__FLOW2_LATTICE__?.set?.(S.lattice)}catch{}S.zoom=smooth(zt);try{forest()?.setZoom?.(S.zoom)}catch{}const F=forest();if(F&&typeof F.setEntry=="function"){if(a>1e-4){const tilt=T.tilt*lines*(1-smooth(clamp01(zt/.7)));try{F.setEntry({fore:tilt,side:0,turn:0,dist:1-.08*lines*(1-zt)})}catch{}S.entry=+tilt.toFixed(2),S.holding=!0}else if(S.holding){try{F.setEntry(null)}catch{}S.holding=!1,S.entry=0}}if(S.lens=zt<=0||zt>=1?0:smooth(clamp01(zt/.16))*(1-smooth(clamp01((zt-.9)/.1))),NOLENS&&(S.lens=0),(nx>0||block)&&buildBlock(),block){block.style.opacity=nx.toFixed(3),block.style.transform=`translate3d(0, ${((1-nx)*6).toFixed(2)}vh, 0)`,block.classList.toggle("is-on",nx>0);const inNow=a>=.999;block.classList.contains("is-in")!==inNow&&(block.classList.toggle("is-in",inNow),block.inert=!inNow,block.setAttribute("aria-hidden",inNow?"false":"true"))}const covered=a>=.995;covered!==S.covered&&(S.covered=covered,covered&&passRef&&forestTex&&(passRef.uniforms.tForest.value=forestTex))}let last=0;function tick(now){const dt=last?Math.min(.1,(now-last)/1e3):.016666666666666666;last=now;const k=reduced?1:1-Math.exp(-dt*T.follow);S.a+=(S.target-S.a)*k,Math.abs(S.target-S.a)<2e-4&&(S.a=S.target),S.steps++,apply(),S.a!==S.target?requestAnimationFrame(tick):(S.loop=!1,last=0)}function setTarget(v){S.target=clamp01(v),S.loop||(S.loop=!0,last=0,requestAnimationFrame(tick)),S.target>0&&watchJourney()}let watching=0;function watchJourney(){watching||(watching=setInterval(()=>{const J=study()?.journey;if(OPENLIKE){if(O.phase==="off"){clearInterval(watching),watching=0;return}J&&J.target<J.max-.01&&O.phase==="in"&&startClose();return}if(S.target<=0&&S.a<=0){clearInterval(watching),watching=0;return}J&&J.target<J.max-.01&&setTarget(0)},400))}const O={nativeAt:0,phase:"off",t:0,brush:0,t0:0,upAsk:0,upAt:0,fadeUntil:0};S.open=O;const cutTune=()=>window.__FLOW2_LIFT_CUT__&&window.__FLOW2_LIFT_CUT__.tune||{},span=()=>Math.max(.05,reduced?+cutTune().reduceFade||.3:MODE==="dive"?O.phase==="closing"?+DIVE.tune.closeTime||1.2:+DIVE.tune.time||1.5:+cutTune().brushTime||1.15),BRUSH_FRAG=`
     uniform sampler2D tSrc; uniform vec2 uRes; uniform vec4 uB, uLook; varying vec2 vUv;
     /* uB = (progress 0..1, reduce, -, -); uLook = (-, soft, bristle, smear): the canyon stroke's own dials */
     float bH(float x){return fract(sin(x*127.1+.7)*43758.5453);}
@@ -280,175 +106,4 @@
       float gt=length(vec2((vUv.x-.5)/1.2,(1.-vUv.y)/.9));
       vec3 g=gt<.46?mix(vec3(.0627,.1922,.3098),vec3(.0392,.1137,.2),gt/.46):mix(vec3(.0392,.1137,.2),vec3(.0235,.0706,.1333),clamp((gt-.46)/.54,0.,1.));
       gl_FragColor=vec4(mix(view,lin(g),m),1.);
-    }`;
-  let brushMat = null, brushScene = null, brushRT = null;
-  /* PERF ROUND (Team A, 2026-11-17; only with html[data-flow2-opt], not ?aerialopt=0): the opening used to compile its program and allocate its
-     full-screen target on its own first frame (measured: a 53 ms frame on the RTX laptop, 80 ms at phone size; GPU spike 71 ms), and build the
-     next block's DOM on its last. Now, while the visitor stands near FOUR PATHS, the program is compiled in the background (compileAsync), the
-     target is allocated and the block is built hidden — all before the first frame of the stroke. The target is let go again (≈ 31 MB of GPU
-     memory at 2820 × 1395) once the visitor has left the end of the journey with the stroke closed. Same picture, same timing. */
-  const OPT = html.hasAttribute('data-flow2-opt') && Q.get('aerialopt') !== '0';
-  const W = { compiled: false, asked: false, rt: false, block: false, freed: 0 };
-  S.warm = W;
-  function makeBrush(THREE) {
-    if (brushMat) return;
-    brushMat = new THREE.ShaderMaterial({ uniforms: { tSrc: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uB: { value: new THREE.Vector4() }, uLook: { value: new THREE.Vector4(0, 1.6, .45, .55) } },
-      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: BRUSH_FRAG, depthTest: false, depthWrite: false, toneMapped: false });
-    brushScene = new THREE.Scene(); const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), brushMat); quad.frustumCulled = false; brushScene.add(quad);
-    brushRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
-    if (!lensCam) lensCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  }
-  function warmOpen(renderer, src, THREE) {
-    const J = study()?.journey; if (!J || !Number.isFinite(J.max)) return;
-    const near = J.progress > J.max - .6, away = J.progress < J.max - 1.6;
-    if (near) {
-      makeBrush(THREE);
-      if (!W.asked && renderer.compileAsync) {
-        W.asked = true;
-        /* compiled with a target bound (the stroke draws into brushRT: linear output), on the driver's threads */
-        const was = renderer.getRenderTarget(); let p = null;
-        try { renderer.setRenderTarget(brushRT); p = renderer.compileAsync(brushScene, lensCam); } catch (error) { p = null; } finally { renderer.setRenderTarget(was); }
-        if (p && p.then) p.then(() => { W.compiled = true; }, () => { W.compiled = 'at first use'; }); else W.compiled = 'at first use';
-      }
-      if (!W.rt || brushRT.width !== src.width || brushRT.height !== src.height) {
-        /* allocate at the view's size now (a clear), not on the stroke's first frame */
-        brushRT.setSize(src.width, src.height);
-        const was = renderer.getRenderTarget(); try { renderer.setRenderTarget(brushRT); renderer.clear(true, false, false); } finally { renderer.setRenderTarget(was); }
-        W.rt = true;
-      }
-      if (!W.block && !block) { W.block = 'asked'; const go = () => { if (!block) buildBlock(); W.block = true; }; if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 800 }); else setTimeout(go, 60); }
-    } else if (away && W.rt && O.phase === 'off' && brushRT) { brushRT.setSize(4, 4); W.rt = false; W.freed++; }   /* three re-allocates at the new size: the big one is let go */
-  }
-  function openPass(renderer, src, pass, THREE) {
-    if (OPT && O.brush <= .001) { try { warmOpen(renderer, src, THREE); } catch (error) { W.error = String(error?.message || error); } }
-    if (O.brush <= .001) { if (pass.uniforms.tForest.value !== src.texture) pass.uniforms.tForest.value = src.texture; return; }
-    if (OPT) makeBrush(THREE);
-    if (!brushMat) {
-      brushMat = new THREE.ShaderMaterial({ uniforms: { tSrc: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uB: { value: new THREE.Vector4() }, uLook: { value: new THREE.Vector4(0, 1.6, .45, .55) } },
-        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: BRUSH_FRAG, depthTest: false, depthWrite: false, toneMapped: false });
-      brushScene = new THREE.Scene(); const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), brushMat); quad.frustumCulled = false; brushScene.add(quad);
-      brushRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
-      if (!lensCam) lensCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    }
-    if (brushRT.width !== src.width || brushRT.height !== src.height) brushRT.setSize(src.width, src.height);
-    const ct = cutTune(), U = brushMat.uniforms;
-    U.tSrc.value = src.texture; U.uRes.value.set(src.width, src.height);
-    U.uB.value.set(O.brush, reduced ? 1 : 0, 0, 0);
-    U.uLook.value.set(0, Number.isFinite(+ct.brushSoft) ? +ct.brushSoft : 1.6, Number.isFinite(+ct.brushBristle) ? +ct.brushBristle : .45, Number.isFinite(+ct.brushSmear) ? +ct.brushSmear : .55);
-    const prev = renderer.getRenderTarget(); renderer.setRenderTarget(brushRT); renderer.render(brushScene, lensCam); renderer.setRenderTarget(prev);
-    pass.uniforms.tForest.value = brushRT.texture;
-  }
-  /* THE DIVE (team LZ): near FOUR PATHS the dive warms up (program, targets, camera hook); while it plays it draws over the view */
-  let diveDrawn = 0;
-  function divePass(renderer, src, pass, atlas, THREE) {
-    if (O.phase === 'off' && O.brush <= .001) {
-      try { DIVE.warm(renderer, src, atlas, THREE, study()?.journey); } catch (error) { W.error = String(error?.message || error); }
-      if (!W.block && !block) { const J = study()?.journey; if (J && J.progress > J.max - .6) { W.block = 'asked'; const go = () => { if (!block) buildBlock(); W.block = true; }; if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 800 }); else setTimeout(go, 60); } }
-      if (pass.uniforms.tForest.value !== src.texture) pass.uniforms.tForest.value = src.texture;
-      return;
-    }
-    let tex = null;
-    try { tex = DIVE.render(renderer, src, atlas, THREE, O.brush, O.phase === 'closing'); diveDrawn++; } catch (error) { W.error = String(error?.message || error); }
-    pass.uniforms.tForest.value = tex || src.texture;
-  }
-  const ease = t => .18 * t + .82 * (t * t * (3 - 2 * t));   /* the canyon stroke's own: it speeds up and settles */
-  function setStage(st) { if (S.stage !== st) { S.stage = st; html.dataset.flow2After = st; } }
-  function showBlock(on, quick) {
-    buildBlock();
-    block.style.transition = quick ? 'opacity .25s ease' : 'opacity .4s ease';
-    block.style.transform = 'none';
-    if (MODE === 'dive' && on) block.classList.toggle('is-dive', diveDrawn > 0);   /* its ground is the dive's last picture (the close water sunk into navy) */
-    block.classList.toggle('is-on', on); block.classList.toggle('is-in', on); block.inert = !on; block.setAttribute('aria-hidden', on ? 'false' : 'true');
-    requestAnimationFrame(() => { block.style.opacity = on ? '1' : '0'; });
-    if (on && scroller) scroller.scrollTop = 0;
-  }
-  function openFrame(now) {
-    if (O.phase === 'opening' || O.phase === 'closing') {
-      if (O.phase === 'closing' && now < O.fadeUntil) { O.brush = 1; requestAnimationFrame(openFrame); return; }   /* the block fades first */
-      let t = Math.min(1, (now - O.t0) / 1000 / span());
-      if (O.hold != null) { t = O.phase === 'opening' ? O.hold : 1 - O.hold; O.t0 = now - t * 1000 * span(); }   /* frame strips: __FLOW2_AFTER__.hold(t) */
-      O.t = t;
-      if (MODE === 'dive') { O.brush = O.phase === 'opening' ? t : 1 - t; DIVE.set(O.brush); }   /* the dive eases itself */
-      else O.brush = O.phase === 'opening' ? ease(t) : 1 - ease(t);
-      S.lens = 0;
-      if (t < 1 || O.hold != null) { requestAnimationFrame(openFrame); return; }
-      if (O.phase === 'opening') {
-        O.phase = 'in'; O.brush = 1; setStage('in'); html.removeAttribute('data-flow2-brush');
-        showBlock(true);
-        setTimeout(() => { if (O.phase === 'in') S.covered = true; }, 450);   /* the block is opaque: the view is not drawn behind it */
-      } else {
-        O.phase = 'off'; O.brush = 0; setStage('off'); html.removeAttribute('data-flow2-brush'); html.removeAttribute('data-flow2-dive');
-        if (MODE === 'dive') DIVE.set(0);
-        if (passRef && forestTex) passRef.uniforms.tForest.value = forestTex;
-      }
-    }
-  }
-  function startOpen() {
-    if (O.phase !== 'off') return;
-    O.phase = 'opening'; O.t0 = performance.now(); O.t = 0; O.brush = 0; S.covered = false;
-    setStage('opening'); html.setAttribute('data-flow2-brush', 'after-in'); if (MODE === 'dive') { html.setAttribute('data-flow2-dive', 'in'); diveDrawn = 0; }
-    requestAnimationFrame(openFrame); watchJourney();
-  }
-  function startClose() {
-    if (O.phase !== 'in') return;
-    S.covered = false; O.brush = 1; O.phase = 'closing'; setStage('closing'); html.setAttribute('data-flow2-brush', 'after-out'); if (MODE === 'dive') { html.setAttribute('data-flow2-dive', 'out'); DIVE.set(1); }
-    showBlock(false, true);
-    O.fadeUntil = performance.now() + 260; O.t0 = O.fadeUntil; O.upAsk = 0;
-    requestAnimationFrame(openFrame);
-  }
-  /* about two notches up at the block's top close it (the canyon stroke's own threshold for going back) */
-  function askUp(px) { const now = performance.now(); if (now - O.nativeAt < 300) { O.upAsk = 0; return; }   /* momentum from scrolling the block back to its top does not count */
-    if (now - O.upAt > 1200) O.upAsk = 0; O.upAt = now; O.upAsk += px; if (O.upAsk >= 180) startClose(); }
-  const blockFree = dir => !!scroller && O.phase === 'in' && (dir > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : scroller.scrollTop > 0);
-  function openHand(d) {
-    if (O.phase === 'opening' || O.phase === 'closing') return true;            /* absorbed while it plays */
-    if (O.phase === 'off') { if (d > 0) startOpen(); return true; }
-    if (blockFree(Math.sign(d))) { O.nativeAt = performance.now(); return 'native'; }
-    if (d < 0) askUp(-d);
-    return true;
-  }
-
-  /* touches that start inside the next block while it is in: its own pan, or (pulled down at its top) the close request; the page's touch
-     navigation never sees them (it cancels touches to drive the journey, which would stop the block from panning) */
-  let blockTouchY = null;
-  const inBlock = e => O.phase === 'in' && block && e.target && block.contains(e.target);
-  addEventListener('touchstart', e => { if (!OPENLIKE || !inBlock(e)) { blockTouchY = null; return; } blockTouchY = e.touches[0]?.clientY ?? null; e.stopImmediatePropagation(); }, { capture: true, passive: true });
-  addEventListener('touchmove', e => {
-    if (!OPENLIKE || blockTouchY == null || !inBlock(e)) return;
-    const y = e.touches[0]?.clientY ?? blockTouchY, dy = blockTouchY - y; blockTouchY = y;
-    e.stopImmediatePropagation();
-    if (dy < 0 && scroller && scroller.scrollTop <= 0) { askUp(-dy * 2.2); if (e.cancelable) e.preventDefault(); } else O.nativeAt = performance.now();
-  }, { capture: true, passive: false });
-  /* the page's touch navigation (mobile-touch-navigation.js) reads pointer events: inside the block they are the block's own */
-  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) addEventListener(type, e => { if (OPENLIKE && inBlock(e)) e.stopImmediatePropagation(); }, { capture: true, passive: true });
-
-  /* ---------------- the hand (called by flow2-scope.js, which owns the wheel at the journey's end) ---------------- */
-  const norm = e => { let d = e.deltaY || 0; if (e.deltaMode === 1) d *= 16; else if (e.deltaMode === 2) d *= innerHeight; return Math.max(-240, Math.min(240, d)); };
-  const blockScrolls = dir => !!scroller && S.target >= 1 && S.a >= .999 && (dir > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : scroller.scrollTop > 0);
-  /* returns 'native' when the next block should scroll by itself (the caller then lets the browser do it), true when A took it */
-  function wheel(e) {
-    const d = norm(e);
-    if (!d) return true;
-    if (OPENLIKE) return openHand(d);
-    if (blockScrolls(Math.sign(d))) return 'native';
-    if (d > 0 && S.target >= 1) return true;
-    setTarget(S.target + d / T.travel);
-    return true;
-  }
-  function key(dir) { if (OPENLIKE) return openHand(dir * 100); if (blockScrolls(dir)) return 'native'; setTarget(S.target + dir * 100 / T.travel); return true; }
-  function touch(dy) { if (OPENLIKE) return openHand(dy * 2.2); if (blockScrolls(Math.sign(dy))) return 'native'; setTarget(S.target + dy * 2.2 / T.travel); return true; }
-
-  window.__FLOW2_AFTER__ = {
-    enabled: true, state: S, tune: T, lens, wheel, key, touch,
-    mode: MODE,
-    active: () => OPENLIKE ? O.phase !== 'off' : (S.target > 0 || S.a > 0),
-    dive: DIVE,
-    /* frame strips (QA): hold(t) freezes the dive in at t (0..1; starts it if needed), hold(null) lets it run on */
-    hold(t) { if (!OPENLIKE) return; if (t == null) { O.hold = null; return; } O.hold = Math.min(1, Math.max(0, +t || 0)); if (O.phase === 'off') startOpen(); },
-    get covered() { return S.covered; },
-    set(a) { if (OPENLIKE) { if (+a > .5) startOpen(); else startClose(); return; } setTarget(+a || 0); },
-    reset() { if (OPENLIKE) { startClose(); return; } setTarget(0); }
-  };
-  html.dataset.flow2After = 'off';
-  buildStyle();
-})();
+    }`;let brushMat=null,brushScene=null,brushRT=null;const OPT=html.hasAttribute("data-flow2-opt")&&Q.get("aerialopt")!=="0",W={compiled:!1,asked:!1,rt:!1,block:!1,freed:0};S.warm=W;function makeBrush(THREE){if(brushMat)return;brushMat=new THREE.ShaderMaterial({uniforms:{tSrc:{value:null},uRes:{value:new THREE.Vector2(1,1)},uB:{value:new THREE.Vector4},uLook:{value:new THREE.Vector4(0,1.6,.45,.55)}},vertexShader:"varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }",fragmentShader:BRUSH_FRAG,depthTest:!1,depthWrite:!1,toneMapped:!1}),brushScene=new THREE.Scene;const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),brushMat);quad.frustumCulled=!1,brushScene.add(quad),brushRT=new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType,depthBuffer:!1}),lensCam||(lensCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1))}function warmOpen(renderer,src,THREE){const J=study()?.journey;if(!J||!Number.isFinite(J.max))return;const near=J.progress>J.max-.6,away=J.progress<J.max-1.6;if(near){if(makeBrush(THREE),!W.asked&&renderer.compileAsync){W.asked=!0;const was=renderer.getRenderTarget();let p=null;try{renderer.setRenderTarget(brushRT),p=renderer.compileAsync(brushScene,lensCam)}catch{p=null}finally{renderer.setRenderTarget(was)}p&&p.then?p.then(()=>{W.compiled=!0},()=>{W.compiled="at first use"}):W.compiled="at first use"}if(!W.rt||brushRT.width!==src.width||brushRT.height!==src.height){brushRT.setSize(src.width,src.height);const was=renderer.getRenderTarget();try{renderer.setRenderTarget(brushRT),renderer.clear(!0,!1,!1)}finally{renderer.setRenderTarget(was)}W.rt=!0}if(!W.block&&!block){W.block="asked";const go=()=>{block||buildBlock(),W.block=!0};window.requestIdleCallback?requestIdleCallback(go,{timeout:800}):setTimeout(go,60)}}else away&&W.rt&&O.phase==="off"&&brushRT&&(brushRT.setSize(4,4),W.rt=!1,W.freed++)}function openPass(renderer,src,pass,THREE){if(OPT&&O.brush<=.001)try{warmOpen(renderer,src,THREE)}catch(error){W.error=String(error?.message||error)}if(O.brush<=.001){pass.uniforms.tForest.value!==src.texture&&(pass.uniforms.tForest.value=src.texture);return}if(OPT&&makeBrush(THREE),!brushMat){brushMat=new THREE.ShaderMaterial({uniforms:{tSrc:{value:null},uRes:{value:new THREE.Vector2(1,1)},uB:{value:new THREE.Vector4},uLook:{value:new THREE.Vector4(0,1.6,.45,.55)}},vertexShader:"varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }",fragmentShader:BRUSH_FRAG,depthTest:!1,depthWrite:!1,toneMapped:!1}),brushScene=new THREE.Scene;const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),brushMat);quad.frustumCulled=!1,brushScene.add(quad),brushRT=new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType,depthBuffer:!1}),lensCam||(lensCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1))}(brushRT.width!==src.width||brushRT.height!==src.height)&&brushRT.setSize(src.width,src.height);const ct=cutTune(),U=brushMat.uniforms;U.tSrc.value=src.texture,U.uRes.value.set(src.width,src.height),U.uB.value.set(O.brush,reduced?1:0,0,0),U.uLook.value.set(0,Number.isFinite(+ct.brushSoft)?+ct.brushSoft:1.6,Number.isFinite(+ct.brushBristle)?+ct.brushBristle:.45,Number.isFinite(+ct.brushSmear)?+ct.brushSmear:.55);const prev=renderer.getRenderTarget();renderer.setRenderTarget(brushRT),renderer.render(brushScene,lensCam),renderer.setRenderTarget(prev),pass.uniforms.tForest.value=brushRT.texture}let diveDrawn=0;function divePass(renderer,src,pass,atlas,THREE){if(O.phase==="off"&&O.brush<=.001){try{DIVE.warm(renderer,src,atlas,THREE,study()?.journey)}catch(error){W.error=String(error?.message||error)}if(!W.block&&!block){const J=study()?.journey;if(J&&J.progress>J.max-.6){W.block="asked";const go=()=>{block||buildBlock(),W.block=!0};window.requestIdleCallback?requestIdleCallback(go,{timeout:800}):setTimeout(go,60)}}pass.uniforms.tForest.value!==src.texture&&(pass.uniforms.tForest.value=src.texture);return}let tex=null;try{tex=DIVE.render(renderer,src,atlas,THREE,O.brush,O.phase==="closing"),diveDrawn++}catch(error){W.error=String(error?.message||error)}pass.uniforms.tForest.value=tex||src.texture}const ease=t=>.18*t+.82*(t*t*(3-2*t));function setStage(st){S.stage!==st&&(S.stage=st,html.dataset.flow2After=st)}function showBlock(on,quick){buildBlock(),block.style.transition=quick?"opacity .25s ease":"opacity .4s ease",block.style.transform="none",MODE==="dive"&&on&&block.classList.toggle("is-dive",diveDrawn>0),block.classList.toggle("is-on",on),block.classList.toggle("is-in",on),block.inert=!on,block.setAttribute("aria-hidden",on?"false":"true"),requestAnimationFrame(()=>{block.style.opacity=on?"1":"0"}),on&&scroller&&(scroller.scrollTop=0)}function openFrame(now){if(O.phase==="opening"||O.phase==="closing"){if(O.phase==="closing"&&now<O.fadeUntil){O.brush=1,requestAnimationFrame(openFrame);return}let t=Math.min(1,(now-O.t0)/1e3/span());if(O.hold!=null&&(t=O.phase==="opening"?O.hold:1-O.hold,O.t0=now-t*1e3*span()),O.t=t,MODE==="dive"?(O.brush=O.phase==="opening"?t:1-t,DIVE.set(O.brush)):O.brush=O.phase==="opening"?ease(t):1-ease(t),S.lens=0,t<1||O.hold!=null){requestAnimationFrame(openFrame);return}O.phase==="opening"?(O.phase="in",O.brush=1,setStage("in"),html.removeAttribute("data-flow2-brush"),showBlock(!0),setTimeout(()=>{O.phase==="in"&&(S.covered=!0)},450)):(O.phase="off",O.brush=0,setStage("off"),html.removeAttribute("data-flow2-brush"),html.removeAttribute("data-flow2-dive"),MODE==="dive"&&DIVE.set(0),passRef&&forestTex&&(passRef.uniforms.tForest.value=forestTex))}}function startOpen(){O.phase==="off"&&(O.phase="opening",O.t0=performance.now(),O.t=0,O.brush=0,S.covered=!1,setStage("opening"),html.setAttribute("data-flow2-brush","after-in"),MODE==="dive"&&(html.setAttribute("data-flow2-dive","in"),diveDrawn=0),requestAnimationFrame(openFrame),watchJourney())}function startClose(){O.phase==="in"&&(S.covered=!1,O.brush=1,O.phase="closing",setStage("closing"),html.setAttribute("data-flow2-brush","after-out"),MODE==="dive"&&(html.setAttribute("data-flow2-dive","out"),DIVE.set(1)),showBlock(!1,!0),O.fadeUntil=performance.now()+260,O.t0=O.fadeUntil,O.upAsk=0,requestAnimationFrame(openFrame))}function askUp(px){const now=performance.now();if(now-O.nativeAt<300){O.upAsk=0;return}now-O.upAt>1200&&(O.upAsk=0),O.upAt=now,O.upAsk+=px,O.upAsk>=180&&startClose()}const blockFree=dir=>!!scroller&&O.phase==="in"&&(dir>0?scroller.scrollTop+scroller.clientHeight<scroller.scrollHeight-1:scroller.scrollTop>0);function openHand(d){return O.phase==="opening"||O.phase==="closing"?!0:O.phase==="off"?(d>0&&startOpen(),!0):blockFree(Math.sign(d))?(O.nativeAt=performance.now(),"native"):(d<0&&askUp(-d),!0)}let blockTouchY=null;const inBlock=e=>O.phase==="in"&&block&&e.target&&block.contains(e.target);addEventListener("touchstart",e=>{if(!OPENLIKE||!inBlock(e)){blockTouchY=null;return}blockTouchY=e.touches[0]?.clientY??null,e.stopImmediatePropagation()},{capture:!0,passive:!0}),addEventListener("touchmove",e=>{if(!OPENLIKE||blockTouchY==null||!inBlock(e))return;const y=e.touches[0]?.clientY??blockTouchY,dy=blockTouchY-y;blockTouchY=y,e.stopImmediatePropagation(),dy<0&&scroller&&scroller.scrollTop<=0?(askUp(-dy*2.2),e.cancelable&&e.preventDefault()):O.nativeAt=performance.now()},{capture:!0,passive:!1});for(const type of["pointerdown","pointermove","pointerup","pointercancel"])addEventListener(type,e=>{OPENLIKE&&inBlock(e)&&e.stopImmediatePropagation()},{capture:!0,passive:!0});const norm=e=>{let d=e.deltaY||0;return e.deltaMode===1?d*=16:e.deltaMode===2&&(d*=innerHeight),Math.max(-240,Math.min(240,d))},blockScrolls=dir=>!!scroller&&S.target>=1&&S.a>=.999&&(dir>0?scroller.scrollTop+scroller.clientHeight<scroller.scrollHeight-1:scroller.scrollTop>0);function wheel(e){const d=norm(e);return d?OPENLIKE?openHand(d):blockScrolls(Math.sign(d))?"native":(d>0&&S.target>=1||setTarget(S.target+d/T.travel),!0):!0}function key(dir){return OPENLIKE?openHand(dir*100):blockScrolls(dir)?"native":(setTarget(S.target+dir*100/T.travel),!0)}function touch(dy){return OPENLIKE?openHand(dy*2.2):blockScrolls(Math.sign(dy))?"native":(setTarget(S.target+dy*2.2/T.travel),!0)}window.__FLOW2_AFTER__={enabled:!0,state:S,tune:T,lens,wheel,key,touch,mode:MODE,active:()=>OPENLIKE?O.phase!=="off":S.target>0||S.a>0,dive:DIVE,hold(t){if(OPENLIKE){if(t==null){O.hold=null;return}O.hold=Math.min(1,Math.max(0,+t||0)),O.phase==="off"&&startOpen()}},get covered(){return S.covered},set(a){if(OPENLIKE){+a>.5?startOpen():startClose();return}setTarget(+a||0)},reset(){if(OPENLIKE){startClose();return}setTarget(0)}},html.dataset.flow2After="off",buildStyle()})();

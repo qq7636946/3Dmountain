@@ -1,27 +1,4 @@
-/* OCEAN · CEIL (2026-11-18 evening). The look just under the water for index1-5-canyon-forest.html, behind ?ocean=1 only.
-   Client: 「下去的海浪感覺海底下的質感要如圖一模一樣，觀看影片往下時候的質感」 (reference: .qa/index1-5/ocean/ref/).
-   Loaded by dg-scene.js ONLY when ?ocean=1 is in the address (dynamic import): without the switch this file is never fetched.
-
-   What it gives dg-scene.js (the scene keeps the ownership of its materials; this file is text + one texture + numbers):
-     · the surface seen from below: the plane y = uSurfY, one ray per pixel in the ground pass. Three reads of one baked slope map
-       (ocean-surface-n.webp, our own FFT wave field, bake_surface.py) at three scales, drifting; the real refraction at the water/air
-       boundary (n = 1.33): where the wave's slope lets the ray out, the sky and the low sun show (the glints, white → warm gold round
-       the sun); everywhere else TOTAL INTERNAL REFLECTION mirrors the deep water (the dark teal between the glints). The edge of a glint
-       is the critical angle itself (one pixel of anti-aliasing), so the glints are crisp. Red is absorbed first along the light's path:
-       far glints turn cool.
-     · god rays: a fan under the sun's hotspot in the screen pass (two noise reads: wide shafts + thin ones, warm at the top, slow drift).
-     · the grade: teal-cyan under the surface → blue-navy below (measured on the video), every layer's haze reads it through bgAt.
-   Dials: scene.ocean.u (uniform objects), or ?ocPitch= ?ocSlope= ?ocCell= ?ocFade= ?ocGlint= ?ocSun= ?ocMirror= ?ocDeep= ?ocOpenK= ?ocBand=
-   ?ocSwell= ?ocFine= ?ocRays= ?ocGlow= ?ocHotX= ?ocHotY= ?ocOpen= (multipliers / values). */
-
-const Q = new URLSearchParams(location.search);
-const num = (k, d) => { const v = parseFloat(Q.get(k)); return Number.isFinite(v) ? v : d; };
-
-export const VERSION = '6';
-
-// The dome of the lens intersects a small travelling swell. Both halves of the
-// split shot use this signed viewport distance, including the projected pitch.
-export const waterlineGLSL = /* glsl */`
+const Q=new URLSearchParams(location.search),num=(k,d)=>{const v=parseFloat(Q.get(k));return Number.isFinite(v)?v:d};export const VERSION="6",waterlineGLSL=`
 float waterPortDistance(float height, vec3 ray, vec3 cameraUp, float tanHalfFov, float rayLength, float time) {
   float x = ray.x;
   float ripple = 0.012 * sin(x * 5.7 + time * 0.76)
@@ -30,10 +7,7 @@ float waterPortDistance(float height, vec3 ray, vec3 cameraUp, float tanHalfFov,
   float slope = 1.56 * tanHalfFov * (cameraUp.y - ray.y * dot(ray,cameraUp)) / rayLength;
   return (height + 0.78 * ray.y + 0.025 - ripple) / max(0.16, slope);
 }
-`;
-
-// Re-use the same world-space source for the window, the volume and the bed.
-export const riseLightGLSL = /* glsl */`
+`,riseLightGLSL=`
 uniform vec3 uRiseLightDir, uRiseWave;
 uniform vec2 uRiseWindow;
 uniform float uRiseSunAmount, uRiseFogDensity;
@@ -48,11 +22,7 @@ float riverbedDistance(vec3 eye, vec3 ray) {
   float toward = 0.025 * ray.z - ray.y;
   return toward > 0.001 && above > 0.0 ? above / toward : 1e5;
 }
-`;
-
-// Integrate three feathered, tapered beams through the visible water segment.
-// Closest approach gives the local width of each cone without ray marching.
-export const waterShaftsGLSL = /* glsl */`
+`,waterShaftsGLSL=`
 uniform float uRiseRayStrength, uRiseRayTime, uRiseRayFan, uRiseRaySoftness, uRiseRayDepth;
 
 float coneLight(vec2 foot, vec2 direction, vec2 aperture, vec2 tilt,
@@ -105,9 +75,7 @@ float waterShafts(vec3 eye, vec3 ray) {
   return dot(vec3(left, mid, right), weights) * strands * (0.52 + 0.48 * angle * angle)
     * exp(-max(-eye.y, 0.0) * uRiseFogDensity * 0.57) * uRiseSunAmount * uRiseRayStrength;
 }
-`;
-
-const riverbedGLSL = /* glsl */`
+`;const riverbedGLSL=`
 uniform sampler2D tCaus;
 uniform float uRiseBedRippleSize, uRiseCausticStrength, uRiseCausticTime, uRiseCausticReach, uRiseCausticSoftness;
 uniform vec3 uRiseCausticColor;
@@ -137,112 +105,7 @@ vec3 riverbedLight(vec3 bed, float reach, float shelf, vec3 water) {
   vec3 transmission = exp(-reach * uRiseFogDensity * vec3(1.85, 1.16, 0.88));
   return mix(water, lit, shelf * transmission);
 }
-`;
-
-const RISE_CONTROLS = [
-  ['水面透光', [
-    ['透光區亮度', 'windowStrength', 'uRiseWindowStrength', 1, 0, 2.2, 0.05],
-    ['透光區大小', 'windowSize', 'uRiseWindowSize', 1, 0.45, 2.0, 0.05],
-    ['光源左右位置', 'windowOffset', 'uRiseWindowOffset', 0, -10, 10, 0.1],
-    ['光源遠近', 'windowDistance', 'uRiseWindowDistance', 20.2, 16, 32, 0.1],
-    ['水面波紋大小', 'surfaceRippleSize', 'uRiseSurfaceRippleSize', 1, 0.30, 4, 0.01],
-    ['水面波紋速度', 'surfaceSpeed', 'uRiseSurfaceSpeed', 1, 0, 2.5, 0.05],
-    ['水面波紋起伏', 'surfaceChop', 'uRiseSurfaceChop', 1, 0.30, 1.8, 0.05],
-    ['透光區顏色', 'windowColor', 'uRiseWindowColor', '#cae3ee', 'color']
-  ]],
-  ['放射光束', [
-    ['光束強度', 'rays', 'uRiseRayStrength', 0.36, 0, 0.9, 0.01],
-    ['光束動態速度', 'raySpeed', 'uRiseRaySpeed', 1, 0, 2.5, 0.05],
-    ['光束張角', 'rayFan', 'uRiseRayFan', 1, 0.35, 1.8, 0.05],
-    ['光束柔邊', 'raySoftness', 'uRiseRaySoftness', 1, 0.45, 2.0, 0.05],
-    ['光束下照深度', 'rayDepth', 'uRiseRayDepth', 17.4, 7, 24, 0.1],
-    ['光束顏色', 'rayColor', 'uRiseRayColor', '#c4e1f6', 'color']
-  ]],
-  ['河床焦散', [
-    ['河床波紋大小', 'bedRippleSize', 'uRiseBedRippleSize', 1, 0.30, 4, 0.01],
-    ['焦散亮度', 'causticStrength', 'uRiseCausticStrength', 1, 0, 2.2, 0.05],
-    ['焦散流速', 'causticSpeed', 'uRiseCausticSpeed', 1, 0, 2.5, 0.05],
-    ['焦散聚光範圍', 'causticReach', 'uRiseCausticReach', 1, 0.4, 2.1, 0.05],
-    ['焦散柔邊', 'causticSoftness', 'uRiseCausticSoftness', 1, 0.45, 2.0, 0.05],
-    ['焦散顏色', 'causticColor', 'uRiseCausticColor', '#c0e3f8', 'color']
-  ]],
-  ['水色與岩壁', [
-    ['水下底色亮度', 'ambientBrightness', 'uBgGain', 0.84, 0.40, 1.60, 0.01],
-    ['水下霧濃度', 'fogDensity', 'uRiseFogDensity', 0.023, 0.008, 0.065, 0.001],
-    ['水下主色', 'waterColor', 'uBgMid', '#315f89', 'color'],
-    ['深水暗部色', 'deepColor', 'uBgLow', '#061933', 'color'],
-    ['岩壁可見度（0 關）', 'rockOpacity', 'uRiseRockOpacity', 1, 0, 1, 0.05],
-    ['岩壁紋理起伏', 'rockDetail', 'uRiseRockDetail', 1, 0.3, 1.8, 0.05],
-    ['岩壁顏色', 'rockColor', 'uRockTint', '#8da3aa', 'color']
-  ]]
-];
-
-export function createRiseLighting(THREE, dials, lightDirection, grade, hasBanks) {
-  const uniforms = {
-    ...grade, uRiseLightDir: lightDirection, uRiseSunAmount: { value: 1 },
-    uRiseWindow: { value: new THREE.Vector2() }, uRiseWave: { value: new THREE.Vector3() },
-    uRiseSurfaceTime: { value: 0 }, uRiseRayTime: { value: 0 }, uRiseCausticTime: { value: 0 }
-  };
-  const rows = [];
-  for (const [heading, controls] of RISE_CONTROLS) {
-    rows.push([heading]);
-    for (const [label, key, name, start, ...limits] of controls) {
-      if (limits[0] === 'color') {
-        const color = (uniforms[name] ||= { value: new THREE.Color(start) }).value;
-        Object.defineProperty(dials, key, {
-          enumerable: true, get: () => '#' + color.getHexString(),
-          set: value => { if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) color.set(value); }
-        });
-      } else {
-        const [min, max] = limits;
-        const initial = THREE.MathUtils.clamp(dials[key] ?? start, min, max);
-        const uniform = uniforms[name] ||= { value: initial };
-        uniform.value = initial;
-        Object.defineProperty(dials, key, {
-          enumerable: true, get: () => uniform.value,
-          set: value => { uniform.value = THREE.MathUtils.clamp(Number.isFinite(value) ? value : initial, min, max); }
-        });
-      }
-      if (hasBanks || !key.startsWith('rock')) rows.push([label, key, ...limits]);
-    }
-  }
-
-  let previousTime = null;
-  const waveAt = (x, z, t) => 0.52 * Math.sin(x * 0.56 + z * 0.27 - t * 1.88)
-    + 0.31 * Math.sin(-x * 0.29 + z * 0.49 - t * 2.42 + 1.4)
-    + 0.17 * Math.sin(x * 0.83 - z * 0.21 + t * 1.31);
-  function update(time, moving, sunY) {
-    // Integrating the speed keeps the phase continuous while dragging a slider.
-    const dt = moving && previousTime !== null ? Math.max(0, time - previousTime) : 0;
-    previousTime = moving ? time : null;
-    uniforms.uRiseSurfaceTime.value += dt * uniforms.uRiseSurfaceSpeed.value;
-    uniforms.uRiseRayTime.value += dt * uniforms.uRiseRaySpeed.value;
-    uniforms.uRiseCausticTime.value += dt * uniforms.uRiseCausticSpeed.value;
-    const origin = uniforms.uRiseWindow.value;
-    origin.set(11 * lightDirection.value.x / lightDirection.value.y + uniforms.uRiseWindowOffset.value,
-      -uniforms.uRiseWindowDistance.value);
-    const t = uniforms.uRiseRayTime.value;
-    uniforms.uRiseWave.value.set(waveAt(origin.x - 1.52, origin.y + 1.35, t),
-      waveAt(origin.x - 0.24, origin.y + 0.06, t), waveAt(origin.x + 1.22, origin.y - 1.04, t));
-    uniforms.uRiseSunAmount.value = THREE.MathUtils.smoothstep(sunY, 0.025, 0.20);
-  }
-  return { uniforms, update, rows };
-}
-
-// Generate the two tileable cellular fields on the GPU once. Mipmaps keep
-// thin caustic lines stable at distance. The animated warp stays per fragment.
-export function bakeRiseCaustics(THREE, renderer) {
-  const size = 256;
-  const target = new THREE.WebGLRenderTarget(size, size, {
-    wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, depthBuffer: false,
-    generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter
-  });
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
-  const material = new THREE.ShaderMaterial({
-    depthTest: false, depthWrite: false,
-    vertexShader: 'void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }',
-    fragmentShader: /* glsl */`
+`,RISE_CONTROLS=[["\u6C34\u9762\u900F\u5149",[["\u900F\u5149\u5340\u4EAE\u5EA6","windowStrength","uRiseWindowStrength",1,0,2.2,.05],["\u900F\u5149\u5340\u5927\u5C0F","windowSize","uRiseWindowSize",1,.45,2,.05],["\u5149\u6E90\u5DE6\u53F3\u4F4D\u7F6E","windowOffset","uRiseWindowOffset",0,-10,10,.1],["\u5149\u6E90\u9060\u8FD1","windowDistance","uRiseWindowDistance",20.2,16,32,.1],["\u6C34\u9762\u6CE2\u7D0B\u5927\u5C0F","surfaceRippleSize","uRiseSurfaceRippleSize",1,.3,4,.01],["\u6C34\u9762\u6CE2\u7D0B\u901F\u5EA6","surfaceSpeed","uRiseSurfaceSpeed",1,0,2.5,.05],["\u6C34\u9762\u6CE2\u7D0B\u8D77\u4F0F","surfaceChop","uRiseSurfaceChop",1,.3,1.8,.05],["\u900F\u5149\u5340\u984F\u8272","windowColor","uRiseWindowColor","#cae3ee","color"]]],["\u653E\u5C04\u5149\u675F",[["\u5149\u675F\u5F37\u5EA6","rays","uRiseRayStrength",.36,0,.9,.01],["\u5149\u675F\u52D5\u614B\u901F\u5EA6","raySpeed","uRiseRaySpeed",1,0,2.5,.05],["\u5149\u675F\u5F35\u89D2","rayFan","uRiseRayFan",1,.35,1.8,.05],["\u5149\u675F\u67D4\u908A","raySoftness","uRiseRaySoftness",1,.45,2,.05],["\u5149\u675F\u4E0B\u7167\u6DF1\u5EA6","rayDepth","uRiseRayDepth",17.4,7,24,.1],["\u5149\u675F\u984F\u8272","rayColor","uRiseRayColor","#c4e1f6","color"]]],["\u6CB3\u5E8A\u7126\u6563",[["\u6CB3\u5E8A\u6CE2\u7D0B\u5927\u5C0F","bedRippleSize","uRiseBedRippleSize",1,.3,4,.01],["\u7126\u6563\u4EAE\u5EA6","causticStrength","uRiseCausticStrength",1,0,2.2,.05],["\u7126\u6563\u6D41\u901F","causticSpeed","uRiseCausticSpeed",1,0,2.5,.05],["\u7126\u6563\u805A\u5149\u7BC4\u570D","causticReach","uRiseCausticReach",1,.4,2.1,.05],["\u7126\u6563\u67D4\u908A","causticSoftness","uRiseCausticSoftness",1,.45,2,.05],["\u7126\u6563\u984F\u8272","causticColor","uRiseCausticColor","#c0e3f8","color"]]],["\u6C34\u8272\u8207\u5CA9\u58C1",[["\u6C34\u4E0B\u5E95\u8272\u4EAE\u5EA6","ambientBrightness","uBgGain",.84,.4,1.6,.01],["\u6C34\u4E0B\u9727\u6FC3\u5EA6","fogDensity","uRiseFogDensity",.023,.008,.065,.001],["\u6C34\u4E0B\u4E3B\u8272","waterColor","uBgMid","#315f89","color"],["\u6DF1\u6C34\u6697\u90E8\u8272","deepColor","uBgLow","#061933","color"],["\u5CA9\u58C1\u53EF\u898B\u5EA6\uFF080 \u95DC\uFF09","rockOpacity","uRiseRockOpacity",1,0,1,.05],["\u5CA9\u58C1\u7D0B\u7406\u8D77\u4F0F","rockDetail","uRiseRockDetail",1,.3,1.8,.05],["\u5CA9\u58C1\u984F\u8272","rockColor","uRockTint","#8da3aa","color"]]]];export function createRiseLighting(THREE,dials,lightDirection,grade,hasBanks){const uniforms={...grade,uRiseLightDir:lightDirection,uRiseSunAmount:{value:1},uRiseWindow:{value:new THREE.Vector2},uRiseWave:{value:new THREE.Vector3},uRiseSurfaceTime:{value:0},uRiseRayTime:{value:0},uRiseCausticTime:{value:0}},rows=[];for(const[heading,controls]of RISE_CONTROLS){rows.push([heading]);for(const[label,key,name,start,...limits]of controls){if(limits[0]==="color"){const color=(uniforms[name]||={value:new THREE.Color(start)}).value;Object.defineProperty(dials,key,{enumerable:!0,get:()=>"#"+color.getHexString(),set:value=>{typeof value=="string"&&/^#[0-9a-f]{6}$/i.test(value)&&color.set(value)}})}else{const[min,max]=limits,initial=THREE.MathUtils.clamp(dials[key]??start,min,max),uniform=uniforms[name]||={value:initial};uniform.value=initial,Object.defineProperty(dials,key,{enumerable:!0,get:()=>uniform.value,set:value=>{uniform.value=THREE.MathUtils.clamp(Number.isFinite(value)?value:initial,min,max)}})}(hasBanks||!key.startsWith("rock"))&&rows.push([label,key,...limits])}}let previousTime=null;const waveAt=(x,z,t)=>.52*Math.sin(x*.56+z*.27-t*1.88)+.31*Math.sin(-x*.29+z*.49-t*2.42+1.4)+.17*Math.sin(x*.83-z*.21+t*1.31);function update(time,moving,sunY){const dt=moving&&previousTime!==null?Math.max(0,time-previousTime):0;previousTime=moving?time:null,uniforms.uRiseSurfaceTime.value+=dt*uniforms.uRiseSurfaceSpeed.value,uniforms.uRiseRayTime.value+=dt*uniforms.uRiseRaySpeed.value,uniforms.uRiseCausticTime.value+=dt*uniforms.uRiseCausticSpeed.value;const origin=uniforms.uRiseWindow.value;origin.set(11*lightDirection.value.x/lightDirection.value.y+uniforms.uRiseWindowOffset.value,-uniforms.uRiseWindowDistance.value);const t=uniforms.uRiseRayTime.value;uniforms.uRiseWave.value.set(waveAt(origin.x-1.52,origin.y+1.35,t),waveAt(origin.x-.24,origin.y+.06,t),waveAt(origin.x+1.22,origin.y-1.04,t)),uniforms.uRiseSunAmount.value=THREE.MathUtils.smoothstep(sunY,.025,.2)}return{uniforms,update,rows}}export function bakeRiseCaustics(THREE,renderer){const target=new THREE.WebGLRenderTarget(256,256,{wrapS:THREE.RepeatWrapping,wrapT:THREE.RepeatWrapping,depthBuffer:!1,generateMipmaps:!0,minFilter:THREE.LinearMipmapLinearFilter}),geometry=new THREE.BufferGeometry;geometry.setAttribute("position",new THREE.Float32BufferAttribute([-1,-1,0,3,-1,0,-1,3,0],3));const material=new THREE.ShaderMaterial({depthTest:!1,depthWrite:!1,vertexShader:"void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }",fragmentShader:`
       vec2 jitter(vec2 cell) {
         vec3 p = fract(cell.xyx * vec3(0.1031, 0.1030, 0.0973));
         p += dot(p, p.yzx + 33.33);
@@ -264,78 +127,10 @@ export function bakeRiseCaustics(THREE, renderer) {
         return exp(-(sqrt(next) - sqrt(near)) * 7.0);
       }
       void main() {
-        vec2 uv = gl_FragCoord.xy / ${size.toFixed(1)};
+        vec2 uv = gl_FragCoord.xy / ${256 .toFixed(1)};
         gl_FragColor = vec4(veins(uv * 7.0, 7.0, 8.71), veins(uv * 6.0, 6.0, 24.35), 0.0, 1.0);
       }
-    `
-  });
-  const scene = new THREE.Scene();
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.frustumCulled = false;
-  scene.add(mesh);
-  const previous = renderer.getRenderTarget();
-  try {
-    renderer.setRenderTarget(target);
-    renderer.render(scene, new THREE.Camera());
-  } finally {
-    renderer.setRenderTarget(previous);
-    material.dispose();
-    geometry.dispose();
-  }
-  return target;
-}
-
-/* the grade (sRGB hex). TEAL = the video's water (measured on its settled frames, between the glints); ABOVE = the same brightness in the
-   canyon's own above-water colours (cool steel blue: river ≈ rgb 55,75,110, sky ≈ 110,135,175, slate rock).
-   ?ocTone= 0 … 1 mixes them: 0 = the teal, 1 = fully the above-water palette; default 0.5 (client 11-18: 「色調調過去跟水上像一點點 折衷」) */
-export const TONE = Math.min(1, Math.max(0, num('ocTone', 0.5)));
-export const RISE_TONE = Math.min(1, Math.max(0, num('ocTone', 0.70)));
-const TEAL = { reef: '#b4c0c2', top: '#2c7a8c', mid: '#226a80', low: '#021c2c', abyss: '#021420', glow: '#e9f3f4',
-  key: '#d2f0f2', sky: '#5aa6ba', ground: '#0c2a40', rockTint: '#8fb0b6', mossTint: '#8fb08c', deep: '#2c5f76' };
-const ABOVE = { reef: '#b6bcc8', top: '#44709e', mid: '#375f92', low: '#07183a', abyss: '#05102a', glow: '#e9eef6',
-  key: '#dde7ee', sky: '#7d97b2', ground: '#17222f', rockTint: '#8da3aa', mossTint: '#93ae84', deep: '#3d5a86' };
-const mixHex = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, '0')).join('');
-const paletteAt = tone => Object.fromEntries(Object.keys(TEAL).map(k => [k, mixHex(TEAL[k], ABOVE[k], tone)]));
-export const PALETTE = paletteAt(TONE);
-export const RISE_PALETTE = paletteAt(RISE_TONE);
-const mix3 = (a, b) => a.map((v, i) => +(v * (1 - TONE) + b[i] * TONE).toFixed(3));
-const SKY = mix3([0.19, 0.40, 0.58], [0.26, 0.37, 0.6]), RAYCOOL = mix3([0.46, 0.72, 0.9], [0.6, 0.7, 0.96]);   /* a cool glint far from the sun (linear); the rays' cool part (sRGB sum) */
-
-/* the numbers the shaders read */
-export function makeUniforms(THREE, tNoise) {
-  return {
-    tOcN: { value: tNoise }, tOcF: { value: tNoise },
-    /* x = the ceiling's own upward look (rad: the descent looks level, the video looks up at the surface), y = wave slope gain,
-       z = cell scale, w = how fast the ceiling fades into the water along the line of sight */
-    uOcA: { value: new THREE.Vector4(num('ocPitch', 0.4), 0.36 * num('ocSlope', 1), 0.72 * num('ocCell', 1), num('ocFade', 2.0)) },
-    /* x = glint gain, y = gold gain round the hotspot, z = the mirror's (TIR) brightness, w = fade with the lens depth (per metre below 3 m) */
-    uOcB: { value: new THREE.Vector4(num('ocGlint', 1), num('ocSun', 1), num('ocMirror', 1), num('ocDeep', 0.06)) },
-    /* x = how much of the surface opens (bias on Snell's k: the bright fraction), y = the diagonal band of glints through the hotspot,
-       z = the swell (large slow light/dark), w = the fine flecks */
-    uOcC: { value: new THREE.Vector4(num('ocOpenK', 0), num('ocBand', 1), num('ocSwell', 1), num('ocFine', 1)) },
-    /* x = sun sparkle gain (the tiny hard flecks), y = how fast the flecks thin out away from the hotspot, z = ripple lines in the gaps, w = fine wavelets' slope */
-    uOcD: { value: new THREE.Vector4(num('ocSpark', 1), num('ocSparkR', 1), num('ocLines', 1), num('ocWavelet', 1)) },
-    uOcSky: { value: new THREE.Color().setRGB(SKY[0], SKY[1], SKY[2]) },     /* linear: a glint far from the sun, sRGB (120,170,200) */
-    uOcSunCol: { value: new THREE.Color().setRGB(1.0, 0.76, 0.45) },    /* linear: a glint at the hotspot, sRGB (255,246,232) */
-    uOcDeep: { value: new THREE.Color(PALETTE.deep) },                    /* the water the underside mirrors (between the glints) */
-    /* the screen pass: xy = the hotspot on the screen (shares, y up), z = rays strength, w = glow round the hotspot */
-    /* set each frame from s.ceil (the hand-over after the crossing): x = the ceiling's presence, y = softness (mip bias: dim AND soft at first) */
-    uOcK: { value: new THREE.Vector4(1, 0, 0, 0) },
-    uOcRay: { value: new THREE.Vector4(num('ocHotX', 0.74), num('ocHotY', 0.8), 0.36 * num('ocRays', 1), 0.16 * num('ocGlow', 1)) }
-  };
-}
-
-/* the surface map (RG = slope, B = height) */
-export const loadFine = (THREE, renderer) => loadSurface(THREE, renderer, './ocean-fine-n.webp');   /* the rounded fine wavelets (bake_fine.py) */
-export function loadSurface(THREE, renderer, file = './ocean-surface-n.webp') {
-  return new Promise(res => new THREE.TextureLoader().load(new URL(file + '?v=' + VERSION, import.meta.url).href, t => {
-    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = true;
-    t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
-    t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); res(t);
-  }, undefined, () => res(null)));
-}
-
-export const riseCeilFS = /* glsl */`
+    `}),scene=new THREE.Scene,mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=!1,scene.add(mesh);const previous=renderer.getRenderTarget();try{renderer.setRenderTarget(target),renderer.render(scene,new THREE.Camera)}finally{renderer.setRenderTarget(previous),material.dispose(),geometry.dispose()}return target}export const TONE=Math.min(1,Math.max(0,num("ocTone",.5))),RISE_TONE=Math.min(1,Math.max(0,num("ocTone",.7)));const TEAL={reef:"#b4c0c2",top:"#2c7a8c",mid:"#226a80",low:"#021c2c",abyss:"#021420",glow:"#e9f3f4",key:"#d2f0f2",sky:"#5aa6ba",ground:"#0c2a40",rockTint:"#8fb0b6",mossTint:"#8fb08c",deep:"#2c5f76"},ABOVE={reef:"#b6bcc8",top:"#44709e",mid:"#375f92",low:"#07183a",abyss:"#05102a",glow:"#e9eef6",key:"#dde7ee",sky:"#7d97b2",ground:"#17222f",rockTint:"#8da3aa",mossTint:"#93ae84",deep:"#3d5a86"},mixHex=(a,b,t)=>"#"+[1,3,5].map(i=>Math.round(parseInt(a.substr(i,2),16)*(1-t)+parseInt(b.substr(i,2),16)*t).toString(16).padStart(2,"0")).join(""),paletteAt=tone=>Object.fromEntries(Object.keys(TEAL).map(k=>[k,mixHex(TEAL[k],ABOVE[k],tone)]));export const PALETTE=paletteAt(TONE),RISE_PALETTE=paletteAt(RISE_TONE);const mix3=(a,b)=>a.map((v,i)=>+(v*(1-TONE)+b[i]*TONE).toFixed(3)),SKY=mix3([.19,.4,.58],[.26,.37,.6]),RAYCOOL=mix3([.46,.72,.9],[.6,.7,.96]);export function makeUniforms(THREE,tNoise){return{tOcN:{value:tNoise},tOcF:{value:tNoise},uOcA:{value:new THREE.Vector4(num("ocPitch",.4),.36*num("ocSlope",1),.72*num("ocCell",1),num("ocFade",2))},uOcB:{value:new THREE.Vector4(num("ocGlint",1),num("ocSun",1),num("ocMirror",1),num("ocDeep",.06))},uOcC:{value:new THREE.Vector4(num("ocOpenK",0),num("ocBand",1),num("ocSwell",1),num("ocFine",1))},uOcD:{value:new THREE.Vector4(num("ocSpark",1),num("ocSparkR",1),num("ocLines",1),num("ocWavelet",1))},uOcSky:{value:new THREE.Color().setRGB(SKY[0],SKY[1],SKY[2])},uOcSunCol:{value:new THREE.Color().setRGB(1,.76,.45)},uOcDeep:{value:new THREE.Color(PALETTE.deep)},uOcK:{value:new THREE.Vector4(1,0,0,0)},uOcRay:{value:new THREE.Vector4(num("ocHotX",.74),num("ocHotY",.8),.36*num("ocRays",1),.16*num("ocGlow",1))}}}export const loadFine=(THREE,renderer)=>loadSurface(THREE,renderer,"./ocean-fine-n.webp");export function loadSurface(THREE,renderer,file="./ocean-surface-n.webp"){return new Promise(res=>new THREE.TextureLoader().load(new URL(file+"?v="+VERSION,import.meta.url).href,t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping,t.colorSpace=THREE.NoColorSpace,t.generateMipmaps=!0,t.minFilter=THREE.LinearMipmapLinearFilter,t.magFilter=THREE.LinearFilter,t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()),res(t)},void 0,()=>res(null)))}export const riseCeilFS=`
   uniform sampler2D tOcN, tOcF;
   uniform vec3 uCamPos, uCamR, uCamU, uCamF;
   uniform float uTanH, uSurfY;
@@ -413,10 +208,7 @@ export const riseCeilFS = /* glsl */`
     }
     gl_FragColor = vec4(toSRGB(color), 1.0);
   }
-`;
-
-/* ---- the ground pass: replaces dg-scene's ceilFS (same header: bgAt, toSRGB, uRes, uTime come from COMMON_UW) */
-export const ceilFS = /* glsl */`
+`,ceilFS=`
   uniform sampler2D tOcN, tOcF; uniform vec3 uCamPos, uCamR, uCamU, uCamF, uOcSky, uOcSunCol, uOcDeep; uniform float uTanH, uSurfY, uCeil, uOcOver; uniform vec4 uOcA, uOcB, uOcC, uOcD, uOcRay, uOcK;
   void main(){
     vec2 fc = gl_FragCoord.xy, uv = fc / uRes; vec3 base = bgAt(fc);
@@ -429,8 +221,8 @@ export const ceilFS = /* glsl */`
     if (rd.y > 0.012) {
       float h = max(uSurfY - uCamPos.y, 0.8), t = h / rd.y;
       vec2 p = (uCamPos.xz + rd.xz * t) * uOcA.z;
-      /* the field streams away from the lens (toward the horizon, −z), every scale at its own speed, so the cells re-form all the time:
-         a, b = the chop · c = ripples · d, e = fine wavelets (centimetres: the flecks and slivers) · the swell = very large and slow */
+      /* the field streams away from the lens (toward the horizon, \u2212z), every scale at its own speed, so the cells re-form all the time:
+         a, b = the chop \xB7 c = ripples \xB7 d, e = fine wavelets (centimetres: the flecks and slivers) \xB7 the swell = very large and slow */
       vec2 a = texture2D(tOcN, p * 0.075 + vec2(uTime * 0.0021, uTime * 0.0135), -0.7 + uOcK.y).rg - 0.5;
       vec2 b = texture2D(tOcN, p * 0.19 + vec2(-uTime * 0.0105, uTime * 0.057) + 0.37, -0.7 + uOcK.y).rg - 0.5;
       vec3 c = texture2D(tOcN, p.yx * 0.6 + vec2(uTime * 0.27, -uTime * 0.031) + 0.71, -1.0 + uOcK.y).grb - vec3(0.5, 0.5, 0.0);
@@ -449,20 +241,20 @@ export const ceilFS = /* glsl */`
       vec2 ax = normalize(vec2(-1.0, -0.2)); float al = dot(hg, ax), ac = dot(hg, vec2(-ax.y, ax.x));
       float band = exp(-ac * ac / 0.012) * exp(-max(al, 0.0) * max(al, 0.0) / 0.3) * exp(-min(al, 0.0) * min(al, 0.0) / 0.05);
       float ci = max(-dot(rd, n), 0.0);
-      float k = 1.0 - 1.7689 * (1.0 - ci * ci)                /* Snell, water → air (1.33²): k > 0 = the ray leaves the water */
+      float k = 1.0 - 1.7689 * (1.0 - ci * ci)                /* Snell, water \u2192 air (1.33\xB2): k > 0 = the ray leaves the water */
               + uOcC.x + 0.1 + (0.16 * band + 0.22 * wz + 0.55 * hc) * uOcC.y + (swell - 0.5) * 0.3 * uOcC.z;
       float open = smoothstep(0.0, fwidth(k) * 1.1 + 0.003, k);   /* a hard, one-pixel edge at the critical angle */
-      /* the sun's sparkle: a facet shows the sun itself where its slope is the one that bends the sun to the lens — flat facets at the
+      /* the sun's sparkle: a facet shows the sun itself where its slope is the one that bends the sun to the lens \u2014 flat facets at the
          hotspot, steeper (rarer) ones away from it: many tiny hard flecks that thin out with distance */
       vec2 sq = s - hg * vec2(5.0, 5.0 * asp) * uOcD.y; float spark = smoothstep(0.36, 0.44, exp(-dot(sq, sq) / 0.05)) * uOcD.x;
       float lit = max(open, spark);
       float ct = sqrt(max(k, 0.0));
-      float core = smoothstep(0.0, 0.2, k);                   /* a glint is brightest in its middle … */
-      float fleck = 0.7 + 0.6 * c.z;                          /* … and carries the ripples' own light */
+      float core = smoothstep(0.0, 0.2, k);                   /* a glint is brightest in its middle \u2026 */
+      float fleck = 0.7 + 0.6 * c.z;                          /* \u2026 and carries the ripples' own light */
       vec3 gl = mix(uOcSky * (0.62 + 0.95 * core) * (0.85 + 0.4 * band), uOcSunCol * (0.66 + 0.42 * core) * uOcB.y, wz) * fleck * uOcB.x;
       gl *= 1.0 - (0.02 + 0.98 * pow(1.0 - min(ct * 2.2, 1.0), 5.0)) * (1.0 - spark);   /* Fresnel: the rim of a glint is darker */
       gl = mix(gl, vec3(1.1, 0.94, 0.7) * uOcB.x * uOcB.y, max(spark * (0.35 + 0.65 * wz), hc * core));   /* the sun itself: white-gold */
-      /* the mirror (total internal reflection): the water below — lighter on the swell's faces and where a wave nearly opens; the
+      /* the mirror (total internal reflection): the water below \u2014 lighter on the swell's faces and where a wave nearly opens; the
          wavelets draw fine blue-grey ripple lines in it and catch soft second highlights */
       vec3 Rr = reflect(rd, n); float rl = dot(sf + sm * 0.7, vec2(0.33, 0.94));
       vec3 mirror = uOcDeep * (0.2 + 1.3 * swell * uOcC.z + 0.5 * smoothstep(-0.98, -0.2, Rr.y) + 0.9 * smoothstep(-0.4, 0.0, k)) * uOcB.z;
@@ -476,13 +268,10 @@ export const ceilFS = /* glsl */`
       col = mix(base, surf, ext * smoothstep(0.012, 0.09, rd.y) * uOcK.x);   /* uOcK.x: the ceiling's presence (from s.ceil, set by dg-scene each frame) */
     }
     gl_FragColor = vec4(toSRGB(col), uOcOver);   /* uOcOver: 1 in the ground pass; the open-water veil's opacity in its second pass */
-  }`;
-
-/* ---- the screen pass: replaces raysAt's line (needs tNoise, uTime, uRayK from dg-scene's outMat). Colours here are sRGB-encoded sums. */
-export const raysFS = /* glsl */`
+  }`,raysFS=`
   uniform vec4 uOcRay;
   vec3 ocRays(vec2 uv, float asp){
-    vec2 hot = uOcRay.xy, o = vec2(hot.x + 0.035, 1.18);                 /* the fan's apex: just above the frame, over the hotspot — the shafts converge on it */
+    vec2 hot = uOcRay.xy, o = vec2(hot.x + 0.035, 1.18);                 /* the fan's apex: just above the frame, over the hotspot \u2014 the shafts converge on it */
     float below = hot.y - uv.y;
     vec2 d = (uv - o) * vec2(asp, 1.0); float ang = atan(d.x, -d.y);
     /* several soft shafts of different widths: two noise reads at different scales, neither one leading, drifting slowly opposite ways */
@@ -490,7 +279,7 @@ export const raysFS = /* glsl */`
     float sh = smoothstep(0.38, 0.62, w1) * (0.3 + 0.95 * smoothstep(0.34, 0.7, w2)) + 0.4 * smoothstep(0.5, 0.74, w2) + 0.25 * smoothstep(0.2, 0.36, w1 * w2);
     sh = min(sh, 1.15);
     float m = smoothstep(0.0, 0.26, below) * exp(-max(0.46 - uv.y, 0.0) * 5.0) * exp(-pow((ang + 0.04) / 0.4, 2.0));
-    vec3 warm = vec3(1.0, 0.87, 0.6), cool = vec3(${RAYCOOL.map(v => v.toFixed(3)).join(', ')});     /* warm-neutral at the top, cool blue lower down */
+    vec3 warm = vec3(1.0, 0.87, 0.6), cool = vec3(${RAYCOOL.map(v=>v.toFixed(3)).join(", ")});     /* warm-neutral at the top, cool blue lower down */
     vec3 c = mix(warm, cool, smoothstep(0.28, 0.78, below)) * sh * m * uOcRay.z;
     /* the hotspot's own soft warm glow (the light scattered on its way in): a tight core in a wide, faint halo */
     vec2 g = vec2(uv.x - hot.x, (uv.y - hot.y) / asp); float gd = dot(g, g);

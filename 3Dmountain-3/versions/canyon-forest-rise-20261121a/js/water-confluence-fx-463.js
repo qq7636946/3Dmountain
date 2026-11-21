@@ -1,139 +1,16 @@
-// index4-6-3 專用分支（LOGO 山道）：從 water-confluence-fx.js 複製而來，只有 index4-6-3.html 載入；
-// 其他頁面仍用原檔，一個位元組都不受影響。
-/** Optional live controls; omitted configuration preserves the original studies. */
-export const WATERSHED_FLOW_DEFAULTS = Object.freeze({
-  count: 1, width: .065, brightness: 1, speed: 1, glow: .65,
-  color: '#dcecf4', mist: .6, coreTint: 0,
-  // Light-line shaping (read only when a page passes flowConfig; pages that
-  // omit it keep the original seven blue filaments untouched):
-  // core = crispness of the white-hot centre, halo = width of the soft
-  // falloff that spills over the water, pulse = travelling comet packets,
-  // sparkle = sun glints riding the current, join = extra light where rivers
-  // meet, meander = how much the strands braid, depth = fade into valley haze.
-  core: .6, halo: .7, pulse: .85, sparkle: .5, join: 1, meander: .6, depth: .75,
-  // The comet head (光束頭) and its train, all 1 = the look as designed:
-  // headSize = how long the head is along the river, headBright = how hot it
-  // burns, headGlow = the halo it throws, headWidth = how thick it is across,
-  // tail = length of the fading train behind it, spacing = gap between packets.
-  headSize: 1, headBright: 1, headGlow: 1, headWidth: 1, tail: 1, spacing: 1,
-  // launch = how the light comes out as the valley opens (0: fades in everywhere at once, as before; 1: runs down
-  // the rivers from their sources to the confluence), launchGlow = how hot its leading reach burns,
-  // surge = how much it quickens and brightens while the page is being scrolled (the page writes _surge, 0–1).
-  launch: 0, launchGlow: 1.5, surge: 0
-});
-
-/** Locally bounded, terrain-occluded light carried by the five actual rivers. */
-export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () => 0, lite = false, joins = [], flowConfig = null } = {}) {
-  const group = new THREE.Group();
-  group.name = 'Five currents · luminous filaments and valley atmosphere';
-  const geometries = [], materials = [], textures = [];
-  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
-  const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
-  const fract = x => x - Math.floor(x);
-  const random = n => fract(Math.sin(n * 127.1 + 51.713) * 43758.5453);
-  const channels = paths.filter(p => p?.curve && typeof p.widthAt === 'function');
-  const refined = flowConfig !== null;
-  const flowValue = (key, min, max) => {
-    const value = Number(flowConfig?.[key] ?? WATERSHED_FLOW_DEFAULTS[key]);
-    return clamp(Number.isFinite(value) ? value : WATERSHED_FLOW_DEFAULTS[key], min, max);
-  };
-  const flowColor = new THREE.Color(WATERSHED_FLOW_DEFAULTS.color);
-  let lastFlowColor = null;
-  const uniforms = {
-    uTime: { value: 0 }, uFlowTravel: { value: 0 }, uReveal: { value: 0 }, uConfluence: { value: 0 },
-    uCurveMap: { value: null }, uCurveRows: { value: Math.max(1, channels.length) },
-    uCurveSamples: { value: lite ? 192 : 384 },
-    uFlowCount: { value: 1 }, uFlowWidth: { value: .065 },
-    uFlowBrightness: { value: 1 }, uFlowSpeed: { value: 1 },
-    uFlowGlow: { value: .65 }, uFlowColor: { value: flowColor }, uMist: { value: .6 }
-  };
-  if (refined) Object.assign(uniforms, {
-    uFlowCoreTint: { value: WATERSHED_FLOW_DEFAULTS.coreTint },
-    uFlowCore: { value: WATERSHED_FLOW_DEFAULTS.core }, uFlowHalo: { value: WATERSHED_FLOW_DEFAULTS.halo },
-    uFlowPulse: { value: WATERSHED_FLOW_DEFAULTS.pulse }, uFlowSparkle: { value: WATERSHED_FLOW_DEFAULTS.sparkle },
-    uFlowJoin: { value: WATERSHED_FLOW_DEFAULTS.join }, uFlowMeander: { value: WATERSHED_FLOW_DEFAULTS.meander },
-    uFlowDepth: { value: WATERSHED_FLOW_DEFAULTS.depth },
-    uHeadSize: { value: 1 }, uHeadBright: { value: 1 }, uHeadGlow: { value: 1 }, uHeadWidth: { value: 1 },
-    uHeadTail: { value: 1 }, uHeadSpacing: { value: 1 },
-    uLaunch: { value: 1 }, uLaunchOn: { value: 0 }, uLaunchGlow: { value: 1.5 }, uFlowFrom: { value: 0 }, uFlowSpan: { value: 1 }
-  });
-  let disposed = false, previousTime = null, motionTime = 0, flowTravel = 0;
-  const pointAt = (curve, t) => curve.getPointAt(clamp(t));
-  const tangentAt = (curve, t) => curve.getTangentAt(clamp(t));
-  const widths = (channel, t) => Math.max(1, channel.widthAt(clamp(t)));
-  const commonFragment = /* glsl */`
+export const WATERSHED_FLOW_DEFAULTS=Object.freeze({count:1,width:.065,brightness:1,speed:1,glow:.65,color:"#dcecf4",mist:.6,coreTint:0,core:.6,halo:.7,pulse:.85,sparkle:.5,join:1,meander:.6,depth:.75,headSize:1,headBright:1,headGlow:1,headWidth:1,tail:1,spacing:1,launch:0,launchGlow:1.5,surge:0});export function createConfluenceEffects(THREE,{paths=[],sampleHeight=()=>0,lite=!1,joins=[],flowConfig=null}={}){const group=new THREE.Group;group.name="Five currents \xB7 luminous filaments and valley atmosphere";const geometries=[],materials=[],textures=[],clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t)},fract=x=>x-Math.floor(x),random=n=>fract(Math.sin(n*127.1+51.713)*43758.5453),channels=paths.filter(p=>p?.curve&&typeof p.widthAt=="function"),refined=flowConfig!==null,flowValue=(key,min,max)=>{const value=Number(flowConfig?.[key]??WATERSHED_FLOW_DEFAULTS[key]);return clamp(Number.isFinite(value)?value:WATERSHED_FLOW_DEFAULTS[key],min,max)},flowColor=new THREE.Color(WATERSHED_FLOW_DEFAULTS.color);let lastFlowColor=null;const uniforms={uTime:{value:0},uFlowTravel:{value:0},uReveal:{value:0},uConfluence:{value:0},uCurveMap:{value:null},uCurveRows:{value:Math.max(1,channels.length)},uCurveSamples:{value:lite?192:384},uFlowCount:{value:1},uFlowWidth:{value:.065},uFlowBrightness:{value:1},uFlowSpeed:{value:1},uFlowGlow:{value:.65},uFlowColor:{value:flowColor},uMist:{value:.6}};refined&&Object.assign(uniforms,{uFlowCoreTint:{value:WATERSHED_FLOW_DEFAULTS.coreTint},uFlowCore:{value:WATERSHED_FLOW_DEFAULTS.core},uFlowHalo:{value:WATERSHED_FLOW_DEFAULTS.halo},uFlowPulse:{value:WATERSHED_FLOW_DEFAULTS.pulse},uFlowSparkle:{value:WATERSHED_FLOW_DEFAULTS.sparkle},uFlowJoin:{value:WATERSHED_FLOW_DEFAULTS.join},uFlowMeander:{value:WATERSHED_FLOW_DEFAULTS.meander},uFlowDepth:{value:WATERSHED_FLOW_DEFAULTS.depth},uHeadSize:{value:1},uHeadBright:{value:1},uHeadGlow:{value:1},uHeadWidth:{value:1},uHeadTail:{value:1},uHeadSpacing:{value:1},uLaunch:{value:1},uLaunchOn:{value:0},uLaunchGlow:{value:1.5},uFlowFrom:{value:0},uFlowSpan:{value:1}});let disposed=!1,previousTime=null,motionTime=0,flowTravel=0;const pointAt=(curve,t)=>curve.getPointAt(clamp(t)),tangentAt=(curve,t)=>curve.getTangentAt(clamp(t)),widths=(channel,t)=>Math.max(1,channel.widthAt(clamp(t))),commonFragment=`
     uniform float uTime, uFlowTravel, uReveal, uConfluence;
     uniform float uFlowCount, uFlowWidth, uFlowBrightness, uFlowSpeed, uFlowGlow, uMist;
-    uniform vec3 uFlowColor;${refined ? `
+    uniform vec3 uFlowColor;${refined?`
     uniform float uFlowCoreTint, uFlowCore, uFlowHalo, uFlowPulse, uFlowSparkle, uFlowJoin, uFlowMeander, uFlowDepth;
     uniform float uHeadSize, uHeadBright, uHeadGlow, uHeadWidth, uHeadTail, uHeadSpacing;
-    uniform float uLaunch, uLaunchOn, uLaunchGlow, uFlowFrom, uFlowSpan;` : ''}
+    uniform float uLaunch, uLaunchOn, uLaunchGlow, uFlowFrom, uFlowSpan;`:""}
     float hash21(vec2 p) { p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
     float noise21(vec2 p) {
       vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
       return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+vec2(1.)),f.x),f.y);
     }
-  `;
-  function geometryWith(attributes, indices) {
-    const geometry = new THREE.BufferGeometry();
-    for (const [name, [data, size]] of Object.entries(attributes)) geometry.setAttribute(name, new THREE.Float32BufferAttribute(data, size));
-    if (indices) geometry.setIndex(indices);
-    geometry.computeBoundingSphere(); geometries.push(geometry); return geometry;
-  }
-  function shader(name, vertexShader, fragmentShader, extra = {}) {
-    const material = new THREE.ShaderMaterial({
-      name, uniforms, vertexShader, fragmentShader, transparent: true,
-      depthTest: true, depthWrite: false, side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending, toneMapped: false, ...extra
-    });
-    materials.push(material); return material;
-  }
-
-  // A shared strip mesh follows each river's real arc length and half-width.
-  // Only thin strands emit: the spaces between them retain the original water.
-  const ribbonPosition = [], ribbonFlow = [], ribbonEnds = [], ribbonIndex = [];
-  const lengths = channels.map(p => Math.max(1, p.curve.getLength()));
-  let ribbonVertexCount = 0, flowFrom = Infinity, flowTo = -Infinity;
-  channels.forEach((channel, pathIndex) => {
-    const length = lengths[pathIndex];
-    if (refined) { const o = Number.isFinite(channel.flowOffset) ? channel.flowOffset : 0; flowFrom = Math.min(flowFrom, o); flowTo = Math.max(flowTo, o + length); }
-    // A drainage-wide distance makes the moving crest continuous at seams.
-    // Tributaries use the trunk distance at their mouth as the phase anchor.
-    const flowOffset = refined && Number.isFinite(channel.flowOffset) ? channel.flowOffset : 0;
-    const startFade = refined ? Math.max(0, channel.flowStartFade ?? 56) : 0;
-    const endFade = refined ? Math.max(0, channel.flowEndFade ?? 56) : 0;
-    const rows = Math.round(clamp(length / (lite ? 26 : 17), 100, lite ? 460 : 760));
-    const columns = lite ? 4 : 8, first = ribbonVertexCount;
-    for (let row = 0; row <= rows; row++) {
-      const t = row / rows, center = pointAt(channel.curve, t), tangent = tangentAt(channel.curve, t);
-      const horizontal = Math.hypot(tangent.x, tangent.z) || 1;
-      const nx = -tangent.z / horizontal, nz = tangent.x / horizontal, width = widths(channel, t) * .93;
-      // Optional per-path dimming (index4-6-3's logo lake): paths without flowDimAt are unchanged.
-      const dim = channel.flowDimAt ? channel.flowDimAt(center.x, center.z) : 1;
-      // Refined only: how close this cross-section sits to a confluence, so
-      // the light can gather and swell where two currents merge.
-      let joinGlow = 0;
-      if (refined) for (const j of joins) {
-        const reach = Math.max(120, width * 2.6), dx = center.x - j.x, dz = center.z - j.z;
-        joinGlow = Math.max(joinGlow, Math.exp(-(dx * dx + dz * dz) / (reach * reach)));
-      }
-      for (let column = 0; column <= columns; column++) {
-        const lane = column / columns * 2 - 1;
-        ribbonPosition.push(center.x + nx * width * lane, refined ? 3.6 : 2.2, center.z + nz * width * lane);
-        ribbonFlow.push(lane, t * length + flowOffset, t, refined ? joinGlow : pathIndex * 4.713 + .9);
-        ribbonEnds.push((startFade > 0 ? smooth(0, startFade, t * length) : 1) * dim,
-          endFade > 0 ? smooth(0, endFade, (1 - t) * length) : 1);
-        ribbonVertexCount++;
-      }
-      if (row < rows) for (let column = 0; column < columns; column++) {
-        const a = first + row * (columns + 1) + column, b = a + columns + 1;
-        ribbonIndex.push(a, a + 1, b, a + 1, b + 1, b);
-      }
-    }
-  });
-  if (ribbonVertexCount) {
-    const geometry = geometryWith({ position: [ribbonPosition, 3], aFlow: [ribbonFlow, 4], aEnds: [ribbonEnds, 2] }, ribbonIndex);
-    const refinedVertex = /* glsl */`
+  `;function geometryWith(attributes,indices){const geometry=new THREE.BufferGeometry;for(const[name,[data,size]]of Object.entries(attributes))geometry.setAttribute(name,new THREE.Float32BufferAttribute(data,size));return indices&&geometry.setIndex(indices),geometry.computeBoundingSphere(),geometries.push(geometry),geometry}function shader(name,vertexShader,fragmentShader,extra={}){const material=new THREE.ShaderMaterial({name,uniforms,vertexShader,fragmentShader,transparent:!0,depthTest:!0,depthWrite:!1,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:!1,...extra});return materials.push(material),material}const ribbonPosition=[],ribbonFlow=[],ribbonEnds=[],ribbonIndex=[],lengths=channels.map(p=>Math.max(1,p.curve.getLength()));let ribbonVertexCount=0,flowFrom=1/0,flowTo=-1/0;if(channels.forEach((channel,pathIndex)=>{const length=lengths[pathIndex];if(refined){const o=Number.isFinite(channel.flowOffset)?channel.flowOffset:0;flowFrom=Math.min(flowFrom,o),flowTo=Math.max(flowTo,o+length)}const flowOffset=refined&&Number.isFinite(channel.flowOffset)?channel.flowOffset:0,startFade=refined?Math.max(0,channel.flowStartFade??56):0,endFade=refined?Math.max(0,channel.flowEndFade??56):0,rows=Math.round(clamp(length/(lite?26:17),100,lite?460:760)),columns=lite?4:8,first=ribbonVertexCount;for(let row=0;row<=rows;row++){const t=row/rows,center=pointAt(channel.curve,t),tangent=tangentAt(channel.curve,t),horizontal=Math.hypot(tangent.x,tangent.z)||1,nx=-tangent.z/horizontal,nz=tangent.x/horizontal,width=widths(channel,t)*.93,dim=channel.flowDimAt?channel.flowDimAt(center.x,center.z):1;let joinGlow=0;if(refined)for(const j of joins){const reach=Math.max(120,width*2.6),dx=center.x-j.x,dz=center.z-j.z;joinGlow=Math.max(joinGlow,Math.exp(-(dx*dx+dz*dz)/(reach*reach)))}for(let column=0;column<=columns;column++){const lane=column/columns*2-1;ribbonPosition.push(center.x+nx*width*lane,refined?3.6:2.2,center.z+nz*width*lane),ribbonFlow.push(lane,t*length+flowOffset,t,refined?joinGlow:pathIndex*4.713+.9),ribbonEnds.push((startFade>0?smooth(0,startFade,t*length):1)*dim,endFade>0?smooth(0,endFade,(1-t)*length):1),ribbonVertexCount++}if(row<rows)for(let column=0;column<columns;column++){const a=first+row*(columns+1)+column,b=a+columns+1;ribbonIndex.push(a,a+1,b,a+1,b+1,b)}}}),ribbonVertexCount){const geometry=geometryWith({position:[ribbonPosition,3],aFlow:[ribbonFlow,4],aEnds:[ribbonEnds,2]},ribbonIndex),material=shader(refined?"Ice silver \xB7 continuous river current":"River-bound electric blue filaments",refined?`
       attribute vec4 aFlow; attribute vec2 aEnds;
       varying vec4 vFlow; varying vec2 vEnds;
       #include <fog_pars_vertex>
@@ -143,13 +20,11 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
         gl_Position=projectionMatrix*mvPosition;
         #include <fog_vertex>
       }
-    `;
-    const originalVertex = /* glsl */`
+    `:`
       attribute vec4 aFlow; attribute vec2 aEnds;
       varying vec4 vFlow; varying vec2 vEnds;
       void main(){ vFlow=aFlow; vEnds=aEnds; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }
-    `;
-    const material = shader(refined ? 'Ice silver · continuous river current' : 'River-bound electric blue filaments', refined ? refinedVertex : originalVertex, commonFragment + (refined ? /* glsl */`
+    `,commonFragment+(refined?`
       varying vec4 vFlow; varying vec2 vEnds;
       #include <fog_pars_fragment>
       float hash11(float n){ return fract(sin(n*127.1+51.713)*43758.5453); }
@@ -203,11 +78,11 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
           float adv=(distance-uFlowTravel*(.80+.40*h1))/((520.+340.*h2)*uHeadSpacing)+h3;
           float ph=fract(adv), phAA=max(fwidth(adv)*1.25,.002);
           const float H=.86;
-          // 尾巴最長只到下一個包的前面：再長就會在相位繞回處接出一道亮縫。
+          // \u5C3E\u5DF4\u6700\u9577\u53EA\u5230\u4E0B\u4E00\u500B\u5305\u7684\u524D\u9762\uFF1A\u518D\u9577\u5C31\u6703\u5728\u76F8\u4F4D\u7E5E\u56DE\u8655\u63A5\u51FA\u4E00\u9053\u4EAE\u7E2B\u3002
           float L=min((.34+.26*h2)*uHeadTail,H-.02);
           float tail=pow(clamp(1.-(H-ph)/L,0.,1.),2.2);
-          // 寬到 0.15 以上，包的硬前緣和粗細錐度會橫跨整條河、疊成一格一格的台階；
-          // 越寬越收掉它，讓寬光是一條平順的光河（0.15 以下完全不變）。
+          // \u5BEC\u5230 0.15 \u4EE5\u4E0A\uFF0C\u5305\u7684\u786C\u524D\u7DE3\u548C\u7C97\u7D30\u9310\u5EA6\u6703\u6A6B\u8DE8\u6574\u689D\u6CB3\u3001\u758A\u6210\u4E00\u683C\u4E00\u683C\u7684\u53F0\u968E\uFF1B
+          // \u8D8A\u5BEC\u8D8A\u6536\u6389\u5B83\uFF0C\u8B93\u5BEC\u5149\u662F\u4E00\u689D\u5E73\u9806\u7684\u5149\u6CB3\uFF080.15 \u4EE5\u4E0B\u5B8C\u5168\u4E0D\u8B8A\uFF09\u3002
           float wide=smoothstep(.15,.6,w);
           float front=1.-smoothstep(H,H+.028+phAA+.10*wide,ph);
           float packet=mix(tail,front,step(H,ph));
@@ -228,7 +103,7 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
           float hw=max(sw*1.1+uFlowHalo*.09,aa*2.);
           float x=d/hw, halo=1./((1.+x*x)*(1.+x*x));
           line+=white*core*energy*(.95+.5*uFlowCore)+uFlowColor*shoulder*energy*.11;
-          // 光束頭光暈：自己的範圍，1 以上沿河與橫向一起長大（在 1 時與原式相同）。
+          // \u5149\u675F\u982D\u5149\u6688\uFF1A\u81EA\u5DF1\u7684\u7BC4\u570D\uFF0C1 \u4EE5\u4E0A\u6CBF\u6CB3\u8207\u6A6B\u5411\u4E00\u8D77\u9577\u5927\uFF08\u5728 1 \u6642\u8207\u539F\u5F0F\u76F8\u540C\uFF09\u3002
           float glowGrow=max(uHeadGlow-1.,0.);
           float headHalo=bell(ph-H+.006*uHeadSize,(.011*uHeadSize+phAA)*(1.+1.5*glowGrow));
           float xg=d/(hw*(1.+.5*glowGrow)), hhalo=1./((1.+xg*xg)*(1.+xg*xg));
@@ -281,7 +156,7 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
         gl_FragColor=vec4(emission,1.);
         #include <colorspace_fragment>
       }
-    ` : /* glsl */`
+    `:`
       varying vec4 vFlow;
       void main() {
         float lane=vFlow.x, distance=vFlow.y, seed=vFlow.w;
@@ -315,42 +190,7 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
         gl_FragColor=vec4(color,min(strength,.94));
         #include <colorspace_fragment>
       }
-    `), refined ? {
-      // The refined current reads the scene's own fog so far reaches recede.
-      uniforms: { ...uniforms, ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog) }, fog: true,
-      defines: { ...(lite ? { FLOW_LITE: '' } : {}), ...(refined && flowValue('launch', 0, 1) > 0 ? { FLOW_LAUNCH: '' } : {}) }
-    } : {});
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.name = refined ? 'Continuous ice currents · adjustable 0 to 5 per valley' : 'Seven narrow blue currents per valley'; mesh.renderOrder = 4; group.add(mesh);
-  }
-
-  // GPU particles sample the same curves, keeping every square in its channel.
-  const samples = uniforms.uCurveSamples.value;
-  const curveData = new Float32Array(samples * Math.max(1, channels.length) * 4);
-  channels.forEach((channel, index) => {
-    for (let i = 0; i < samples; i++) {
-      const t = i / (samples - 1), p = pointAt(channel.curve, t), offset = (index * samples + i) * 4;
-      curveData.set([p.x, 5.2, p.z, widths(channel, t)], offset);
-    }
-  });
-  const curveTexture = new THREE.DataTexture(curveData, samples, Math.max(1, channels.length), THREE.RGBAFormat, THREE.FloatType);
-  curveTexture.minFilter = THREE.NearestFilter; curveTexture.magFilter = THREE.NearestFilter;
-  curveTexture.generateMipmaps = false; curveTexture.needsUpdate = true;
-  textures.push(curveTexture); uniforms.uCurveMap.value = curveTexture;
-  const particlePositions = [], particleFlows = [], particlePaths = [], particleRates = [];
-  const particlesPerPath = refined ? 0 : lite ? 13 : 25;
-  channels.forEach((channel, pathIndex) => {
-    for (let i = 0; i < particlesPerPath; i++) {
-      const seed = (pathIndex + 1) * 93.47 + i * 8.371, t = (i + random(seed)) / particlesPerPath;
-      const p = pointAt(channel.curve, t);
-      particlePositions.push(p.x, 6, p.z);
-      particleFlows.push(t, random(seed + 8), (random(seed + 19) * 2 - 1) * .74, 1.9 + random(seed + 35) * 2.8);
-      particlePaths.push(pathIndex); particleRates.push((24 + random(seed + 27) * 24) / lengths[pathIndex]);
-    }
-  });
-  if (particlePaths.length) {
-    const geometry = geometryWith({ position: [particlePositions, 3], aFlow: [particleFlows, 4], aPath: [particlePaths, 1], aRate: [particleRates, 1] });
-    const material = shader('Sparse square glints advected on each river', /* glsl */`
+    `),refined?{uniforms:{...uniforms,...THREE.UniformsUtils.clone(THREE.UniformsLib.fog)},fog:!0,defines:{...lite?{FLOW_LITE:""}:{},...refined&&flowValue("launch",0,1)>0?{FLOW_LAUNCH:""}:{}}}:{}),mesh=new THREE.Mesh(geometry,material);mesh.name=refined?"Continuous ice currents \xB7 adjustable 0 to 5 per valley":"Seven narrow blue currents per valley",mesh.renderOrder=4,group.add(mesh)}const samples=uniforms.uCurveSamples.value,curveData=new Float32Array(samples*Math.max(1,channels.length)*4);channels.forEach((channel,index)=>{for(let i=0;i<samples;i++){const t=i/(samples-1),p=pointAt(channel.curve,t),offset=(index*samples+i)*4;curveData.set([p.x,5.2,p.z,widths(channel,t)],offset)}});const curveTexture=new THREE.DataTexture(curveData,samples,Math.max(1,channels.length),THREE.RGBAFormat,THREE.FloatType);curveTexture.minFilter=THREE.NearestFilter,curveTexture.magFilter=THREE.NearestFilter,curveTexture.generateMipmaps=!1,curveTexture.needsUpdate=!0,textures.push(curveTexture),uniforms.uCurveMap.value=curveTexture;const particlePositions=[],particleFlows=[],particlePaths=[],particleRates=[],particlesPerPath=refined?0:lite?13:25;if(channels.forEach((channel,pathIndex)=>{for(let i=0;i<particlesPerPath;i++){const seed=(pathIndex+1)*93.47+i*8.371,t=(i+random(seed))/particlesPerPath,p=pointAt(channel.curve,t);particlePositions.push(p.x,6,p.z),particleFlows.push(t,random(seed+8),(random(seed+19)*2-1)*.74,1.9+random(seed+35)*2.8),particlePaths.push(pathIndex),particleRates.push((24+random(seed+27)*24)/lengths[pathIndex])}}),particlePaths.length){const geometry=geometryWith({position:[particlePositions,3],aFlow:[particleFlows,4],aPath:[particlePaths,1],aRate:[particleRates,1]}),material=shader("Sparse square glints advected on each river",`
       uniform float uTime,uReveal,uCurveRows,uCurveSamples;
       uniform sampler2D uCurveMap;
       attribute vec4 aFlow; attribute float aPath,aRate;
@@ -374,164 +214,34 @@ export function createConfluenceEffects(THREE, { paths = [], sampleHeight = () =
         float twinkle=.35+.65*pow(.5+.5*sin(uTime*2.7+aFlow.y*39.),5.);
         vAlpha=uReveal*twinkle*smoothstep(0.,.015,t)*(1.-smoothstep(.985,1.,t));vSeed=aFlow.y;
       }
-    `, /* glsl */`
+    `,`
       varying float vAlpha,vSeed;
       void main(){
         vec2 p=abs(gl_PointCoord-.5);float edge=1.-smoothstep(.30,.50,max(p.x,p.y));
         gl_FragColor=vec4(mix(vec3(.055,.45,1.),vec3(.65,.93,1.),vSeed),edge*vAlpha*.86);
         #include <colorspace_fragment>
       }
-    `);
-    const points = new THREE.Points(geometry, material);
-    points.name = 'Sparse tiny downstream square particles'; points.frustumCulled = false; points.renderOrder = 6; group.add(points);
-  }
-
-  const sourceChannels = channels.length >= 6 ? [channels[5], ...channels.slice(1, 5)] : channels.slice(0, 5);
-  const sourcePoints = sourceChannels.map((channel, index) => {
-    const t = index === 0 ? .58 : .46 + index * .035, p = pointAt(channel.curve, t);
-    return { x: p.x, y: 2.3, z: p.z, seed: index * 2.37, width: widths(channel, t) };
-  });
-
-  // Small low-lying fog islands are actual world planes with terrain occlusion.
-  // They sit in sheltered pockets, never as a screen-space veil over the title.
-  const mistPatches = [];
-  channels.slice(1, 5).forEach((channel, index) => {
-    const t = .57 + index * .039, p = pointAt(channel.curve, t), tangent = tangentAt(channel.curve, t);
-    const normalLength = Math.hypot(tangent.x, tangent.z) || 1;
-    const bankSide = index % 2 ? -1 : 1, offset = widths(channel, t) * .81;
-    const x = p.x - tangent.z / normalLength * offset * bankSide;
-    const z = p.z + tangent.x / normalLength * offset * bankSide;
-    mistPatches.push({ x, y: Math.max(9, sampleHeight(x, z) + 5), z, rx: 88 + index * 11, rz: 154 + index * 15, seed: index + 1, opacity: .115 });
-  });
-  const joinPatches = joins.map((p, index) => ({ x: p.x, y: 2.7, z: p.z, rx: 76 + index * 7, rz: 116 + index * 9, seed: index + 2, opacity: .53 }));
-  sourcePoints.forEach((p, index) => joinPatches.push({ ...p, rx: 19, rz: 33, seed: index + 9, opacity: .39 }));
-  function patchMesh(patches, mist) {
-    if (!patches.length) return;
-    const positions = [], uv = [], info = [], indices = [];
-    for (let i = 0; i < patches.length; i++) {
-      const p = patches[i];
-      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-        positions.push(p.x + p.rx * x, p.y, p.z + p.rz * z);
-        uv.push(x, z); info.push(p.seed, p.opacity);
-      }
-      const k = i * 4; indices.push(k, k + 2, k + 1, k + 1, k + 2, k + 3);
-    }
-    const geometry = geometryWith({ position: [positions, 3], aPatchUv: [uv, 2], aInfo: [info, 2] }, indices);
-    const material = shader(mist ? 'Sheltered blue valley mist' : 'Local confluence radiance', /* glsl */`
+    `),points=new THREE.Points(geometry,material);points.name="Sparse tiny downstream square particles",points.frustumCulled=!1,points.renderOrder=6,group.add(points)}const sourcePoints=(channels.length>=6?[channels[5],...channels.slice(1,5)]:channels.slice(0,5)).map((channel,index)=>{const t=index===0?.58:.46+index*.035,p=pointAt(channel.curve,t);return{x:p.x,y:2.3,z:p.z,seed:index*2.37,width:widths(channel,t)}}),mistPatches=[];channels.slice(1,5).forEach((channel,index)=>{const t=.57+index*.039,p=pointAt(channel.curve,t),tangent=tangentAt(channel.curve,t),normalLength=Math.hypot(tangent.x,tangent.z)||1,bankSide=index%2?-1:1,offset=widths(channel,t)*.81,x=p.x-tangent.z/normalLength*offset*bankSide,z=p.z+tangent.x/normalLength*offset*bankSide;mistPatches.push({x,y:Math.max(9,sampleHeight(x,z)+5),z,rx:88+index*11,rz:154+index*15,seed:index+1,opacity:.115})});const joinPatches=joins.map((p,index)=>({x:p.x,y:2.7,z:p.z,rx:76+index*7,rz:116+index*9,seed:index+2,opacity:.53}));sourcePoints.forEach((p,index)=>joinPatches.push({...p,rx:19,rz:33,seed:index+9,opacity:.39}));function patchMesh(patches,mist){if(!patches.length)return;const positions=[],uv=[],info=[],indices=[];for(let i=0;i<patches.length;i++){const p=patches[i];for(const[x,z]of[[-1,-1],[1,-1],[-1,1],[1,1]])positions.push(p.x+p.rx*x,p.y,p.z+p.rz*z),uv.push(x,z),info.push(p.seed,p.opacity);const k=i*4;indices.push(k,k+2,k+1,k+1,k+2,k+3)}const geometry=geometryWith({position:[positions,3],aPatchUv:[uv,2],aInfo:[info,2]},indices),material=shader(mist?"Sheltered blue valley mist":"Local confluence radiance",`
       attribute vec2 aPatchUv,aInfo; varying vec2 vPatch,vInfo;
       void main(){vPatch=aPatchUv;vInfo=aInfo;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}
-    `, commonFragment + /* glsl */`
+    `,commonFragment+`
       varying vec2 vPatch,vInfo;
       void main(){
         float r=dot(vPatch,vPatch), mask=1.-smoothstep(.25,1.,r);
         float turbulence=noise21(vPatch*3.3+vec2(uTime*.037+vInfo.x,-uTime*.026));
-        ${mist ? `
+        ${mist?`
           float alpha=mask*(.25+turbulence*.75)*vInfo.y*uReveal;
-          vec3 color=${refined ? 'mix(uFlowColor,vec3(.60,.67,.73),.42)' : 'vec3(.17,.34,.59)'};
-          ${refined ? 'alpha*=uMist;' : ''}
-        ` : `
+          vec3 color=${refined?"mix(uFlowColor,vec3(.60,.67,.73),.42)":"vec3(.17,.34,.59)"};
+          ${refined?"alpha*=uMist;":""}
+        `:`
           float bloom=exp(-r*5.5), center=exp(-r*43.);
           float pulse=.84+.16*sin(uTime*1.7+vInfo.x*3.1);
           float alpha=(bloom*.48+center*.34)*mask*(.78+turbulence*.22)*vInfo.y*uReveal*pulse;
           alpha*=vInfo.x<8. ? mix(.65,1.,uConfluence) : 1.;
-          vec3 color=${refined ? 'mix(uFlowColor*.72,vec3(.86,.93,.98),center)' : 'mix(vec3(.018,.26,.91),vec3(.40,.86,1.14),center)'};
-          ${refined ? 'alpha*=uFlowBrightness*uFlowGlow*.32*step(.5,uFlowCount)*(vInfo.x<8. ? uFlowJoin : 1.);' : ''}
+          vec3 color=${refined?"mix(uFlowColor*.72,vec3(.86,.93,.98),center)":"mix(vec3(.018,.26,.91),vec3(.40,.86,1.14),center)"};
+          ${refined?"alpha*=uFlowBrightness*uFlowGlow*.32*step(.5,uFlowCount)*(vInfo.x<8. ? uFlowJoin : 1.);":""}
         `}
         if(alpha<.002)discard;gl_FragColor=vec4(color,alpha);
         #include <colorspace_fragment>
       }
-    `, mist ? { blending: THREE.NormalBlending } : {});
-    const mesh = new THREE.Mesh(geometry, material); mesh.name = mist ? 'Four sheltered ground mist pockets' : 'Four joins and five quiet source halos';
-    mesh.renderOrder = mist ? 7 : 5; group.add(mesh);
-  }
-  patchMesh(mistPatches, true); patchMesh(joinPatches, false);
-
-  // Grounded, very small faceted source markers share a single instanced draw.
-  let markerMaterial = null;
-  if (sourcePoints.length) {
-    const geometry = new THREE.OctahedronGeometry(1, 0); geometries.push(geometry);
-    markerMaterial = new THREE.MeshBasicMaterial({ color: refined ? flowColor : 0x47bdff, transparent: true, opacity: 0, depthTest: true, depthWrite: false, toneMapped: false });
-    materials.push(markerMaterial);
-    const markers = new THREE.InstancedMesh(geometry, markerMaterial, sourcePoints.length);
-    const matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), axis = new THREE.Vector3(0, 1, 0);
-    sourcePoints.forEach((p, index) => {
-      quaternion.setFromAxisAngle(axis, index * 1.23);
-      matrix.compose(new THREE.Vector3(p.x, 10.5, p.z), quaternion, new THREE.Vector3(3.7, 9.4, 3.7));
-      markers.setMatrixAt(index, matrix);
-    });
-    markers.instanceMatrix.needsUpdate = true; markers.name = 'Five small grounded luminous source crystals'; markers.renderOrder = 5; group.add(markers);
-  }
-  const stats = {
-    riverPaths: channels.length, ribbonVertices: ribbonVertexCount, ribbonTriangles: ribbonIndex.length / 3,
-    strandsPerRiver: refined ? 1 : 7, liveFlowControls: refined,
-    downstreamPackets: refined, flowWorldSpeed: refined ? 340 : 0, phaseContinuous: refined && channels.every(p => Number.isFinite(p.flowOffset)), particles: particlePaths.length, mistPockets: mistPatches.length,
-    confluencePatches: joins.length, sourceMarkers: sourcePoints.length, drawCalls: group.children.length,
-    depthTest: true, depthWrite: false, boundedWorldSpace: true
-  };
-  group.visible = false;
-  return {
-    group, stats, flowConfig, uniforms,
-    update(time = 0, reveal = 0, confluence = 0, reduced = false) {
-      if (disposed) return;
-      const currentTime = Number.isFinite(time) ? time : 0;
-      const delta = previousTime === null ? 0 : clamp(currentTime - previousTime, 0, .12);
-      // SURGE: while the page is being scrolled (the page writes _surge, 0–1) the light runs faster and burns hotter.
-      const surgeNow = refined && !reduced ? clamp(Number(flowConfig._surge) || 0, 0, 1) * flowValue('surge', 0, 3) : 0;
-      if (!reduced) {
-        motionTime += delta;
-        // Integrate speed: moving the live slider must not jump the crest.
-        if (refined) flowTravel += delta * 340 * flowValue('speed', 0, 2.5) * (1 + 1.6 * surgeNow);
-      }
-      previousTime = currentTime;
-      if (refined) {
-        uniforms.uFlowCount.value = Math.round(flowValue('count', 0, 5));
-        uniforms.uFlowWidth.value = flowValue('width', .005, 1);
-        uniforms.uFlowBrightness.value = flowValue('brightness', 0, 2) * (1 + .22 * surgeNow);
-        uniforms.uFlowSpeed.value = flowValue('speed', 0, 2.5);
-        uniforms.uFlowGlow.value = flowValue('glow', 0, 1.5);
-        uniforms.uMist.value = flowValue('mist', 0, 1.5);
-        uniforms.uFlowCore.value = flowValue('core', 0, 1);
-        uniforms.uFlowCoreTint.value = flowValue('coreTint', 0, 1);
-        uniforms.uFlowHalo.value = flowValue('halo', 0, 1.5);
-        uniforms.uFlowPulse.value = flowValue('pulse', 0, 1.5);
-        uniforms.uFlowSparkle.value = flowValue('sparkle', 0, 1.5);
-        uniforms.uFlowJoin.value = flowValue('join', 0, 2);
-        uniforms.uFlowMeander.value = flowValue('meander', 0, 1.5);
-        uniforms.uFlowDepth.value = flowValue('depth', 0, 1);
-        uniforms.uHeadSize.value = flowValue('headSize', .2, 5);
-        uniforms.uHeadBright.value = flowValue('headBright', 0, 5) * (1 + .7 * surgeNow);
-        uniforms.uHeadGlow.value = flowValue('headGlow', 0, 5);
-        uniforms.uHeadWidth.value = flowValue('headWidth', .3, 5);
-        uniforms.uHeadTail.value = flowValue('tail', .2, 3) * (1 + .6 * surgeNow);
-        uniforms.uHeadSpacing.value = flowValue('spacing', .3, 3);
-        const color = flowConfig.color ?? WATERSHED_FLOW_DEFAULTS.color;
-        if (color !== lastFlowColor) { flowColor.set(color); lastFlowColor = color; }
-        stats.strandsPerRiver = uniforms.uFlowCount.value;
-      }
-      uniforms.uTime.value = motionTime;
-      uniforms.uFlowTravel.value = flowTravel;
-      // LAUNCH: the light is up early, but only behind its front, which runs down the drainage as the view opens.
-      const launch = refined ? flowValue('launch', 0, 1) : 0, fadeIn = smooth(.16, .62, reveal);
-      uniforms.uReveal.value = launch > 0 ? fadeIn + (smooth(.06, .22, reveal) - fadeIn) * launch : fadeIn;
-      if (refined) {
-        uniforms.uLaunchOn.value = launch; uniforms.uLaunch.value = smooth(.10, .62, reveal); uniforms.uLaunchGlow.value = flowValue('launchGlow', 0, 4);
-        if (Number.isFinite(flowFrom)) { uniforms.uFlowFrom.value = flowFrom; uniforms.uFlowSpan.value = Math.max(1, flowTo - flowFrom); }
-      }
-      uniforms.uConfluence.value = smooth(.02, .90, confluence);
-      group.visible = uniforms.uReveal.value > .001;
-      if (markerMaterial) {
-        if (refined) markerMaterial.color.copy(flowColor);
-        markerMaterial.opacity = uniforms.uReveal.value * (refined ?
-          .18 * uniforms.uFlowBrightness.value * uniforms.uFlowGlow.value * (uniforms.uFlowCount.value > 0 ? 1 : 0) : .68);
-      }
-    },
-    dispose() {
-      if (disposed) return;
-      disposed = true; group.removeFromParent();
-      for (const geometry of geometries) geometry.dispose();
-      for (const material of materials) material.dispose();
-      for (const texture of textures) texture.dispose();
-      group.clear();
-    }
-  };
-}
+    `,mist?{blending:THREE.NormalBlending}:{}),mesh=new THREE.Mesh(geometry,material);mesh.name=mist?"Four sheltered ground mist pockets":"Four joins and five quiet source halos",mesh.renderOrder=mist?7:5,group.add(mesh)}patchMesh(mistPatches,!0),patchMesh(joinPatches,!1);let markerMaterial=null;if(sourcePoints.length){const geometry=new THREE.OctahedronGeometry(1,0);geometries.push(geometry),markerMaterial=new THREE.MeshBasicMaterial({color:refined?flowColor:4701695,transparent:!0,opacity:0,depthTest:!0,depthWrite:!1,toneMapped:!1}),materials.push(markerMaterial);const markers=new THREE.InstancedMesh(geometry,markerMaterial,sourcePoints.length),matrix=new THREE.Matrix4,quaternion=new THREE.Quaternion,axis=new THREE.Vector3(0,1,0);sourcePoints.forEach((p,index)=>{quaternion.setFromAxisAngle(axis,index*1.23),matrix.compose(new THREE.Vector3(p.x,10.5,p.z),quaternion,new THREE.Vector3(3.7,9.4,3.7)),markers.setMatrixAt(index,matrix)}),markers.instanceMatrix.needsUpdate=!0,markers.name="Five small grounded luminous source crystals",markers.renderOrder=5,group.add(markers)}const stats={riverPaths:channels.length,ribbonVertices:ribbonVertexCount,ribbonTriangles:ribbonIndex.length/3,strandsPerRiver:refined?1:7,liveFlowControls:refined,downstreamPackets:refined,flowWorldSpeed:refined?340:0,phaseContinuous:refined&&channels.every(p=>Number.isFinite(p.flowOffset)),particles:particlePaths.length,mistPockets:mistPatches.length,confluencePatches:joins.length,sourceMarkers:sourcePoints.length,drawCalls:group.children.length,depthTest:!0,depthWrite:!1,boundedWorldSpace:!0};return group.visible=!1,{group,stats,flowConfig,uniforms,update(time=0,reveal=0,confluence=0,reduced=!1){if(disposed)return;const currentTime=Number.isFinite(time)?time:0,delta=previousTime===null?0:clamp(currentTime-previousTime,0,.12),surgeNow=refined&&!reduced?clamp(Number(flowConfig._surge)||0,0,1)*flowValue("surge",0,3):0;if(reduced||(motionTime+=delta,refined&&(flowTravel+=delta*340*flowValue("speed",0,2.5)*(1+1.6*surgeNow))),previousTime=currentTime,refined){uniforms.uFlowCount.value=Math.round(flowValue("count",0,5)),uniforms.uFlowWidth.value=flowValue("width",.005,1),uniforms.uFlowBrightness.value=flowValue("brightness",0,2)*(1+.22*surgeNow),uniforms.uFlowSpeed.value=flowValue("speed",0,2.5),uniforms.uFlowGlow.value=flowValue("glow",0,1.5),uniforms.uMist.value=flowValue("mist",0,1.5),uniforms.uFlowCore.value=flowValue("core",0,1),uniforms.uFlowCoreTint.value=flowValue("coreTint",0,1),uniforms.uFlowHalo.value=flowValue("halo",0,1.5),uniforms.uFlowPulse.value=flowValue("pulse",0,1.5),uniforms.uFlowSparkle.value=flowValue("sparkle",0,1.5),uniforms.uFlowJoin.value=flowValue("join",0,2),uniforms.uFlowMeander.value=flowValue("meander",0,1.5),uniforms.uFlowDepth.value=flowValue("depth",0,1),uniforms.uHeadSize.value=flowValue("headSize",.2,5),uniforms.uHeadBright.value=flowValue("headBright",0,5)*(1+.7*surgeNow),uniforms.uHeadGlow.value=flowValue("headGlow",0,5),uniforms.uHeadWidth.value=flowValue("headWidth",.3,5),uniforms.uHeadTail.value=flowValue("tail",.2,3)*(1+.6*surgeNow),uniforms.uHeadSpacing.value=flowValue("spacing",.3,3);const color=flowConfig.color??WATERSHED_FLOW_DEFAULTS.color;color!==lastFlowColor&&(flowColor.set(color),lastFlowColor=color),stats.strandsPerRiver=uniforms.uFlowCount.value}uniforms.uTime.value=motionTime,uniforms.uFlowTravel.value=flowTravel;const launch=refined?flowValue("launch",0,1):0,fadeIn=smooth(.16,.62,reveal);uniforms.uReveal.value=launch>0?fadeIn+(smooth(.06,.22,reveal)-fadeIn)*launch:fadeIn,refined&&(uniforms.uLaunchOn.value=launch,uniforms.uLaunch.value=smooth(.1,.62,reveal),uniforms.uLaunchGlow.value=flowValue("launchGlow",0,4),Number.isFinite(flowFrom)&&(uniforms.uFlowFrom.value=flowFrom,uniforms.uFlowSpan.value=Math.max(1,flowTo-flowFrom))),uniforms.uConfluence.value=smooth(.02,.9,confluence),group.visible=uniforms.uReveal.value>.001,markerMaterial&&(refined&&markerMaterial.color.copy(flowColor),markerMaterial.opacity=uniforms.uReveal.value*(refined?.18*uniforms.uFlowBrightness.value*uniforms.uFlowGlow.value*(uniforms.uFlowCount.value>0?1:0):.68))},dispose(){if(!disposed){disposed=!0,group.removeFromParent();for(const geometry of geometries)geometry.dispose();for(const material of materials)material.dispose();for(const texture of textures)texture.dispose();group.clear()}}}}

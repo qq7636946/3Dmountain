@@ -1,8 +1,4 @@
-// The canyon dive and the Rise crossing use the same beads and refraction profile.
-export const lensDrops = [[0.23, 0.80, 0.042], [0.33, 0.62, 0.024], [0.69, 0.84, 0.048], [0.79, 0.60, 0.030], [0.56, 0.90, 0.020], [0.12, 0.57, 0.022], [0.88, 0.76, 0.034],
-    [0.45, 0.70, 0.016], [0.06, 0.86, 0.028], [0.96, 0.52, 0.018], [0.62, 0.66, 0.013]];
-
-export const lensSplashGLSL = /* glsl */`
+export const lensDrops=[[.23,.8,.042],[.33,.62,.024],[.69,.84,.048],[.79,.6,.03],[.56,.9,.02],[.12,.57,.022],[.88,.76,.034],[.45,.7,.016],[.06,.86,.028],[.96,.52,.018],[.62,.66,.013]],lensSplashGLSL=`
 uniform vec4 uDrops[11];
 uniform float uRun[11];
 void addLensSplash(inout vec4 acc, sampler2D tScene, vec2 uv, float asp) {
@@ -37,4 +33,3 @@ void addLensSplash(inout vec4 acc, sampler2D tScene, vec2 uv, float asp) {
   }
 }
 `;
-

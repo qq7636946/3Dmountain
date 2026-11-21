@@ -703,12 +703,6 @@
 
   /* ---------------------------------------------------------------- Start: the first shot uses the canyon's measured banks */
   async function start() {
-    const phone = innerWidth < innerHeight && Q.get('riseMobile') !== '1';
-    if (phone) {
-      S.stage = 'off: phone'; S.state = 'off';
-      html.removeAttribute('data-xs-gorge'); html.style.removeProperty('--xs-ui'); html.setAttribute('data-rise', 'canyon');
-      return;
-    }
     buildDom(); ui.classList.add('is-on');
     S.stage = 'scene';
     const t0 = now();

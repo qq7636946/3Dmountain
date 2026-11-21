@@ -211,7 +211,7 @@
     addEventListener('finnovation:text-mode', () => off(), { once: true });
   }
   function off() {
-    setOld(false);
+    setOld('none');
     delete window.__FLOW2_LIFT_FADE__;   // flow2 unify: the lift is seen again, so the valley modules fade over their own window
     finish('off');
     if (installed && J) { const p = _p, t = _t; delete J.progress; delete J.target; J.progress = p; J.target = t; installed = false; }
@@ -271,20 +271,40 @@
     if (pass) { pass.enabled = false; pass.mode = 'idle'; }
   }
 
-  /* flow2 td3 (2026-11-15): the old aerial world behind the canyon, not drawn in the canyon's later stretches (see the header) */
-  const OLD = ['Alpine watershed · five sources, one current', 'Atmospheric far range'];
-  const oldLayers = new Map(); let oldHidden = false;
-  function setOld(hide) {
-    if (hide === oldHidden || !canyon || !canyon.scene) return;
-    if (hide) for (const name of OLD) canyon.scene.getObjectByName(name)?.traverse(o => { if (!oldLayers.has(o)) oldLayers.set(o, o.layers.mask); o.layers.mask = 0; });
-    else { for (const [o, mask] of oldLayers) o.layers.mask = mask; oldLayers.clear(); }
-    oldHidden = hide; S.old = hide ? 'hidden (' + oldLayers.size + ' objects)' : 'shown';
+  const oldLayers = new Map();
+  let oldMode = 'none';
+  function hideOldObject(object) {
+    oldLayers.set(object, object.layers.mask);
+    object.layers.mask = 0;
+  }
+  function setOld(mode) {
+    if (mode === oldMode || !canyon?.scene) return;
+    for (const [object, mask] of oldLayers) object.layers.mask = mask;
+    oldLayers.clear();
+    const watershed = canyon.watershed;
+    if (mode === 'all') {
+      watershed?.group.traverse(hideOldObject);
+      canyon.scene.getObjectByName('Atmospheric far range')?.traverse(hideOldObject);
+    } else if (mode === 'water') {
+      // The canyon owns the continuous river. Keep the old range as backdrop,
+      // but remove its tributaries, continuations and confluence lights.
+      for (const object of watershed?.group.children || []) {
+        if (object.userData.journeyRiver || object === watershed.effects?.group) {
+          object.traverse(hideOldObject);
+        }
+      }
+    }
+    oldMode = mode;
+    S.old = mode === 'none' ? 'shown' : mode + ' hidden (' + oldLayers.size + ' objects)';
   }
 
   /* per frame (while the canyon is drawn), after canyon.update placed this frame's camera */
   function frame(args) {
-    if (!installed) { setOld(false); return; }
-    { const c = _p - shift(); setOld(T.hideOld >= .5 && active() && c >= T.hideFrom && (studioPbr || c <= T.from + (T.mode === 'brush' ? T.cap + .05 : .1))); }
+    if (!installed) { setOld('none'); return; }
+    const clock = _p - shift();
+    const hideOld = T.hideOld >= .5 && active();
+    const hideRange = clock >= T.hideFrom && (studioPbr || clock <= T.from + (T.mode === 'brush' ? T.cap + .05 : .1));
+    setOld(hideOld ? (hideRange ? 'all' : studioPbr ? 'water' : 'none') : 'none');
     if (navigating && Math.abs(_t - _p) < .002) navigating = false;
     if (T.mode === 'brush') { brushFrame(); return; }
     if (phase === 'armed' && now() - armedAt > 400) { S.notes.push('armed but no frame was kept: released'); phase = 'idle'; S.phase = phase; if (pass) pass.enabled = false; }
@@ -471,8 +491,8 @@
     if (riseW > 0 && c > riseA) { const s = cl((c - riseA) / riseW), uA = cl((riseA - riseFrom) / (riseTo - riseFrom)), m = riseW / (riseTo - riseFrom); riseU = uA + m * (s + s * s - s * s * s); }
     const aerial = [cl((c - 1.404) / (8 - 1.404)), args[1], args[2], riseU, cl((c - joinFrom) / (13.8 - joinFrom))];
     const rt = new THREE.WebGLRenderTarget(320, 160, { type: THREE.HalfFloatType, depthBuffer: true });
-    const prev = renderer.getRenderTarget(), shadows = renderer.shadowMap.autoUpdate, hidden = oldHidden;
-    setOld(false);   // the aerial view is warmed whole   /* flow2 td3 (2026-11-15) */
+    const prev = renderer.getRenderTarget(), shadows = renderer.shadowMap.autoUpdate, previousOldMode = oldMode;
+    setOld('none');   // Warm the complete legacy view for the optional cells transition.
     try {
       update.apply(canyon, aerial);
       renderer.shadowMap.autoUpdate = false;
@@ -481,7 +501,7 @@
       renderer.shadowMap.autoUpdate = shadows; renderer.setRenderTarget(prev);
       update.apply(canyon, args);
       rt.dispose();
-      setOld(hidden);
+      setOld(previousOldMode);
     }
   }
 

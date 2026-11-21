@@ -452,7 +452,7 @@
           #ifdef STUDIO_PBR_VIEW
           float survey=0.;
           #endif
-          if(uBrush.x>.5){
+          if(uBrush.x>.5&&uBrush.y<1.){
             if(uBrush.w>.5)m=uBrush.y;
             else{
               float asp=uRes.x/uRes.y;vec2 p=(vUv-.5)*vec2(asp,1.);
@@ -550,9 +550,9 @@
     emptyScene=new THREE.Scene();projected=new THREE.Vector3();
     const main=study.mainRenderPass,render=main.render;
     main.render=function(...args){
-      sync();const scene=this.scene;
-      // Keep main's buffer swap and depth bookkeeping; don't draw an invisible canyon.
-      if(active&&weight>.999&&!ov())this.scene=emptyScene;
+      sync();const scene=this.scene,o=ov();
+      // Keep the buffer bookkeeping while the aerial view completely covers the canyon.
+      if(active&&weight>.999&&(!o||+o.brush>=1))this.scene=emptyScene;
       try{return render.apply(this,args);}finally{this.scene=scene;}
     };
     const update=canyon.update;

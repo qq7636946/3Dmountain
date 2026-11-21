@@ -203,6 +203,10 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     await import('./studio-floating-logo.js?v=20261121-3-perf1')
       .then(module => module.createStudioFloatingLogo(renderer, atlas, curtain, { reducedMotion, query }))
       .catch(error => { console.warn('Confluence logo could not load:', error); return null; }) : null;
+  function syncLogoVisibility() {
+    const floating = floatingLogo?.config.enabled && !floatingLogo.state.error;
+    if (curtain.logo) curtain.logo.group.visible = !!curtain.config.showLogo && !floating;
+  }
   bindAtmosphereArrival(atlas, studio.uniforms);
 
   const framing = { ...CAMERA };
@@ -272,6 +276,7 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     camera: framing, pbr: studio.config, curtain: curtain.config, cartography: cartography.config,
     riverBeams: beams?.tune, lines3d: lines3d.config, leftFog, cloudLook, floatingLogo: floatingLogo?.config
   }, { studio, curtain, cartography, lines3d, floatingLogo, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook });
+  syncLogoVisibility();
 
   const gulls = !reducedMotion && query.get('birds') !== '0' ? createForestBirds(renderer, {
     atlas, camera: atlas.camera, once: false, panel: false, timedCrossings: true,
@@ -356,7 +361,8 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       const follow = override ? 0 : smoothstep(state.arrival, .72, 1);
       sway.set(lerp(sway.x, pointer.x * follow, easing), lerp(sway.y, pointer.y * follow, easing));
       atlas.update(CLOCK, dt, { cloud: 0, drift: tune.drift });
-      floatingLogo?.update(dt, { progress: state.routeProgress, azimuth: framing.azimuth });
+      syncLogoVisibility();
+      floatingLogo?.update(dt, { progress: curtain.config.showLogo ? state.routeProgress : 0, azimuth: framing.azimuth });
       cartography.update();
       if (gulls) {
         const show = studio.config.layers.gulls && studio.config.layers.terrainStyle && atlas.uniforms.uLattice.value < .35;

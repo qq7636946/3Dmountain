@@ -28,17 +28,21 @@
       @media (max-width: 760px) { .f2n-cards, .f2n-band { grid-template-columns: 1fr; } }
       /* while A runs, the chapter's own copy, labels and rail step aside (the header stays) */
       :root:not(#a1):not(#a2):not(#a3):not(#a4):not(#a5):not(#a6):not(#a7):not(#a8)[data-flow2-after]:not([data-flow2-after="off"]) :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .f2td-layer, .alp-labels, #flow2-canyon-atlas, .fi-copy-panel) {
-        opacity: 0 !important; pointer-events: none !important; transition: opacity .6s ease !important; }
+        opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; transition: opacity .6s ease, visibility 0s linear .6s !important; }
       /* THE DIVE: the interface leaves quickly (the dive itself is 1.5 s) */
       :root:not(#a1):not(#a2):not(#a3):not(#a4):not(#a5):not(#a6):not(#a7):not(#a8)[data-flow2-after][data-flow2-dive]:not([data-flow2-after="off"]) :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .f2td-layer, .alp-labels, #flow2-canyon-atlas, .fi-copy-panel) {
-        transition: opacity .3s ease !important; }
+        transition: opacity .3s ease, visibility 0s linear .3s !important; }
       /* \u2026and the next block stands on the dive's last picture (the close water sunk into navy): a light veil of its own ground, no grid; its copy rises in */
       .f2-next.is-dive { background: radial-gradient(120% 90% at 50% 0%, rgb(16 49 79 / .34) 0%, rgb(10 29 51 / .3) 46%, rgb(6 18 34 / .42) 100%); }
       .f2-next.is-dive::before { display: none; }
       .f2-next.is-dive .f2n-wrap { transition: transform 1.1s cubic-bezier(.2, .7, .2, 1), opacity .8s ease; }
       .f2-next.is-dive:not(.is-in) .f2n-wrap { transform: translate3d(0, 28px, 0); opacity: 0; }
-      /* \u2026and nothing inside them takes the pointer or a touch (a faded button's inner spans kept pointer-events: auto and caught the finger) */
-      :root:not(#a1):not(#a2):not(#a3):not(#a4):not(#a5):not(#a6):not(#a7):not(#a8)[data-flow2-after]:not([data-flow2-after="off"]) :is(.finnovation-ui .fi-copy, .finnovation-ui .fi-rail, .finnovation-ui .fi-footer, .finnovation-ui .f2u-side, .f2u-lock, .f2td-layer, .alp-labels, #flow2-canyon-atlas, .fi-copy-panel) * { pointer-events: none !important; }`,document.head.append(style)}function buildBlock(){block||(buildStyle(),block=document.createElement("section"),block.className="f2-next",block.setAttribute("aria-label","\u4E0B\u4E00\u500B\u5340\u584A\uFF08\u66AB\u7528\u6587\u6848\uFF09"),block.setAttribute("aria-hidden","true"),block.inert=!0,block.innerHTML=`<div class="f2-next-scroll"><div class="f2n-wrap">
+      /* \u2026and nothing inside them takes the pointer or a touch (a faded button's inner spans kept pointer-events: auto and caught the finger).
+         SMOOTH (2026-11-22): that used to be one more rule over every descendant (\u2026 :is(\u2026) * { pointer-events: none }); a universal last
+         compound makes each change of data-flow2-after (four per trip: opening / in / closing / off) restyle the whole document \u2014 measured
+         19\u201325 ms each on the rise page. Now the faded parts turn visibility: hidden once their fade is done (above: inherited, so their
+         descendants take no pointer either; on screen nothing changes, they are at opacity 0 by then). */
+`,document.head.append(style)}function buildBlock(){block||(buildStyle(),block=document.createElement("section"),block.className="f2-next",block.setAttribute("aria-label","\u4E0B\u4E00\u500B\u5340\u584A\uFF08\u66AB\u7528\u6587\u6848\uFF09"),block.setAttribute("aria-hidden","true"),block.inert=!0,block.innerHTML=`<div class="f2-next-scroll"><div class="f2n-wrap">
       <p class="f2n-kicker">03 \xB7 Why Finnovation \xB7 \u66AB\u7528\u6587\u6848</p>
       <h2 class="f2n-title">Depth beneath<br>the surface</h2>
       <p class="f2n-lead">\u5728\u6C34\u9762\u4E4B\u4E0B\uFF0C\u770B\u898B\u50F9\u503C\u771F\u6B63\u7684\u6D41\u5411</p>

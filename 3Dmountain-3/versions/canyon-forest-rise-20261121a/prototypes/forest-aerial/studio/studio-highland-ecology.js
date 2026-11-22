@@ -16,7 +16,8 @@ import*as THREE from"three";import{BANKS}from"./studio-clouds.js?v=look1";export
     vec3 L = uBankShadow.xyz;
     vec2 wind = vec2(-0.021, 0.010) * uTime;
     float dens = 0.0;
-    for (int i = 0; i < ${BANKS.length}; i++) {
+    int bankN = (uBankShadow.w >= 0.0) ? ${BANKS.length} : 0;
+    for (int i = 0; i < bankN; i++) {
       vec4 cs = ST_BANK_C[i], rs = ST_BANK_R[i];
       float sx = float(i) * 2.731;
       vec3 c = cs.xyz + vec3(0.55, 0.0, -0.26) * sin(uTime * 0.019 + sx);

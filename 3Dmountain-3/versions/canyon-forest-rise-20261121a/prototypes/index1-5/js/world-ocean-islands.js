@@ -13,7 +13,7 @@ import*as THREE from"three";import{decodedFirst}from"./perf-firstpass.js?v=i15-m
       ${viewGlsl}
       ${waterGlsl}
       ${gradeGlsl}
-      uniform sampler2D uIsland,uIslandForm; uniform float uIslandOn;
+      uniform sampler2D uIsland,uIslandForm; uniform float uIslandOn; uniform vec4 uRockLook;
       varying vec2 vUv,vWorld; varying vec3 vMap; varying float vTile;
       vec2 atlasUv(vec2 uv){return vec2((clamp(uv.x,.002,.998)+vTile)*.5,clamp(uv.y,.002,.998));}
       float islandHeight(vec2 uv){return texture2D(uIslandForm,atlasUv(uv)).b;}
@@ -45,7 +45,8 @@ import*as THREE from"three";import{decodedFirst}from"./perf-firstpass.js?v=i15-m
         vec3 landN=normalize(vec3(normalXY,sqrt(max(.025,1.-dot(normalXY,normalXY)))));
         // Native alpine mineral colour and detailed erosion normals. Warm rock
         // ridges / cool sheltered gullies, with the same single sun as the sea.
-        vec3 albedo=mix(t.rgb,vec3(dot(t.rgb,vec3(.3,.59,.11))),.12);
+        vec3 albedo=mix(t.rgb,vec3(dot(t.rgb,vec3(.3,.59,.11))),uRockLook.x);
+        albedo*=mix(vec3(1.),vec3(.90,.97,1.08),uRockLook.y)*uRockLook.z;   // ROCK_LOOK (world-ocean.js): default .12 / 0 / 1 = as before
         vec3 key=mix(vec3(1.08,1.01,.91),uGlintCol,.30);
         float facing=max(dot(landN,uSun),0.);
         vec2 localSun=mat2(vMap.x,-vMap.y,vMap.y,vMap.x)*uSun.xy;

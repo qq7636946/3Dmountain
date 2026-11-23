@@ -1,0 +1,233 @@
+import * as THREE from 'three';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { createLogoMark } from '../../index1-5/js/world-logo-mark.js?v=i15-mw30beoi';
+
+// The canyon's authored Blender geometry and glass look, rendered against the
+// completed landscape. Transmission never redraws the terrain or its foliage.
+export async function createStudioFloatingLogo(renderer, atlas, curtain, { reducedMotion = false, query } = {}) {
+  const config = { enabled: true, height: 1.05, gap: .10, offsetX: 0, offsetY: 0, offsetZ: 0,
+    yaw: 0, pitch: 0, roll: 0, depth: 1, rotate: true, reverse: false, period: 18,
+    opacity: 1, transmission: 1, roughness: 0, volume: .3, ior: 2.33, dispersion: 1.75,
+    envIntensity: .65, rimStrength: 6, caustic: 2.5, tint: '#f5faff', brandBlue: .72,
+    brandBlueColor: '#77b1ee', light: 2.1, maxBright: 1.3 };
+  const mark = await createLogoMark({
+    THREE, SVGLoader, renderer, svgUrl: new URL('../../../images/logo.svg', import.meta.url).href,
+    look: { ...(window.__MONTIS_STUDY__?.CONFIG?.logoMark || {}), small: false, bgDisplay: 0,
+      transmission: 1, roughness: 0, clearcoatRoughness: .05, volume: .3, ior: 2.33, dispersion: 1.75, thickFloor: 1,
+      tint: '#f5faff', attenuationColor: '#7daad4', attenuationDistance: 12, envIntensity: .65, specular: 1,
+      sheen: .11, clearcoat: .6, rimStrength: 6, rimLine: .45, rimColor: '#c2daeb', glow: 0, wallGlow: 0,
+      caustic: 2.5, shimmer: .1, brandBlue: .72, brandBlueColor: '#77b1ee' }
+  });
+  mark.update({ yaw: 0, time: 0, q: 1 });
+  const box = new THREE.Box3().setFromObject(mark.group);
+  const baseHeight = Math.max(.001, box.max.y - box.min.y);
+  const center = box.getCenter(new THREE.Vector3());
+  const pivot = new THREE.Group(), holder = new THREE.Group(), scene = new THREE.Scene();
+  mark.group.position.sub(center);
+  pivot.add(mark.group); holder.add(pivot); scene.add(holder);
+  holder.name = 'FINNOVATION rotating glass above confluence';
+  const light = new THREE.DirectionalLight('#edf6ff', 2.1);
+  light.position.set(-3, 6, 5); scene.add(light, light.target);
+
+  const target = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: true,
+    samples: window.__FLOW2_QUALITY__?.pick?.(2, 2, 0) ?? 2 });
+  target.texture.name = 'Confluence glass only';
+  const quad = new THREE.PlaneGeometry(2, 2);
+  const vertexShader = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,1.,1.); }';
+  const background = new THREE.ShaderMaterial({
+    uniforms: { tScene: { value: null } }, depthTest: false, depthWrite: false, toneMapped: false, vertexShader,
+    fragmentShader: 'uniform sampler2D tScene; varying vec2 vUv; void main(){ gl_FragColor=vec4(texture2D(tScene,vUv).rgb,1.); }'
+  });
+  const backdrop = new THREE.Mesh(quad, background);
+  backdrop.frustumCulled = false; backdrop.renderOrder = -10;
+  // Only the transmission prepass needs the opaque background. Leave the main
+  // glass target transparent so its untouched pixels preserve the landscape.
+  backdrop.onBeforeRender = r => { background.colorWrite = r.getRenderTarget() !== target; };
+  scene.add(backdrop);
+  const composite = new THREE.ShaderMaterial({
+    uniforms: { tGlass: { value: target.texture }, uOpacity: { value: 0 }, uMax: { value: config.maxBright } },
+    vertexShader, fragmentShader: `uniform sampler2D tGlass; uniform float uOpacity,uMax; varying vec2 vUv;
+      void main(){ vec4 c=texture2D(tGlass,vUv); float peak=max(c.r,max(c.g,c.b));
+        if(peak>uMax) c.rgb*=(uMax+(peak-uMax)/(1.+(peak-uMax)/uMax))/peak;
+        gl_FragColor=c*uOpacity; }`,
+    depthTest: false, depthWrite: false, toneMapped: false, transparent: true,
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+    blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor
+  });
+  const compositeScene = new THREE.Scene(), lens = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const screen = new THREE.Mesh(quad, composite); screen.frustumCulled = false; compositeScene.add(screen);
+  const clearColor = new THREE.Color(), corner = new THREE.Vector3(), screenBox = new THREE.Vector4(), previousScissor = new THREE.Vector4();
+  let phase = 0, time = 0, opacity = 0, disposed = false;
+  const state = { model: mark.model, phase: 0, visible: false, opacity: 0, bounds: null, draws: 0, error: null };
+  /* PERF (strike team PIPE, 2026-11-21; rise page only, ?perf=0 = as before; ?perfLogo=0 = this part only).
+     The glass's first draw allocated its own target, three's transmission target (4x, mip-mapped) and linked its programs in the frame the
+     view from above arrives: a 0.75-0.83 s frame on a first visit. And both targets (about 400 MB at the top tier) stayed for the rest of
+     the visit. Here:
+       prepare(r)  programs first (compiled by the driver's threads, nothing drawn); then, only while the loader still covers the page, the
+                   glass is drawn once into its OWN target, 1 pixel of it, never the visible canvas, and the targets are let go again;
+                   skipped when the view arrives first;
+       leave()     after a real visit the two targets are released (three makes them again at the next first draw; programs stay linked).
+     The draw itself is unchanged. */
+  const PERF_ON = new URLSearchParams(location.search).get('perf') !== '0' && new URLSearchParams(location.search).get('perfLogo') !== '0'
+    && document.documentElement.hasAttribute('data-rise-studio-pbr');
+  const PERF_RELEASE = PERF_ON && new URLSearchParams(location.search).get('perfLogoRelease') !== '0';
+  /* optR (team R, 2026-11-21; ?optR=0 or ?optRoff=logo = as before). The glass is double-sided: three's transmission pass draws its BACK faces with
+     side = BackSide, a program variant that renderer.compile() does not make (it only handles double-sided *transparent* materials). Those programs
+     were therefore linked on the first real draw, in the frame the view from above arrives: three calls of getProgramInfoLog, 0.81 s at the top tier
+     (measured, first visit, 1880x930, .qa/perf/rise/out/optr-inst1). prepare() now compiles that variant with the others, on the driver's threads. */
+  const OPT_BACKSIDE = PERF_ON && new URLSearchParams(location.search).get('optR') !== '0' && !(new URLSearchParams(location.search).get('optRoff') || '').split(',').includes('logo');
+  const perf = state.perf = { on: PERF_ON, stage: PERF_ON ? 'waiting' : 'off', compileMs: 0, allocMs: 0, firstDrawMs: 0, released: 0, size: '' };
+  const transmissionTargets = new Set();
+  let preparing = false, drawsAtAlloc = -1;
+  /* three's transmission target is private to the renderer: it is the only other target bound while the glass scene is drawn */
+  function renderGlass(r, camera) {
+    if (!PERF_ON) { r.render(scene, camera); return; }
+    const set = r.setRenderTarget;
+    r.setRenderTarget = function (t, ...rest) { if (t && t !== target && t.isWebGLRenderTarget) transmissionTargets.add(t); return set.call(this, t, ...rest); };
+    try { r.render(scene, camera); } finally { r.setRenderTarget = set; }
+  }
+  function release() {
+    if (!PERF_RELEASE || disposed || preparing || drawsAtAlloc < 0 || state.draws <= drawsAtAlloc) return;   /* only after a real visit */
+    try { target.dispose(); for (const t of transmissionTargets) t.dispose(); } catch (error) { perf.error = String(error?.message || error); }
+    transmissionTargets.clear(); drawsAtAlloc = -1; perf.released++;
+  }
+  const frameLater = ms => new Promise(done => setTimeout(() => requestAnimationFrame(() => done()), ms));
+  async function prepare(r) {
+    if (!PERF_ON || disposed || preparing || perf.stage !== 'waiting') return;
+    preparing = true;
+    try {
+      const camera = atlas.camera, engine = window.__FLOW2_TEX_ENGINE__;
+      const withTarget = fn => { const previous = r.getRenderTarget(), tone = r.toneMapping, shadow = r.shadowMap.autoUpdate, autoClear = r.autoClear, alpha = r.getClearAlpha(); r.getClearColor(clearColor);
+        try { r.toneMapping = THREE.NoToneMapping; r.shadowMap.autoUpdate = false; fn(); }
+        finally { r.toneMapping = tone; r.shadowMap.autoUpdate = shadow; r.autoClear = autoClear; r.setClearColor(clearColor, alpha); r.setRenderTarget(previous); } };
+      /* 1. programs: three's compile for the variants the draw will use, in the driver's threads */
+      perf.stage = 'compiling'; let t0 = performance.now();
+      const warm = () => withTarget(() => {
+        r.setRenderTarget(target); r.render(scene, camera); r.render(compositeScene, lens);
+        if (!OPT_BACKSIDE) return;
+        const dbl = []; scene.traverse(o => { const m = o.material; if (m && !Array.isArray(m) && m.transmission > 0 && m.side === THREE.DoubleSide) dbl.push(m); });
+        if (!dbl.length) return;
+        perf.backside = dbl.length;
+        for (const m of dbl) { m.side = THREE.BackSide; m.needsUpdate = true; }
+        try { r.render(scene, camera); } finally { for (const m of dbl) { m.side = THREE.DoubleSide; m.needsUpdate = true; } }
+      });
+      if (engine?.settle) await engine.settle(r, warm, { timeout: 10000 });
+      else if (r.compileAsync) { await r.compileAsync(scene, camera); await r.compileAsync(compositeScene, lens); }
+      perf.compileMs = Math.round(performance.now() - t0);
+      await frameLater(250);
+      if (disposed || state.draws > 0) { perf.stage = 'the view arrived first'; return; }
+      /* the first draw below blocks for about 0.45 s (measured on the RTX 4070): only while the loader still covers the page. Once the
+         visitor is in, it is left to the first arrival, as before. */
+      if (document.body.classList.contains('is-ready') || (window.__GATE__ && window.__GATE__.state === 'entered')) { perf.stage = 'programs only (the page was already live)'; return; }
+      /* 2. the targets, at the size the landscape will have (the composer's buffer), on a frame of their own */
+      const buffer = engine?.composer?.readBuffer; const size = new THREE.Vector2();
+      if (buffer && buffer.width > 4) size.set(buffer.width, buffer.height); else r.getDrawingBufferSize(size);
+      t0 = performance.now();
+      target.setSize(size.x, size.y); r.initRenderTarget?.(target);
+      perf.allocMs = +(performance.now() - t0).toFixed(1); perf.size = size.x + 'x' + size.y;
+      await frameLater(120);
+      if (disposed || state.draws > 0) { perf.stage = 'the view arrived first'; return; }
+      /* 3. the first real draw (uploads the model, makes three's transmission target), into the glass's own target, one pixel of it */
+      t0 = performance.now();
+      withTarget(() => {
+        const scissorTest = target.scissorTest; previousScissor.copy(target.scissor);
+        const tScene = background.uniforms.tScene.value;
+        try { background.uniforms.tScene.value = null; target.scissor.set(0, 0, 1, 1); target.scissorTest = true;
+          r.autoClear = true; r.setClearColor(0x000000, 0); r.setRenderTarget(target); renderGlass(r, camera); }
+        finally { target.scissor.copy(previousScissor); target.scissorTest = scissorTest; background.uniforms.tScene.value = tScene; }
+      });
+      perf.firstDrawMs = +(performance.now() - t0).toFixed(1);
+      /* the targets are not kept until the first visit (about 400 MB at the top tier): making them again costs under 1 ms */
+      if (PERF_RELEASE) { target.dispose(); for (const t of transmissionTargets) t.dispose(); transmissionTargets.clear(); drawsAtAlloc = -1; } else drawsAtAlloc = state.draws;
+      perf.stage = 'ready';
+    } catch (error) { perf.stage = 'failed: ' + (error?.message || error); }
+    finally { preparing = false; }
+  }
+  const diagnostic = query?.get('motionqa') === '1' ? document.createElement('output') : null;
+  if (diagnostic) { diagnostic.id = 'rise-logo-qa'; diagnostic.hidden = true; document.body.append(diagnostic); }
+  let diagnosticAt = 0;
+
+  function bounds(camera, width, height) {
+    holder.updateMatrixWorld(true); box.setFromObject(holder);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z)
+        .applyMatrix4(camera.matrixWorldInverse);
+      if (corner.z > -camera.near) return screenBox.set(0, 0, width, height);
+      corner.applyMatrix4(camera.projectionMatrix);
+      x0 = Math.min(x0, corner.x); x1 = Math.max(x1, corner.x);
+      y0 = Math.min(y0, corner.y); y1 = Math.max(y1, corner.y);
+    }
+    const left = Math.max(0, Math.floor((x0 * .5 + .5) * width) - 8);
+    const bottom = Math.max(0, Math.floor((y0 * .5 + .5) * height) - 8);
+    const right = Math.min(width, Math.ceil((x1 * .5 + .5) * width) + 8);
+    const top = Math.min(height, Math.ceil((y1 * .5 + .5) * height) + 8);
+    return screenBox.set(left, bottom, Math.max(0, right-left), Math.max(0, top-bottom));
+  }
+  return {
+    config, state,
+    apply() {
+      const optical = ['transmission','roughness','volume','ior','dispersion','envIntensity','rimStrength',
+        'caustic','tint','brandBlue','brandBlueColor'];
+      mark.setLook(Object.fromEntries(optical.map(key => [key, config[key]])));
+      light.intensity = Math.max(0, config.light);
+      composite.uniforms.uMax.value = Math.max(.2, config.maxBright);
+    },
+    update(dt, { progress, azimuth }) {
+      if (disposed) return;
+      const reveal = THREE.MathUtils.smootherstep(progress, .48, .98);
+      opacity = config.enabled ? reveal * THREE.MathUtils.clamp(config.opacity, 0, 1) : 0;
+      if (!reducedMotion && opacity > .001) {
+        time += dt;
+        if (config.rotate) phase = THREE.MathUtils.euclideanModulo(phase + (config.reverse ? -1 : 1) * dt * Math.PI * 2 / Math.max(3, config.period), Math.PI * 2);
+      }
+      // Rotate the centered pivot; the logo keeps its own authored geometry and normals.
+      mark.update({ yaw: 0, time, q: 1 });
+      pivot.rotation.set(THREE.MathUtils.degToRad(config.pitch), THREE.MathUtils.degToRad(azimuth + config.yaw) + phase, THREE.MathUtils.degToRad(config.roll), 'YXZ');
+      pivot.scale.z = Math.max(.1, config.depth);
+      holder.scale.setScalar(Math.max(.15, config.height) / baseHeight);
+      const origin = curtain.logo?.group.position || atlas.lake.center;
+      holder.position.set(origin.x + config.offsetX,
+        origin.y + curtain.config.logoHeight + config.gap + config.offsetY + config.height*.5 - (1-reveal)*.16,
+        origin.z + config.offsetZ);
+      composite.uniforms.uOpacity.value = opacity;
+      state.visible = opacity > .001; state.phase = +phase.toFixed(4); state.opacity = +opacity.toFixed(3);
+      if (diagnostic && performance.now() - diagnosticAt > 100) {
+        diagnostic.textContent = JSON.stringify(state); diagnosticAt = performance.now();
+      }
+    },
+    leave() { opacity = 0; state.visible = false; composite.uniforms.uOpacity.value = 0; release(); },
+    prepare,
+    draw(r, landscape) {
+      if (disposed || opacity < .001 || state.error) return;
+      const camera = atlas.camera, width = landscape.width, height = landscape.height;
+      if (target.width !== width || target.height !== height) target.setSize(width, height);
+      const area = bounds(camera, width, height);
+      if (!area.z || !area.w) return;
+      state.bounds = area.toArray().map(Math.round);
+      background.uniforms.tScene.value = landscape.texture;
+      target.scissor.copy(area); target.scissorTest = true;
+      const previous = r.getRenderTarget(), autoClear = r.autoClear, alpha = r.getClearAlpha();
+      const scissorTest = landscape.scissorTest; previousScissor.copy(landscape.scissor);
+      r.getClearColor(clearColor);
+      try {
+        r.autoClear = true; r.setClearColor(0x000000, 0);
+        const fresh = PERF_ON && drawsAtAlloc < 0, t0 = fresh ? performance.now() : 0;
+        r.setRenderTarget(target); renderGlass(r, camera);
+        if (fresh) { drawsAtAlloc = state.draws; (perf.freshDrawMs ||= []).push(+(performance.now() - t0).toFixed(1)); }
+        landscape.scissor.copy(area); landscape.scissorTest = true;
+        r.autoClear = false; r.setRenderTarget(landscape); r.render(compositeScene, lens);
+        state.draws++;
+      } catch (error) {
+        state.error = String(error?.message || error); console.warn('Confluence glass:', error);
+      } finally {
+        landscape.scissor.copy(previousScissor); landscape.scissorTest = scissorTest;
+        r.setClearColor(clearColor, alpha); r.autoClear = autoClear; r.setRenderTarget(previous);
+      }
+    },
+    dispose() {
+      disposed = true; diagnostic?.remove(); mark.dispose(); target.dispose();
+      background.dispose(); composite.dispose(); quad.dispose(); scene.clear(); compositeScene.clear();
+    }
+  };
+}

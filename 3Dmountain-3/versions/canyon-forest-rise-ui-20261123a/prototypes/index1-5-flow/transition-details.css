@@ -1,0 +1,9 @@
+/* One optical language, with a distinct profile at each existing cut. */
+.flow-optics { position:fixed; inset:0; z-index:8; overflow:hidden; pointer-events:none; opacity:0; visibility:hidden; contain:strict; }
+.flow-optics-haze { position:absolute; inset:0; background:radial-gradient(ellipse 80% 46% at 48% 53%,#d7e7f355,transparent 75%); }
+.flow-optics[data-phase='strategy'] .flow-optics-haze { display:none; }
+/* The same blue as the water's depth. Opaque at the end of 320ms so a
+   distant chapter cannot flash through before its assets and copy settle. */
+html[data-flow-copy-motion] .site-section-veil { background:radial-gradient(ellipse at 42% 40%,#46637e,#142d45 80%); -webkit-backdrop-filter:none; backdrop-filter:none; transition:opacity 320ms cubic-bezier(.22,.61,.36,1),visibility 320ms; }
+html[data-render-mode='text'] .flow-optics { display:none; }
+@media (prefers-reduced-motion:reduce) { .flow-optics { display:none; } html[data-flow-copy-motion] .site-section-veil { -webkit-backdrop-filter:none; backdrop-filter:none; transition:none; } }

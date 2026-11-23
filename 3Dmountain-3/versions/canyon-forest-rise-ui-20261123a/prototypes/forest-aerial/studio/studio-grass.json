@@ -1,0 +1,39 @@
+{
+  "what": "Ecological 3D meadow grass, golden wildgrass, forest fern & riverbank reed tufts",
+  "count": 17584,
+  "biomeCounts": [
+    6573,
+    6874,
+    4082,
+    55
+  ],
+  "biomeLabels": [
+    "Sunlit Golden-Lime",
+    "Warm Ochre Wildgrass",
+    "Deep Emerald Fern",
+    "Riverbank Reed"
+  ],
+  "ranges": {
+    "x": [
+      -7.0,
+      7.0
+    ],
+    "z": [
+      -3.9170015,
+      3.9170015
+    ],
+    "h": [
+      0.0,
+      0.08
+    ],
+    "w": [
+      0.0,
+      0.09
+    ],
+    "rot": [
+      0.0,
+      6.2832
+    ],
+    "colMax": 1.5
+  }
+}

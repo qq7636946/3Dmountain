@@ -1,0 +1,31 @@
+{
+  "what": "Watertight 360-deg Poly Haven CC0 2K 3D rocks (cliff crags, shoreline outcrops & talus boulders) with slope-aligned geological scatter",
+  "version": 2,
+  "strideFloats": 9,
+  "sources": [
+    "boulder_01",
+    "rock_07",
+    "rock_moss_set_02",
+    "rock_moss_set_01"
+  ],
+  "count": 378,
+  "countsByKind": [
+    85,
+    60,
+    39,
+    86,
+    45,
+    63
+  ],
+  "names": [
+    "RockBoulderA",
+    "RockBoulderB",
+    "RockShoreA",
+    "RockShoreB",
+    "RockCliffA",
+    "RockCliffB"
+  ],
+  "atlas": "studio-rocks-atlas.webp",
+  "normal": "studio-rocks-nrm.webp",
+  "glb": "studio-rocks.glb"
+}

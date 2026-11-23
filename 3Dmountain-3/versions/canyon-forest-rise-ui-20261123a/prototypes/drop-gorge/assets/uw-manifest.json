@@ -1,0 +1,398 @@
+{
+  "_doc": "DEEP (dg-scene.js) reads this at load. AD-REEF fills 'reef', AD-LIFE fills 'life' (formats in .qa/index1-5/underwater/STATUS-DEEP.md, PHASE 4). null = our own bakes (bommie, aqua, fish).",
+  "reef": {
+    "kit": "reef2",
+    "dir": "reef2",
+    "_by": "AD-REEF 2026-11-17 (STATUS-ADREEF.md); wired by DEEP"
+  },
+  "life": {
+    "_by": "AD-LIFE 2026-11-18 (files in assets/life2/, paths relative to assets/life/; spec: .qa/index1-5/underwater/STATUS-ADLIFE.md)",
+    "fish": [
+      {
+        "name": "fusilier",
+        "glb": "../life2/fish-fusilier.glb",
+        "glbHi": "../life2/fish-fusilier-hi.glb",
+        "glbLo": "../life2/fish-fusilier-lo.glb",
+        "tex": "../life2/fish-fusilier-albedo",
+        "px": 512,
+        "singles": 0,
+        "schools": [
+          {
+            "y": -11,
+            "z": -16,
+            "x": -2,
+            "R": 8,
+            "w": 0.045,
+            "n": 110,
+            "sz": [
+              0.28,
+              0.36
+            ],
+            "tint": [
+              1,
+              1,
+              1
+            ],
+            "spread": [
+              10,
+              3,
+              6
+            ]
+          },
+          {
+            "y": -35,
+            "z": -20,
+            "x": 3,
+            "R": 9,
+            "w": -0.04,
+            "n": 90,
+            "sz": [
+              0.28,
+              0.34
+            ],
+            "tint": [
+              0.96,
+              1,
+              1.04
+            ],
+            "spread": [
+              10,
+              3.2,
+              6
+            ]
+          }
+        ]
+      },
+      {
+        "name": "sardine",
+        "glb": "../life2/fish-sardine-lo.glb",
+        "glbHi": "../life2/fish-sardine.glb",
+        "tex": "../life2/fish-sardine-albedo",
+        "px": 512,
+        "singles": 0,
+        "schools": [
+          {
+            "y": -23,
+            "z": -14,
+            "x": -1,
+            "R": 6,
+            "w": 0.06,
+            "n": 200,
+            "sz": [
+              0.12,
+              0.16
+            ],
+            "tint": [
+              1,
+              1,
+              1
+            ],
+            "spread": [
+              9,
+              4,
+              7
+            ]
+          },
+          {
+            "y": -50,
+            "z": -18,
+            "x": 2,
+            "R": 7,
+            "w": -0.05,
+            "n": 110,
+            "sz": [
+              0.12,
+              0.15
+            ],
+            "tint": [
+              0.95,
+              1,
+              1.05
+            ],
+            "spread": [
+              8,
+              3,
+              6
+            ]
+          }
+        ]
+      },
+      {
+        "name": "butterfly",
+        "glb": "../life2/fish-butterfly.glb",
+        "glbHi": "../life2/fish-butterfly-hi.glb",
+        "tex": "../life2/fish-butterfly-albedo",
+        "px": 512,
+        "singles": 0,
+        "schools": [
+          {
+            "y": -18,
+            "z": -12,
+            "x": 3.5,
+            "R": 5,
+            "w": -0.035,
+            "n": 34,
+            "sz": [
+              0.2,
+              0.26
+            ],
+            "tint": [
+              1,
+              1,
+              1
+            ],
+            "spread": [
+              6,
+              2.5,
+              4
+            ]
+          },
+          {
+            "y": -43,
+            "z": -13,
+            "x": -3.5,
+            "R": 5,
+            "w": 0.035,
+            "n": 30,
+            "sz": [
+              0.2,
+              0.26
+            ],
+            "tint": [
+              1,
+              1,
+              1
+            ],
+            "spread": [
+              6,
+              2.5,
+              4
+            ]
+          }
+        ]
+      },
+      {
+        "name": "chromis",
+        "glb": "../life2/fish-chromis-lo.glb",
+        "glbHi": "../life2/fish-chromis.glb",
+        "tex": "../life2/fish-chromis-albedo",
+        "px": 512,
+        "singles": 0,
+        "schools": [
+          {
+            "y": -52,
+            "z": -11,
+            "x": -1.5,
+            "R": 3,
+            "w": 0.05,
+            "n": 90,
+            "sz": [
+              0.08,
+              0.11
+            ],
+            "tint": [
+              1,
+              1,
+              1
+            ],
+            "spread": [
+              5,
+              2,
+              3.5
+            ]
+          },
+          {
+            "y": -30,
+            "z": -10,
+            "x": 4.5,
+            "R": 3,
+            "w": -0.05,
+            "n": 50,
+            "sz": [
+              0.08,
+              0.11
+            ],
+            "tint": [
+              1,
+              1,
+              1
+            ],
+            "spread": [
+              4,
+              2,
+              3
+            ]
+          }
+        ]
+      },
+      {
+        "name": "trevally",
+        "glb": "../life2/fish-trevally-hi.glb",
+        "tex": "../life2/fish-trevally-albedo",
+        "px": 512,
+        "singles": 3,
+        "singleSize": 0.8,
+        "schools": []
+      },
+      {
+        "name": "grouper",
+        "glb": "../life2/fish-grouper-hi.glb",
+        "tex": "../life2/fish-grouper-albedo",
+        "px": 512,
+        "singles": 2,
+        "singleSize": 0.9,
+        "schools": []
+      }
+    ],
+    "coralAtlas": "../life2/coral-atlas",
+    "coralPx": 1024,
+    "coralCells": [
+      "brain (Diploria)",
+      "lettuce (Pavona cactus)",
+      "table (Acropora hyacinthus)",
+      "elkhorn (Acropora palmata)",
+      "blue coral (Heliopora)",
+      "cauliflower (Pocillopora) WARM",
+      "bubblegum (Paragorgia) WARM",
+      "lace fan (Distichopora) WARM"
+    ],
+    "_budget": "life at high ≈ 25 MB GPU textures with coralPx/plantsPx 1024 (2048 tiers exist: +16 MB if AD-REEF leaves room); fish ≈ 83 k tris as configured",
+    "plantsAtlas": "../life2/plants-atlas",
+    "plantsPx": 1024,
+    "plantsCells": [
+      "kelp tall",
+      "kelp young",
+      "sea grass dense",
+      "sea grass sparse",
+      "tube sponges (lilac)",
+      "sea fan WARM (orange-red)",
+      "sea whips WARM (gold)",
+      "sea fan WARM (violet)"
+    ],
+    "heroes": [
+      {
+        "name": "ray",
+        "glb": "../life2/fish-ray.glb",
+        "glbLo": "../life2/fish-ray-lo.glb",
+        "tex": "../life2/fish-ray-albedo",
+        "px": 1024,
+        "count": 1,
+        "size": 1.05,
+        "motion": "flap",
+        "note": "spotted eagle ray, span ≈ 2 m at size 1.05; flap = COLOR_0.g (see STATUS-ADLIFE.md); glide ≈ 1 m/s, 5–8 m from the lens, once per descent"
+      }
+    ],
+    "corals3d": [
+      {
+        "name": "brain",
+        "glb": "../life2/coral-brain.glb",
+        "glbLo": "../life2/coral-brain-lo.glb",
+        "tex": "../life2/coral-brain-albedo",
+        "px": 512,
+        "h": 0.9,
+        "normal": "../life2/coral-brain-normal",
+        "tangents": true
+      },
+      {
+        "name": "lettuce",
+        "glb": "../life2/coral-lettuce.glb",
+        "glbLo": "../life2/coral-lettuce-lo.glb",
+        "tex": "../life2/coral-lettuce-albedo",
+        "px": 512,
+        "h": 0.7,
+        "normal": "../life2/coral-lettuce-normal",
+        "tangents": true
+      },
+      {
+        "name": "table",
+        "glb": "../life2/coral-table.glb",
+        "glbLo": "../life2/coral-table-lo.glb",
+        "tex": "../life2/coral-table-albedo",
+        "px": 512,
+        "h": 1,
+        "normal": "../life2/coral-table-normal",
+        "tangents": true
+      },
+      {
+        "name": "elkhorn",
+        "glb": "../life2/coral-elkhorn.glb",
+        "glbLo": "../life2/coral-elkhorn-lo.glb",
+        "tex": "../life2/coral-elkhorn-albedo",
+        "px": 512,
+        "h": 1.6,
+        "normal": "../life2/coral-elkhorn-normal",
+        "tangents": true
+      },
+      {
+        "name": "bluecoral",
+        "glb": "../life2/coral-bluecoral.glb",
+        "glbLo": "../life2/coral-bluecoral-lo.glb",
+        "tex": "../life2/coral-bluecoral-albedo",
+        "px": 512,
+        "h": 0.8,
+        "normal": "../life2/coral-bluecoral-normal",
+        "tangents": true
+      },
+      {
+        "name": "cauliflower",
+        "glb": "../life2/coral-cauliflower.glb",
+        "glbLo": "../life2/coral-cauliflower-lo.glb",
+        "tex": "../life2/coral-cauliflower-albedo",
+        "px": 512,
+        "h": 0.5,
+        "warm": true,
+        "normal": "../life2/coral-cauliflower-normal",
+        "tangents": true
+      },
+      {
+        "name": "bubblegum",
+        "glb": "../life2/coral-bubblegum.glb",
+        "glbLo": "../life2/coral-bubblegum-lo.glb",
+        "tex": "../life2/coral-bubblegum-albedo",
+        "px": 512,
+        "h": 1.8,
+        "warm": true,
+        "normal": "../life2/coral-bubblegum-normal",
+        "tangents": true
+      },
+      {
+        "name": "lacefan",
+        "glb": "../life2/coral-lacefan.glb",
+        "glbLo": "../life2/coral-lacefan-lo.glb",
+        "tex": "../life2/coral-lacefan-albedo",
+        "px": 512,
+        "h": 0.6,
+        "warm": true,
+        "normal": "../life2/coral-lacefan-normal",
+        "tangents": true
+      },
+      {
+        "name": "seastar",
+        "glb": "../life2/coral-seastar.glb",
+        "glbLo": "../life2/coral-seastar-lo.glb",
+        "tex": "../life2/coral-seastar-albedo",
+        "px": 512,
+        "h": 0.045,
+        "note": "0.3 m across, lies on the sand",
+        "normal": "../life2/coral-seastar-normal",
+        "tangents": true
+      }
+    ],
+    "kelp": {
+      "tall": "../life2/kelp-tall.glb",
+      "young": "../life2/kelp-young.glb",
+      "tex": "../life2/kelp-albedo",
+      "px": 512,
+      "alphaTest": 0.5,
+      "hTall": 8.2,
+      "hYoung": 3.5,
+      "note": "real metres, origin = holdfast, double-sided, sway = COLOR_0.r"
+    },
+    "sponge": {
+      "glb": "../life2/sponge.glb",
+      "color": "#9e80b8",
+      "h": 0.6,
+      "note": "no texture: flat lilac + your lighting"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+/* RISE · the WHY sea in the page's own type system (2026-11-22, client: 「俯視海岸區塊色調文字系統都要調整跟前面一樣」). Loaded by why-sea.js,
+   active only while the sea is up (html[data-rise-why]). The canyon and the view from above set the rules copied here:
+   - one large title per screen (Oswald 500, ice #e4e9ee); above it one kicker (Oswald 12px, tracked, white .92, soft shadow);
+   - under it the Chinese lead (22px / 500) and the running text (15px), white .9 with the same soft shadow;
+   - the glass pill button of FOUR PATHS / WHERE VALUE CONNECTS;
+   - the page HUD stays: the rail at the left (03 為何選擇我們 lit), the read at the right (03 / 05, WHY FINNOVATION).
+   So the sea's own second title (WHY FINNOVATION over every card) and its boxed tag step aside: the section's name moves into the kicker.
+   ?why=0 leaves this file out. The prefix only adds weight: the sheets before it use long id chains with !important. */
+
+/* SMOOTH (2026-11-22): the colours are set on #fiWorld at all times (they only feed the rules below); set under [data-rise-why] they restyled the
+   whole world through inheritance at each change of the attribute */
+#fiWorld {
+  --rw-ice: rgb(228 233 238);
+  --rw-ink: rgb(240 244 247 / .9);
+  --rw-ink-2: rgb(240 244 247 / .74);
+  --rw-accent: rgb(169 220 255);
+  --rw-shadow: 0 1px 2px rgb(3 16 28 / .26);
+}
+
+/* the shared title over the cards and its tag: out (the kicker and the HUD carry the name) */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .flow-why-heading {
+  opacity: 0 !important; visibility: hidden !important;
+}
+
+/* kicker: WHY FINNOVATION · 01 / 04, as INVESTMENT STRATEGIES / KNOWLEDGE IN CONFLUENCE */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-kicker {
+  color: rgb(240 244 247 / .92) !important; font: 500 12px/1.4 "Oswald", "Noto Sans TC", sans-serif !important; letter-spacing: .14em !important;
+  text-transform: uppercase !important; text-shadow: var(--rw-shadow) !important;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-kicker > i { display: none !important; }
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-kicker > span { color: inherit !important; }
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-kicker > span::before {
+  content: "WHY FINNOVATION"; margin-right: .9em;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-kicker > span::after { content: none !important; }
+
+/* the one large title */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-strategy-title {
+  color: var(--rw-ice) !important; text-shadow: none !important;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-strategy-title span { color: inherit !important; }   /* SMOOTH: span, not * (a universal last compound restyled the whole document on every data-rise-why change, 26 ms) */
+
+/* lead and running text */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-strategy-tagline {
+  color: var(--rw-ink) !important; text-shadow: var(--rw-shadow) !important;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld :is(.fiwo-strategy-body, .fiwo-strategy-en) {
+  color: var(--rw-ink) !important; text-shadow: var(--rw-shadow) !important;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-strategy-en { color: var(--rw-ink-2) !important; }
+
+/* the glass pill of the chapters before */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld .fiwo-pill {
+  background-color: rgb(255 255 255 / .12) !important;
+  background-image: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / .04)) !important;
+  border: 1px solid rgb(255 255 255 / .34) !important; color: rgb(244 249 252) !important;
+  font: 500 11px/1.2 "Oswald", "Noto Sans TC", sans-serif !important; letter-spacing: .07em !important; text-shadow: 0 1px 2px rgb(2 14 24 / .45) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1);
+}
+
+/* the photo's caption, keywords and the stop counter: the page's secondary and accent */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld :is(.fiwo-photo figcaption, .fiwo-strategy-keywords) {
+  color: var(--rw-ink-2) !important;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] #fiWorld :is(.why-photo-folio, .fiwo-strategy-number) { color: var(--rw-accent) !important; }
+
+/* the page HUD stays while the sea is up (the dive had sent it away): the rail and the read at the right */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why="on"][data-flow2-after="in"] :is(.finnovation-ui .fi-rail, .finnovation-ui .f2u-side) {
+  opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; transition: opacity .6s ease !important;
+}
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] .fi-rail > [data-section="2"] { opacity: 1 !important; }
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why] .fi-rail > [data-section="1"] { opacity: .84 !important; }
+
+/* while the sea travels between two cards the cards pass under the read at the right: it steps aside and comes back at the stop */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why="on"][data-flow2-after="in"][data-rise-why-moving] .finnovation-ui .f2u-side { opacity: 0 !important; transition: opacity .2s ease !important; }
+/* the rail as over the valley: every number and name shown (the world's own state folds it to the current number only) */
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why="on"] .finnovation-ui .fi-rail > [data-section] .fi-rail-label { opacity: 1 !important; visibility: visible !important; max-width: none !important; overflow: visible !important; clip-path: none !important; transform: none !important; margin-inline-start: 12px !important; }
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why="on"] .finnovation-ui .fi-rail > [data-section] .fi-rail-number { opacity: .8 !important; }
+:root:not(#rw1):not(#rw2):not(#rw3):not(#rw4):not(#rw5):not(#rw6):not(#rw7):not(#rw8):not(#rw9)[data-rise-why="on"] .finnovation-ui .fi-rail > [data-section][aria-current] .fi-rail-number { opacity: 1 !important; }
+
+/* RISE UI (2026-11-23, client: 「卡牌這區塊要上下置中」): the card block (the photo with its caption and stops, beside the copy) sat low: its panel keeps
+   room above it for the sea's own WHY FINNOVATION title (flow2-section-detail.css: padding-top = the title's top + its size × 1.14 + 88 px), and that
+   title is hidden on this page (above). With the title gone the top padding equals the bottom one, so the grid (align-content: center) centres the
+   block in the screen; the chrome keeps the same clearance top and bottom. index1-5-canyon-forest-rise-ui.html only; ?whyCenter=0 = as before. */
+:root[data-rise-ui][data-rise-why]:not([data-rise-why-nocenter]) body #fiWorld .fiwo-panel.fiwo-strategy { padding-top: clamp(86px, 12vh, 146px); }
+@media (min-width: 681px) and (max-height: 760px) {
+  :root[data-rise-ui][data-rise-why]:not([data-rise-why-nocenter]) body #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 76px; }
+}
+@media (max-width: 680px) {
+  :root[data-rise-ui][data-rise-why]:not([data-rise-why-nocenter]) body #fiWorld .fiwo-panel.fiwo-strategy { padding-top: 140px; }
+}

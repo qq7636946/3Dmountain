@@ -1,0 +1,134 @@
+{
+  "atlasSize": 2048,
+  "tileSize": 512,
+  "cols": 4,
+  "rows": 4,
+  "albedo": "studio-trees-atlas.webp",
+  "normal": "studio-trees-nrm.webp",
+  "species": [
+    {
+      "index": 0,
+      "id": "tree1a",
+      "label": "樹1左 (Linden A)",
+      "folder": "樹1",
+      "crownAspect": 1.1223,
+      "topOrthoScale": 1.2121,
+      "sideOrthoScale": 1.2121,
+      "uvCol": [
+        0.0,
+        0.25
+      ],
+      "uvRows": {
+        "top0": [
+          0.0,
+          0.25
+        ],
+        "top1": [
+          0.25,
+          0.5
+        ],
+        "side0": [
+          0.5,
+          0.75
+        ],
+        "side1": [
+          0.75,
+          1.0
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "id": "tree1b",
+      "label": "樹1右 (Linden B)",
+      "folder": "樹1",
+      "crownAspect": 1.1796,
+      "topOrthoScale": 1.274,
+      "sideOrthoScale": 1.274,
+      "uvCol": [
+        0.25,
+        0.5
+      ],
+      "uvRows": {
+        "top0": [
+          0.0,
+          0.25
+        ],
+        "top1": [
+          0.25,
+          0.5
+        ],
+        "side0": [
+          0.5,
+          0.75
+        ],
+        "side1": [
+          0.75,
+          1.0
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "id": "tree2",
+      "label": "樹2 (Common Fig)",
+      "folder": "樹2",
+      "crownAspect": 1.292,
+      "topOrthoScale": 1.3954,
+      "sideOrthoScale": 1.3954,
+      "uvCol": [
+        0.5,
+        0.75
+      ],
+      "uvRows": {
+        "top0": [
+          0.0,
+          0.25
+        ],
+        "top1": [
+          0.25,
+          0.5
+        ],
+        "side0": [
+          0.5,
+          0.75
+        ],
+        "side1": [
+          0.75,
+          1.0
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "id": "tree3",
+      "label": "樹3 (Oak)",
+      "folder": "樹3",
+      "crownAspect": 1.2634,
+      "topOrthoScale": 1.3645,
+      "sideOrthoScale": 1.3645,
+      "uvCol": [
+        0.75,
+        1.0
+      ],
+      "uvRows": {
+        "top0": [
+          0.0,
+          0.25
+        ],
+        "top1": [
+          0.25,
+          0.5
+        ],
+        "side0": [
+          0.5,
+          0.75
+        ],
+        "side1": [
+          0.75,
+          1.0
+        ]
+      }
+    }
+  ]
+}

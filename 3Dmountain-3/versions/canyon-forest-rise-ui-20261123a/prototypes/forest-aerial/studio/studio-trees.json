@@ -1,0 +1,44 @@
+{
+  "what": "Ecological 3D scattered trees (Image 1 Layer 2) from 樹1, 樹2, 樹3 in Image 2 style",
+  "count": 38000,
+  "layout": "count x 5 Uint16 (x, z, h, w, rot) + count x 4 Uint8 (kind, tintR, tintG, tintB)",
+  "ranges": {
+    "x": [
+      -7.0,
+      7.0
+    ],
+    "z": [
+      -3.9170015,
+      3.9170015
+    ],
+    "h": [
+      0.0,
+      0.3
+    ],
+    "w": [
+      0.0,
+      0.24
+    ],
+    "rot": [
+      0.0,
+      6.2832
+    ],
+    "tintMax": 1.5
+  },
+  "sunDir": [
+    0.6198,
+    0.5599,
+    -0.5499
+  ],
+  "speciesCounts": [
+    4701,
+    10722,
+    16568,
+    6009
+  ],
+  "tierCounts": [
+    4437,
+    20770,
+    12793
+  ]
+}

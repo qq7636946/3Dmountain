@@ -1,0 +1,556 @@
+/* css/world.css — the world epilogue of index1-1.html (js/finnovation-world.js): after the portfolio
+   cards the page goes on through the clouds to the planet, into the responsibility chapters and down
+   to the footer. Loaded by the module when it mounts; layout follows a 24-column grid. */
+
+.fi-world {
+  --fiw-margin: clamp(20px, 4.2vw, 64px);
+  --fiw-gap: clamp(10px, 1.25vw, 22px);
+  --fiw-ink: #f2f6fa;
+  --fiw-soft: #c4d2de;
+  --fiw-dim: #ffffff4d;
+  --fiw-line: #a9bfd24d;
+  --fiw-navy: #1c2d42;
+  --fiw-steel: #7d93a8;
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  visibility: hidden;
+  pointer-events: none;
+  color: var(--fiw-ink);
+  font-family: "Jost", "Noto Sans TC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.fi-world.is-open { visibility: visible; }
+/* blocks are revealed one per free moment (see the module); the grid display must not beat [hidden] */
+.fi-world [hidden] { display: none !important; }
+/* Until the clouds have covered the cards the layer lets the strip be dragged. */
+.fi-world.is-live { pointer-events: auto; }
+
+.fiw-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.fiw-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
+  /* text slips away under the fixed header instead of colliding with it */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 64px, #000 150px);
+  mask-image: linear-gradient(to bottom, transparent 0, transparent 64px, #000 150px);
+}
+
+.fiw-content { position: relative; }
+
+.fiw-grid {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  column-gap: var(--fiw-gap);
+  padding: 0 var(--fiw-margin);
+}
+
+/* ---------- the clouds (empty: the canvas does this part) ---------- */
+.fiw-gap { height: 170vh; }
+
+/* ---------- global reach ---------- */
+.fiw-global { position: relative; padding-top: 70vh; padding-bottom: 34vh; }
+
+.fiw-kicker {
+  grid-column: 6 / 20;
+  margin: 0 0 clamp(18px, 2.4vh, 30px);
+  color: var(--fiw-soft);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .26em;
+}
+
+.fiw-statement {
+  grid-column: 6 / 20;
+  margin: 0;
+  font-size: clamp(27px, 3.55vw, 56px);
+  font-weight: 300;
+  line-height: 1.24;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  /* stays legible where it crosses the lit limb */
+  text-shadow: 0 2px 26px #08141e8c, 0 0 2px #08141e40;
+}
+
+.fiw-statement-zh {
+  text-shadow: 0 1px 14px #08141e99;
+  grid-column: 6 / 15;
+  margin: clamp(22px, 3vh, 36px) 0 0;
+  color: var(--fiw-soft);
+  font: 300 clamp(14px, 1.05vw, 17px)/2 "Noto Sans TC", sans-serif;
+  letter-spacing: .12em;
+}
+
+/* the projected market labels */
+.fiw-pins { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+.fiw-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: -5px 0 0 -5px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  will-change: transform, opacity;
+  text-shadow: 0 1px 8px #0b1a2680;
+}
+
+.fiw-pin::before {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 5px #ffffff1f, 0 0 18px #ffffff66;
+}
+
+.fiw-pin.is-home::before {
+  background: transparent;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 6px #ffffff24, 0 0 22px #ffffff80;
+}
+
+.fiw-pin small {
+  color: var(--fiw-soft);
+  font-size: 9px;
+  letter-spacing: .16em;
+}
+
+/* ---------- responsibility ---------- */
+.fiw-resp { position: relative; padding-top: 58vh; padding-bottom: 18vh; }
+
+.fiw-intro {
+  grid-column: 9 / 17;
+  margin: 0;
+  font: 300 clamp(16px, 1.3vw, 21px)/2 "Noto Sans TC", sans-serif;
+  letter-spacing: .1em;
+}
+
+.fiw-block { margin-top: clamp(140px, 34vh, 360px); row-gap: clamp(26px, 4.5vh, 54px); }
+
+.fiw-index {
+  grid-column: 3 / 5;
+  align-self: start;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+}
+
+.fiw-index span {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ffffffb3;
+  transform: rotate(45deg);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.fiw-index span b { display: block; transform: rotate(-45deg); font-weight: inherit; }
+
+.fiw-line {
+  grid-column: 12 / 23;
+  align-self: center;
+  height: 1px;
+  background: var(--fiw-line);
+  transform-origin: left;
+}
+
+.fiw-title {
+  grid-column: 3 / 18;
+  margin: clamp(30px, 8vh, 120px) 0 0;
+  font-size: clamp(28px, 3vw, 48px);
+  font-weight: 300;
+  line-height: 1.32;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--fiw-dim);
+}
+
+/* letters light up as they are read (scrubbed by scroll) */
+.fiw-title .char { color: #fff; }
+
+.fiw-desc {
+  grid-column: 3 / 11;
+  margin: 0;
+  font: 300 clamp(17px, 1.35vw, 21px)/1.9 "Noto Sans TC", sans-serif;
+  letter-spacing: .08em;
+}
+
+.fiw-paras {
+  grid-column: 12 / 23;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(22px, 2.6vw, 44px);
+  row-gap: clamp(26px, 4vh, 44px);
+}
+
+.fiw-paras p,
+.fiw-second {
+  margin: 0;
+  color: #e6eef5;
+  font: 300 clamp(14px, 1.02vw, 16px)/1.95 "Noto Sans TC", sans-serif;
+  letter-spacing: .07em;
+}
+
+.fiw-paras p b {
+  display: block;
+  margin-bottom: 8px;
+  color: #fff;
+  font: 600 10px/1.4 "Jost", sans-serif;
+  letter-spacing: .2em;
+}
+
+.fiw-second { grid-column: 12 / 23; }
+
+/* tabs (block 2) */
+.fiw-tabs { grid-column: 12 / 23; }
+
+.fiw-tablist { display: flex; flex-wrap: wrap; gap: 6px 28px; margin-bottom: clamp(20px, 3vh, 32px); }
+
+.fiw-tablist button {
+  position: relative;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--fiw-soft);
+  font: 600 10px/1.4 "Jost", sans-serif;
+  letter-spacing: .2em;
+  cursor: pointer;
+}
+
+.fiw-tablist button::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .45s cubic-bezier(.2, .7, .2, 1);
+}
+
+.fiw-tablist button[aria-selected="true"] { color: #fff; }
+.fiw-tablist button[aria-selected="true"]::after { transform: scaleX(1); }
+.fiw-tablist button:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
+
+.fiw-tabpanel p {
+  margin: 0;
+  max-width: 34em;
+  color: #e6eef5;
+  font: 300 clamp(15px, 1.1vw, 17px)/1.95 "Noto Sans TC", sans-serif;
+  letter-spacing: .07em;
+}
+
+.fiw-tabpanel[hidden] { display: none; }
+
+/* items (block 4) */
+.fiw-items { grid-column: 12 / 23; display: grid; gap: clamp(26px, 4vh, 40px); }
+
+.fiw-items h4 {
+  margin: 0 0 8px;
+  font: 600 10px/1.4 "Jost", sans-serif;
+  letter-spacing: .2em;
+}
+
+.fiw-items p {
+  margin: 0;
+  color: #e6eef5;
+  font: 300 clamp(14px, 1.02vw, 16px)/1.95 "Noto Sans TC", sans-serif;
+  letter-spacing: .07em;
+}
+
+/* ---------- footer ---------- */
+.fiw-footer {
+  position: relative;
+  padding-top: clamp(110px, 16vh, 170px);
+  padding-bottom: clamp(40px, 6vh, 64px);
+  background: #fff;
+  color: var(--fiw-navy);
+  row-gap: 0;
+}
+
+.fiw-footer a,
+.fiw-footer button { color: inherit; font: inherit; }
+
+.fiw-menu { grid-column: 3 / 9; display: grid; align-content: start; gap: 40px; }
+
+.fiw-menu ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 13px; }
+
+.fiw-menu button,
+.fiw-menu a {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2d628c;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fiw-menu .fiw-legal button,
+.fiw-menu .fiw-legal a { color: #81a0bb; }
+.fiw-menu button:hover,
+.fiw-menu a:hover { color: var(--fiw-navy); }
+
+.fiw-offices {
+  grid-column: 10 / 24;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--fiw-gap);
+}
+
+.fiw-office { display: flex; flex-direction: column; justify-content: space-between; gap: 46px; min-height: 260px; }
+
+.fiw-office h3 {
+  margin: 0 0 14px;
+  color: #2d628c;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.fiw-office h3 small { display: block; color: #81a0bb; font: 400 12px/1.6 "Noto Sans TC", sans-serif; letter-spacing: .14em; }
+
+.fiw-office p { margin: 0; color: #81a0bb; font: 400 12px/1.75 "Noto Sans TC", sans-serif; letter-spacing: .08em; }
+
+.fiw-office .fiw-contact { display: grid; gap: 3px; }
+.fiw-office .fiw-contact span { color: #2d628c; font-size: 12px; letter-spacing: .06em; }
+
+/* placeholders the client still has to supply */
+.fiw-todo { color: #b06b2c !important; }
+
+.fiw-footer-line { grid-column: 3 / 24; height: 1px; margin: clamp(60px, 9vh, 96px) 0 30px; background: #2d628c1a; }
+
+.fiw-sign { grid-column: 3 / 12; display: flex; align-items: center; gap: 14px; color: var(--fiw-navy); }
+
+.fiw-sign svg { width: 24px; height: 29px; fill: currentColor; }
+
+.fiw-sign strong { font-size: 15px; font-weight: 600; letter-spacing: .14em; }
+
+.fiw-sign span { color: #81a0bb; font: 400 11px "Noto Sans TC", sans-serif; letter-spacing: .3em; }
+
+.fiw-legalline {
+  grid-column: 12 / 24;
+  align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px 26px;
+  margin: 0;
+  color: #2d628c;
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.fiw-legalline a { color: #81a0bb; text-decoration: none; }
+.fiw-legalline a:hover { color: #2d628c; }
+
+.fiw-footer .fiw-top {
+  position: absolute;
+  right: var(--fiw-margin);
+  top: clamp(40px, 6vh, 64px);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2d628c;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  cursor: pointer;
+}
+
+.fiw-top i {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #2d628c40;
+  border-radius: 50%;
+  font-style: normal;
+  transition: background .25s, color .25s;
+}
+
+.fiw-top:hover i { background: #2d628c; color: #fff; }
+
+/* ---------- chapter navigation (left, like the journey rail) ---------- */
+.fiw-chapters {
+  position: absolute;
+  left: calc(var(--fiw-margin) * .5 + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity .5s, color .5s;
+  pointer-events: none;
+}
+
+.fi-world.is-chapters .fiw-chapters { opacity: 1; pointer-events: auto; }
+.fiw-chapters { text-shadow: 0 1px 10px #0b1a2699; }
+
+.fiw-chapters button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 500 10px/1 "Jost", sans-serif;
+  letter-spacing: .14em;
+  opacity: .55;
+  cursor: pointer;
+  transition: opacity .3s;
+}
+
+.fiw-chapters button[aria-current="step"],
+.fiw-chapters button:hover { opacity: 1; }
+
+.fiw-chapters .fiw-bar { position: relative; width: 2px; height: 26px; background: currentColor; opacity: .3; }
+.fiw-chapters .fiw-bar i { position: absolute; inset: 0; background: currentColor; transform-origin: top; transform: scaleY(var(--p, 0)); }
+.fiw-chapters button[aria-current="step"] .fiw-bar { opacity: 1; background: #ffffff40; }
+
+.fiw-chapters .fiw-label { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .5s cubic-bezier(.2, .7, .2, 1); }
+.fiw-chapters button[aria-current="step"] .fiw-label,
+.fiw-chapters:hover .fiw-label { max-width: 220px; }
+
+.fi-world.is-light .fiw-chapters { color: var(--fiw-navy); }
+.fi-world.is-light .fiw-chapters button[aria-current="step"] .fiw-bar { background: #1c2d4233; }
+
+/* ---------- the page around it ---------- */
+body.is-world .fi-footer,
+body.is-world .fi-rail,
+body.is-world .fi-portfolio-copy {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity .45s, visibility .45s;
+}
+
+body.is-world .fi-veil { opacity: 0; }
+
+body.is-world-dark .finnovation-ui {
+  --ui-ink: #eef4f9;
+  --ui-muted: #c0cedb;
+  --ui-line: #ffffff2b;
+  --ui-panel: #ffffff12;
+}
+
+body.is-world-dark .fi-header-actions {
+  background: #0a182240;
+  box-shadow: inset 0 1px 0 #ffffff1f, inset 0 -1px 0 #00000026;
+}
+
+body.is-world-dark .fi-header-actions .fi-menu-toggle { background: #ffffff0f; border-left-color: #ffffff24; }
+body.is-world-dark .fi-header-actions button:hover { background: #ffffff1f; }
+
+/* ---------- reveal defaults (GSAP animates from these; without it everything just shows) ---------- */
+.fi-world.is-animated [data-reveal] { opacity: 0; }
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 960px) {
+  .fiw-statement,
+  .fiw-kicker { grid-column: 3 / 23; }
+  .fiw-statement-zh { grid-column: 3 / 20; }
+  .fiw-intro { grid-column: 4 / 22; }
+  .fiw-title { grid-column: 3 / 23; }
+  .fiw-desc { grid-column: 3 / 23; }
+  .fiw-paras,
+  .fiw-second,
+  .fiw-tabs,
+  .fiw-items { grid-column: 3 / 23; }
+  .fiw-line { grid-column: 7 / 23; }
+  .fiw-menu { grid-column: 3 / 23; grid-template-columns: 1fr 1fr; }
+  .fiw-offices { grid-column: 3 / 23; margin-top: 70px; }
+  .fiw-sign { grid-column: 3 / 23; }
+  .fiw-legalline { grid-column: 3 / 23; justify-content: flex-start; margin-top: 22px; }
+  .fiw-chapters { display: none; }
+}
+
+@media (max-width: 680px) {
+  .fi-world { --fiw-margin: 22px; --fiw-gap: 0px; }
+  .fiw-grid { grid-template-columns: repeat(24, minmax(0, 1fr)); }
+  .fiw-statement,
+  .fiw-kicker,
+  .fiw-statement-zh,
+  .fiw-intro,
+  .fiw-title,
+  .fiw-desc,
+  .fiw-paras,
+  .fiw-second,
+  .fiw-tabs,
+  .fiw-items,
+  .fiw-menu,
+  .fiw-offices,
+  .fiw-sign,
+  .fiw-legalline,
+  .fiw-footer-line { grid-column: 1 / -1; }
+  .fiw-global { padding-top: 62vh; padding-bottom: 30vh; }
+  .fiw-statement { font-size: clamp(23px, 6.6vw, 30px); letter-spacing: .035em; }
+  .fiw-index { grid-column: 1 / 6; }
+  .fiw-line { grid-column: 8 / -1; }
+  .fiw-paras { grid-template-columns: 1fr; }
+  .fiw-offices { grid-template-columns: 1fr; row-gap: 46px; }
+  .fiw-office { min-height: 0; gap: 18px; }
+  .fiw-pin { font-size: 9px; gap: 8px; }
+  .fiw-pin small { display: none; }
+  .fiw-top { top: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fiw-tablist button::after,
+  .fiw-chapters .fiw-label { transition: none; }
+}
+
+.fiw-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* stacking inside the layer: picture, labels, scrolled text, then the chapter list on top */
+.fiw-canvas { z-index: 0; }
+.fiw-pins { z-index: 1; }
+.fiw-viewport { z-index: 2; }
+.fiw-chapters { z-index: 3; }

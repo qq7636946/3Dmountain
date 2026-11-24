@@ -2,17 +2,19 @@ import * as THREE from 'three';
 import { createForestFlow } from '../flow2-scene-flow.js?v=pbr-01-perf1';
 import { createForestBirds } from '../flow2-scene-birds.js?v=timed-passes1';
 import { createRiverBeams } from '../flow2-river-beams.js?v=studio-confluence-20261121-1-perf1';
-import { createStudioTerrainPbrLayer } from './studio-terrain-pbr-layer.js?v=ridge-banks2-fast1-cmp1';
+import { createStudioTerrainPbrLayer } from './studio-terrain-pbr-layer.js?v=ridge-banks2-fast1-cmp1-falls9-dir2';
 import { bindAtmosphereArrival } from './studio-highland-ecology.js?v=weather1-bank1-fast1';
 import { createTributaryNetwork, createTributaryNetworkAsync } from './studio-tributary-network.js?v=meadow-riffles1-optR';
-import { createStudioCartography } from './studio-cartography.js?v=strategy-beacons-20261121-2-perf1';
-import { createStudioLightCurtain } from './studio-light-curtain.js?v=confluence-20261121-1';
-import { createStudio3DLines } from './studio-3d-lines.js?v=ridge-banks1-fast1';
+import { createStudioCartography } from './studio-cartography.js?v=strategy-beacons-20261121-2-perf1-falls1';
+import { createStudioLightCurtain } from './studio-light-curtain.js?v=confluence-20261121-1-falls1-dir2';
+import { createStudio3DLines } from './studio-3d-lines.js?v=ridge-banks1-fast1-falls2-redo1';
 
 const CLOCK = 10.18;
 /* 2026-11-21 (client: 「俯視山谷初始 參數統一」): the client's copied JSON is the starting look. Before: _archive/backups/td-params-20261121/
    2026-11-22 (client: 「俯視山谷初始數據使用這個」): their second export — arrival 3.25 s, the grass and rock colours, grass PBR 0, contours on (.4);
-   the panel's storage moved to preset-4 so values kept in a browser do not cover it. Before: _archive/backups/td-params-20261122/ */
+   the panel's storage moved to preset-4 so values kept in a browser do not cover it. Before: _archive/backups/td-params-20261122/
+   2026-11-23 (client: 「俯視山谷參數初始改成這樣」, third export): contours off, the floating 3D logo off, the 3D lines off; everything else as before;
+   panel storage preset-5. Before: _archive/backups/td-params-20261123/ */
 const CAMERA = { entryAzimuth: 70.31, azimuth: 323.44, tilt: 63.832, distance: 22.056, fov: 22, tx: .23, tz: -.03, arrivalSeconds: 3.25 };
 const PBR = {
   style: 1, grassSat: 1.28, grassCoverage: 85, grassTuftCount: 4800, grassPbr: 0,
@@ -23,8 +25,17 @@ const PBR = {
   sunIntensity: 1.83, sunShadow: .6, sunRays: .39, sunAzimuth: 62, sunElevation: 24,
   mist: .16, cloudStrength: .07, valleyMist: .11, mistHeight: .13, contourOpacity: .4, contourInterval: .04,
   cloudShadow: .9, mistColor: '#dfe6ec', airWhite: .5,
-  layers: { tributaries: true, contours: true, terrainStyle: true, water: true, sunbeams: false, atmosphere: true, clouds: true, gulls: true }
+  layers: { tributaries: true, contours: false, terrainStyle: true, water: true, sunbeams: false, atmosphere: true, clouds: true, gulls: true }
 };
+/* 261124 FUSION (2026-11-24, client: 「森林拿掉 其他照這個檔案的山谷 261124.html，參數值也要上」): on the -ui page the land is the fused terrain
+   (terrain-fusion/terrain-pbr-fusion.js: a snapshot of 261124.html's single-pass Magic Valley + 山谷 erosion land) with that page's values,
+   and the forest canopy off (canopyCover 0). ?fusion=0 = our own land and values. The rise page is unchanged. */
+const FUSION = document.documentElement.hasAttribute('data-rise-ui') && new URLSearchParams(location.search).get('fusion') !== '0';
+if (FUSION) Object.assign(PBR, {
+  grassTipColor: '#74a886', grassMossColor: '#6d8a82', grassDryColor: '#9bb8b4', rockColor: '#7a828a', rockLayerColor: '#bcc6d0', biomeContrast: 1.08,
+  detailFusion: 1.0, erosionRelief: 1.12, erosionAlbedo: .86, erosionAO: .88, canopyCover: 0, canopyRelief: 1.08, meadowGrain: .68,
+  colorVariety: 1.0, alpineAccents: 1.0
+});
 const CURTAIN = {
   enabled: false, showTributaries: true, showLogo: true, height: .3, speed: .3, brightness: .6, progress: 1,
   scanIntensity: .84, pulseStrength: 1.38, color: '#88ccf8', contactColor: '#d9f2ff', logoScale: 1.55, logoHeight: 1.4, logoRotation: 323
@@ -34,10 +45,10 @@ const BEACONS = { enabled: true, particles: true, count: 34, height: 1.4, width:
   particleSize: 1.16, particleBrightness: 1.55, speed: .7, color: '#b5e6ff' };
 const RIVER_DESIGN = { on: true, bright: .98, coreWidth: .95, halo: .82, haloWidth: 10, wide: .75, speed: .85, spacing: 2.5, packetLength: 1,
   pulse: 1.3, filaments: 1.1, sparkDensity: .24, glint: 1, tribBright: .4, softClip: 1.45, colour: '#e3f7ff', glow: '#68bded' };
-const FLOATING_LOGO = { enabled: true, height: 1.31, gap: .1, offsetX: .53, offsetY: -1.53, offsetZ: -.76, yaw: 0, pitch: 0, roll: 0, depth: 1,
+const FLOATING_LOGO = { enabled: false, height: 1.31, gap: .1, offsetX: .53, offsetY: -1.53, offsetZ: -.76, yaw: 0, pitch: 0, roll: 0, depth: 1,
   rotate: true, reverse: false, period: 18, opacity: .56, transmission: 1, roughness: .6, volume: 2, ior: 2.33, dispersion: 1.65,
   envIntensity: 1.72, rimStrength: 5.15, caustic: 2.38, tint: '#ffffff', brandBlue: .72, brandBlueColor: '#143e6b', light: 1.7, maxBright: 3 };
-const LINES_3D = { enabled: true, opacity: .18, color: '#d4e6ff', accentColor: '#76c4ff' };
+const LINES_3D = { enabled: false, opacity: .18, color: '#d4e6ff', accentColor: '#76c4ff' };
 const CLOUD_LOOK = { lit: '#ffffff', shade: '#e1e8ee', bright: 1.18, contrast: .85 };
 const { clamp, degToRad, euclideanModulo, lerp, smoothstep, smootherstep } = THREE.MathUtils;
 
@@ -62,6 +73,12 @@ const ROWS = [
   ['岩坡分界', 'pbr.rockSlope', .45, .98, .01], ['地貌對比', 'pbr.biomeContrast', 0, 1.8, .01],
   ['凹處深度', 'pbr.cavityDepth', 0, 1, .01], ['岩層強度', 'pbr.strataStrength', 0, 1.4, .01],
   ['河岸濕潤感', 'pbr.shoreWet', 0, 1.8, .01], ['地形起伏', 'pbr.relief', .65, 2, .01],
+  ...(FUSION ? [['— 材質細節融合（Magic Valley + 山谷侵蝕）—'],
+    ['融合細節總強度', 'pbr.detailFusion', 0, 1.5, .01], ['山谷侵蝕浮雕法線', 'pbr.erosionRelief', 0, 2.0, .01],
+    ['山谷岩紋色彩融合', 'pbr.erosionAlbedo', 0, 1.5, .01], ['山谷溝壑陰影 AO', 'pbr.erosionAO', 0, 1.6, .01],
+    ['森林樹冠覆蓋率', 'pbr.canopyCover', 0, 1.5, .01], ['森林樹冠立體法線', 'pbr.canopyRelief', 0, 2.0, .01],
+    ['草坡細紋顆粒', 'pbr.meadowGrain', 0, 1.5, .01], ['多色地貌豐富度', 'pbr.colorVariety', 0, 1.8, .01],
+    ['冷紫石楠／銀灰藍岩比重', 'pbr.alpineAccents', 0, 1.8, .01]] : []),
   ['— 河流與湖面 —'],
   ['深水色', 'pbr.waterDeep', 'color'], ['淺水色', 'pbr.waterShallow', 'color'],
   ['水流速度', 'pbr.waterSpeed', 0, 3, .01], ['水波強度', 'pbr.waterWave', .1, 2.5, .01],
@@ -105,7 +122,7 @@ const ROWS = [
 
 function registerControls(tune, { studio, curtain, cartography, lines3d, floatingLogo, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook }) {
   const panel = window.__FLOW2_PANEL__?.add({
-    id: 'rise-studio-pbr', storageId: 'rise-studio-pbr-preset-4', title: '俯視山谷 PBR', key: 'p', tune,
+    id: 'rise-studio-pbr', storageId: FUSION ? 'rise-studio-pbr-ui-fusion-1' : 'rise-studio-pbr-preset-5', title: '俯視山谷 PBR', key: 'p', tune,
     rows: [...(tune.riverBeams ? ROWS : ROWS.filter(row => row[1] !== 'riverBeams.on')),
       ...(tune.riverBeams?.filaments !== undefined ? [['— 河道流光設計 —'],
         ['河流整體亮度', 'riverBeams.bright', 0, 2, .01], ['核心光線寬度', 'riverBeams.coreWidth', .4, 3, .05],
@@ -186,6 +203,9 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
 }
 
 export async function createStudioPbrView(renderer, atlas, { reducedMotion, query, labels }) {
+  /* 261124 PORT (2026-11-24 ~13:50, client: 「261124.html俯視山谷 移過來 index1-5-canyon-forest-rise-ui.html」): on the -ui page the whole view from
+     above is 261124.html's (terrain-fusion/studio-pbr-view-fusion.js: its land, water, values and panel; forest off). ?fusion=0 = ours below. */
+  if (FUSION) return (await import('./terrain-fusion/studio-pbr-view-fusion.js?v=f10-29')).createStudioPbrView(renderer, atlas, { reducedMotion, query, labels });
   const rhythm = window.__RISE_RHYTHM__;
   const logoExperiment = document.documentElement.hasAttribute('data-rise-floating-logo');
   const legacyMist = atlas.scene.getObjectByName('Forest legacy mist');
@@ -193,7 +213,13 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   /* optR slice (team R, 2026-11-21; rise page, ?optR=0 / ?perf=0 / ?optRoff=slice = in one block as before): the 0.5-0.7 s of CPU work is cut into 3 ms slices so the opening keeps drawing */
   atlas.studioHydrology = (document.documentElement.hasAttribute('data-rise-studio-pbr') && query.get('perf') !== '0' && query.get('optR') !== '0' && !(query.get('optRoff') || '').split(',').includes('slice')) ? await createTributaryNetworkAsync(atlas) : createTributaryNetwork(atlas);
   const [studio, flow] = await Promise.all([
-    createStudioTerrainPbrLayer(renderer, atlas, PBR),
+    FUSION ? import('./terrain-fusion/terrain-pbr-fusion.js?v=f4-k2').then(module => {
+      const init = { ...PBR };
+      for (const k of ['detailFusion', 'erosionRelief', 'erosionAlbedo', 'erosionAO', 'canopyCover', 'canopyRelief', 'meadowGrain', 'colorVariety', 'alpineAccents']) {
+        const v = query.get(k); if (v != null && v !== '' && Number.isFinite(+v)) init[k] = +v;
+      }
+      return module.createStudioTerrainPbrLayer(renderer, atlas, init);
+    }) : createStudioTerrainPbrLayer(renderer, atlas, PBR),
     query.get('wflow') === '0' ? null : createForestFlow(renderer, { reducedMotion, atlas })
   ]);
   if (!studio.terrainPatched) throw new Error('Studio PBR terrain could not be applied');
@@ -205,6 +231,21 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   studio.bindCurtain(curtain);
   if (flow) atlas.scene.add(flow.group);
   if (beams) atlas.scene.add(beams.group);
+  /* RISE FALLS (team FW, 2026-11-23; only with html[data-rise-falls] = ?falls=1 on the -ui page while it is built; docs/falls/BRIEF-20261123.md):
+     the lake of this view becomes a horseshoe waterfall. falls/index.js brings team FT's rock and FW's water and air. It is made here, after the
+     terrain layer and before the atlas compiles the view's programs, so its own are compiled with them (no hitch at the arrival).
+     Without the attribute falls is null and every line below that reads it does nothing. A failure only warns: the view comes as before. */
+  const falls = document.documentElement.hasAttribute('data-rise-falls') ?
+    await import('./falls/index.js?v=dir2-shelf24')
+      .then(module => module.createStudioFalls(renderer, atlas, studio, { reducedMotion, query, beams, curtain, flow }))
+      .catch(error => { console.warn('Rise falls could not be made:', error); return null; }) : null;
+  if (falls) atlas.scene.add(falls.group);
+  /* VALLEY DETAIL (2026-11-24, -ui page only, ?vtex=0 = off): the erosion relief, streaks and meadow grain of the client's two terrain maps
+     (magic_valley/, 山谷/textures/) multiplied over the live land in one light pass on the same surface (valley-detail/valley-detail.js). */
+  const valleyDetail = document.documentElement.hasAttribute('data-rise-ui') && query.get('vtex') !== '0' ?
+    await import('./valley-detail/valley-detail.js?v=s24')
+      .then(module => module.createValleyDetail(renderer, atlas, { query, fusion: FUSION }))
+      .catch(error => { console.warn('Valley detail could not be made:', error); return null; }) : null;
   const lines3d = createStudio3DLines(atlas, { studio, parts: { flow } }, { enabled: true });
   const cartography = createStudioCartography(atlas, studio, atlas.camera, {
     ...labels, compactLeaders: logoExperiment, enhancedBeacons: logoExperiment, curtain, reducedMotion
@@ -233,6 +274,7 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   };
   const outlinePoint = new THREE.Vector3();
   const applyBeamOutline = () => {
+    if (falls) return;   /* RISE FALLS: the light lines end at the gorge's rim (falls/index.js bindBeams), not at the mark on the lake */
     const logo = curtain.logo;
     if (!beams || !logo?.outlines.length) return;
     logo.group.updateWorldMatrix(true, false);
@@ -311,7 +353,7 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     const dive = smootherstep(zoom || 0, 0, 1);
     const polar = clamp(framing.tilt - z * 12 + (entry?.fore || 0) * .35 - sway.y * (1 - dive) * 1.35, 1, 84);
     const distance = framing.distance * (entry?.dist || 1) * lerp(1, .065, dive);
-    aim.set(framing.tx, .105, framing.tz).lerp(atlas.lake.center, dive);
+    aim.set(framing.tx, .105, framing.tz).lerp(falls ? falls.diveTarget : atlas.lake.center, dive);   /* RISE FALLS: the dive goes to the pool */
     orbit.set(distance, degToRad(lerp(polar, .7, dive)), degToRad(state.azimuth + x * 26 + sway.x * (1 - dive) * 3.15));
     lens.position.setFromSpherical(orbit).add(aim);
     lens.lookAt(aim);
@@ -323,10 +365,12 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   const removeWaterUpdate = atlas.onUpdate(frame => {
     flow?.update(frame);
     beams?.update({ ...frame, routeProgress: state.routeProgress });
+    falls?.update(frame);   /* RISE FALLS */
+    valleyDetail?.update();   /* VALLEY DETAIL: follows the land's place and visibility */
     if (flow && beams?.group.visible && !retainCurrent) flow.uniforms.uCurrent.value = 0;
   });
   const view = {
-    studio, state, cartography, curtain, beams, lines3d, floatingLogo,
+    studio, state, cartography, curtain, beams, lines3d, floatingLogo, falls,
     draw(r, target) { floatingLogo?.draw(r, target); },
     setPointer(x = 0, y = 0) { if (!reducedMotion) pointer.set(x, y); },
     leave() {
@@ -360,6 +404,8 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       // handoff at every refresh rate. The sweep still covers its first beat.
       if (rhythm && !override && !(M && state.arrival < clamp(+M.lightAt || 0, 0, .98))) routeAdvance = Math.min(1, routeAdvance + dt / (M && +M.lightSeconds > .2 ? +M.lightSeconds : framing.arrivalSeconds * 0.53));
       applyRouteProgress();
+      falls?.setArrival(state.arrival);   /* RISE FALLS: the water comes with the land's colour */
+      valleyDetail?.setArrival(state.arrival);   /* VALLEY DETAIL: comes with the land's colour */
       if (M) {   /* RISE HOOK: the 3D lines leave once the lens is in place; back quickly when the stroke takes the view away */
         const settled = !override && turn >= 1 && state.arrival >= clamp(+M.lineAt || 0, 0, 1);
         const back = override && override.dir === -1;
@@ -382,6 +428,8 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     },
     dispose() {
       removeWaterUpdate();
+      falls?.dispose();
+      valleyDetail?.dispose();
       floatingLogo?.dispose();
       lines3d.dispose();
       beams?.dispose();

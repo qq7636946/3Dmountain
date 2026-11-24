@@ -348,6 +348,7 @@ export function createStudio3DLines(atlas, { studio = null, parts = {} } = {}, i
   const U = atlas.uniforms;
   const terrainHeight = heightSource(studio?.lineWatershed || makeWatershedGlsl);
   const defines = studio?.lineWatershed ? { STUDIO_HEADWATERS: 1 } : {};
+  const fallsLines = !!(studio?.falls && studio?.lineWatershed);
   const coreW = U?.uBounds ? (1.0 / U.uBounds.value.z) : 14.0;
   const coreD = U?.uBounds ? (1.0 / U.uBounds.value.w) : 7.84;
   const SKIRT = 11.5;
@@ -364,7 +365,8 @@ export function createStudio3DLines(atlas, { studio = null, parts = {} } = {}, i
     uEx: { value: 1.0 }
   };
   if (studio?.lineWatershed) Object.assign(shared, {
-    tWater: U.tWater, uSkirt: U.uSkirt, uTributaries: studio.uniforms.uTributaries
+    tWater: U.tWater, uSkirt: U.uSkirt, uTributaries: studio.uniforms.uTributaries,
+    ...(studio?.falls ? { uFallsSize: studio.uniforms.uFallsSize, uFallsHeadland: studio.uniforms.uFallsHeadland, uFallsDrop: studio.uniforms.uFallsDrop } : {})
   });
 
   const lineMat = new THREE.ShaderMaterial({
@@ -379,8 +381,9 @@ export function createStudio3DLines(atlas, { studio = null, parts = {} } = {}, i
       uWaterGlow: { value: cfg.waterGlow },
       uDarkGround: { value: cfg.darkGround }
     },
-    vertexShader: lineVertex(terrainHeight),
-    fragmentShader: LINE_FRAG,
+    /* RISE FALLS (team FT, 2026-11-23; only with html[data-rise-falls]: studio.falls is null everywhere else): no line is drawn over the gorge's hole, and the lines sink with the fourth river's trough like the land */
+    vertexShader: fallsLines ? lineVertex(terrainHeight).replace('varying float vLit, vWet, vMinor, vH, vOutFade;', 'varying float vLit, vWet, vMinor, vH, vOutFade, vFallsSd;').split('p.y = h + uLift;').join('vec2 fg = fallsGorgeField(p.xz); p.y = h + uLift - fallsTrough(p.xz) + fallsRimLift(fg); vFallsSd = fg.x;') : lineVertex(terrainHeight),
+    fragmentShader: fallsLines ? LINE_FRAG.replace('varying float vLit, vWet, vMinor, vH, vOutFade;', 'varying float vLit, vWet, vMinor, vH, vOutFade, vFallsSd;').replace('void main() {', 'void main() { if (vFallsSd < 0.0) discard;') : LINE_FRAG,
     transparent: true,
     depthWrite: false,
     depthTest: true,

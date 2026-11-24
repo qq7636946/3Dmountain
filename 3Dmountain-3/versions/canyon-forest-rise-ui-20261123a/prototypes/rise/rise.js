@@ -23,7 +23,9 @@
   const reducedMQ = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)'); } catch (error) { return { matches: false }; } })();
   const HERE = (document.currentScript && document.currentScript.src) ? new URL('.', document.currentScript.src).href : new URL('prototypes/rise/', document.baseURI).href;
   const GORGE = new URL('../drop-gorge/', HERE).href;
-  const STAMP = { scene: '48-uwq', dive: '23-splash', optics: '15-bubble-anchor', td: '24' };
+  const STAMP = { scene: '50-seapng', dive: '23-splash', optics: '15-bubble-anchor', td: '24' };
+  const SEA_VIDEO_URL = (Q.get('seaVideo') === '1' || (html.hasAttribute('data-rise-sea-video') && Q.get('seaVideo') !== '0'))
+    ? new URL('../../' + (Q.get('sea') === 'mp4' ? 'sea.mp4' : Q.get('sea') === 'b' ? 'sea_B.mp4' : 'sea.png'), HERE).href : '';   /* 2026-11-24: sea.png by default (「第一幕換圖我看看」); ?sea=mp4 / ?sea=b = the videos */
 
   const T = {
     travel: 1100, entry: 170, depthTravel: 1100, depth: 18, canyonLift: 0,
@@ -725,11 +727,11 @@
       import(GORGE + 'dg-scene.js?v=' + STAMP.scene),
       import(HERE + 'waterline.js?v=' + STAMP.optics),
       import(HERE + 'opening-shot.js?v=1'),
-      import(HERE + 'rise-bubble-logo.js?v=9-defaults').catch(error => { console.warn('rise bubble logo: unavailable', error); return null; })
+      import(HERE + 'rise-bubble-logo.js?v=10-smooth-return').catch(error => { console.warn('rise bubble logo: unavailable', error); return null; })
     ]);
     optics = waterline;
     scene = mod.createGorge({ canvas, tune: { depth: T.depth }, phone: false,
-      riseWaterline: true, gpuTimer: Q.get('gorgeGpu') === '1', dpr: renderScale(), texTier: uwTexTier, oceanSurface: UWQ === 'low' ? './ocean-surface-n-512.webp' : undefined, mono: 'RL Mono',
+      riseWaterline: true, seaVideo: SEA_VIDEO_URL, gpuTimer: Q.get('gorgeGpu') === '1', dpr: renderScale(), texTier: uwTexTier, oceanSurface: UWQ === 'low' ? './ocean-surface-n-512.webp' : undefined, mono: 'RL Mono',
       warmDrop: !!(bubble && window.__FLOW2_DROP__), onUnderwaterFrame: (shot, light) => bubbleLogo?.update(shot, light) });
     await scene.load();
 

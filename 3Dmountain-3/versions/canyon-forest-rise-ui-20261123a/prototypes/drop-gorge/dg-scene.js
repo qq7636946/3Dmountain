@@ -42,7 +42,7 @@ const UW3D = UWQ.get('uw') === '3d';
 /* OCEAN (CEIL, 2026-11-18 evening; client: 「海底下的質感要如圖一模一樣」): ?ocean=1 = the video's look just under the water (the surface seen from
    below with real refraction / total internal reflection, sun glints, god rays, teal → navy). The module is fetched only with the switch;
    without ?ocean=1 nothing here changes. */
-const OC = (UWQ.get('ocean') === '1' || window.__RISE_OCEAN__ === true || (window.__GORGE_OCEAN__ === true && UWQ.get('ocean') !== '0')) ? await import('./ocean/dg-ocean.js?v=18-ambient').catch(() => null) : null;
+const OC = (UWQ.get('ocean') === '1' || window.__RISE_OCEAN__ === true || (window.__GORGE_OCEAN__ === true && UWQ.get('ocean') !== '0')) ? await import('./ocean/dg-ocean.js?v=19-sea2').catch(() => null) : null;
 
 /* ------------------------------------------------------------------ UNDER WATER: the same functions, the water's own colour (cheap: every layer calls bgAt) */
 const COMMON_UW = /* glsl */`
@@ -303,8 +303,90 @@ export function createGorge(opts = {}) {
     C.uBgTop.value = hex(P.top); C.uBgMid.value = hex(P.mid); C.uBgLow.value = hex(P.low); C.uBgGlow.value = hex(P.glow); C.uAbyss.value = hex(P.abyss);
     L.uKeyCol.value = hex(P.key).multiplyScalar(1.12); L.uSky.value = hex(P.sky).multiplyScalar(0.62); L.uGround.value = hex(P.ground).multiplyScalar(0.55);
     L.uRockTint.value = hex(P.rockTint); L.uMossTint.value = hex(P.mossTint); OCU.uOcDeep.value.set(P.deep); info.ocean = OC.VERSION; }
+  const hasSeaVideo = !!(riseWaterline && opts.seaVideo);
   const riseLighting = riseWaterline ? OC.createRiseLighting(THREE, OCX, L.uKeyDir,
-    { uBgMid: C.uBgMid, uBgLow: C.uBgLow, uBgGain: C.uBgGain, uRockTint: L.uRockTint }, MTN && UWQ.get('uwLane') !== '1') : null;
+    { uBgMid: C.uBgMid, uBgLow: C.uBgLow, uBgGain: C.uBgGain, uRockTint: L.uRockTint }, MTN && UWQ.get('uwLane') !== '1', hasSeaVideo) : null;
+  const seaVidDummy = riseWaterline ? new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1) : null;
+  if (seaVidDummy) seaVidDummy.needsUpdate = true;
+  const seaVidUniform = { value: seaVidDummy };
+  let seaVid = null;
+  /* SEA IMAGE (2026-11-24, client: 「第一幕換圖我看看 sea.png」): a still picture in place of the video — same blend, same dials; it stays still
+     apart from the shader's own refraction ripple */
+  const SEA_IMG = hasSeaVideo && /\.(png|jpe?g|webp)(\?|$)/i.test(opts.seaVideo);
+  if (SEA_IMG) {
+    const img = new Image(); img.crossOrigin = 'anonymous'; img.decoding = 'async';
+    const tex = new THREE.Texture(img);
+    tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+    tex.colorSpace = THREE.NoColorSpace; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    seaVid = { img, tex, ready: false, isImage: true };
+    img.onload = () => {
+      seaVid.ready = true;
+      riseLighting.uniforms.uSeaVidAspect.value = img.naturalWidth / img.naturalHeight;
+      seaVidUniform.value = tex; tex.needsUpdate = true;
+      info.seaVideo = { url: opts.seaVideo, w: img.naturalWidth, h: img.naturalHeight, image: true };
+    };
+    img.onerror = () => { info.seaVideo = { url: opts.seaVideo, error: true, image: true }; };
+    img.src = opts.seaVideo;
+  }
+  if (hasSeaVideo && !SEA_IMG) {
+    const v = document.createElement('video');
+    Object.assign(v, { muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous', disablePictureInPicture: true });
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', '');
+    const tex = new THREE.Texture(v);
+    tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+    tex.colorSpace = THREE.NoColorSpace; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    seaVid = { v, tex, ready: false, fresh: 0, uploaded: -1, lastTime: -1 };
+    const onReady = () => {
+      if (v.videoWidth > 0 && v.videoHeight > 0) {
+        seaVid.ready = true;
+        v.width = v.videoWidth; v.height = v.videoHeight;
+        riseLighting.uniforms.uSeaVidAspect.value = v.videoWidth / v.videoHeight;
+        seaVidUniform.value = tex;
+        tex.needsUpdate = true;
+        info.seaVideo = { url: opts.seaVideo, w: v.videoWidth, h: v.videoHeight };
+      }
+    };
+    v.addEventListener('loadeddata', onReady, { once: true });
+    v.addEventListener('canplay', onReady, { once: true });
+    v.addEventListener('error', () => { info.seaVideo = { url: opts.seaVideo, error: true }; }, { once: true });
+    if (v.requestVideoFrameCallback) {
+      const tick = () => { seaVid.fresh++; v.requestVideoFrameCallback(tick); };
+      v.requestVideoFrameCallback(tick);
+    }
+    v.src = opts.seaVideo;
+    v.load();
+  }
+  function syncSeaVideo(cy, t, live) {
+    if (!riseLighting) return;
+    const u = riseLighting.uniforms;
+    if (!seaVid || !seaVid.ready) {
+      u.uSeaVidReady.value = 0;
+      u.uSeaVidRockMul.value = 1;
+      return;
+    }
+    if (seaVid.isImage) u.uSeaVidReady.value = 1;
+    else {
+    const v = seaVid.v;
+    const active = cy < -1.1 && u.uSeaVidMix.value > 0.002;
+    if (active && live !== false) {
+      if (v.paused) v.play().catch(() => { });
+    } else if (!v.paused) {
+      v.pause();
+    }
+    if (v.readyState >= 2) {
+      if (seaVid.fresh !== seaVid.uploaded || v.currentTime !== seaVid.lastTime) {
+        seaVid.tex.needsUpdate = true;
+        seaVid.uploaded = seaVid.fresh;
+        seaVid.lastTime = v.currentTime;
+      }
+      u.uSeaVidReady.value = 1;
+    }
+    }
+    const depthN = clamp01((-cy - 1.4) / (14.0 - 1.4));
+    u.uSeaVidShift.value = (1 - depthN) * 0.045;
+    const mixAmt = u.uSeaVidReady.value * u.uSeaVidMix.value * ss(-1.4, -7.8, cy);
+    u.uSeaVidRockMul.value = 1 - 0.80 * mixAmt;
+  }
   /* the live dials (uniform objects; scene().uw.ceil.value = 1.3 …) */
   const UWU = {
     ceil: { value: uwNum('uwCeil', 1) }, ceilK: { value: 0.034 }, surfY: { value: 0 }, rays: { value: 0.3 * uwNum('uwRays', 1) },
@@ -337,7 +419,7 @@ export function createGorge(opts = {}) {
       vec3 col = mix(base, sheet, lit);
       gl_FragColor = vec4(toSRGB(col), 1.0);
     }`;
-  const bgMat = new THREE.ShaderMaterial({ uniforms: UW ? { ...C, tCaus: { value: tCaus }, uCamPos: UWU.camPos, uCamR: UWU.camR, uCamU: UWU.camU, uCamF: UWU.camF, uTanH: UWU.tanH, uSurfY: UWU.surfY, uCeil: UWU.ceil, uCeilK: UWU.ceilK, uTiltC: UWU.tilt, ...(OCEAN ? { ...OCU, uOcOver: { value: 1 } } : {}), ...(riseWaterline ? { ...riseLighting.uniforms, uRiseOptics: riseOptics } : {}) } : { ...C },
+  const bgMat = new THREE.ShaderMaterial({ uniforms: UW ? { ...C, tCaus: { value: tCaus }, uCamPos: UWU.camPos, uCamR: UWU.camR, uCamU: UWU.camU, uCamF: UWU.camF, uTanH: UWU.tanH, uSurfY: UWU.surfY, uCeil: UWU.ceil, uCeilK: UWU.ceilK, uTiltC: UWU.tilt, ...(OCEAN ? { ...OCU, uOcOver: { value: 1 } } : {}), ...(riseWaterline ? { ...riseLighting.uniforms, tSeaVid: seaVidUniform, uRiseOptics: riseOptics } : {}) } : { ...C },
     depthTest: riseWaterline, depthWrite: riseWaterline, depthFunc: THREE.LessEqualDepth,
     vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }',
     fragmentShader: UW ? CM + (riseWaterline ? OC.riseCeilFS : OCEAN ? OC.ceilFS : ceilFS) : COMMON + 'void main(){ gl_FragColor = vec4(toSRGB(bgAt(gl_FragCoord.xy)), 1.0); }' });
@@ -1215,7 +1297,7 @@ ${riseWaterline ? OC.waterShaftsGLSL : ''}
     #ifdef RISE_WATERLINE
       ${riseLighting ? OC.riseLightGLSL : ''}
       uniform float uRiseCausticTime, uRiseBedRippleSize, uRiseCausticStrength;
-      uniform float uRiseRockOpacity, uRiseRockDetail;
+      uniform float uRiseRockOpacity, uRiseRockDetail, uSeaVidRockMul;
     #endif
     void main(){
       vec3 N0 = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0), aN = abs(N0);
@@ -1271,7 +1353,7 @@ ${riseWaterline ? OC.waterShaftsGLSL : ''}
         float paleBed = smoothstep(0.15,0.56,lN) * (0.45 + 0.55 * smoothstep(0.18,0.56,lF));
         float ledge = smoothstep(-0.12,0.70,N0.y) * (0.52 + 0.48 * bed);
         slate += vec3(0.11,0.16,0.18) * throughWater * paleBed * (0.28 + 0.72 * ledge);
-        gl_FragColor = vec4(toSRGB(slate), visibility * uRiseRockOpacity);
+        gl_FragColor = vec4(toSRGB(slate), visibility * uRiseRockOpacity * uSeaVidRockMul);
       #else
       float fd = max(vDist - 0.5, 0.0), f = 1.0 - exp(-fd * uFogK - fd * fd * 0.00014);
       f = f + (1.0 - f) * boostAt(gl_FragCoord.xy) * mix(0.5, 1.0, smoothstep(5.0, 9.0, vDist));
@@ -2220,6 +2302,7 @@ ${riseWaterline ? OC.waterShaftsGLSL : ''}
         UWU.snow.value = baseSnow * (s.live === false ? 0.27 : 0.36);
         riseOptics.value.set(1 + 0.12 * (frame?.shallow ?? 0), shiftY);
         riseLighting.update(t, s.live !== false, riseSun.value.y);
+        syncSeaVideo(cy, t, s.live);
         // Move the eye along the canyon heading, so the rock, bed and light have the same parallax.
         const advance = frame?.advance ?? 0;
         cz -= advance;
@@ -2338,6 +2421,24 @@ ${riseWaterline ? OC.waterShaftsGLSL : ''}
       try { await renderer.compileAsync(scene, camera); await renderer.compileAsync(dropScene, camera); await renderer.compileAsync(outScene, ortho); } catch (error) { }
       const keep = [W, H, dpr];
       if (riseWaterline) {
+        if (seaVid && !seaVid.ready) {
+          await Promise.race([
+            new Promise(r => {
+              const done = () => r();
+              if (seaVid.isImage) { seaVid.img.addEventListener('load', done, { once: true }); seaVid.img.addEventListener('error', done, { once: true }); }
+              else {
+              seaVid.v.addEventListener('loadeddata', done, { once: true });
+              seaVid.v.addEventListener('canplay', done, { once: true });
+              seaVid.v.addEventListener('error', done, { once: true });
+              }
+            }),
+            new Promise(r => setTimeout(r, 1500))
+          ]);
+        }
+        if (seaVid && seaVid.ready) {
+          if (!seaVid.isImage) try { await seaVid.v.play(); } catch (e) { }
+          try { renderer.initTexture(seaVid.tex); } catch (e) { }
+        }
         if (opts.warmDrop) renderer.initRenderTarget(B);
         api.render({ ...s, camY: -0.14 });
         api.render(s);
@@ -2361,7 +2462,7 @@ ${riseWaterline ? OC.waterShaftsGLSL : ''}
       return keep;
     },
     clear() { renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 0); renderer.clear(true, true, false); },
-    dispose() { causticTarget?.dispose(); renderer.dispose(); A.dispose(); B.dispose(); if (FAR) { clearInterval(FAR.timer); for (const b of FAR.bands) { b.v.pause(); b.v.removeAttribute('src'); b.v.load(); } } }
+    dispose() { causticTarget?.dispose(); seaVidDummy?.dispose(); if (seaVid) { if (seaVid.v) { seaVid.v.pause(); seaVid.v.removeAttribute('src'); seaVid.v.load(); } seaVid.tex.dispose(); } renderer.dispose(); A.dispose(); B.dispose(); if (FAR) { clearInterval(FAR.timer); for (const b of FAR.bands) { b.v.pause(); b.v.removeAttribute('src'); b.v.load(); } } }
   };
   /* a small copy of Team SQ's lens recipe (Drops by saharan, MIT — notice in prototypes/canyon-seagull/flow2-drop-lead.js), used only when
      their factory is absent (?drop=0): exact ray–ellipsoid, refraction in and out, the picture behind read where the exit ray lands */

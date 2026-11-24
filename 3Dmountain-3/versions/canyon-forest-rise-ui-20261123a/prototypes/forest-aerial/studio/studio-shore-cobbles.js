@@ -2,7 +2,10 @@ import * as THREE from 'three';
 
 // Larger stones break the waterline in scattered deposits. The smaller ones
 // are resolved by the scan relief in the terrain, including below the water.
-function deposits(atlas) {
+/* RISE FALLS (team FT, 2026-11-23): `falls` = the module falls/falls-shape.js where html[data-rise-falls] is set, else null / undefined and
+   nothing below changes. With it the lake-shore deposits lie along the gorge's rim instead (the lake is gone), and no stone is left
+   standing over the hole or in the lowered trough of the fourth river. */
+function deposits(atlas,falls) {
   const water=atlas.uniforms.tWater.value.image;
   const ground=atlas.uniforms.tCanopy.value.image;
   if (!water.data || !ground.data) return [];
@@ -22,8 +25,9 @@ function deposits(atlas) {
       const along=(random()+random()-1)*length, across=(random()+random()-1)*0.056;
       const x=cx+dx*along-dz*across, z=cz+dz*along+dx*across, k=texel(x,z);
       const w=water.data, creek=!lake && w[k+3]>240;
-      if ((!lake && w[k]<62) || (w[k]>100 && w[k+1]>130)) continue;
-      const bed=creek ? Math.max(0,Math.min(w[k+2]/255*range.y,range.x+ground.data[k]/255*range.y-0.105)) : 0;
+      if (falls && falls.gorgeSd(x,z)<0.02) continue;
+      if (!(falls && lake) && ((!lake && w[k]<62) || (w[k]>100 && w[k+1]>130))) continue;
+      const bed=(creek ? Math.max(0,Math.min(w[k+2]/255*range.y,range.x+ground.data[k]/255*range.y-0.105)) : 0)-(falls ? falls.troughDrop(x,z)/Math.max(0.2,atlas.uniforms.uRelief.value) : 0);   /* RISE FALLS: stones go down with the lowered land */
       const radius=0.006+0.019*random()**2+(i===0 ? 0.010 : 0);
       result.push({anchor:[x,bed,z,creek?1:0],shape:[radius,radius*(0.32+0.46*random()),radius*(0.57+0.42*random()),angle+(random()-0.5)*2.1],
         grain:[random(),random(),random(),0.22+0.20*random()]});
@@ -33,6 +37,11 @@ function deposits(atlas) {
     const a=(i+random()*0.80)*2*Math.PI/26;
     const bends=0.085*Math.sin(3*a+0.7)+0.055*Math.cos(5*a-1.2)+0.035*Math.sin(7*a+2.4);
     const r=0.908+(random()-0.5)*0.056-bends;
+    if (falls) {   /* along the rim, a little outside it; the tangent from two rim points */
+      if (falls.lipWeight && falls.lipWeight(a)>0.15) continue;   /* redo (2026-11-23 evening): the lip is clean water, stones only along the dry rim */
+      const deg=a*180/Math.PI, out=1.012+random()*0.022, [x,z]=falls.rimPoint(deg,out), [x1,z1]=falls.rimPoint(deg+1,out);
+      deposit(x,z,Math.atan2(z1-z,x1-x),true);
+    } else
     deposit(0.122+1.66*r*Math.cos(a),-0.056+1.42*r*Math.sin(a),a+Math.PI/2,true);
   }
   // Shallow pixels of the authored water field also cover the main channel
@@ -42,7 +51,7 @@ function deposits(atlas) {
     const x=bounds.x+random()/bounds.z, z=bounds.y+random()/bounds.w;
     const k=texel(x,z), w=water.data;
     if (w[k]<88 || w[k+1]<12 || w[k+1]>108 || (w[k+3]>0 && w[k+3]<241)) continue;
-    if (Math.hypot((x-0.122)/1.66,(z+0.056)/1.42)<1.12) continue;
+    if (falls ? falls.gorgeSd(x,z)<0.05 : Math.hypot((x-0.122)/1.66,(z+0.056)/1.42)<1.12) continue;
     const gx=w[texel(x+0.02,z)+1]-w[texel(x-0.02,z)+1];
     const gz=w[texel(x,z+0.02)+1]-w[texel(x,z-0.02)+1];
     deposit(x,z,Math.atan2(gz,gx)+Math.PI/2,false);
@@ -51,8 +60,8 @@ function deposits(atlas) {
   return result;
 }
 
-export function createShoreCobbles(atlas,studio,scanColor,outerStones=[]) {
-  const stones=deposits(atlas).concat(outerStones);
+export function createShoreCobbles(atlas,studio,scanColor,outerStones=[],falls=null) {
+  const stones=deposits(atlas,falls).concat(outerStones);
   const geometry=new THREE.InstancedBufferGeometry(), positions=[], indices=[];
   // A rounded shoulder over a lower angular skirt, with a split, off-centre crown.
   const sides=8;
@@ -173,6 +182,13 @@ export function createShoreCobbles(atlas,studio,scanColor,outerStones=[]) {
     side:THREE.DoubleSide,forceSinglePass:true
   });
   contact.userData.handlesArrival=true;
+  /* redo-s5 (RISE FALLS): the stones were laid along the default rim; when the opening sliders move the rim, any stone the rim moved past (or that
+     now lies in the hole) is hidden, so nothing floats or sinks. Live field (uFallsSize) against the default one. */
+  if (falls && falls.LIVE_GORGE_FIELD_GLSL && falls.GORGE_SD_GLSL && studio.uFallsSize) {
+    material.uniforms.uFallsSize=studio.uFallsSize;
+    const NL=String.fromCharCode(10), head='uniform vec2 uFallsSize;'+NL+falls.GORGE_SD_GLSL+NL+falls.LIVE_GORGE_FIELD_GLSL+NL+'bool fallsMoved(vec2 p){float l=fallsGorgeField(p).x;return l<0.03||abs(l-fallsGorgeSd(p))>0.04;}'+NL;
+    for (const m of [material,contact]) m.vertexShader=m.vertexShader.replace('void main() {',head+'void main() {').replace('gl_Position=vec4(2.0,2.0,2.0,1.0);','gl_Position=vec4(2.0,2.0,2.0,1.0); if(fallsMoved(aAnchor.xz)) gl_Position=vec4(2.0,2.0,2.0,1.0);');
+  }
   const shadows=new THREE.Mesh(footprints,contact);
   shadows.frustumCulled=false;
   const group=new THREE.Group();

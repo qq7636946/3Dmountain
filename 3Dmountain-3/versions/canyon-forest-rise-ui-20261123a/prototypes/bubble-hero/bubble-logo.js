@@ -297,7 +297,7 @@ void main(){
   vec3 p = position + aNormal*sin(uTime*0.6 + position.y*0.55 + phase*0.25)*(lead ? 0.0 : uBreath);
   if (!lead) {
     #ifdef POINTER_SIM
-    if (uSimOn > 0.5) p.xy += texture2D(tSim, aSim).xy;
+    if (uSimOn > 0.001) p.xy += texture2D(tSim, aSim).xy * uSimOn;
     #else
     vec2 d = position.xy-uCursor.xy;
     float r = length(d);
@@ -598,23 +598,35 @@ function createWaterMark(THREE, geometry, order, { width, height, depth, unit, q
     dwell = hitNow && speed < 0.31 ? Math.min(1, dwell+dt/1.55) : Math.max(0, dwell-dt*2.2);
     const pressure = hitNow ? force*(0.52+0.48*dwell)/(1+speed*0.58) : 0;
     cursor.z += (pressure-cursor.z)*(1-Math.exp(-dt/0.085));
-    if (pressure > 0.001) lastPressure = time;
+    if (pressure > 0.001 || cursor.z > 0.001) lastPressure = time;
     if (!sim) return;
 
     const M = sim.mat.uniforms;
-    const running = active && hitNow || time-lastPressure < Math.max(1.1, settle*1.9);
-    U.uSimOn.value = +running;
+    const damp = Math.max(0.5, X.damp);
+    const kSpring = 3*damp/Math.max(0.05, settle);
+    /* Exact slowest exponential decay rate of x'' + damp*x' + kSpring*x = 0 (covers both overdamped & underdamped presets!) */
+    const disc = damp*damp - 4*kSpring;
+    const decayRate = disc > 0 ? 0.5*(damp - Math.sqrt(disc)) : 0.5*damp;
+    /* Keep simulation alive until envelope exp(-decayRate*t) < 0.0005, then smoothly ease uSimOn -> 0 over final 1.5 s (zero snap!) */
+    const settleWait = Math.min(40, Math.max(2.0, 7.6/Math.max(decayRate, 0.05)));
+    const idle = time - lastPressure;
+    const pushing = (active && hitNow) || cursor.z > 0.001;
+    const running = pushing || idle < settleWait;
     if (!running) {
+      U.uSimOn.value = 0;
       M.uReset.value = 1;
       return;
     }
+    const fadeTail = 1.5;
+    const fadeStart = Math.max(0.5, settleWait - fadeTail);
+    U.uSimOn.value = pushing || idle <= fadeStart ? 1 : Math.max(0, 1 - (idle - fadeStart)/fadeTail);
     M.uP.value.copy(cursor);
     M.uV.value.copy(velocity).clampLength(0, 3.8);
     M.uA.value = 2.25*reach*X.accel;
     M.uR.value = U.uPointerRadius.value;
     M.uMax.value = X.push*reach;
-    M.uDamp.value = X.damp;
-    M.uK.value = 3*M.uDamp.value/settle;
+    M.uDamp.value = damp;
+    M.uK.value = kSpring;
     M.uSwirl.value = X.swirl;
     M.uDrag.value = X.drag;
     // Substep a long animation frame, keeping the spring stable on low tiers.
@@ -649,13 +661,14 @@ function createWaterMark(THREE, geometry, order, { width, height, depth, unit, q
     points.rotation.set(tiltX + Math.sin(time*0.22)*0.022 - sy*0.34*swayTurn,
       tiltY + Math.sin(time*0.19)*0.075 - sx*0.59*swayTurn, Math.sin(time*0.23)*0.015 - sx*0.086);
     U.uSmear.value.set(sx*reach*0.14, sy*reach*0.067);
-    if (motion && group.visible && dt > 0) pointerFrame(pointer,camera,time,dt,active,pointerForce*(1-release),pointerReturn);
-    else {
+    if (!motion || !group.visible) {
       U.uSimOn.value = 0;
       cursor.z = dwell = 0;
       hitLast = false;
       lastPressure = -Infinity;
       if (sim) sim.mat.uniforms.uReset.value = 1;
+    } else if (dt > 0) {
+      pointerFrame(pointer,camera,time,dt,active,pointerForce*(1-release),pointerReturn);
     }
     group.getWorldPosition(U.uCenterW.value);
     U.uTime.value = time;

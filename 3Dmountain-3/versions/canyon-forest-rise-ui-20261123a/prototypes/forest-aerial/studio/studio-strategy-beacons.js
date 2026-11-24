@@ -190,6 +190,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
       emitters[i].set(p.x,y,p.z);
     });
     emitters[4].copy(curtain?.logo?.group.position || atlas.lake.center);
+    if (studio.falls) emitters[4].y = -60;   /* RISE FALLS (team FT, 2026-11-23; only with html[data-rise-falls]): the lake's own rising motes would hang in the air over the gorge: out of sight */
     const now = performance.now(), k = 1-Math.exp(-Math.min(.1,(now-previousTime)/1000)*8);
     previousTime = now;
     for (let i=0;i<4;i++) focus.setComponent(i,THREE.MathUtils.lerp(focus.getComponent(i),i===hovered||i===selected?1:0,k));

@@ -1,0 +1,105 @@
+{
+ "version": 1,
+ "variant": "nofalls",
+ "plate": {
+  "x0": -7,
+  "z0": -3.9170013386880855,
+  "w": 14,
+  "d": 7.834002677376171
+ },
+ "skirt": 11.5,
+ "outer": {
+  "x0": -18.5,
+  "z0": -15.417001338688085,
+  "w": 37,
+  "d": 30.83400267737617
+ },
+ "grid": {
+  "nx": 512,
+  "nz": 287,
+  "skirtCells": 16,
+  "cols": 545,
+  "rows": 320,
+  "hMin": 0.10498046874999999,
+  "hMax": 1.0369114231418919
+ },
+ "enc": 0.8,
+ "bakedSun": 1.83,
+ "sizes": {
+  "core": [
+   4096,
+   2292
+  ],
+  "coreHalf": [
+   2048,
+   1146
+  ],
+  "outer": [
+   2048,
+   1706
+  ]
+ },
+ "coverCore": 1,
+ "waterShare": [
+  0.17445615864965097,
+  0.03576331010038101
+ ],
+ "edgeFadeOff": true,
+ "config": {
+  "style": 1,
+  "grassSat": 1.28,
+  "grassCoverage": 85,
+  "grassColor": "#7a9086",
+  "grassTipColor": "#76a27f",
+  "grassMossColor": "#7b8e86",
+  "grassDryColor": "#9dc8b4",
+  "grassMossCoverage": 59,
+  "grassDryCoverage": 62,
+  "grassTipCoverage": 64,
+  "rockColor": "#7d7d7d",
+  "rockLayerColor": "#b4b5bb",
+  "grassPbr": 0,
+  "rockSlope": 0.88,
+  "biomeContrast": 1.06,
+  "cavityDepth": 0.44,
+  "strataStrength": 1.4,
+  "shoreWet": 1.3,
+  "relief": 1.03,
+  "waterDeep": "#0a182c",
+  "waterShallow": "#264468",
+  "waterSpeed": 1.1,
+  "waterWave": 1.48,
+  "waterClear": 0.94,
+  "whitewater": 1,
+  "waterGlow": 0.88,
+  "sunIntensity": 1.83,
+  "sunShadow": 0.6,
+  "sunRays": 0.39,
+  "sunAzimuth": 62,
+  "sunElevation": 24,
+  "mist": 0.16,
+  "cloudStrength": 0.07,
+  "cloudShadow": 0.9,
+  "airWhite": 0.5,
+  "mistColor": "#dfe6ec",
+  "valleyMist": 0.11,
+  "mistHeight": 0.13,
+  "contourOpacity": 0.4,
+  "contourInterval": 0.04,
+  "layers": {
+   "tributaries": true,
+   "contours": false,
+   "terrainStyle": true,
+   "water": false,
+   "sunbeams": false,
+   "atmosphere": false,
+   "clouds": false,
+   "gulls": true
+  },
+  "grassTuftCount": 4800
+ },
+ "at": "2026-11-23T14:00:05.775Z",
+ "bakeMs": 5602,
+ "page": "index1-5-canyon-forest-rise-ui.html?falls=0&quality=high&qualityTiers=0",
+ "errors": []
+}

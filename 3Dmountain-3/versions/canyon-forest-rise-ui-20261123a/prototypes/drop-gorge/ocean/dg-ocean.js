@@ -174,17 +174,24 @@ const RISE_CONTROLS = [
     ['岩壁可見度（0 關）', 'rockOpacity', 'uRiseRockOpacity', 1, 0, 1, 0.05],
     ['岩壁紋理起伏', 'rockDetail', 'uRiseRockDetail', 1, 0.3, 1.8, 0.05],
     ['岩壁顏色', 'rockColor', 'uRockTint', '#8da3aa', 'color']
+  ]],
+  ['海底影片融合', [
+    ['海景影片融合', 'seaVideoMix', 'uSeaVidMix', 0.86, 0, 1, 0.01],
+    ['影片色彩保留', 'seaVideoColor', 'uSeaVidColor', 0.50, 0, 1, 0.01],
+    ['影片亮度', 'seaVideoGain', 'uSeaVidGain', 0.96, 0.3, 1.8, 0.02]
   ]]
 ];
 
-export function createRiseLighting(THREE, dials, lightDirection, grade, hasBanks) {
+export function createRiseLighting(THREE, dials, lightDirection, grade, hasBanks, hasSeaVideo = false) {
   const uniforms = {
     ...grade, uRiseLightDir: lightDirection, uRiseSunAmount: { value: 1 },
     uRiseWindow: { value: new THREE.Vector2() }, uRiseWave: { value: new THREE.Vector3() },
-    uRiseSurfaceTime: { value: 0 }, uRiseRayTime: { value: 0 }, uRiseCausticTime: { value: 0 }
+    uRiseSurfaceTime: { value: 0 }, uRiseRayTime: { value: 0 }, uRiseCausticTime: { value: 0 },
+    uSeaVidReady: { value: 0 }, uSeaVidAspect: { value: 16 / 9 }, uSeaVidShift: { value: 0 }, uSeaVidRockMul: { value: 1 }
   };
   const rows = [];
   for (const [heading, controls] of RISE_CONTROLS) {
+    if (heading === '海底影片融合' && !hasSeaVideo) continue;
     rows.push([heading]);
     for (const [label, key, name, start, ...limits] of controls) {
       if (limits[0] === 'color') {
@@ -205,6 +212,11 @@ export function createRiseLighting(THREE, dials, lightDirection, grade, hasBanks
       }
       if (hasBanks || !key.startsWith('rock')) rows.push([label, key, ...limits]);
     }
+  }
+  if (!hasSeaVideo) {
+    uniforms.uSeaVidMix ||= { value: 0 };
+    uniforms.uSeaVidColor ||= { value: 0.5 };
+    uniforms.uSeaVidGain ||= { value: 1 };
   }
 
   let previousTime = null;
@@ -336,10 +348,11 @@ export function loadSurface(THREE, renderer, file = './ocean-surface-n.webp') {
 }
 
 export const riseCeilFS = /* glsl */`
-  uniform sampler2D tOcN, tOcF;
+  uniform sampler2D tOcN, tOcF, tSeaVid;
   uniform vec3 uCamPos, uCamR, uCamU, uCamF;
   uniform float uTanH, uSurfY;
   uniform float uRiseWindowStrength, uRiseWindowSize, uRiseSurfaceRippleSize, uRiseSurfaceTime, uRiseSurfaceChop;
+  uniform float uSeaVidReady, uSeaVidMix, uSeaVidColor, uSeaVidGain, uSeaVidAspect, uSeaVidShift;
   uniform vec3 uRiseWindowColor;
   uniform vec2 uRiseOptics, uRiseClip;
   uniform vec4 uOcA, uOcB, uOcK;
@@ -410,6 +423,39 @@ export const riseCeilFS = /* glsl */`
       }
     } else if (ray.y > 0.025) {
       color = throughSurface(eye, ray, color);
+    }
+    /* sea2.mp4 Act-1 fusion: aspect-matched real underwater ocean & coral reef graded into Finnovation's ocean palette,
+       layered with live 3D caustics & surface highlights, fading smoothly into deep blue as the lens ascends toward the canyon. */
+    if (uSeaVidReady > 0.001 && uSeaVidMix > 0.001) {
+      float depthFade = smoothstep(-1.4, -7.8, eye.y);
+      float vMix = uSeaVidReady * uSeaVidMix * depthFade;
+      if (vMix > 0.001) {
+        vec2 scr = gl_FragCoord.xy / uRes;
+        float scrAsp = uRes.x / max(uRes.y, 1.0);
+        vec2 cover = scrAsp > uSeaVidAspect ? vec2(1.0, uSeaVidAspect / scrAsp) : vec2(scrAsp / uSeaVidAspect, 1.0);
+        vec2 vUv = (scr - 0.5) * cover * 0.92 + 0.5;
+        vUv.y = clamp(vUv.y + uSeaVidShift, 0.004, 0.996);
+        vec2 wRip = (texture2D(tOcF, scr * vec2(1.5, 1.1) + vec2(uRiseSurfaceTime * 0.015, -uRiseSurfaceTime * 0.010)).rg - 0.5) * 0.0042;
+        vec3 raw = texture2D(tSeaVid, clamp(vUv + wRip, 0.002, 0.998)).rgb;
+        vec3 vLin = raw * (raw * (raw * 0.305306011 + 0.682171111) + 0.012522878);
+        float vl = dot(vLin, vec3(0.2126, 0.7152, 0.0722));
+        vec3 oceanTint = mix(uBgLow * 1.12, mix(uBgMid * 1.12, uRiseWindowColor * 0.95, smoothstep(0.46, 0.94, scr.y)), smoothstep(0.0, 0.72, pow(max(vl, 0.0), 0.78)));
+        vec3 coolGrade = oceanTint * (0.46 + 1.48 * vl);
+        vec3 reefNatural = vLin * mix(vec3(0.74, 0.93, 1.08), vec3(0.84, 0.97, 1.05), smoothstep(0.42, 0.85, scr.y));
+        vec3 fused = mix(coolGrade, reefNatural, uSeaVidColor) * uSeaVidGain;
+        float reefZone = 1.0 - smoothstep(0.36, 0.62, scr.y);
+        float causNet = texture2D(tCaus, vUv * vec2(2.6, 1.9) + vec2(uRiseCausticTime * 0.014, uRiseCausticTime * 0.008)).r
+                      * texture2D(tCaus, vUv * vec2(3.3, 2.5) + vec2(-uRiseCausticTime * 0.011, uRiseCausticTime * 0.013) + 0.31).g;
+        fused += uRiseCausticColor * smoothstep(0.18, 0.75, causNet) * reefZone * (0.14 + 0.36 * vl) * uRiseCausticStrength * 0.42;
+        float topZone = smoothstep(0.55, 0.95, scr.y);
+        vec3 procLift = max(color - uBgMid * 0.55, vec3(0.0));
+        fused += procLift * topZone * 0.22;
+        float titleZone = (1.0 - smoothstep(0.06, 0.42, scr.y)) * exp(-pow((scr.x - 0.5) / 0.36, 2.0));
+        float topNavVeil = smoothstep(0.86, 1.0, scr.y) * exp(-pow((scr.x - 0.5) / 0.28, 2.0)) * 0.18;
+        fused = mix(fused, uBgLow * 0.85 + uBgMid * 0.14, 0.14 * (1.0 - scr.y) + 0.34 * titleZone);
+        fused = mix(fused, uBgMid * 0.72, topNavVeil);
+        color = mix(color, fused, vMix);
+      }
     }
     gl_FragColor = vec4(toSRGB(color), 1.0);
   }

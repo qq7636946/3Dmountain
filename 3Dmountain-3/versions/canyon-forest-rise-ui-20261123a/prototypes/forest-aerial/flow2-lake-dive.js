@@ -47,6 +47,8 @@
     dropP: 2.2,          // the drop's growth power (high = it stays small longer, then rushes)
     bead: .012,          // the drop's radius at birth (short-side units)
     dropF: .0025,        // the edge's softness (short-side units: crisp)
+    dropRK: 1,           // IRREGULAR (2026-11-24, -ui page): the lens circle's size × this, so it stays inside why-sea.js's blot (1 = as drawn)
+    dropFK: 0,           // FEATHER (2026-11-24, -ui page): the edge's softness as a share of the drop's radius (why-sea.js sets it; 0 = crisp)
     dropBlur: .26,       // the outer picture's radial zoom blur at its strongest
     beadGlow: .9,        // the bead of light before the drop
     dropStreak: .35,     // the streaks' strength (× streak)
@@ -75,7 +77,7 @@
     const u2 = clamp01((t - t0) / (t1 - t0));
     const D = T.drop > 0;
     const R = t < t0 ? 0 : t >= t1 ? Rcov * 1.15 : D ? T.bead * sm(0, .08, u2) + (Rcov - T.bead) * Math.pow(u2, T.dropP) : Rcov * Math.pow(u2, 1.7);
-    const F = D ? T.dropF : Math.max(.012, Math.min(T.featherMax, T.featherK * R));
+    const F = D ? Math.max(T.dropF, (+T.dropFK || 0) * R) : Math.max(.012, Math.min(T.featherMax, T.featherK * R));
     const eps = .004, speed = (lnMo(Math.min(1, t + eps)) - lnMo(Math.max(0, t - eps))) / (Math.min(1, t + eps) - Math.max(0, t - eps)) / T.time;   // d ln(zoom) / second
     return {
       t, mo, mi, K, R, F, lnMo: lo, speed, inner: !D && t >= t0 && t < t1 && R > .02, drop: D,
@@ -99,6 +101,9 @@
   /* the dive's target: the point under the screen centre at the end of team PN's pan (flow2-aerial-pan.js, 2026-11-17: 「可以從最左上橫移到左下後
      再轉場嗎」), else team RV's point (when their travel has ended there), else the lake's centre */
   function centre(atlas, out) {
+    /* RISE FALLS (team FW, 2026-11-23): where the lake has become a gorge (html[data-rise-falls]; falls/index.js sets this) the dive goes to its pool */
+    const FL = window.__RISE_FALLS__;
+    if (FL && FL.diveTarget) { out.copy(FL.diveTarget); S.centre = 'falls pool'; return out; }
     const P = window.__FLOW2_AERIAL_PAN__;
     if (P && typeof P.centreTarget === 'function' && P.ready) {
       try { const c = P.centreTarget(); if (c && Number.isFinite(+c.x) && Number.isFinite(+c.z)) { out.set(+c.x, Number.isFinite(+c.y) ? +c.y : .105, +c.z); S.centre = c.water ? 'pan · ' + c.water : 'pan'; return out; } } catch (error) { }
@@ -292,7 +297,7 @@
         innerOn = 1; U.uA.value.set(c.R, c.F, K, 1);
       }
     }
-    if (!innerOn) U.uA.value.set(c.R, c.F, c.inner ? Math.max(1, c.mi / (used ? used.mo : c.mo)) : 1, 0);
+    if (!innerOn) U.uA.value.set(c.drop ? c.R * (+T.dropRK || 1) : c.R, c.F, c.inner ? Math.max(1, c.mi / (used ? used.mo : c.mo)) : 1, 0);
     S.inner = innerOn;
     U.tOuter.value = src.texture; U.tInner.value = innerRT.texture; U.uRes.value.set(src.width, src.height);
     U.uB.value.set(t, reduced ? 0 : Math.max(Math.min(.07, T.blur * c.speed), c.blurD), c.lnMo, reduced ? 0 : c.streak * (closing ? .6 : 1));

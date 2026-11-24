@@ -1,0 +1,6 @@
+Terrain texture credits
+
+This work is based on "Mountain Range 01" (https://sketchfab.com/3d-models/mountain-range-01-6dff907d427f4c9f8d301075f8019c82) by solararchitect (https://sketchfab.com/solararchitect) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+This work is based on "Magic Valley" (https://sketchfab.com/3d-models/magic-valley-3770ae4e37c34fc4a4eea79ce6af5d87) by bilgehan.korkmaz (https://sketchfab.com/bilgehan.korkmaz) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+
+The site adapts the source textures into tiled rock, erosion and canopy maps and generates normal, detail and compressed texture variants.

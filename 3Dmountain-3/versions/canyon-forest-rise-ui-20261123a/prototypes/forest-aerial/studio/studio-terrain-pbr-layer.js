@@ -18,7 +18,7 @@
 import * as THREE from 'three';
 import { HIGHLAND_GLSL, packArrivalField } from './studio-highland-ecology.js?v=weather1-bank1-fast1';
 import { createStudioClouds } from './studio-clouds.js?v=look1';
-import { createShoreCobbles } from './studio-shore-cobbles.js?v=bank-toes1';
+import { createShoreCobbles } from './studio-shore-cobbles.js?v=bank-toes1-falls1-redo2';
 import { refineHeadwaterBanks, headwaterStones } from './studio-headwater-detail.js?v=ridge-banks2';
 
 const REFINE_HEADWATERS = document.documentElement.hasAttribute('data-rise-headwater-detail') &&
@@ -365,6 +365,46 @@ const WS_A_GLSL = WS_STREAMS.map(([ox, oy, dx, dy]) => {
 const WS_B_GLSL = WS_STREAMS.map((s) => `vec4(${s[4]},${s[5]},${s[6]},${s[7]})`).join(',');
 const WS_C_GLSL = WS_STREAMS.map((s) => `vec2(${s[8]},${s[9]})`).join(',');
 
+/* RISE FALLS (team FT, 2026-11-23; docs/falls/BRIEF-20261123.md). Only where html[data-rise-falls] is set (the -ui page with ?falls=1): FALLS = the
+   module falls/falls-shape.js, loaded by createStudioTerrainPbrLayer before the land is patched; everywhere else it stays null and every line
+   below that reads it emits exactly the text of before. With it: the lake's basin becomes the gorge's rim (the land comes down to the water
+   level all round it, the plateau water runs flat to the lip along the curtain's arc), the land inside the rim is not drawn (the gorge's own
+   meshes stand there: falls/falls-gorge.js), and the fourth river's last reach is lowered in a smooth trough. */
+let FALLS = null, FALLS_SINK = false;
+const fallsLakeGlsl = noiseFn => `
+    uniform vec2 uFallsSize;
+    uniform float uFallsHeadland;
+    ${FALLS.LIVE_GORGE_FIELD_GLSL}
+    ${FALLS.LIP_GLSL}
+    ${FALLS.BAND_GLSL}
+    ${FALLS.LIVE_BAND_REACH_GLSL || FALLS.BAND_REACH_GLSL || 'float fallsBandReach(float t){ return fallsBand(t)*(0.15+0.36*max(0.0,sin(t))); }'}
+    ${FALLS.LIVE_RIM_LIFT_GLSL}
+    ${FALLS.LIVE_TROUGH_GLSL}
+    float stFallsSd = 1.0;   /* the last point's distance to the rim (negative inside) */
+    vec2 stFallsGF = vec2(1.0, 0.0);
+    vec3 stCentralLakeBasin(vec2 p) {
+      vec2 g = fallsGorgeField(p);
+      stFallsSd = g.x;
+      stFallsGF = g;
+      float lip = fallsLip(g.y), band = fallsBand(g.y);
+      float cragN = (${noiseFn}(p * 2.2 + vec2(-2.4, 5.1)) - 0.5) * 0.14
+                  + (${noiseFn}(p * 5.8 + vec2(6.1, -3.3)) - 0.5) * 0.052;
+      /* redo-s1: the plateau water runs flat and wide to the lip along the whole far arc (one horseshoe), narrower down the two side walls */
+      float vary = ${noiseFn}(p * 0.72 + vec2(7.1, -3.4));
+      float bay2 = ${noiseFn}(p * 1.45 + vec2(-5.3, 2.8));
+      float reach = fallsBandReach(g.y) * (0.80 + 0.40 * vary + 0.22 * (bay2 - 0.5)) + 0.001;   /* redo-s2/s6: the shape's band width (falls-shape.js bandReachAt), with a ragged outer shore */
+      float kerbW = 0.11 * (1.0 - lip);
+      /* redo-s5: the two rivers' mouths follow their troughs (and so the opening sliders), not fixed rim angles */
+      float mouth = clamp(max(fallsTrOut(p, g.x) / ${FALLS.FALLS_SHAPE.trough.drop.toFixed(4)}, fallsTrIn(p, g.x) / ${(FALLS.FALLS_SHAPE.inletTrough ? FALLS.FALLS_SHAPE.inletTrough.drop : 1).toFixed(4)}), 0.0, 1.0) * (1.0 - smoothstep(0.34, 0.74, g.x + cragN * 0.55));
+      float wMask = max(band * smoothstep(kerbW * 0.45 - 0.001, kerbW + 0.001, g.x + cragN * 0.2) * (1.0 - smoothstep(reach * 0.30, reach * 0.80, g.x + cragN * 1.70)), mouth);   /* director fix2: under the falls' apron, never past it */
+      /* ft-v9: gentle organic framing around the gorge; elevated dry headlands stay lush & sculpted above the waterfall notches */
+      float shelf = mix(0.16 + 0.18 * vary, 0.02 + 0.14 * vary, lip) + reach * 0.72;
+      float carve = 1.0 - smoothstep(shelf, shelf + mix(1.70 + 0.50 * vary, 1.05 + 0.65 * vary, lip), g.x + cragN * 2.1 + (vary - 0.5) * 0.34);   /* redo-s4: the dry rim's bank rises over a longer, gentler slope (no cut step) */
+      float depth = max(band * 0.24 * (1.0 - smoothstep(0.0, reach * 1.15, g.x)), mouth * 0.30);   /* redo-s1: shallow, bright plateau water at the lip */
+      return vec3(wMask, carve, depth);
+    }
+`;
+
 /* Shared GLSL Watershed (exact geometry alignment with studio-light-curtain.js & studio-3d-lines.js) */
 function makeWatershedGlsl(noiseFn) {
   return `
@@ -372,7 +412,7 @@ function makeWatershedGlsl(noiseFn) {
     const vec4 ST_WS_A[${WS_STREAMS.length}] = vec4[${WS_STREAMS.length}](${WS_A_GLSL});
     const vec4 ST_WS_B[${WS_STREAMS.length}] = vec4[${WS_STREAMS.length}](${WS_B_GLSL});
     const vec2 ST_WS_C[${WS_STREAMS.length}] = vec2[${WS_STREAMS.length}](${WS_C_GLSL});
-    float stLakeBasinR(vec2 p) {
+    ${FALLS ? fallsLakeGlsl(noiseFn) : `float stLakeBasinR(vec2 p) {
       vec2 q = (p - vec2(0.122, -0.056)) / vec2(1.66, 1.42);
       float r = length(q);
       float ang = atan(q.y, q.x);
@@ -389,7 +429,7 @@ function makeWatershedGlsl(noiseFn) {
       float carve = 1.0 - smoothstep(0.93, 1.17, lr + cragN);
       float depth = 1.0 - smoothstep(0.0, 1.02, lr);
       return vec3(wMask, carve, depth);
-    }
+    }`}
 
     float stWsFbm(vec2 p) {
       float v = 0.0, a = 0.5;
@@ -443,7 +483,7 @@ function makeWatershedGlsl(noiseFn) {
       if (minD > 1.2) return vec3(0.0);
       flowDir = length(bDir) > 1e-4 ? normalize(bDir) : vec2(0.0, 1.0);
       float bankRough = ${noiseFn}(p * 2.1 + vec2(4.2, -1.7));
-      float nearLake = 1.0 - smoothstep(1.3, 2.5, length(p - vec2(0.122, -0.056)));
+      float nearLake = ${FALLS ? '1.0 - smoothstep(0.10, 1.25, stFallsSd)   /* RISE FALLS: the rivers widen toward the rim (stCentralLakeBasin ran on this point first) */' : '1.0 - smoothstep(1.3, 2.5, length(p - vec2(0.122, -0.056)))'};
       /* Generous continuous gorge floor strictly wider than water mask -> zero pinched rivers & zero water climbing cliffs! */
       float w = mix(0.124, 0.195, nearLake) * (0.86 + 0.28 * bankRough);
       float cragR = (${noiseFn}(p * 4.2 + vec2(1.9, -4.3)) - 0.5) * 0.030;
@@ -702,7 +742,10 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
       uCurtainGlow: studioUniforms.uCurtainGlow,
       uCurtainCol: studioUniforms.uCurtainCol,
       uCurtainContact: studioUniforms.uCurtainContact,
-      uCurtainLogo: studioUniforms.uCurtainLogo
+      uCurtainLogo: studioUniforms.uCurtainLogo,
+      uFallsSize: studioUniforms.uFallsSize,
+      uFallsHeadland: studioUniforms.uFallsHeadland,
+      uFallsDrop: studioUniforms.uFallsDrop   /* redo-s5: the depth slider (falls-gorge.js keeps it current; 0 = the shape's default) */
     });
 
     if (mat.vertexShader && !mat.vertexShader.includes('stWatershed')) {
@@ -711,7 +754,8 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
         uniform float uTributaries;
         varying vec3 vStOutN;
         varying vec2 vStCurvature;
-        varying float vStArrival;
+        varying float vStArrival;${FALLS ? `
+        varying float vStFallsLow;   /* RISE FALLS: how far this point is lowered by the fourth river's trough */` : ''}
         float stVHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float stVNoise(vec2 p) {
           vec2 i = floor(p), f = fract(p);
@@ -779,15 +823,27 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           float hcU = texture2D(tCanopy, forestMir(uvR + vec2(0.0, ec.y))).r;
           float bend = ((hcL + hcR + hcD + hcU) * 0.25 - c.r) * uYRange.y * uRelief / 0.16;
           vStCurvature = vec2(smoothstep(0.002, 0.052, bend), smoothstep(0.003, 0.060, -bend));
-          float coreCarve = max(stLB.y, max(stVCR.y, smoothstep(0.10, 0.55, stWS.x)));
+          ${FALLS ? `float riverCarve = max(stVCR.y, smoothstep(0.10, 0.55, stWS.x));
+          p.y = stRockBankHeight(p.xz,p.y,riverCarve,uRelief);
+          /* RISE FALLS (ft-v6): ease the gorge's outer basin gently down in an S-curve (no sheer circular cliff ring) */
+          float fE = smoothstep(0.0, 1.0, stLB.y);
+          p.y = mix(p.y, 0.105, fE * fE * (3.0 - 2.0 * fE) * 0.96 + fE * 0.04);
+          /* director 2026-11-24: no flat pale shelf round the rim: past the band water's ragged edge the land rises as a low, uneven mossy bank */
+          { float bR = fallsBandReach(stFallsGF.y), bn = stVNoise(p.xz * 6.3 + vec2(3.1, -1.7)) * 0.6 + stVNoise(p.xz * 17.0 + vec2(-4.2, 2.6)) * 0.4;
+            float bE = stFallsGF.x - bR * (0.78 + 0.44 * bn) - 0.035;
+            p.y += fE * smoothstep(-0.02, 0.30, bE) * (0.022 + 0.05 * bn) * (1.0 - smoothstep(0.0, 0.45, fallsTrough(p.xz))); }` : `float coreCarve = max(stLB.y, max(stVCR.y, smoothstep(0.10, 0.55, stWS.x)));
           /* Sculpt sheer rocky cliff precipices right at the waterline (replaces flat sandy ramps with steep stepped rock bluffs!) */
-          p.y = stRockBankHeight(p.xz,p.y,coreCarve,uRelief);
+          p.y = stRockBankHeight(p.xz,p.y,coreCarve,uRelief);`}
         }
         if (uTributaries > 0.5 && all(greaterThanEqual(uvR,vec2(0.0))) && all(lessThanEqual(uvR,vec2(1.0)))) {
           vec4 branch = texture2D(tWater,uvR);
           float bedY = 0.105 + branch.b * uYRange.y * uRelief;
           p.y = mix(p.y,min(p.y,bedY),branch.a);
-        }
+        }${FALLS ? `
+        vStFallsLow = fallsTrough(p.xz);   /* RISE FALLS: the land and the river sink together toward the outlet */
+        p.y -= vStFallsLow;
+        p.y += fallsRimLift(stFallsGF);   /* ft-v9: elevated mossy canyon headlands between the 3 waterfalls (watertight with falls-gorge rimY) */${FALLS_SINK ? `
+        if (stFallsSd < 0.0) p.y = -1.9;   /* ?fallsSink=1 (cost study): inside the rim the land goes down under the pool instead of the discard */` : ''}` : ''}
         #endif
         vec4 w=modelMatrix*vec4(p,1.);
       `;
@@ -799,7 +855,8 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
     const decls = `
       varying vec3 vStOutN;
       varying vec2 vStCurvature;
-      varying float vStArrival;
+      varying float vStArrival;${FALLS ? `
+      varying float vStFallsLow;` : ''}
       uniform vec2 uYRange;
       uniform float uRelief;
       #ifdef FOREST_MIRROR
@@ -979,13 +1036,13 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
            sloping bed with room for a shallow shelf at the waterline. */
         float branchY=0.105+wt.b*uYRange.y*uRelief;
         float branchGate=smoothstep(0.60,0.96,stBranch)*(1.0-smoothstep(0.034,0.12,vForestWorld.y-branchY));
-        float stWmSafe=max(stWm*(1.0-smoothstep(0.111,0.128,vForestWorld.y)),wt.r*branchGate);
+        float stWmSafe=max(stWm*(1.0-smoothstep(0.111,0.128,vForestWorld.y${FALLS ? '+vStFallsLow' : ''})),wt.r*branchGate);
         float creekMix=smoothstep(0.44,0.94,stBranch)*smoothstep(0.055,0.34,stCRDist0)*(1.0-stLakeN);
         float waterBlend = (uWaterOn > 0.5) ? smoothstep(0.08, 0.48, stWmSafe) : 0.0;
         float landM = 1.0 - smoothstep(0.18, 0.62, stWmSafe);
         // Differentiate the actual incision mask in world XZ. The uncut
         // height map alone would project top-face textures down a carved wall.
-        float innerCut=max(lb.y,stCR0.y);
+        float innerCut=max(${FALLS ? 'lb.y*0.18' : 'lb.y'},stCR0.y);
         #ifdef STUDIO_HEADWATERS
         float outerCut = 1.0 - stDryShoulder(ws);
         innerCut = mix(innerCut, outerCut, headwaterMix);
@@ -1065,9 +1122,9 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
 
           /* --- 1A. 4-LAYER PURE 2K CC0 ALPINE GRASS & GROUND BIOMES (Grass004 + forrest_ground_01 + Moss002 + aerial_rocks_04!) --- */
           float shoreBreak = (forestNoise(wp * 2.4 + vec2(-5.1, 3.7)) - 0.5) * 0.024;
-          float localWaterY = mix(0.105,branchY,smoothstep(0.002,0.16,stBranch));
+          float localWaterY = mix(0.105,branchY,smoothstep(0.002,0.16,stBranch))${FALLS ? '-vStFallsLow' : ''};
           float relY = vForestWorld.y - localWaterY + shoreBreak;
-          float outerBankCap = outDist > 0.05 ? smoothstep(0.38, 0.85, ws.y) : 1.0;
+          float outerBankCap = (outDist > 0.05 ? smoothstep(0.38, 0.85, ws.y) : 1.0)${FALLS ? ' * mix(0.15, 1.0, smoothstep(0.05, 1.10, stFallsSd)) * mix(0.45, 1.0, smoothstep(1.10, 3.40, stFallsSd))   /* redo-s3/s5: no dark basalt waterline ring round the gorge, and softer river banks in its neighbourhood */' : ''};
           float shoreCliff = (1.0 - smoothstep(0.0, 0.095, relY)) * outerBankCap;
           float wetCliff   = (1.0 - smoothstep(0.0, 0.036, relY)) * outerBankCap * clamp(uShoreWet, 0.0, 1.5);
           float dampRim    = (1.0 - smoothstep(0.030, 0.092, relY)) * (1.0 - wetCliff) * outerBankCap * clamp(uShoreWet, 0.0, 1.5);
@@ -1232,7 +1289,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
 
           // Carve masks describe the newly exposed walls continuously across
           // mesh triangles. Their half-depth transition is the steepest part.
-          float cutEdge=max(max(lb.y*(1.0-lb.y),stCR0.y*(1.0-stCR0.y)),stBranch*(1.0-stBranch));
+          float cutEdge=max(max(lb.y*(1.0-lb.y)${FALLS ? '*0.30' : ''},stCR0.y*(1.0-stCR0.y)),stBranch*(1.0-stBranch));
           cutEdge=max(cutEdge,ws.y*(1.0-ws.y)*headwaterMix);
           float bankFace=smoothstep(0.010,0.068,relY)*(1.0-smoothstep(0.27,0.60,relY));
           float rootingSlope=clamp(sN.y-cutEdge*1.32*bankFace,0.0,1.0);
@@ -1241,12 +1298,13 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           rootPocket+=(forestNoise(fissureUV*8.7+warp)-0.5)*0.068+(g1Tex.a-g3Tex.a)*0.035;
           rootPocket-=clamp(wetCliff,0.0,1.0)*(1.0-rootingSlope)*0.19;
           float rockCover=1.0-stGrassCover(rootingSlope,sheerRock,rootPocket);
+          ${FALLS ? 'rockCover *= mix(0.22, 1.0, smoothstep(0.30, 3.40, stFallsSd));   /* redo-s4/s5: round the gorge (to ~3.4 from the rim) the slopes and river banks stay grass and moss, no bare brown cut faces */' : ''}
           #ifdef STUDIO_HEADWATERS
           // Expose the existing slate and basalt scans on broken shoulders.
           // Sheltered patches keep their moss, and the toe still takes gravel.
           float bankBelt = 4.0*ws.y*(1.0-ws.y)*headwaterMix;
           float ledgeFace = smoothstep(0.035,0.14,relY) * (1.0-smoothstep(0.56,0.94,sN.y));
-          rockCover = max(rockCover, bankBelt*ledgeFace*smoothstep(0.22,0.67,rockFineN*.58+rockNoise*.42));
+          rockCover = max(rockCover, bankBelt*ledgeFace*smoothstep(0.22,0.67,rockFineN*.58+rockNoise*.42)${FALLS ? '*mix(0.18,1.0,smoothstep(0.30,3.40,stFallsSd))' : ''});   /* redo-s5: the river banks' exposed scans stay grass and moss near the gorge */
           #endif
           if (rockCover > 0.006) {
             vec3 absN = abs(sN);
@@ -1406,8 +1464,8 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           float creekBank=smoothstep(0.06,0.46,stBranch)*(1.0-smoothstep(0.045,0.18,relY));
           float lakeBank=smoothstep(0.03,0.48,lb.y)*(1.0-smoothstep(0.027,0.13,relY));
           float drift=smoothstep(0.31,0.67,patchMix*0.45+rockFineN*0.55);
-          float gravelShelf=max(max(riverBank,creekBank),lakeBank*0.72)*
-                            smoothstep(0.33,0.72,sN.y)*(0.29+0.71*drift)*clamp(uShoreWet,0.0,1.4);
+          float gravelShelf=max(max(riverBank,creekBank),lakeBank*${FALLS ? '0.16' : '0.72'})*
+                            smoothstep(0.33,0.72,sN.y)*(0.29+0.71*drift)*clamp(uShoreWet,0.0,1.4)${FALLS ? '*mix(0.35,1.0,smoothstep(0.30,3.40,stFallsSd))' : ''};
           float outerShelf=headwaterMix*smoothstep(.62,.96,ws.y)*(1.0-smoothstep(.018,.14,relY));
           gravelShelf=max(gravelShelf,outerShelf*smoothstep(.42,.78,sN.y)*(.28+.51*drift)*clamp(uShoreWet,0.0,1.4));
           float emergedBar=smoothstep(0.93,0.997,stBranch)*(1.0-smoothstep(0.020,0.059,abs(relY)))*
@@ -1457,7 +1515,7 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
             flowRaw=mix(flowRaw,branchCurrent,creekMix);
           }
           float flowLen = length(flowRaw);
-          vec2 flowDir = flowLen > 0.01 ? (flowRaw / flowLen) : normalize(vec2(0.122, -0.056) - wp + vec2(1e-4));
+          vec2 flowDir = flowLen > 0.01 ? (flowRaw / flowLen) : normalize(${FALLS ? `vec2(${FALLS.FALLS_SHAPE.centre[0].toFixed(4)}, ${FALLS.FALLS_SHAPE.centre[1].toFixed(4)})` : 'vec2(0.122, -0.056)'} - wp + vec2(1e-4));
           float flowSpd = mix(clamp(flowLen * 1.35 + 0.40, 0.40, 1.0), 0.24, stLakeN);
           flowSpd*=mix(1.0,0.66+0.29*(1.0-smoothstep(0.21,0.58,wt.g)),creekMix);
 
@@ -1710,7 +1768,16 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
           float froth=(rapidStreak+shoreLap+foam)*mix(1.0,.48,headwaterMix);
           wc=mix(wc,vec3(.76,.87,.93),min(.76,froth/(1.0+.28*froth)));
 
-          wc = wc / (1.0 + wc * 0.14);
+          wc = wc / (1.0 + wc * 0.14);${FALLS ? `
+          /* director 2026-11-24 (client 「河流也要統一」): every river is ONE water with the falls: its brightness kept, its colour re-graded into the
+             falls' teal family (deep teal-steel -> pale teal), the white riffles tamed to one scale, nearer the gorge the band's teal */
+          { float wl = dot(wc, vec3(0.2126, 0.7152, 0.0722));
+            float rq = forestNoise(wp * 23.0 + flowDir * uTime * 0.35) * 0.55 + forestNoise(wp * 47.0 - flowDir * uTime * 0.55) * 0.45;
+            float lw = smoothstep(0.03, 0.62, wl * 0.80 + (rq - 0.5) * 0.10);
+            vec3 uni = mix(mix(vec3(0.052, 0.170, 0.200), vec3(0.165, 0.420, 0.440), lw), vec3(0.62, 0.78, 0.80), smoothstep(0.62, 1.0, lw) * 0.55);
+            float nearG = 1.0 - smoothstep(0.25, 2.6, stFallsSd);
+            uni = mix(uni, mix(vec3(0.040, 0.130, 0.140), vec3(0.150, 0.330, 0.330), lw), nearG * 0.60);   /* director fix2: deep teal near the gorge, never a light rim */
+            wc = mix(wc, uni, 0.82); }` : ''}
           col = mix(col, wc, waterBlend * clamp(stAmt, 0.0, 1.0));
         }
 
@@ -1752,13 +1819,15 @@ function patchTerrainAndWater(atlas, pbrTex, studioUniforms) {
     const waterExpandReplace = `
       float stOut0 = forestOut(uvR);
       float stBranch = uTributaries > 0.5 && stOut0 < 0.0005 ? wt.a : 0.0;
-      vec3 stLB0 = (stOut0 <= 0.0005 && uPbrTerrainOn > 0.001) ? stCentralLakeBasin(vForestWorld.xz) : vec3(0.0);
+      vec3 stLB0 = (stOut0 <= 0.0005 && uPbrTerrainOn > 0.001) ? stCentralLakeBasin(vForestWorld.xz) : vec3(0.0);${FALLS && !FALLS_SINK ? `
+      if (stFallsSd < 0.0) discard;   /* RISE FALLS: inside the rim the gorge's own meshes are the land */` : ''}
       vec2 stCRFlow = vec2(0.0);
       float stCRDist0 = 9.0;
       vec3 stCR0 = (stOut0 <= 0.0005 && uPbrTerrainOn > 0.001) ? stCoreRiversEx(vForestWorld.xz, stCRFlow, stCRDist0) : vec3(0.0);
+      ${FALLS ? 'wt.r *= 1.0 - smoothstep(0.3, 0.7, wt.b);   /* director fix2: no old-lake water anywhere outside the live rim (it made the light ring round the bowl) */   /* redo-s5: the OLD lake water (atlas, wt.b) away from the live rim is dry land (a smaller opening leaves part of the old lake outside) */' : ''}
       float wm = max(max(wt.r, stLB0.x), stCR0.x);
       float shore = max(max(wt.g, stLB0.z * 0.94 * smoothstep(0.05, 0.35, stLB0.x)), stCR0.z * 0.58 * smoothstep(0.05, 0.35, stCR0.x));
-      float lakeN = max(stBranch > 0.001 ? 0.0 : wt.b, smoothstep(0.05, 0.42, stLB0.x));
+      float lakeN = ${FALLS ? '0.0;   /* RISE FALLS: no still lake is left: the water outside the rim runs to the lip */' : 'max(stBranch > 0.001 ? 0.0 : wt.b, smoothstep(0.05, 0.42, stLB0.x));'}
     `;
     const flowReplace = `
       vec2 F=fl.rg*2.-1.;
@@ -1973,6 +2042,10 @@ export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig
     layers: { ...DEFAULT_PBR_CONFIG.layers, ...(initialConfig.layers || {}) }
   };
   const arrivalPacked = packArrivalField(atlas);
+  /* RISE FALLS (team FT, 2026-11-23): the gorge's shape, only where the page asks for it (html[data-rise-falls]); see FALLS above. ?fallsLand=0 = the lake's land as before */
+  FALLS = document.documentElement.hasAttribute('data-rise-falls') && new URLSearchParams(location.search).get('fallsLand') !== '0'
+    ? await import('./falls/falls-shape.js?v=dir2').catch(error => { console.warn('Rise falls: the shape did not load, the lake stays', error); return null; }) : null;
+  FALLS_SINK = !!FALLS && new URLSearchParams(location.search).get('fallsSink') === '1';   /* test switch (cost study): sink the land inside the rim instead of the discard */
 
   /* Hide ALL legacy 3D trees completely per brief (pure planar terrain & water pass!) */
   if (atlas.trees) {
@@ -2167,6 +2240,9 @@ export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig
     uWaterSpeed: { value: cfg.waterSpeed },
     uWaterWave: { value: cfg.waterWave },
     uWaterClear: { value: cfg.waterClear },
+    uFallsSize: { value: FALLS?.DEFAULT_OPENING ? new THREE.Vector2(FALLS.DEFAULT_OPENING.scale * FALLS.DEFAULT_OPENING.width, FALLS.DEFAULT_OPENING.scale * FALLS.DEFAULT_OPENING.length) : new THREE.Vector2(1, 1) },   /* director: the default opening */
+    uFallsHeadland: { value: 1 },
+    uFallsDrop: { value: FALLS?.DEFAULT_OPENING ? FALLS.DEFAULT_OPENING.depth : 0 },   /* redo-s5: the opening's drop (set by falls/falls-gorge.js on build and on every slider rebuild) */
     uWhitewater: { value: cfg.whitewater },
     uWaterGlow: { value: cfg.waterGlow },
     uWaterOn: { value: cfg.layers.water ? 1.0 : 0.0 },
@@ -2182,7 +2258,7 @@ export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig
   }, studioUniforms);
   const waterPatched = patchWaterSurfaceMaterial(atlas, rockBasaltAlb, studioUniforms);
   const cobbles = createShoreCobbles(atlas, studioUniforms, rockBasaltAlb,
-    REFINE_HEADWATERS ? headwaterStones(atlas.uniforms.uBounds.value) : []);
+    REFINE_HEADWATERS ? headwaterStones(atlas.uniforms.uBounds.value) : [], FALLS);
   atlas.scene.add(cobbles);
 
   /* Alpine Daylight Sky Horizon Dome */
@@ -2335,6 +2411,7 @@ export async function createStudioTerrainPbrLayer(renderer, atlas, initialConfig
     config: cfg,
     terrainPatched,
     lineWatershed: REFINE_HEADWATERS ? makeWatershedGlsl : null,
+    falls: FALLS,   /* RISE FALLS: the shape module the land was cut with (null = the lake as before) */
     waterPatched,
     skyDome,
     sunbeams,

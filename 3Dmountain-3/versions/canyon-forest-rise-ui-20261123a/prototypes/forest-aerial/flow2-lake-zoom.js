@@ -178,7 +178,7 @@
     if (!lensMat) buildLens(THREE);
     if (lensRT.width !== src.width || lensRT.height !== src.height) lensRT.setSize(src.width, src.height);
     const F = forest();
-    if (F && F.lake && F.camera && THREE) { const v = new THREE.Vector3().copy(F.lake.center).project(F.camera); if (Number.isFinite(v.x)) { projected.x = v.x * .5 + .5; projected.y = v.y * .5 + .5; } }
+    if (F && F.lake && F.camera && THREE) { const v = new THREE.Vector3().copy(window.__RISE_FALLS__?.diveTarget || F.lake.center).project(F.camera);   /* RISE FALLS: the pool, where the lake is a gorge */ if (Number.isFinite(v.x)) { projected.x = v.x * .5 + .5; projected.y = v.y * .5 + .5; } }
     const U = lensMat.uniforms, z = S.zoomT;
     U.tSrc.value = src.texture; U.uRes.value.set(src.width, src.height); U.uCenter.value.set(projected.x, projected.y);
     const grow = smooth(z);

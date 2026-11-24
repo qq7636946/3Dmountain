@@ -174,10 +174,26 @@ html[data-rise="under"] #ru-chrome .ru-rule, html[data-xs-gorge] #ru-chrome .ru-
 }
 
 /* ---------------- one set of edges ----------------
-   the ruler is the page's edge now (as under water); the chapter rail (left) and the reading column (right: 02 / 05, the section's name, FLOW %)
-   stood on the same edges and are taken over by the chapter pill (number, names, progress, ‹ ›) and the foot (counter). ?uiRail=1 keeps them. */
+   2026-11-23 client 「左右兩邊的UI 改回去這種」: restore the original left chapter rail (.fi-rail: diamonds + 01..05) and right reading column
+   (.f2u-side: TAIPEI time/coords, 02/05, vertical section name + diamond track, FLOW %) as default on this page (data-ru-rail), hiding the
+   vertical edge rulers (.ru-rule / .xs-sea-rule) so they never overlap. ?uiRail=0 reverts to the rulers. */
 :root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui]:not([data-ru-rail]) body .finnovation-ui .fi-rail,
 :root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui]:not([data-ru-rail]) body .f2u-side { display: none !important; }
+html[data-rise-ui][data-ru-rail] #ru-chrome .ru-rule,
+html[data-rise-ui][data-ru-rail] #xs-sea .xs-sea-rule { display: none !important; }
+/* keep the restored left & right HUD visible in Act 1 underwater as well (overriding rise.css's underwater fade) once the loader lifts */
+:root:not(#xs1):not(#xs2):not(#xs3):not(#xs4):not(#xs5):not(#xs6):not(#xs7):not(#xs8):not(#xs9):not(#xs10):not(#ru-r)[data-rise-ui][data-ru-rail][data-gate="off"] body.is-ready .finnovation-ui > :is(.fi-rail, .f2u-side) {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+@media (min-width: 761px) {
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h):not(#ru-r)[data-rise-ui][data-ru-rail][data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui > .fi-rail {
+    left: 48px !important;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h):not(#ru-r)[data-rise-ui][data-ru-rail][data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side {
+    right: 48px !important;
+  }
+}
 
 /* ---------------- the page's own buttons: one split-arrow button ----------------
    the chapters' FOLLOW / EXPLORE buttons and the sea's NEXT pill become that site's READ MORE | → (label, a hairline, the arrow in its own cell);

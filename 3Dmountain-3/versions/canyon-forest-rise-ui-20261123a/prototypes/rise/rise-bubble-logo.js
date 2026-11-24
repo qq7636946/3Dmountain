@@ -1,4 +1,4 @@
-import { createBubbleLogo, WORD_PATHS } from '../bubble-hero/bubble-logo.js?v=rise-water-6';
+import { createBubbleLogo, WORD_PATHS } from '../bubble-hero/bubble-logo.js?v=rise-water-7';
 
 /* 2026-11-20: the client's tuned values are the defaults (their pasted JSON); the panel has a shape switch (圖形 LOGO / 英文字 FINNOVATION)
    and more dials. The word version also opens by itself: index1-5-canyon-forest-rise-word.html, or ?riseMark=word; it keeps its own saved values. */

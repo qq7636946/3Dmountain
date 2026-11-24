@@ -33,6 +33,20 @@
     scale0: num('dropScale', .64),             // DROP: the sea's size inside the newborn drop (1 = full size from the start)
     skin: num('dropSkin', 1),                  // DROP: the skin's strength
     wobble: num('dropWobble', .06),            // DROP: the trembling of the small drop (share of its radius)
+    /* FEATHER (2026-11-24, client on the -ui page: 「這塊圓形要羽化暈開感覺」): the drop's edge melts over this share of its radius and its skin is a soft
+       blurred glow (no crisp meniscus, no colour-split rings). The -ui page only; the rise page keeps the crisp drop. ?dropFeather=0 = crisp. */
+    feather: num('dropFeather', html.hasAttribute('data-rise-ui') ? .32 : 0),
+    /* IRREGULAR (2026-11-24, client: 「要不規則暈開」): the feathered drop is a blot, not a circle: lobes round its outline (this share of its radius),
+       a softness that changes round it, a mottled fringe, and a second blot spreading at its own pace so the outline keeps changing as it grows.
+       -ui page only; ?dropIrr=0 = the round feathered drop. */
+    irregular: num('dropIrr', html.hasAttribute('data-rise-ui') ? .26 : 0),
+    /* RAYS (2026-11-24, client: 「這給他一點放射感打開」): the drop bursts open: spikes of the sea shoot out past its soft edge, longest while it opens,
+       swallowed as it fills the screen. -ui page only (with the blot); ?dropRays=0 = none, ?dropRays=1.5 = longer. */
+    rays: num('dropRays', html.hasAttribute('data-rise-ui') ? 1 : 0),   /* 11-24 later 「不規則範圍再大一點絲滑一點」: .16 → .26, broad lobes only, no grain */
+    /* ISLAND GRASS (2026-11-24, client on the -ui page: 「這塊石頭上加點草」): moss and grass on the islands' gentle, higher ground. -ui page only;
+       ?whyGrass=0 = bare rock as before, ?whyGrass=1.4 = more. */
+    grass: num('whyGrass', html.hasAttribute('data-rise-ui') ? 1 : 0),
+    grassP: [num('whyGrassFlat', .36), num('whyGrassScale', 2.2), num('whyGrassSparse', .1)],
     shiftPad: num('dropShift', .24),           // DROP: how far beside the first card's photo the small drop looks (short-side units; 0 = no slide)
     warm: num('whyWarm', .9)      // journey units before FOUR PATHS at which the world is fetched and built
   };
@@ -68,8 +82,26 @@
      size (1.05 → .76), same place and turn; ?whyIsle=1,.58,.3,1.05,.38 = the size before. The rise page keeps 1.05. */
   const ISLE_SIZE = html.hasAttribute('data-rise-ui') ? .76 : 1.05;
   const ISLE = (() => { const v = Q.get('whyIsle'); if (v === '0') return null; const a = (v || '').split(',').map(Number); return a.length === 5 && a.every(Number.isFinite) ? a : [1, .58, .3, ISLE_SIZE, .38]; })();
+  let grassMat = null;
   if (ISLE) {
+    /* ISLAND GRASS: one extra layer in the islands' own shader (world-ocean-islands.js is generated, so it is patched here, at build time) */
+    const grassIsles = (mat, THREE) => {
+      if (!(T.grass > 0) || !THREE || !mat || !mat.fragmentShader || mat.userData.riseGrass) return;
+      const A = 'uniform vec4 uRockLook;', B = 'albedo*=mix(vec3(1.),vec3(.90,.97,1.08),uRockLook.y)*uRockLook.z;';
+      if (mat.fragmentShader.indexOf(A) < 0 || mat.fragmentShader.indexOf(B) < 0) { S.isleGrass = 'shader changed: skipped'; return; }
+      mat.uniforms.uRiseGrass = { value: new THREE.Vector4(T.grassP[0], T.grassP[1], T.grassP[2], T.grass) };
+      mat.fragmentShader = mat.fragmentShader.replace(A, A + ' uniform vec4 uRiseGrass;').replace(B, B + `
+        // RISE-UI GRASS (why-sea.js): patches of grass and moss on the gentle, higher ground; steep faces stay rock.  uRiseGrass = flat from, patch scale, sparse, amount
+        float gFlat=smoothstep(uRiseGrass.x,uRiseGrass.x+.28,landN.z), gHigh=smoothstep(.05,.38,form.b);
+        float gA=texture2D(uNoise,vWorld*uRiseGrass.y+vec2(.13,.41)).r, gB=texture2D(uNoise,vWorld*uRiseGrass.y*5.3+vec2(.71,.17)).g;
+        float grassK=clamp(gFlat*gHigh*smoothstep(uRiseGrass.z,uRiseGrass.z+.28,gA*.72+gB*.38)*uRiseGrass.w,0.,1.);
+        vec3 grassCol=mix(vec3(.23,.35,.17),vec3(.42,.52,.26),gB)*(.78+.45*dot(t.rgb,vec3(.333)));
+        albedo=mix(albedo,grassCol,grassK);`);
+      grassMat = mat;
+      mat.userData.riseGrass = true; mat.needsUpdate = true; S.isleGrass = 'on';
+    };
     const bigIsle = ctx => {
+      try { grassIsles(ctx?.islands, ctx?.THREE); } catch (error) { S.isleGrass = 'failed: ' + (error?.message || error); }
       try {
         const mesh = ctx?.scene?.children?.find(o => o.material && o.material === ctx.islands); const pose = mesh?.geometry?.getAttribute('aPose');
         if (!pose || pose.count < 6) return;
@@ -88,7 +120,7 @@
   { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'prototypes/rise/why-sea.css?v=8-ui-center'; document.head.append(l); }
   if (Q.get('whyCenter') === '0') html.setAttribute('data-rise-why-nocenter', '');   /* RISE UI (2026-11-23): the card block as before (why-sea.css, rise-ui page only) */
   /* DROP: the dive plays as a drop, a little slower (their gate takes about two seconds; ours went 1.5 / 1.2) */
-  if (DROP) { const D0 = dive(); if (D0 && D0.tune) { D0.tune.drop = 1; if (!Q.has('diveTime')) D0.tune.time = 1.8; if (!Q.has('diveBack')) D0.tune.closeTime = 1.3; } }
+  if (DROP) { const D0 = dive(); if (D0 && D0.tune) { D0.tune.drop = 1; if (T.feather > 0) D0.tune.dropFK = T.feather * .9; if (T.irregular > 0) D0.tune.dropRK = 1 - T.irregular * 1.1; if (!Q.has('diveTime')) D0.tune.time = 1.8; if (!Q.has('diveBack')) D0.tune.closeTime = 1.3; } }
 
   /* ---------------- fetch and build the world near FOUR PATHS ---------------- */
   function load() {
@@ -124,6 +156,7 @@
   /* ---------------- the circle ---------------- */
   function mask(r, f) {
     if (!root) return;
+    blotOff();
     if (r == null) { root.style.removeProperty('-webkit-mask-image'); root.style.removeProperty('mask-image'); return; }
     const g = `radial-gradient(circle at 50% 50%, #000 ${Math.max(0, r - f).toFixed(1)}px, transparent ${Math.max(.5, r + f * .35).toFixed(1)}px)`;
     root.style.setProperty('-webkit-mask-image', g); root.style.setProperty('mask-image', g);
@@ -143,17 +176,81 @@
 
   /* ---------------- DROP: the drop's edge, its skin, the sea opening up inside it ---------------- */
   const SKIN_N = 1024, SKIN_R = 440;
+  /* IRREGULAR: the blot's outline r(θ) and softness s(θ) as tables (1024 angles), and its mask picture (alpha only, drawn once at rest) */
+  const BLOT_N = 512, BLOT_E = 2.1, BLOT_T = 1024, TAU = Math.PI * 2;
+  const h1 = x => { const v = Math.sin(x * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+  const blotTabs = [];
+  function blotTab(seed) {
+    if (blotTabs[seed]) return blotTabs[seed];
+    const H = [[2, .26], [3, .36], [4, .24], [5, .14]].map(([k, a], i) => [k, a, h1(seed * 7.13 + i * 1.37) * TAU]);
+    const P1 = h1(seed * 3.7 + .5) * TAU, P2 = h1(seed * 5.3 + .9) * TAU;
+    const r = new Float32Array(BLOT_T), sf = new Float32Array(BLOT_T);
+    for (let i = 0; i < BLOT_T; i++) {
+      const th = i / BLOT_T * TAU; let v = 0; for (const [k, a, p] of H) v += a * Math.sin(k * th + p);
+      r[i] = 1 + T.irregular * v;
+      sf[i] = .55 + .9 * (.5 + .5 * Math.sin(2 * th + P1) * Math.cos(3 * th + P2));
+    }
+    return (blotTabs[seed] = { r, sf });
+  }
+  const blotURL = [], blotBusy = [];
+  /* the burst: thin soft spikes from the centre, each its own length and width, fading toward the tip (alpha only, drawn once at rest) */
+  let raysURL = null, raysBusy = false;
+  function makeRays() {
+    if (raysURL || raysBusy || !(T.rays > 0)) return;
+    raysBusy = true;
+    try {
+      const N = 512, c = N / 2, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d');
+      g.globalCompositeOperation = 'lighter';
+      const R = n => h1(n * 3.17 + 11.3), K = 96;
+      for (let i = 0; i < K; i++) {
+        const th = (i + (R(i) - .5) * .8) / K * TAU, w = (.004 + .022 * Math.pow(R(i + 40), 2.2)) * TAU / 6, L = c * (.58 + .42 * R(i + 90)), a = .35 + .65 * R(i + 140);
+        const gr = g.createRadialGradient(c, c, 0, c, c, L); gr.addColorStop(0, 'rgba(0,0,0,' + a + ')'); gr.addColorStop(.55, 'rgba(0,0,0,' + (a * .7).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(c, c); g.arc(c, c, L, th - w / 2, th + w / 2); g.closePath(); g.fill();
+      }
+      g.globalCompositeOperation = 'source-over';
+      if ('filter' in g) { const t = document.createElement('canvas'); t.width = t.height = N; t.getContext('2d').drawImage(cv, 0, 0); g.clearRect(0, 0, N, N); g.filter = 'blur(2px)'; g.drawImage(t, 0, 0); g.filter = 'none'; }
+      cv.toBlob(b => { raysBusy = false; if (b) raysURL = URL.createObjectURL(b); });
+    } catch (error) { raysBusy = false; T.rays = 0; S.rays = 'failed: ' + (error?.message || error); }
+  }
+  function makeBlot(seed) {
+    if (blotURL[seed] || blotBusy[seed] || !(T.irregular > 0)) return;
+    blotBusy[seed] = true;
+    try {
+      const N = BLOT_N, c = N / 2, R = c / BLOT_E, { r, sf } = blotTab(seed), fw0 = Math.max(.08, T.feather || .24);
+      const G = 7, L = new Float32Array((G + 1) * (G + 1)); for (let i = 0; i < L.length; i++) L[i] = h1(seed * 11.7 + i * .731);
+      const noise = (x, y) => { const gx = (x / N * G) % G, gy = (y / N * G) % G, ix = gx | 0, iy = gy | 0, fx = gx - ix, fy = gy - iy, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), o = iy * (G + 1) + ix;
+        return (L[o] * (1 - sx) + L[o + 1] * sx) * (1 - sy) + (L[o + G + 1] * (1 - sx) + L[o + G + 2] * sx) * sy; };
+      const cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d'); const img = g.createImageData(N, N), D = img.data;
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const dx = (x + .5 - c) / R, dy = (y + .5 - c) / R, d = Math.hypot(dx, dy);
+        let a = 1;
+        if (d > .02) {
+          const i = ((Math.atan2(dy, dx) / TAU + 1) % 1 * BLOT_T) | 0, fw = fw0 * sf[i];
+          const e = r[i] + (noise(x, y) - .5) * fw * .8;   /* the fringe bleeds a little further here and there (broad, smooth: no grain) */
+          const t = Math.min(1, Math.max(0, (d - (e - fw)) / (2 * fw))); a = 1 - t * t * t * (t * (t * 6 - 15) + 10);
+        }
+        D[(y * N + x) * 4 + 3] = Math.round(a * 255);
+      }
+      g.putImageData(img, 0, 0);
+      cv.toBlob(b => { blotBusy[seed] = false; if (b) blotURL[seed] = URL.createObjectURL(b); });
+    } catch (error) { blotBusy[seed] = false; blotURL[seed] = null; T.irregular = 0; S.blot = 'failed: ' + (error?.message || error); }
+  }
   let skin = null, skinFailed = false, scaled = '';
   function makeSkin() {
-    const N = SKIN_N, c = N / 2, r = SKIN_R, TAU = Math.PI * 2;
+    const N = SKIN_N, c = N / 2, r = SKIN_R;
     const cv = document.createElement('canvas'); cv.width = cv.height = N;
     const g = cv.getContext('2d', { willReadFrequently: true }); if (!g) return null;   /* drawn on the CPU now, uploaded once (an accelerated canvas ran its blur on the frame the drop was born: 75 ms) */
-    const disc = (r1, gr) => { g.fillStyle = gr; g.beginPath(); g.arc(c, c, r1, 0, TAU); g.fill(); };
+    const blot = T.irregular > 0 ? blotTab(0).r : null;   /* IRREGULAR: the skin takes the blot's outline */
+    const outline = (r1, ccw) => { if (!blot) { g.arc(c, c, r1, 0, TAU, !!ccw); return; }
+      for (let j = 0; j <= 256; j++) { const k = ccw ? 256 - j : j, th = k / 256 * TAU, rr = r1 * blot[(k / 256 * BLOT_T | 0) % BLOT_T]; g[j ? 'lineTo' : 'moveTo'](c + Math.cos(th) * rr, c + Math.sin(th) * rr); } g.closePath(); };
+    const disc = (r1, gr) => { g.fillStyle = gr; g.beginPath(); outline(r1); g.fill(); };
     const radial = (r0, r1, stops) => { const gr = g.createRadialGradient(c, c, r0, c, c, r1); for (const [o, col] of stops) gr.addColorStop(o, col); return gr; };
     /* the body: clear in the middle, the water's tint gathering toward the rim (fresnel), a bright meniscus on the skin */
-    disc(r, radial(r * .5, r, [[0, 'rgba(196,232,244,0)'], [.62, 'rgba(196,232,244,.05)'], [.86, 'rgba(204,238,250,.2)'], [.965, 'rgba(226,248,255,.48)'], [1, 'rgba(255,255,255,.95)']]));
+    const soft = T.feather > 0;
+    disc(r, soft ? radial(r * .45, r, [[0, 'rgba(196,232,244,0)'], [.6, 'rgba(196,232,244,.05)'], [.86, 'rgba(204,238,250,.16)'], [1, 'rgba(232,248,255,.3)']])
+      : radial(r * .5, r, [[0, 'rgba(196,232,244,0)'], [.62, 'rgba(196,232,244,.05)'], [.86, 'rgba(204,238,250,.2)'], [.965, 'rgba(226,248,255,.48)'], [1, 'rgba(255,255,255,.95)']]));
     /* thin film: a band of shifting colour just inside the rim */
-    if (g.createConicGradient) {
+    if (g.createConicGradient && !blot) {
       const fc = document.createElement('canvas'); fc.width = fc.height = N; const f = fc.getContext('2d');
       const cg = f.createConicGradient(-.6, c, c); ['#ff9fd2', '#ffe39a', '#a6ffd0', '#8fd6ff', '#b9a2ff', '#ff9fd2'].forEach((col, i, a) => cg.addColorStop(i / (a.length - 1), col));
       f.fillStyle = cg; f.fillRect(0, 0, N, N);
@@ -163,15 +260,22 @@
       g.globalAlpha = .45; g.drawImage(fc, 0, 0); g.globalAlpha = 1;
     }
     /* the colour split at the rim: warm just outside, cool just inside */
-    g.lineWidth = 3; g.strokeStyle = 'rgba(255,176,156,.34)'; g.beginPath(); g.arc(c, c, r * 1.006, 0, TAU); g.stroke();
-    g.lineWidth = 4; g.strokeStyle = 'rgba(140,204,255,.3)'; g.beginPath(); g.arc(c, c, r * .975, 0, TAU); g.stroke();
-    /* a soft light just outside the skin */
-    g.fillStyle = radial(r, r * 1.13, [[0, 'rgba(222,246,255,.42)'], [1, 'rgba(222,246,255,0)']]); g.beginPath(); g.arc(c, c, r * 1.13, 0, TAU); g.arc(c, c, r, 0, TAU, true); g.fill('evenodd');
+    if (!soft) {
+      g.lineWidth = 3; g.strokeStyle = 'rgba(255,176,156,.34)'; g.beginPath(); g.arc(c, c, r * 1.006, 0, TAU); g.stroke();
+      g.lineWidth = 4; g.strokeStyle = 'rgba(140,204,255,.3)'; g.beginPath(); g.arc(c, c, r * .975, 0, TAU); g.stroke();
+    }
+    /* a soft light just outside the skin (wider and fainter when feathered) */
+    const glowR = soft ? 1.16 : 1.13;
+    g.fillStyle = radial(r, r * glowR, [[0, soft ? 'rgba(222,246,255,.22)' : 'rgba(222,246,255,.42)'], [1, 'rgba(222,246,255,0)']]); g.beginPath(); outline(r * glowR); outline(r, true); g.fill('evenodd');
     /* the light on the skin: a soft window high on the left with a small sharp glint, a thin arc of reflected light low on the right */
     const spot = (x, y, rr, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rr, 0, TAU); g.fill(); };
     spot(c - r * .38, c - r * .42, r * .32, .34);
     g.save(); g.translate(c - r * .47, c - r * .5); g.rotate(-.75); g.scale(1, .42); spot(0, 0, r * .13, .8); g.restore();
     g.save(); if ('filter' in g) g.filter = 'blur(5px)'; g.lineCap = 'round'; g.lineWidth = r * .04; g.strokeStyle = 'rgba(236,250,255,.32)'; g.beginPath(); g.arc(c, c, r * .885, .3, 1.35); g.stroke(); g.restore();
+    if (soft && 'filter' in g) {   /* FEATHER: the whole skin melts: one blur of the finished picture (drawn once, at rest) */
+      const tmp = document.createElement('canvas'); tmp.width = tmp.height = N; const tg = tmp.getContext('2d'); tg.drawImage(cv, 0, 0);
+      g.clearRect(0, 0, N, N); g.filter = 'blur(' + Math.round(10 + T.feather * 40) + 'px)'; g.drawImage(tmp, 0, 0); g.filter = 'none';
+    }
     cv.className = 'rise-why-drop'; cv.setAttribute('aria-hidden', 'true');
     cv.style.cssText = 'position:fixed;left:50%;top:50%;width:' + N + 'px;height:' + N + 'px;pointer-events:none;z-index:40;opacity:0;will-change:transform,opacity';
     document.body.append(cv);
@@ -190,8 +294,42 @@
     if (next !== scaled && root) { scaled = next; root.style.transform = next; }
   }
   /* cx = the drop's centre in the sea's own (untransformed) px */
-  function maskDrop(rx, ry, f, cx) {
-    const g = 'radial-gradient(' + rx.toFixed(1) + 'px ' + ry.toFixed(1) + 'px at ' + cx.toFixed(1) + 'px 50%, #000 ' + Math.max(0, rx - f).toFixed(1) + 'px, transparent ' + Math.max(.5, rx + f * .35).toFixed(1) + 'px)';
+  let blotOn = '';
+  function blotOff() {
+    if (!blotOn || !root) return; blotOn = '';
+    for (const k of ['-webkit-mask-size', 'mask-size', '-webkit-mask-position', 'mask-position', '-webkit-mask-repeat', 'mask-repeat', '-webkit-mask-composite', 'mask-composite']) root.style.removeProperty(k);
+  }
+  function maskDrop(rx, ry, f, cx, u) {
+    if (T.irregular > 0) {
+      if (!blotURL[0]) makeBlot(0); if (!blotURL[1]) makeBlot(1); if (T.rays > 0 && !raysURL) makeRays();
+      if (blotURL[0]) {
+        const two = !!blotURL[1], rays = !!raysURL && T.rays > 0;
+        const v = 'url(' + blotURL[0] + ')' + (two ? ', url(' + blotURL[1] + ')' : '') + (rays ? ', url(' + raysURL + ')' : '');
+        if (blotOn !== v) {
+          blotOn = v; root.style.setProperty('-webkit-mask-image', v); root.style.setProperty('mask-image', v);
+          root.style.setProperty('-webkit-mask-repeat', 'no-repeat'); root.style.setProperty('mask-repeat', 'no-repeat');
+          root.style.setProperty('-webkit-mask-composite', 'source-over'); root.style.setProperty('mask-composite', 'add');
+        }
+        /* the second blot spreads at its own pace and drifts a little: the outline keeps changing as the drop grows */
+        const ax = rx * BLOT_E, ay = ry * BLOT_E, uu = u || 0, kB = .84 + .2 * uu, ox = rx * .1 * Math.cos(1.3 + uu * 2.4), oy = ry * .09 * Math.sin(.7 + uu * 2.1);
+        const px = n => n.toFixed(1) + 'px';
+        const cy = innerHeight / 2;   /* px, not %: a mask-position percentage is of (box − picture), like a background's */
+        let size = px(2 * ax) + ' ' + px(2 * ay), pos = px(cx - ax) + ' ' + px(cy - ay);
+        if (two) { size += ', ' + px(2 * ax * kB) + ' ' + px(2 * ay * kB); pos += ', ' + px(cx - ax * kB + ox) + ' ' + px(cy - ay * kB + oy); }
+        if (rays) {   /* RAYS: the burst reaches past the drop's edge, furthest while it opens (u .1 – .6), from the same centre */
+          const kR = Math.max(rx, ry) * (1.15 + T.rays * (.55 + .9 * Math.sin(Math.PI * Math.min(1, uu / .75))));
+          size += ', ' + px(2 * kR) + ' ' + px(2 * kR); pos += ', ' + px(cx - kR) + ' ' + px(cy - kR);
+        }
+        root.style.setProperty('-webkit-mask-size', size); root.style.setProperty('mask-size', size);
+        root.style.setProperty('-webkit-mask-position', pos); root.style.setProperty('mask-position', pos);
+        return;
+      }
+    }
+    blotOff();
+    const F = T.feather > 0 ? Math.max(f, T.feather * Math.min(rx, ry)) : 0;
+    const g = F > 0
+      ? 'radial-gradient(' + rx.toFixed(1) + 'px ' + ry.toFixed(1) + 'px at ' + cx.toFixed(1) + 'px 50%, #000 ' + Math.max(0, rx - F).toFixed(1) + 'px, rgba(0,0,0,.72) ' + Math.max(0, rx - F * .5).toFixed(1) + 'px, rgba(0,0,0,.38) ' + (rx - F * .05).toFixed(1) + 'px, rgba(0,0,0,.12) ' + (rx + F * .4).toFixed(1) + 'px, transparent ' + Math.max(.5, rx + F * .8).toFixed(1) + 'px)'
+      : 'radial-gradient(' + rx.toFixed(1) + 'px ' + ry.toFixed(1) + 'px at ' + cx.toFixed(1) + 'px 50%, #000 ' + Math.max(0, rx - f).toFixed(1) + 'px, transparent ' + Math.max(.5, rx + f * .35).toFixed(1) + 'px)';
     root.style.setProperty('-webkit-mask-image', g); root.style.setProperty('mask-image', g);
   }
   /* the sea's first card has its photo (drawn by the world's WebGL, so it cannot fade with the cards) across the screen's centre: while the drop
@@ -216,7 +354,7 @@
     /* the sea starts small inside the drop and opens up; never so small that the drop shows past its edge */
     const tx = shiftX * (1 - sm(.25, .7, u)), w = innerWidth;
     const s = T.scale0 >= 1 && !tx ? 1 : Math.min(1, Math.max(T.scale0 + (1 - T.scale0) * sm(0, .55, u), 2.04 * c.R * (1 + Math.abs(wob)), 2.04 * (Math.max(rx, ry) + Math.abs(tx)) / w));
-    maskDrop(rx / s, ry / s, f / s, w / 2 - tx / s); setXform(tx, s);
+    maskDrop(rx / s, ry / s, f / s, w / 2 - tx / s, u); setXform(tx, s);
     root.style.opacity = sm(0, T.fadeIn, u).toFixed(3);
     cardsAt(sm(.4, .78, u));
     setSkin(rx, ry, sm(0, .03, u) * (1 - sm(.5, .8, u)));
@@ -224,6 +362,7 @@
   function dropOff() { setSkin(0, 0, 0); setXform(0, 1); }
   /* the skin is drawn and shown at opacity .001 ahead of the drop (at the rest's prewarm, else in the dive's first frames), so its upload never lands on the drop's birth */
   function warmSkin(on) {
+    if (DROP && on && T.irregular > 0) { makeBlot(0); makeBlot(1); makeRays(); }
     if (!DROP || !(T.skin > 0) || skinFailed) return;
     if (!skin) { try { skin = makeSkin(); } catch (error) { skin = null; } if (!skin) { skinFailed = true; return; } }
     if (on) { skin.style.transform = 'translate(-50%, -50%) scale(.05)'; skin.style.opacity = '0.001'; } else skin.style.opacity = '0';
@@ -423,7 +562,7 @@
   new MutationObserver(kick).observe(html, { attributes: true, attributeFilter: ['data-flow2-after'] });
 
   window.__FLOW2_NEXT__ = {
-    state: S, tune: T, get world() { return W; }, load,
+    state: S, tune: T, get world() { return W; }, load, get grass() { return grassMat?.uniforms?.uRiseGrass?.value; },   /* .x flat from, .y patch scale, .z sparse, .w amount */
     get enabled() { return S.stage !== 'failed'; },
     /* flow2-lake-zoom.js: the dive has finished (on) / starts back (off) */
     show(on) {

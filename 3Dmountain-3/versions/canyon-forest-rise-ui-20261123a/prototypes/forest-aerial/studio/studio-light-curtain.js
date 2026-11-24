@@ -622,6 +622,10 @@ async function buildCentralSvgLogo(svgUrl, uniforms, centerXZ) {
 export async function createStudioLightCurtain(atlas, initialConfig = {}) {
   const cfg = { ...DEFAULT_CURTAIN_CONFIG, ...initialConfig };
   const url = rel => new URL(rel, import.meta.url).href;
+  /* RISE FALLS (team FW, 2026-11-23; only with html[data-rise-falls], docs/falls/BRIEF-20261123.md): the lake is a gorge with a waterfall.
+     The rings and the mark that lay on the lake's water rest (the glass mark above keeps its place: it reads this group's position, which
+     does not move), and the river curtains (off in the client's values) end at the gorge's rim. Without the attribute: exactly as before. */
+  const fallsShape = document.documentElement.hasAttribute('data-rise-falls') ? await import('./falls/falls-shape.js?v=dir2').catch(() => null) : null;
 
   const [streamData, tribData] = await Promise.all([
     fetch(url('../original/w2-streamlines.json')).then(r => r.json()),
@@ -694,7 +698,7 @@ export async function createStudioLightCurtain(atlas, initialConfig = {}) {
   const material = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: CURTAIN_VERT,
-    fragmentShader: CURTAIN_FRAG,
+    fragmentShader: fallsShape?.GORGE_SD_GLSL ? CURTAIN_FRAG.replace('void main() {', fallsShape.GORGE_SD_GLSL + ' void main() { if (fallsGorgeSd(vWorld.xz) < 0.02) discard;') : CURTAIN_FRAG,
     transparent: true,
     depthWrite: false,
     depthTest: true,
@@ -735,7 +739,7 @@ export async function createStudioLightCurtain(atlas, initialConfig = {}) {
     uniforms.uColor.value.set(cfg.color);
     uniforms.uContactColor.value.set(cfg.contactColor);
     if (logo) {
-      logo.group.visible = !!cfg.showLogo;
+      logo.group.visible = !!cfg.showLogo && !fallsShape;   /* RISE FALLS: no lake to lie on */
       const s = Math.max(0.2, +cfg.logoScale || 1.65);
       logo.group.scale.set(s, 1.0, s);
       logo.group.rotation.y = (+cfg.logoRotation || 0) * Math.PI / 180;

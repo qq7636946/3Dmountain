@@ -4,7 +4,8 @@ import { createBubbleLogo, WORD_PATHS } from '../bubble-hero/bubble-logo.js?v=ri
    and more dials. The word version also opens by itself: index1-5-canyon-forest-rise-word.html, or ?riseMark=word; it keeps its own saved values. */
 const BRIGHTNESS_RANGE = [0.15, 9];
 const Q = new URLSearchParams(location.search);
-const WORD_PAGE = (Q.get('riseMark') || document.documentElement.dataset.riseMark) === 'word';
+const WORD_PAGE = document.documentElement.hasAttribute('data-rise-published')
+  || (Q.get('riseMark') || document.documentElement.dataset.riseMark) === 'word';
 
 export function createRiseBubbleLogo({ gorge, station, sun, copy, redraw, sampleDrop }) {
   const { THREE, camera, ocean, scene, renderer } = gorge;

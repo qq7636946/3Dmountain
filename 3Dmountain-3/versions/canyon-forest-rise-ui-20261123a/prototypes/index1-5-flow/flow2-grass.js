@@ -1096,6 +1096,7 @@ float f2gNoise(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);return mix(mix
 
   /* ------------------------------------------------------------------ the dials' panel: its own file, only where a person is looking */
   function panel() {
+    if (document.documentElement.hasAttribute('data-rise-published')) return;
     const want = Q.get('grassPanel');
     if (want === '0' || (navigator.webdriver && want !== '1')) return;
     const load = () => { const s = document.createElement('script'); s.src = new URL('flow2-grass-panel.js?v=2', BASE).href; s.async = true; document.head.append(s); };

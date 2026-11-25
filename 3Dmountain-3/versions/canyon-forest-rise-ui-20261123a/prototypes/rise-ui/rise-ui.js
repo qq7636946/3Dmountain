@@ -58,7 +58,7 @@
     document.body.append(root);
     /* 2026-11-23 client 「底下這排參數值給我一個小按鈕點選可以先隱藏」: a small button left of the panel tabs hides / shows the whole panel bar
        (tabs and any open panel); the choice is remembered in this browser. Shown only once the panel bar exists (desktop, not under automation). */
-    {
+    if (!document.documentElement.hasAttribute('data-rise-published')) {
       const KEY = 'rise-ui:panels-hidden', html = document.documentElement;
       const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'ru-ptoggle'; btn.hidden = true;
       const sync = () => { const off = html.hasAttribute('data-ru-panels-off'); btn.setAttribute('aria-pressed', String(off)); btn.title = off ? '顯示參數列' : '隱藏參數列'; btn.setAttribute('aria-label', btn.title); btn.innerHTML = svg(off ? 'M4 10l4-4 4 4' : 'M4 6l4 4 4-4'); };

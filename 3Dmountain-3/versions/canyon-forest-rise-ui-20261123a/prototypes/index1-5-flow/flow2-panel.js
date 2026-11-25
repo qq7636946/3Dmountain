@@ -17,6 +17,7 @@
    ?panel=0 hides the tabs. Under automation (captures) they are hidden unless ?panel=1. Nothing here touches the 3D. */
 (() => {
   'use strict';
+  if (document.documentElement.hasAttribute('data-rise-published')) return;
   const Q = new URLSearchParams(location.search);
   const hidden = Q.get('panel') === '0' || (navigator.webdriver && Q.get('panel') !== '1');
   const sections = new Map();

@@ -2,6 +2,14 @@
 <html data-rise-overlap data-rise-headwater-detail data-rise-floating-logo data-rise-studio-pbr data-flow2-tex data-flow2-zrk-ui data-flow2-blue-ui data-flow2-aphelion data-flow2-detail-refinement data-flow2-section-wipe data-flow2-news-ticker data-flow2-reference-menu data-flow2-editorial-motion data-flow2-short-cards data-flow2-wave-rings data-flow-fast-start data-flow-ocean-sections="separate" data-site-sections="five" data-gate="off" data-copy-layout="original" data-direct-logo-zoom data-wordmark-lowered data-opening-sea-depth lang="zh-Hant" prefix="og: https://ogp.me/ns#" data-letter-direction="rising-helix" data-epilogue="world" data-landscape="1010" data-look="index1-5" data-alpine-ui>
 
 <head>
+  <script>
+    if (location.hostname === 'qq7636946.github.io') {
+      document.documentElement.setAttribute('data-rise-published', '');
+    }
+  </script>
+  <style>
+    html[data-rise-published] :is(.gate-rays, #tuner, .letters-panel, .fi-grade) { display: none !important; }
+  </style>
   <!-- index1-5-canyon-forest.html (lead, 2026-11-15): the canyon + the view from above on their own page, taken from index1-5-flow2-mark.html.
        The engine and modules are the same files; flow2-scope.js opens on the canyon (journey 4.87) and ends at FOUR PATHS. Work on the canyon / forest view continues HERE. -->
   <script>/* PHONE FULL (2026-11-16, client: 「為什麼手機還是這版本」): phones draw the same 3D as desktops, with fewer objects; ?phone=lite = the old lighter phone drawing */
@@ -1935,9 +1943,9 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <!-- Valley, fourth round (2026-11-14): valley and river drawn finer still (client: 山谷河流精緻度還要再加強3倍); after the third round's lines, before main.js; ?v4=0 compares; remove this line to undo -->
   <script defer src="prototypes/index1-5-flow/flow2-valley4.js?v=7-rise-tiers"></script>
   <!-- Valley grass (2026-11-14): fine meadow grass and wildflowers on the valley's low ground; after the line above, before main.js; ?grass=0 compares; remove this line to undo -->
-  <script defer src="prototypes/index1-5-flow/flow2-grass.js?v=6-gs1-fast2-lead1"></script>
+  <script defer src="prototypes/index1-5-flow/flow2-grass.js?v=6-gs1-fast2-published"></script>
   <!-- Tuning panels (2026-11-14): small tabs in the lower left corner open sliders for the modules that register with it (the client tunes, copies the values as JSON, the developer bakes them into the defaults); ?panel=0 hides them; must load before the modules that use it; remove this line to undo -->
-  <script defer src="prototypes/index1-5-flow/flow2-panel.js?v=9-studio-route"></script>
+  <script defer src="prototypes/index1-5-flow/flow2-panel.js?v=10-published"></script>
   <!-- Progressive start (2026-11-14, client: 進場直接就3D 不要一張靜態圖): the valley goes live with the walls' program as the fourth round left it (it compiles as fast as before); the fifth round's wall program is compiled in the background and swapped in on one frame, its detail faded in. Must load AFTER the fourth round's lines and BEFORE the fifth's; ?progressive=0 = everything compiled before the valley shows, as before; remove this line to undo -->
   <script defer src="prototypes/index1-5-flow/flow2-progressive.js?v=5-calm"></script>
   <!-- Valley, fifth round (2026-11-14, client: 整體山谷的精緻度再加5倍 / 草根植被 / 光影 / 河道海浪): four parts by three directors, each with its own switch: ?v5rock=0 (rock and forms), ?plants=0 (more vegetation), ?v5light=0 (light and shadow), ?v5water=0 (the river's waves); after the panel line, before main.js; remove a line to undo that part -->
@@ -1967,7 +1975,7 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <script defer src="prototypes/rise/rise-load.js?v=2"></script><!-- RISE LOAD v2 (default; ?load=0 off) -->
   <!-- RISE starts under water. It shares one reversible camera path through the canyon's water surface.
        Load before flow2-scope.js so the underwater section can handle input at the head of the canyon. -->
-  <script defer src="prototypes/rise/rise.js?v=91-bubble-return"></script>
+  <script defer src="prototypes/rise/rise.js?v=92-published"></script>
   <script defer src="prototypes/index1-5-flow/flow2-scope.js?v=7-end"></script>   <!-- the canyon and the view from above only (?scope=0 = whole page) -->
   <script defer src="prototypes/index1-5-flow/flow2-anchors.js?v=4-no-marks"></script>   <!-- round anchors + their flight to the four forest points (?anchors=0) -->
   <!-- Speed streaks (2026-11-14): while the visitor scrolls forward through the valley, thin bright streaks fly outwards from the vanishing point (client: 往前滾幫我加入這種放射狀); nothing at rest, none under reduce motion; before main.js; ?streaks=0 compares; remove this line to undo -->
@@ -2014,7 +2022,7 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
        this page is the copy; index1-5-canyon-forest-rise.html stays as it was. One UI and type system over every section: the underwater depth ruler on both edges
        all the way through, a thin frame, a chapter pill at the top centre and a caption with a counter at the foot (that site's kind of chrome, drawn in our own style),
        one mono for every small label, the underwater title style for every title. ?ui=0 = the page without it. -->
-  <script>if (new URLSearchParams(location.search).get('ui') !== '0') { document.documentElement.setAttribute('data-rise-ui', ''); if (new URLSearchParams(location.search).get('uiRail') !== '0') document.documentElement.setAttribute('data-ru-rail', ''); document.write('<link rel="stylesheet" href="prototypes/rise-ui/rise-ui.css?v=17-rail"><script defer src="prototypes/rise-ui/rise-ui.js?v=4-band"><\/script>'); }</script>
+  <script>if (new URLSearchParams(location.search).get('ui') !== '0') { document.documentElement.setAttribute('data-rise-ui', ''); if (new URLSearchParams(location.search).get('uiRail') !== '0') document.documentElement.setAttribute('data-ru-rail', ''); document.write('<link rel="stylesheet" href="prototypes/rise-ui/rise-ui.css?v=17-rail"><script defer src="prototypes/rise-ui/rise-ui.js?v=5-published"><\/script>'); }</script>
   <style>/* 2026-11-25 client: 「這四個項目字放大2個px」 (the four strategy labels over the valley: 11 → 13 px, 8 → 10 px) */ html[data-rise-ui] .map-annotations--site .map-callout strong{font-size:13px} html[data-rise-ui] .map-annotations--site .map-callout small{font-size:10px}</style>
   <!-- RISE FALLS (2026-11-23, client: 「這段做成像圖一峽谷的樣子，匯集中間瀑布如圖三」): the view from above's lake becomes a tiered canyon waterfall.
        Brief docs/falls/BRIEF-20261123.md. Default ON on this page (?falls=0 reverts to the original central lake). -->

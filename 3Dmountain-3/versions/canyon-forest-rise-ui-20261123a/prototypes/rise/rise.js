@@ -727,7 +727,7 @@
       import(GORGE + 'dg-scene.js?v=' + STAMP.scene),
       import(HERE + 'waterline.js?v=' + STAMP.optics),
       import(HERE + 'opening-shot.js?v=1'),
-      import(HERE + 'rise-bubble-logo.js?v=10-smooth-return').catch(error => { console.warn('rise bubble logo: unavailable', error); return null; })
+      import(HERE + 'rise-bubble-logo.js?v=11-published').catch(error => { console.warn('rise bubble logo: unavailable', error); return null; })
     ]);
     optics = waterline;
     scene = mod.createGorge({ canvas, tune: { depth: T.depth }, phone: false,
@@ -747,6 +747,7 @@
     layoutSea(S.openY, 1, 1);
     opening = { pitch: entry.openingShot.pitch, sun: new scene.THREE.Vector3().fromArray(entry.openingShot.sun) };
     const ocean = scene.ocean;
+    if (ocean?.dials && html.hasAttribute('data-rise-published')) ocean.dials.rays = 0;
     if (ocean?.lightingRows) window.__FLOW2_PANEL__?.add({
       id: 'rise-water-light', title: '水下光影', key: 'z', tune: ocean.dials,
       rows: ocean.lightingRows, onChange: () => { if (S.drawn) kick(); },

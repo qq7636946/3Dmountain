@@ -32,6 +32,10 @@ let atmos = [];
 /* one vignette under the interface and one film grain over everything: the page and the canvas share the same air */
 function buildAtmos() {
   if (html.dataset.visual === 'classic' || (!unifiedGrain && params.get('atmos') !== '1') || atmos.length) return;   // grain + vignette are opt-in now (?atmos=1)
+  /* flow2 (2026-11-11): index1-5-flow2.html hides this film sheet on every screen (flow2-fine-journey.js, flow2-fine-world.js); flow2-perf.js says so
+     here and the sheet is not made at all: generating it and setting its data URL on <html> was a third of a second of the opening (one long task).
+     The other pages that use this file never carry the attribute. */
+  if (html.hasAttribute('data-flow2-no-grain')) { if (unifiedGrain) html.dataset.grain = 'unified'; return; }
   try {
     const c = document.createElement('canvas'); c.width = c.height = 160; const g = c.getContext('2d'), img = g.createImageData(160, 160);
     for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255 | 0; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
@@ -45,6 +49,7 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a
 const range = document.createRange();
 
 let root = null, cells = null, layer = null, pins = [], raf = 0, lastStats = 0, lastRects = 0, obstacles = [];
+let railObserver = null;
 let summitRevision = -1, chapterId = '', names = [];
 let sceneClock = null, sceneClockText = null, sceneClockPeriod = null, sceneClockSun = null, sceneClockKey = '';
 const titleCase = s => s.charAt(0) + s.slice(1).toLowerCase();
@@ -158,7 +163,11 @@ function makePin(kind, opts) {
     const tag = el('span', 'alp-tag');
     const line = el('span', 'alp-tag-text');
     if (opts.zh) line.append(el('span', 'alp-tag-zh', opts.zh));
-    line.append(el('span', 'alp-tag-en', opts.text));
+    /* FLOW_STRATEGY_MAP_COPY: bilingual annotations are scoped to Flow2. */
+    if (html.hasAttribute('data-flow2-blue-ui')) {
+      const english = el('span','alp-tag-en',opts.text);
+      english.lang = 'en'; line.append(english);
+    }
     const number = el('span','alp-tag-index',String(PATHS.indexOf(opts.id)+1).padStart(2,'0'));
     number.setAttribute('aria-hidden','true');
     tag.append(number,line);
@@ -221,7 +230,8 @@ function refreshRects() {
     }
     for (const n of panel.querySelectorAll('.fi-copy-action, .alp-or')) { const r = n.getBoundingClientRect(); if (r.width) obstacles.push(pad(r, 12)); }
   }
-  for (const n of root.querySelectorAll('.fi-brand, .fi-header-right, .fi-rail, .fi-footer, .alp-stats')) {
+  const rail = document.documentElement.hasAttribute('data-flow2-blue-ui') ? '.fi-rail > [data-section]' : '.fi-rail';
+  for (const n of root.querySelectorAll(`.fi-brand, .fi-header-right, ${rail}, .fi-footer, .alp-stats`)) {
     const r = n.getBoundingClientRect(); if (r.width) obstacles.push(pad(r, 10));
   }
 }
@@ -236,8 +246,18 @@ function occluded(W, c, x, y, z) {
   return false;
 }
 function show(pin, on) {
+  /* FLOW_STRATEGY_VISIBILITY */
+  const steps = window.__MONTIS_STUDY__?.strategyReveal;
+  if (pin.kind === 'tag' && steps && !steps.visible(PATHS.indexOf(pin.id))) on = false;
+  /* FLOW_RIVER_LIGHT: state changes only; no new loop or layout reads. */
+  const index = PATHS.indexOf(pin.id);
+  const current = !!(on && pin.kind === 'tag' && steps && steps.visible(index) && !steps.visible(index + 1));
+  if (pin.lightCurrent !== current) {
+    pin.lightCurrent = current; pin.node.classList.toggle('is-step-current', current);
+  }
   if (pin.on === on) return;
-  pin.on = on; pin.node.style.opacity = on ? '1' : '0';
+  pin.on = on; pin.node.classList.toggle('is-visible', on);
+  pin.node.style.opacity = on ? '1' : '0';
 }
 /* Label box for a placement. up: text above the point; right/left: a station tag beside the point. */
 function boxAt(pin, x, y, lead, side) {
@@ -300,13 +320,22 @@ function layoutGlassStrategies(S, project, now, obstacles) {
   const W = S.canyon.watershed, cam = S.canyon.camera, width = innerWidth, height = innerHeight;
   const tags = pins.filter(pin => pin.kind === 'tag'), phone = width <= 760;
   const key = [width, height, chapterId, ...cam.position.toArray().map(v => v.toFixed(1)),
-    ...cam.quaternion.toArray().map(v => v.toFixed(4)), ...tags.map(p => p.w + ':' + p.h)].join('|');
+    ...cam.quaternion.toArray().map(v => v.toFixed(4)), ...tags.map(p => p.w + ':' + p.h),
+    ...obstacles.map(o => [o.l,o.r,o.t,o.b].map(v => Math.round(v)).join(':'))].join('|');
   if (key === glassLayoutKey) { for (const pin of tags) show(pin, pin.glassVisible === true); return; }
   if (now - glassLayoutAt < 80) return;
   glassLayoutKey = key; glassLayoutAt = now;
+  if (html.hasAttribute('data-flow2-blue-ui')) {
+    layoutMapStrategies(S, project, obstacles, tags, phone);
+    return;
+  }
   const placed = [], clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  // The narrower desktop title wraps to two lines. Lift its lower markers
+  // into the valley and leave the left chapter rail a clear reading margin.
+  const compact = width <= 1100;
   const slots = phone ? [[.25,.345],[.75,.345],[.25,.50],[.75,.50]]
-    : [[.235,.63],[.365,.38],[.675,.66],[.80,.36]];
+    : compact ? [[.285,.42],[.365,.30],[.71,.425],[.80,.29]]
+    : [[.235,.51],[.365,.34],[.675,.52],[.80,.33]];
   const clear = box => obstacles.every(o => !overlaps(box, o)) && placed.every(o => !overlaps(box, o));
   for (const pin of pins) {
     if (pin.kind !== 'tag') { show(pin, false); continue; }
@@ -338,7 +367,7 @@ function layoutGlassStrategies(S, project, now, obstacles) {
       const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns,'svg');
       svg.classList.add('alp-glass-leader'); svg.setAttribute('aria-hidden','true');
       const path = document.createElementNS(ns,'path'), dot = document.createElementNS(ns,'circle');
-      dot.setAttribute('r','2.5'); svg.append(path,dot); pin.node.append(svg);
+      dot.setAttribute('r','1.75'); svg.append(path,dot); pin.node.append(svg);
       pin.glassLeader = { svg, path, dot };
     }
     // In portrait a tributary may leave the crop; keep its card readable
@@ -352,6 +381,76 @@ function layoutGlassStrategies(S, project, now, obstacles) {
     pin.node.dataset.layout = 'glass'; pin.node.dataset.side = 'up';
     pin.node.style.transform = `translate3d(${box.x.toFixed(1)}px,${box.y.toFixed(1)}px,0)`;
     placed.push(box); pin.glassVisible=true; show(pin,true);
+  }
+}
+
+/* Flow2's map annotations use a straight stem at a projected river point.
+   Only screen-space label placement changes; the scene and reveal clock stay shared. */
+function layoutMapStrategies(S, project, obstacles, tags, phone) {
+  const width = innerWidth, height = innerHeight, W = S.canyon.watershed, cam = S.canyon.camera;
+  const slots = phone ? [[.16,.29],[.18,.41],[.64,.31],[.86,.20]]
+    : [[.19,.39],[.37,.255],[.64,.40],[.76,.245]];
+  const placed = [], stems = [], edge = phone ? 18 : 64;
+  const clear = box => obstacles.every(o => !overlaps(box,o)) && placed.every(o => !overlaps(box,o)) && stems.every(o => !overlaps(box,o));
+  for (const pin of pins) if (pin.kind !== 'tag') show(pin,false);
+  // Reserve the two outside tributaries first, then fit the inside pair.
+  const ordered = [tags[0],tags[3],tags[1],tags[2]].filter(Boolean);
+  for (const pin of ordered) {
+    const i = PATHS.indexOf(pin.id), slot = slots[i], w = pin.w, h = pin.h;
+    const minLead = h + (phone ? 22 : 38), maxLead = Math.min(phone ? 235 : 360,height * .34);
+    const candidates = [];
+    for (let sample = 25; sample <= 49; sample++) {
+      const q = pin.curve.getPointAt(sample/50), point = project(q.x,0,q.z);
+      if (!point || point[0] < edge || point[0] > width-edge || point[1] > height-90) continue;
+      for (const dy of [0,-24,24,-48,48]) {
+        const y = slot[1]*height + dy, lead = point[1]-y;
+        if (y < (phone ? 156 : 120) || lead < minLead || lead > maxLead) continue;
+        for (const side of ['right','left']) {
+          const sx = side === 'right' ? 3 : w-3, x = point[0]-sx;
+          if (x < edge || x+w > width-edge) continue;
+          const box = {l:x-8,r:x+w+8,t:y-8,b:y+h+8};
+          const stem = {l:point[0]-2,r:point[0]+2,t:y+8,b:point[1]+4};
+          if (!clear(box) || !clear(stem)) continue;
+          const cost = (point[0]-slot[0]*width)**2 + dy*dy*1.4 + (side === 'left' ? 1800 : 0);
+          candidates.push({x,y,sx,lead,side,box,stem,q,cost});
+        }
+      }
+    }
+    candidates.sort((a,b) => a.cost-b.cost);
+    // Candidate offsets share a river sample: test each sample only once, and
+    // never display a ground dot on a branch hidden behind a mountain ridge.
+    const visibility = new Map();
+    let result = candidates.find(c => {
+      if (!visibility.has(c.q)) visibility.set(c.q,!occluded(W,cam.position,c.q.x,4,c.q.z));
+      return visibility.get(c.q);
+    });
+    if (!result && candidates[0]) result = {...candidates[0],stem:null,lead:h};
+    if (!result && phone) {
+      // A portrait crop can exclude a whole tributary. Keep its name in the
+      // overview, but never attach a ground dot to a made-up river location.
+      const x = Math.max(18, Math.min(width-w-18,(i%2 ? .75 : .25)*width-w/2));
+      for (const y of [slot[1]*height,slot[1]*height-32,slot[1]*height+32,156,198,240,282,324,366,408]) {
+        const box = {l:x-6,r:x+w+6,t:y-6,b:y+h+6};
+        if (clear(box)) { result = {x,y,sx:3,lead:h,side:'right',box}; break; }
+      }
+    }
+    if (!result) { pin.glassVisible=false; show(pin,false); continue; }
+    if (!pin.glassLeader) {
+      const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+      svg.classList.add('alp-glass-leader'); svg.setAttribute('aria-hidden','true');
+      const path=document.createElementNS(ns,'path'),dot=document.createElementNS(ns,'circle');
+      dot.setAttribute('r','2.7'); svg.append(path,dot); pin.node.append(svg);
+      pin.glassLeader={svg,path,dot};
+    }
+    const {x,y,sx,lead,side,box,stem} = result, line=pin.glassLeader;
+    line.svg.style.opacity='1';
+    line.path.setAttribute('d',`M${sx.toFixed(1)} 3 V${lead.toFixed(1)}`);
+    line.dot.setAttribute('cx',sx.toFixed(1)); line.dot.setAttribute('cy',lead.toFixed(1));
+    line.dot.style.display=stem ? '' : 'none';
+    pin.node.dataset.layout='map'; pin.node.dataset.side='up'; pin.node.dataset.copySide=side;
+    pin.node.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+    placed.push(box); if(stem) stems.push(stem);
+    pin.glassVisible=true; show(pin,true);
   }
 }
 
@@ -389,6 +488,8 @@ function frame(now) {
   if (cells && now - lastStats > 200) { lastStats = now; updateStats(S, dir); }
 }
 function stop() {
+  railObserver?.disconnect();
+  railObserver = null;
   for (const d of atmos) d.remove(); atmos = [];
   cancelAnimationFrame(raf); raf = 0;
   layer?.remove(); layer = null; pins = [];
@@ -400,6 +501,13 @@ function start() {
   if (!html.hasAttribute('data-alpine-ui') || isText()) return;
   root = document.querySelector('[data-journey-ui]');
   if (!root || !root.querySelector('.fi-copy-panel')) { setTimeout(start, 200); return; }
+  const chapterRail = html.hasAttribute('data-flow2-blue-ui') && root.querySelector('.fi-rail');
+  if (chapterRail && typeof ResizeObserver === 'function') {
+    // Cache the orbit's button bounds after layout, including a direct jump to the final view.
+    railObserver = new ResizeObserver(refreshRects);
+    railObserver.observe(root);
+    railObserver.observe(chapterRail);
+  }
   enhanceCopy();
   buildAtmos();
   if (params.get('stats') === '1') cells = buildStats(); else html.setAttribute('data-alpine-ui-live', '');   // the bottom-right stat bar is removed (client 2026-10-24); ?stats=1 brings it back

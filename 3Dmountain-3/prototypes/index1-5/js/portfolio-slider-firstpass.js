@@ -268,9 +268,10 @@ void main() {
 const fragmentSlider = /* glsl */ `
 precision highp float;
 uniform sampler2D tImage;
+uniform float uPhotoCropY;
 varying vec2 vUv;
 varying vec3 vNormal;
-void main() { gl_FragColor = texture2D(tImage, vUv); }
+void main() { gl_FragColor = texture2D(tImage, vec2(vUv.x, .5 + (vUv.y - .5) * uPhotoCropY)); }
 `;
 
 /* mist mode: a card far off in the haze is the haze's colour; written unblended (straight alpha) */
@@ -280,10 +281,11 @@ uniform sampler2D tImage;
 uniform vec3 uFogColor;
 uniform float uFog;
 uniform float uAlpha;
+uniform float uPhotoCropY;
 varying vec2 vUv;
 varying vec3 vNormal;
 void main() {
-  vec4 c = texture2D(tImage, vUv);
+  vec4 c = texture2D(tImage, vec2(vUv.x, .5 + (vUv.y - .5) * uPhotoCropY));
   gl_FragColor = vec4(mix(c.rgb, uFogColor, uFog), c.a * uAlpha);
 }
 `;
@@ -328,7 +330,7 @@ void main() {
    BASE: the ground the strip is set on, linear-looking rgb 0–1.
    LIFT: how far above the middle of the frame the strip sits, in frame
    heights. DPR: the most device pixels per CSS pixel it will draw. */
-function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], lift = 0, dpr = 2, skipIntro = false, externalEntrance = false, displacement = null, mist = false, approach = false } = {}) {
+function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], lift = 0, heightReductionPx = 0, onLayout = null, dpr = 2, skipIntro = false, externalEntrance = false, displacement = null, mist = false, approach = false } = {}) {
   const pixelRatio = Math.min(window.devicePixelRatio || 1, dpr);
   const renderer = new Renderer({ canvas, alpha: true, dpr: pixelRatio });
   const gl = renderer.gl;
@@ -340,6 +342,8 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
   camera.position.set(0, 0, 4);
   camera.lookAt([0, 0, 0]);
 
+  const slideWidth = 1, slideHeight = 1, slideGap = 0.15;
+  const photoCropY = { value: 1 };
   let width, height, visibleWidth, visibleHeight, resized = false, disposed = false;
 
   function resize() {
@@ -355,6 +359,10 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
     const halfFov = ((Math.PI / 180) * camera.fov) / 2;
     visibleHeight = 2 * Math.tan(halfFov) * camera.position.len();
     visibleWidth = visibleHeight * aspect;
+    // Trim in CSS pixels, then crop the photo by the same factor so it keeps its proportions.
+    const slideHeightPx = slideHeight * height / visibleHeight;
+    photoCropY.value = Math.max(.5, 1 - heightReductionPx / Math.max(1, slideHeightPx));
+    onLayout?.({ centerY: height * (.5 - lift), photoHeight: slideHeightPx * photoCropY.value });
   }
   resize();
   yield 'size';
@@ -427,19 +435,19 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
     return texture;
   });
 
-  const slideWidth = 1, slideHeight = 1, slideGap = 0.15;
   const totalSlidesWidth = (slideWidth + slideGap) * textures.length;
   const slideGeometry = new Plane(gl, { width: slideWidth, height: slideHeight });
   yield 'images';
   const slideProgram = new Program(gl, {
     vertex: vertexSlider, fragment: mist ? fragmentSliderMist : fragmentSlider,
-    uniforms: { tImage: { value: null } }
+    uniforms: { tImage: { value: null }, uPhotoCropY: photoCropY }
   });
   const fogColor = [...base];   // the haze the far cards dissolve into: the ground, graded like it
 
   const slideMeshes = textures.map(tex => {
     const program = Object.create(slideProgram);
-    program.uniforms = mist ? { tImage: { value: tex }, uFogColor: { value: fogColor }, uFog: { value: 0 }, uAlpha: { value: 1 } } : { tImage: { value: tex } };
+    program.uniforms = { tImage: { value: tex }, uPhotoCropY: photoCropY };
+    if (mist) Object.assign(program.uniforms, { uFogColor: { value: fogColor }, uFog: { value: 0 }, uAlpha: { value: 1 } });
     const mesh = new Mesh(gl, { geometry: slideGeometry, program });
     mesh.setParent(scene);
     return mesh;
@@ -506,7 +514,7 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
         const local = Math.min(1, Math.max(0, (entrance - .4 * centre) / .6));
         const lag = Math.pow(1 - local, 2.4);
         mesh.position.set(x, up, -depth * lag);
-        mesh.scale.set(1, 1, 1); mesh.rotation.set(0, 0, 0);
+        mesh.scale.set(1, photoCropY.value, 1); mesh.rotation.set(0, 0, 0);
         const u = mesh.program.uniforms;
         const shown = Math.min(1, Math.max(0, (local - .04) / .32));
         u.uFog.value = Math.min(1, lag * 1.25); u.uAlpha.value = shown * shown * (3 - 2 * shown);
@@ -514,7 +522,8 @@ function* createSliderSteps(canvas, { images = [], base = [0.055, 0.055, 0.06], 
       }
       const arrival = externalEntrance ? 1 - entrance : 0;
       mesh.position.set(x + visibleWidth * .24 * arrival, up - visibleHeight * .055 * arrival, 0);
-      mesh.scale.set(1 - .04 * arrival, 1 - .04 * arrival, 1);
+      const arrivalScale = 1 - .04 * arrival;
+      mesh.scale.set(arrivalScale, arrivalScale * photoCropY.value, 1);
       mesh.rotation.z = -.025 * arrival;
     });
 

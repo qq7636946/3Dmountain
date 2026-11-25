@@ -6,11 +6,23 @@ import { createTerrainMaterial } from './highland-material.js?v=i15-mw30beoi';
 import { installAlpineTerrain } from './alpine-terrain-material.js?v=i15-mw30beoi';
 import { loadAlpineDetail } from './alpine-erosion.js?v=i15-mw30beoi';
 const sets = new Map();
+/* TEXTURE TIERS (2026-11-17, Team C, docs/perf/canyon-forest-20261117/C.md; client: 「能用材質的就用，這樣我之後要做降畫質的動作也比較好做」):
+   only where the page sets html[data-flow2-opt] (index1-5-canyon-forest.html; ?opt=0 / ?bake=0 = off) and only for the full set. The
+   page's window.__FLOW2_TEX_TIER__ picks the size: 'high' (always, today) loads exactly the files below as before; ?texTier=medium|low
+   loads the half / quarter copies from prototypes/index1-5-flow/assets/baked/ (scripts/perf-bake/canyon-tiers.cjs, manifest.json there).
+   Every other page (index1-5.html …) has no data-flow2-opt: unchanged. */
+const TEX_TIER=(()=>{try{const d=document.documentElement;return d.hasAttribute('data-flow2-opt')&&new URLSearchParams(location.search).get('bake')!=='0'&&window.__FLOW2_TEX_TIER__||null;}catch(e){return null;}})();
+const BAKED_EXT={'alpine-tuft-atlas':'png'};   // the lower sizes of a map whose alpha carries data are PNG (manifest.json)
+function tierUrl(url,name,full,min){
+  if(!TEX_TIER||TEX_TIER.tier==='high')return url;
+  return TEX_TIER.url(new URL('../../index1-5-flow/assets/baked/'+name,import.meta.url).href,full,BAKED_EXT[name]||'webp',min||128);
+}
 function getSet(THREE,lite){
   const key=lite?'lite':'full';
   if(sets.has(key))return sets.get(key);
   const loader=new THREE.TextureLoader(),maps={},textures=[],jobs=[];
-  const load=(name,url,color)=>{
+  const load=(name,url,color,tier)=>{
+    if(tier&&!lite)url=tierUrl(url,tier[0],tier[1]);
     jobs.push(loader.loadAsync(url).then(texture=>{
       texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
       texture.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;
@@ -18,23 +30,30 @@ function getSet(THREE,lite){
       textures.push(texture);maps[name]=texture;
     }));
   };
-  load('rockDetail',new URL('../../../images/maritime/terrain/coastal-slate-'+(lite?512:1024)+'.webp',import.meta.url).href,true);
+  load('rockDetail',new URL('../../../images/maritime/terrain/coastal-slate-'+(lite?512:1024)+'.webp',import.meta.url).href,true,['coastal-slate',1024]);
   const tex=new URL('../../highland-1-4/assets/textures/',import.meta.url);
   // ALPINE-TERRAIN (round 4): the meadow photo (Poly Haven aerial_grass_rock, CC0). Desktop keeps the shared
   // 1024 maps; phones load 512 copies from images/alpine/ (~150 KB instead of ~980 KB).
-  load('grassColor',lite?new URL('../../../images/alpine/grass-color-512.webp',import.meta.url).href:new URL('aerial_grass_rock-color-1024.webp',tex).href,true);
-  load('grassNormal',lite?new URL('../../../images/alpine/grass-normal-512.webp',import.meta.url).href:new URL('aerial_grass_rock-normal-1024.webp',tex).href,false);
+  load('grassColor',lite?new URL('../../../images/alpine/grass-color-512.webp',import.meta.url).href:new URL('aerial_grass_rock-color-1024.webp',tex).href,true,['grass-color',1024]);
+  load('grassNormal',lite?new URL('../../../images/alpine/grass-normal-512.webp',import.meta.url).href:new URL('aerial_grass_rock-normal-1024.webp',tex).href,false,['grass-normal',1024]);
   // ALPINE-TERRAIN: generated detail maps (tools/bake-alpine-textures.cjs, tools/bake-erosion-detail.cjs).
   const alp=new URL('../../../images/alpine/',import.meta.url);
-  load('alpineRock',new URL('rock-'+(lite?512:1024)+'.webp',alp).href,false);
-  load('alpineScree',new URL('scree-512.webp',alp).href,false);
-  load('alpineSnow',new URL('snow-512.webp',alp).href,false);
-  load('alpineErosion',new URL('erosion-normal-1024.webp',alp).href,false);
-  load('alpineTuft',new URL('tuft-atlas.webp',alp).href,false);   // canyon grass clumps (data channels, see alpine-canyon-tufts.js)
+  load('alpineRock',new URL('rock-'+(lite?512:1024)+'.webp',alp).href,false,['alpine-rock',1024]);
+  load('alpineScree',new URL('scree-512.webp',alp).href,false,['alpine-scree',512]);
+  load('alpineSnow',new URL('snow-512.webp',alp).href,false,['alpine-snow',512]);
+  load('alpineErosion',new URL('erosion-normal-1024.webp',alp).href,false,['alpine-erosion-normal',1024]);
+  load('alpineTuft',new URL('tuft-atlas.webp',alp).href,false,['alpine-tuft-atlas',512]);   // canyon grass clumps (data channels, see alpine-canyon-tufts.js)
   jobs.push(loadAlpineDetail(new URL('erosion-height-'+(lite?256:512)+'.png',alp).href));
   const set={maps,textures,ready:Promise.all(jobs)};sets.set(key,set);return set;
 }
-export function preloadIndex15Terrain(THREE,lite=false){return getSet(THREE,lite).ready;}
+export function preloadIndex15Terrain(THREE, lite = false, { warmTextures = false } = {}) {
+  const set = getSet(THREE, lite);
+  if (!warmTextures) return set.ready;
+  return set.ready.then(() => {
+    const { rockDetail, grassColor, grassNormal, alpineRock, alpineScree, alpineSnow, alpineErosion } = set.maps;
+    return [rockDetail, grassColor, grassNormal, alpineRock, alpineScree, alpineSnow, alpineErosion];
+  });
+}
 // ALPINE-TERRAIN: the canyon rock and the watershed terrain take the alpine material; the highland one stays as a fallback.
 export function installIndex15Terrain(THREE,{rockMaterial,terrainMaterial,lite=false}){
   return installAlpineTerrain(THREE,{rockMaterial,terrainMaterial,lite,maps:getSet(THREE,lite).maps});

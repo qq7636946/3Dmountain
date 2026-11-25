@@ -20,7 +20,7 @@ const STYLE = `
 const GATE = .1, UNITS = 6900, BRIDGE = 1.3;
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055, reducedMotion = false, state, sliderUrl = './portfolio-slider.js',
+export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055, heightReductionPx = 0, alignControls = false, reducedMotion = false, state, sliderUrl = './portfolio-slider.js',
   kicker = 'FINNOVATION PORTFOLIO', title = 'PORTFOLIO IN MOTION', note = '拖曳或捲動，瀏覽更多', bridge = false, onEnd = null, grade = null, mist = null, notch = null, carry = null }) {
   const style = document.createElement('style'); style.dataset.portfolio = ''; style.textContent = STYLE; document.head.append(style);
   const layer = document.createElement('div'); layer.className = 'fi-portfolio'; layer.setAttribute('aria-hidden', 'true');
@@ -53,7 +53,12 @@ export function mountPortfolio({ images, base = [.925, .943, .962], lift = .055,
       if (disposed) return null;
       const displacement = await module.prepareSlider();
       if (disposed) return null;
-      slider = module.createSlider(canvas, { images, base, lift, dpr: document.documentElement.hasAttribute('data-perf-phone') ? 1.25 : 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
+      // Use the same projection for the photos and the DOM controls after each resize.
+      const onLayout = alignControls && panel ? ({ centerY, photoHeight }) => {
+        panel.style.setProperty('--flow2-card-center', centerY + 'px');
+        panel.style.setProperty('--flow2-card-half-height', photoHeight * .5 + 'px');
+      } : null;
+      slider = module.createSlider(canvas, { images, base, lift, heightReductionPx, onLayout, dpr: document.documentElement.hasAttribute('data-flow2-low-gpu') ? .75 : document.documentElement.hasAttribute('data-perf-phone') ? 1.25 : 1.75, skipIntro: reducedMotion, externalEntrance: true, displacement, mist: bridge, approach: bridge });
       await slider.ready;
       if (disposed) return null;
       // Upload the first visible photographs and compile all passes off-screen.

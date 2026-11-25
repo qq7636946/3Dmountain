@@ -11,13 +11,14 @@ html[data-alpine-ui] body.is-sea-flow .alp-labels { opacity: calc(1 - var(--sea-
 /* the 'sky' leg (after the cards): the sea is folded away, the planet is followed by the principles */
 .fi-world.is-sky-leg .fiwo-dive,
 .fi-world.is-sky-leg [data-world-part="responsibility"] {
+  display: none !important;
   height: 0 !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; border: 0 !important;
   overflow: hidden !important; visibility: hidden !important;
 }
 /* leaving the sea for the cards: the strategy's words go first, as 06's do on the way in */
 .fi-world.is-sea-leg .fiwo-pin { opacity: calc(1 - var(--sea-haze-out, 0)); }
 
-/* The globe continues into its original closing logo before contact.
+/* The globe continues through both original reading chapters, then the logo.
    The separate ocean leg never opens or draws the closing lake. */
-html[data-flow-ocean-sections="separate"] #principles,
+html[data-flow-ocean-sections="separate"] #fiWorld.is-sea-leg #principles,
 html[data-flow-ocean-sections="separate"] #fiWorld.is-sea-leg #logo-seal { display: none !important; }

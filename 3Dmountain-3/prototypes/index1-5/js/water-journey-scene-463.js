@@ -91,7 +91,11 @@ export function createJourneyScene(THREE, options) {
 
 export async function createJourneySceneAsync(THREE, options) {
   await preloadIndex15Terrain(THREE, options?.lite ?? ((globalThis.innerWidth ?? 1440)<760));
-  const builder=buildJourneyScene(THREE,options);
+  const erosionInWorker = globalThis.document?.documentElement.hasAttribute('data-flow2-aphelion')
+    && typeof Worker === 'function' && new URLSearchParams(globalThis.location?.search).get('terrainworker') !== '0';
+  const builder=buildJourneyScene(THREE,erosionInWorker
+    ? { ...options, erosionInWorker, geometryInWorker: THREE.REVISION === '170' }
+    : options);
   let step=builder.next();
   while(!step.done){
     if(step.value&&typeof step.value.then==='function')await step.value;   /* TERRAIN_WORKER: the builder waits for the terrain workers */
@@ -102,7 +106,7 @@ export async function createJourneySceneAsync(THREE, options) {
   return step.value;
 }
 
-function* buildJourneyScene(THREE, { createRiver, watershedStyle = null, flowConfig = null, terrainConfig = null, shoreConfig = null, viewConfig = null, reliefConfig = null, logoTerrain = null, lite = typeof innerWidth === 'number' && innerWidth < 760 }) {
+function* buildJourneyScene(THREE, { createRiver, watershedStyle = null, flowConfig = null, terrainConfig = null, shoreConfig = null, viewConfig = null, reliefConfig = null, logoTerrain = null, erosionInWorker = false, geometryInWorker = false, lite = typeof innerWidth === 'number' && innerWidth < 760 }) {
   let sliceStart=performance.now();
   const sliceExpired=()=>performance.now()-sliceStart>=6;
   const shore = shoreConfig;
@@ -1069,7 +1073,7 @@ float reliefStreak(vec2 p,vec2 dir){
   // Relief: the watershed asks for the canyon bank under ~40k terrain vertices; rows are shared.
   const frameCache = new Map();
   const cachedFrame = (t, side) => { const k = Math.round(t * 8192) * 2 + (side > 0 ? 1 : 0); let f = frameCache.get(k); if (!f) { f = rowFrame(Math.round(t * 8192) / 8192, side); frameCache.set(k, f); } return f; };
-  const watershedOptions={curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig};
+  const watershedOptions={curve,widthAt,createRiver,rockMaterial,instancedPlainRockMaterial,boulderGeometry,rockDark,rockPale,flowConfig,terrainConfig,erosionInWorker,geometryInWorker};
   if(shore)Object.assign(watershedOptions,{shoreDetail:true,mainOverlap,logoTerrain});
   if(relief)watershedOptions.relief={config:relief,material:terrainMaterial,bankHeight:(t,side,d,x,z)=>bankHeight(cachedFrame(t,side),d,x,z)};
   const watershed=yield* createCanyonWatershedBuilder(THREE,watershedOptions);

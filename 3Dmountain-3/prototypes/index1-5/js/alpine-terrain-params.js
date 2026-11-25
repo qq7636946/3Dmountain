@@ -160,3 +160,21 @@ export const ALPINE_TERRAIN_ROWS = [
   ['山腰顏色', 'valleyMidColor'],
   ['上坡山脊顏色', 'valleyUpperColor']
 ];
+
+/* OPT-M (strike team M, 2026-11-21; rise page only: html[data-rise-studio-pbr], and only on the medium and low quality tiers; ?optMmesh=0 / ?optM=0 / ?perf=0 = as before).
+   The canyon terrain is one grid of 441,396 vertices / 880,088 triangles at the top tier's 14-unit cells (meshDetail 1.3), drawn again in the river's mirror: 1.3-1.8 M
+   triangles a frame at the canyon's mouth, which is what a phone or an integrated GPU is stuck on. This page's own dial 「網格精細度」 (meshDetail, ↻ load-time) already
+   has the coarser grids: 1 = 20-unit cells (559,300 triangles) and .8 = 24-unit cells (455,868). The medium tier now starts at 1, the low tier (phones, integrated GPUs) at .8;
+   a smaller value set by hand still wins. The river corridor (12-unit cells, |x| < 330) is not part of this dial and stays as it is. The top tier never reads this. The terrain workers
+   run this file without a document: there the plain value arrives with the settings they are sent (same number). */
+(() => {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (!document.documentElement.hasAttribute('data-rise-studio-pbr') || ['perf', 'optM', 'optMmesh'].some(k => q.get(k) === '0')) return;
+    const tier = window.__FLOW2_QUALITY__ && window.__FLOW2_QUALITY__.start, dial = tier === 'low' ? .8 : tier === 'medium' ? 1 : 0;
+    if (!dial) return;
+    let stored = ALPINE_TERRAIN.meshDetail;
+    Object.defineProperty(ALPINE_TERRAIN, 'meshDetail', { enumerable: true, configurable: true, get: () => Math.min(stored, dial), set: v => { stored = v; } });
+    window.__RISE_MESH__ = { tier, dial };   /* for QA */
+  } catch (e) { /* a worker (no document) or no tier module: the plain value */ }
+})();

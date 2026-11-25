@@ -300,20 +300,7 @@ void main() {
   vec3 oldC = texture2D(tOld, fold((frag + dir * disp * uMix.z * uRes.y) / uRes)).rgb;
   vec3 newC = texture2D(tNew, fold((frag + dir * disp * uMix.w * uRes.y) / uRes)).rgb;
   vec3 col = mix(oldC, newC, m);
-  // light on the wave: the face ahead of the crest catches the sun, its back darkens a touch
-  col *= 1.0 - 0.16 * max(-face, 0.0);
-  col += uCrest * (0.26 * max(face, 0.0) * max(face, 0.0)) * uMix.x;
-  // the crest: a bright lip, stronger where the wave breaks along its length; a translucent wash behind; a little spray
-  float along = dot(p0, tg);
-  float brk = nz(vec2(along * 2.8 + tm * 0.05, 2.1)).r * 0.7 + nz(vec2(along * 15.0 - tm * 0.08, 5.3)).g * 0.3;
-  float lace = nz(rot(p0, 0.9) * 120.0 + tg * tm * 2.0 + dir * tm * 0.8).a * 0.6 + nz(rot(p0, -0.7) * 150.0 - tg * tm * 3.0).b * 0.4;
-  float lip = crest * mix(0.45, 1.0, smoothstep(0.3, 0.7, brk)) * mix(0.55, 1.0, smoothstep(0.3, 0.7, lace));
-  col *= 1.0 - 0.22 * smoothstep(0.0, 0.15, sd / L) * exp(-sd / (L * 0.55)) * step(0.0, sd);
-  float soft = nz(p0 * 8.0 + vec2(tm * 0.05, -tm * 0.15)).r * 0.65 + nz(p0 * 20.0 - tg * tm * 0.2).g * 0.35;
-  float wash = step(0.0, sd) * exp(-sd / (L * 0.9)) * smoothstep(0.35, 0.7, soft) * smoothstep(0.3, 0.65, brk);
-  float sprayN = nz(rot(p0, 0.4) * 190.0 + vec2(tm * 1.6, -tm * 2.9)).a * 0.6 + nz(rot(p0, -1.1) * 240.0 - vec2(tm * 1.0, tm * 3.8)).b * 0.4;
-  float spray = smoothstep(0.7, 0.84, sprayN) * exp(-pow((sd + L * 0.1) / (L * 0.3), 2.0)) * smoothstep(0.45, 0.7, brk) * uMix.y;
-  col = mix(col, uFoam, clamp((lip * 0.85 + wash * 0.3) * uMix.x + spray * 0.8, 0.0, 1.0));
+  // FLOW_GRID_NO_LIGHT_STRIPE: the grid carries the cut, without a luminous wave lip.
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `;
@@ -416,13 +403,39 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     R.ember.toggle();
   };
   addEventListener('click', onClick);
-  function cutProgress(l) {
-    const now = performance.now() / 1000, dt = cut.t < 0 ? 0 : clamp(now - cut.t, 0, .1); cut.t = now;
-    if (reducedMotion || num('cutClock', 0, 1) < .5 || Math.round(num('transition', 0, 2)) === 0) return cut.p = l.qWave;
-    const go = l.qWave > 0 && l.qWave >= num('cutAt', 0, 1), step = dt / num('cutTime', .1, 4);
-    return cut.p = go ? Math.min(1, cut.p + step) : Math.max(0, cut.p - step);
-  }
+  /* FLOW_REVERSIBLE_LOGO: the lake cut and mark rotation use the same
+     reversible scroll score. A one-way clock cannot follow a mid-cut reversal. */
+  function cutProgress(l) { cut.t = performance.now() / 1000; return cut.p = l.qWave; }
+
   let lastRenderer = null, state = 'idle', R = null, warmStage = 0, lastY = NaN, movedAt = -1, startTime = -1, lost = false, tail = null;
+  /* FLOW_LOGO_HANDOFF: one live resource owner for the world's renderer. */
+  let retryAt = 0, failures = 0;
+  /* FLOW_EARLY_LOGO: construction is independent of visible scroll sampling. */
+  const tracePreparation = new URLSearchParams(location.search).has('logoPerf');
+  function reportPreparation(phase, R0 = R) {
+    if (tracePreparation) console.debug('[Flow logo]', phase, {
+      ms: Math.round(performance.now() - (R0?.startedAt || performance.now())),
+      worldOpen: root.classList.contains('is-open'),
+      leg: root.classList.contains('is-sky-leg') ? 'sky' : root.classList.contains('is-sea-leg') ? 'sea' : 'journey'
+    });
+  }
+  function prepare(renderer) {
+    if (!renderer || lost) return;
+    if (failed && failures < 3 && performance.now() >= retryAt) failed = false;
+    if (failed) return;
+    lastRenderer = renderer;
+    if (!R) begin(renderer, { renderer });
+  }
+  function prewarm(renderer, draw) {
+    prepare(renderer);
+    if (!R?.ready || warmStage >= 3 || lost || failed) return;
+    const atStart = { y: abs().w0, w0: abs().w0, qWave: 0, pc: 0, q: 1, yaw: 0, rise: 1, near: true };
+    warm(R, atStart, performance.now() / 1000, { renderer, world() {}, draw }, renderer);
+  }
+  function limitY(y) {
+    // Auxiliary warm-up must not lock scroll after the renderable scene exists.
+    return R?.ready && !lost && !failed ? y : Math.min(y, abs().w0);
+  }
   const hexOf = c => '#' + c.getHexString(THREE.LinearSRGBColorSpace);
   const hexOr = (v, d) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   /* the valley's colours (read live, like the ocean's, so tuning the valley retunes the lake and the foam) */
@@ -543,6 +556,7 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     });
     if (dead(R0)) return;
     R0.ready = true; R0.readyAt = performance.now() / 1000; state = 'ready';
+    reportPreparation('renderable', R0);
   }
   /* Every program variant the wave will draw, compiled in the background. three compiles one variant per material (as drawn on the canvas), but
      the glass is also drawn with its back faces into the transmission target, and the sky, the water and the glass go into render targets (the
@@ -651,14 +665,17 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   function release() { if (!R) return; const old = R; R = null; state = 'idle'; warmStage = 0; disposeResources(old); }
   function fail(error) {
     if (failed) return;
-    failed = true; console.warn('Logo seal unavailable, the page continues without it.', error);
-    release(); section.hidden = true; root.classList.remove('is-logoseal'); if (resp) resp.inert = false;
-    setTimeout(() => { layout(W, H); remeasure(); }, 0);
+    failed = true; failures++; retryAt = performance.now() + 1000;
+    console.warn('Logo seal preparation failed; retaining the globe until retry.', error);
+    release(); root.classList.remove('is-logoseal');
+    // Never remove the closing section or collapse its scroll measurements.
+    // A brief driver/asset failure can retry; a later visit can try again too.
   }
   function begin(renderer, ctx) {
     if (R || failed || lost) return;
     state = 'loading';
     const R0 = R = { ctx, log: [], dead: false, ready: false, warmCost: 0, readyAt: 0, timings: {}, px: [0, 0], lake: null, mark: null, holder: null, env: null, noise: null, comp: null, texOld: null, texNew: null, looks: { mark: {}, lake: {} } };
+    R0.startedAt = performance.now(); reportPreparation('started', R0);
     build(R0, renderer).catch(error => { if (!dead(R0)) fail(error); });
   }
   const sync = (src, memo) => { let changed = false; for (const k in src) if (src[k] !== memo[k]) { memo[k] = src[k]; changed = true; } return changed; };
@@ -666,9 +683,11 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   /* the world calls this just before it draws its own frame. true: the frame is drawn (the world must not draw it). */
   function render(s, time, ctx) {
     const l = s.l;
-    if (!l || failed || lost) return false;
+    if (!l || lost) return false;
+    if (failed && failures < 3 && performance.now() >= retryAt) failed = false;
+    if (failed) return false;
     const renderer = lastRenderer = ctx.renderer;
-    if (Math.abs(l.y - lastY) > .5) { lastY = l.y; movedAt = time; }
+    if (!Number.isFinite(lastY) || Math.abs(l.y - lastY) > .5) { lastY = l.y; movedAt = time; }
     if (l.near && !R) begin(renderer, ctx);
     if (!R || !R.ready) return false;
     l.pc = cutProgress(l);
@@ -690,11 +709,15 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
     const t0 = performance.now(), stage = warmStage++, before = new Set(renderer.info.programs);
     try {
       frame(R0, { ...l, qWave: 0, yaw: 0, q: 1, rise: 1 }, time, renderer);
-      if (stage === 0) { R0.holder.visible = false; drawLake(R0, renderer); R0.holder.visible = true; }
+      if (stage === 0) {
+        R0.holder.visible = false;
+        try { drawLake(R0, renderer); } finally { if (R0.holder) R0.holder.visible = true; }
+      }
       else if (stage === 1) { drawLake(R0, renderer); R0.ember?.warm?.(R0.lake.camera); }
       else wave(R0, { ...l, qWave: 0 }, time, ctx, renderer);
       R0.timings['warm' + stage] = Math.round(R0.warmCost = performance.now() - t0); R0.log.push(['warm' + stage, Math.round(t0), Math.round(R0.warmCost)]);
       (R0.newPrograms ||= {})['warm' + stage] = renderer.info.programs.filter(p => !before.has(p)).map(p => p.name + ' ' + String(p.cacheKey));
+      if (warmStage >= 3) reportPreparation('prepared', R0);
     } catch (e) { fail(e); }
   }
   /* the lake and the mark at this frame's clocks */
@@ -790,15 +813,34 @@ export function createWorldLogo({ root, reducedMotion = false, small = false, mo
   }
 
   // ---------- GL loss, lifecycle ----------
-  const onLost = () => { lost = true; };
-  const onRestored = () => { lost = false; warmStage = 0; };
+  const onLost = event => { event.preventDefault(); lost = true; };
+  const onRestored = () => {
+    release(); lost = failed = false; failures = 0; retryAt = 0; warmStage = 0;
+  };
   let canvas = root.querySelector('.fiw-canvas');
   canvas?.addEventListener('webglcontextlost', onLost); canvas?.addEventListener('webglcontextrestored', onRestored);
 
   return {
-    layout, measure, sample, shape, stopY, render, paint,
+    layout, measure, sample, shape, stopY, render, paint, limitY, prepare, prewarm,
+    get prepared() { return !!R?.ready && warmStage >= 3 && !lost && !failed; },
+    get unavailable() { return lost || (failed && failures >= 3); },
     get active() { return !!last?.active; },
-    close() { release(); cut.p = 0; cut.t = -1; painted.active = painted.gone = null; painted.p = -1; painted.y = painted.k = ''; root.classList.remove('is-logoseal'); if (resp) resp.inert = false; text.style.visibility = 'hidden'; },
+    suspend() {
+      cut.p = 0; cut.t = -1; last = null; lastY = NaN; movedAt = -1;
+      painted.active = painted.gone = painted.clickable = null; painted.p = -1; painted.y = painted.k = '';
+      R?.ember?.toggle(false); root.style.cursor = ''; root.classList.remove('is-logoseal');
+      if (resp) resp.inert = true;
+      text.style.visibility = 'hidden'; text.style.setProperty('--p', '0');
+    },
+    close() {
+      // The world renderer survives ordinary chapter navigation. Keep its
+      // one compiled lake/mark too; dispose() remains the final owner.
+      cut.p = 0; cut.t = -1; last = null; lastY = NaN; movedAt = -1;
+      R?.ember?.toggle(false); failed = false; failures = 0; retryAt = 0;
+      painted.active = painted.gone = painted.clickable = null; painted.p = -1; painted.y = painted.k = '';
+      root.style.cursor = ''; root.classList.remove('is-logoseal'); if (resp) resp.inert = false;
+      text.style.visibility = 'hidden'; text.style.setProperty('--p', '0');
+    },
     get state() {
       return {
         gl: lastRenderer && { programs: lastRenderer.info.programs?.length, textures: lastRenderer.info.memory.textures, geometries: lastRenderer.info.memory.geometries },

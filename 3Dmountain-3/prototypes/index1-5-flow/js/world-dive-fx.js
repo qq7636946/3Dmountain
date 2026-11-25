@@ -139,7 +139,7 @@ void main() {
   col += vec3(.88,.96,1.0)*innerRim*mwp*uE.x*softGlint*.065;
   // a thin-film rainbow riding the front
   vec3 film = 0.5 + 0.5 * cos(6.2831853 * (sd * 3.2 + fb * 0.8 + vec3(0.0, 0.33, 0.67)));
-  col += (film - 0.45) * band * uA.w * e * 0.22;
+  // FLOW_GRID_NO_RAINBOW_STRIPE: retain pane refraction without the diagonal rainbow.
   // cold: less colour, a little blue
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
   col = mix(col, vec3(lum) * vec3(0.94, 0.98, 1.05), uC.x * e);

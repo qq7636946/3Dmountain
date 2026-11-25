@@ -61,7 +61,8 @@ const RAD = Math.PI / 180;
 export function createOpeningWorld({ uniforms, config, renderer, palette = (hex, v) => { const c = new THREE.Color(hex); return v.set(c.r,c.g,c.b); }, keyLight, hemiLight, airMotes, waterGlints, rebake, rangeUrl, surface = null }) {
   const lightSpecks = createLightSpecks({points:airMotes,surface,getConfig:()=>config.lightSpecks,small:Math.min(innerWidth,innerHeight)<700,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});
   // TEMP_RANGE_BACKGROUND_PAUSED: 暫停主頁的遠山背景圖；保留 opening-range.webp／0.webp 原檔，移除此暫停即可還原。
-  const rangeBackgroundPaused = !!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])');
+  // Opt this page back into the original mountain backdrop and its reflections.
+  const rangeBackgroundPaused = !!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement]):not([data-range-background])');
   const W = () => config.openingWorld;
   const hero = new THREE.Vector3(), dir = new THREE.Vector3(), q = new THREE.Vector3(), cp = new THREE.Vector3(), sd = new THREE.Vector3(), f = new THREE.Vector3();
   let sunLight = null, band = null, lastProbeHour = -100, keyWasAutomatic = false;

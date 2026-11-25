@@ -187,27 +187,49 @@ function spectrumTexture() {
   return t;
 }
 
-function stoneNormalTexture(size = 512) {
+/* OPT_R glassBake (team R, 2026-11-21): the relief map below is 512 x 512 pixels of CPU noise (about 0.29 s in one block at the start of the page). The page that
+   opens in the canyon (rise page, <html data-flow2-start="valley" data-rise-studio-pbr>, ?optR=0 / ?perf=0 / ?optRoff=glassBake = as before) never shows this glass before the
+   opening it does not have, so there the map is made in 3 ms slices behind a flat placeholder: the same statements, the same numbers, written into the texture when done.
+   Everything else (the sync call, the panel's later rebuild) runs the loops in one go exactly as before. */
+function stoneNormalTexture(size = 512) { const build = stoneNormalBuild(size, null, null); let step; while (!(step = build.next()).done); return step.value; }
+function stoneNormalSliced(size = 512) {
+  const flat = new Uint8Array(size * size * 4); for (let o = 0; o < flat.length; o += 4) { flat[o] = 128; flat[o + 1] = 128; flat[o + 2] = 255; flat[o + 3] = 255; }
+  const t = new THREE.DataTexture(flat, size, size);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  let from = performance.now();
+  const build = stoneNormalBuild(size, t, () => performance.now() - from > 3);
+  const go = async () => { for (;;) { const step = build.next(); if (step.done) return; if (globalThis.scheduler?.yield) await globalThis.scheduler.yield(); else await new Promise(r => setTimeout(r, 0)); from = performance.now(); } };
+  go();
+  return t;
+}
+function* stoneNormalBuild(size, into, due) {
   /* How many times the pattern repeats across the map: bigger is a
      finer, busier relief, smaller is broad slabs. */
   const tiles = Math.max(1, Math.round(6 * RK.reliefScale));
   const hash2 = (x, y, k) => { const v = Math.sin(x * 127.1 + y * 311.7 + k * 74.7) * 43758.5453; return v - Math.floor(v); };
   const h = new Float32Array(size * size);
-  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+  for (let j = 0; j < size; j++) { if (due && due()) yield; for (let i = 0; i < size; i++) {
     const px = i / size * tiles, py = j / size * tiles;
-    const ix = Math.floor(px), iy = Math.floor(py);
-    let f1 = 9, f2 = 9;
-    for (let gy = -1; gy <= 1; gy++) for (let gx = -1; gx <= 1; gx++) {
-      const cx = ((ix + gx) % tiles + tiles) % tiles, cy = ((iy + gy) % tiles + tiles) % tiles;
-      const dx = ix + gx + hash2(cx, cy, 1) - px, dy = iy + gy + hash2(cx, cy, 2) - py;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
+    const tileWeight = RK.tiles;
+    let tileHeight = tileWeight;
+    if (tileWeight !== 0) {
+      const ix = Math.floor(px), iy = Math.floor(py);
+      let f1 = 9, f2 = 9;
+      for (let gy = -1; gy <= 1; gy++) for (let gx = -1; gx <= 1; gx++) {
+        const cx = ((ix + gx) % tiles + tiles) % tiles, cy = ((iy + gy) % tiles + tiles) % tiles;
+        const dx = ix + gx + hash2(cx, cy, 1) - px, dy = iy + gy + hash2(cx, cy, 2) - py;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
+      }
+      const bevel = Math.min(1, (f2 - f1) / .09);
+      tileHeight = bevel * (.7 + .3 * hash2(ix, iy, 3)) * .8 * tileWeight;
     }
-    const bevel = Math.min(1, (f2 - f1) / .09);
     const grain = jsFbm(px * 5.3, py * 5.3, 1.7, 3) - .5;
     const swell = jsFbm(px * .55, py * .55, 2.9, 3) - .5;
-    h[j * size + i] = bevel * (.7 + .3 * hash2(ix, iy, 3)) * .8 * RK.tiles + grain * RK.grain + (jsNoise(px * 1.7, py * 1.7, 4.2) - .5) * .2 + swell * RK.swell;
-  }
+    h[j * size + i] = tileHeight + grain * RK.grain + (jsNoise(px * 1.7, py * 1.7, 4.2) - .5) * .2 + swell * RK.swell;
+  } }
   const data = new Uint8Array(size * size * 4), k = 2.4 * size / 64;
   for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
     const l = h[j * size + ((i - 1 + size) % size)], r = h[j * size + ((i + 1) % size)];
@@ -217,6 +239,7 @@ function stoneNormalTexture(size = 512) {
     const o = (j * size + i) * 4;
     data[o] = (nx * .5 + .5) * 255; data[o + 1] = (ny * .5 + .5) * 255; data[o + 2] = (nz * .5 + .5) * 255; data[o + 3] = 255;
   }
+  if (into) { into.image.data.set(data); into.needsUpdate = true; return into; }
   const t = new THREE.DataTexture(data, size, size);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
@@ -241,7 +264,8 @@ function studioScene() {
 }
 
   const spectrum=spectrumTexture();
-  let normalMap=stoneNormalTexture();
+  const optRGlassBake = document.documentElement.dataset.flow2Start === 'valley' && document.documentElement.hasAttribute('data-rise-studio-pbr') && ['perf', 'optR'].every(k => new URLSearchParams(location.search).get(k) !== '0') && !(new URLSearchParams(location.search).get('optRoff') || '').split(',').includes('glassBake');
+  let normalMap=optRGlassBake ? stoneNormalSliced() : stoneNormalTexture();
   const cube=new THREE.WebGLCubeRenderTarget(256,{type:THREE.HalfFloatType,generateMipmaps:true,minFilter:THREE.LinearMipmapLinearFilter});
   const room=studioScene(),captureCamera=new THREE.CubeCamera(.1,100,cube);
   const previousTone=renderer.toneMapping,previousTarget=renderer.getRenderTarget();

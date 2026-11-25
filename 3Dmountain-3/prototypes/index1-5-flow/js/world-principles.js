@@ -7,68 +7,38 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const smooth=(a,b,v)=>{const t=clamp((v-a)/Math.max(.001,b-a));return t*t*(3-2*t);};
 const VERTEX='varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
 const FRAGMENT=/* glsl */`
-uniform sampler2D uPhoto,uPhoto2,uOld;
-uniform vec2 uRes,uMouse;
-uniform float uTime,uEnter,uRead,uAspect,uAspect2,uSceneMix,uMotion;
+uniform sampler2D uOld;
+uniform vec2 uRes;
+uniform float uTime,uEnter,uSceneMix,uMotion;
 varying vec2 vUv;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}
-vec3 photo(sampler2D source,vec2 uv,float r,float aspect,float horizon){
- vec2 cover=vec2(min(1.,uRes.x/uRes.y/aspect),min(1.,aspect*uRes.y/uRes.x));
- vec2 p=.5+(uv-.5)*cover/1.065;
- p+=vec2(sin(uTime*.027)*.008,-uRead*.021)+uMouse*.008;
- p+=vec2(sin(p.y*8.+uTime*.16),cos(p.x*6.-uTime*.11))*.0018*uMotion;
- vec2 d=vec2(r*cover.x,r*cover.y);
- // Keep source detail at rest. Positive mip bias and a permanent blur kernel
- // made full-screen photographs look low-resolution even after settling.
- vec3 c=texture2D(source,clamp(p,.002,.998)).rgb;
- if(r>.00001){
-  c*=.28;
-  c+=(texture2D(source,clamp(p+vec2(d.x,0),.002,.998)).rgb+texture2D(source,clamp(p-vec2(d.x,0),.002,.998)).rgb)*.16;
-  c+=(texture2D(source,clamp(p+vec2(0,d.y),.002,.998)).rgb+texture2D(source,clamp(p-vec2(0,d.y),.002,.998)).rgb)*.13;
-  c+=(texture2D(source,clamp(p+d,.002,.998)).rgb+texture2D(source,clamp(p-d,.002,.998)).rgb)*.07;
- }
- c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,.76)*vec3(.83,.97,1.04);
- float scrim=.15+.19*(1.-smoothstep(.15,.90,uv.x))+.17*(1.-smoothstep(0.,.35,uv.y));
- // The supplied business photograph joins the site's slate-blue world.
- // Keep its human detail visible while protecting white editorial copy.
- if(horizon>.5){
-  c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,.56)*vec3(.78,.92,1.03)*.88;
-  scrim+=.22+.10*(1.-smoothstep(.35,.80,uv.y));
- }
- return mix(c,vec3(.04,.075,.13),scrim);
-}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
 void main(){
- vec2 uv=vUv;float q=smoothstep(0.,1.,uEnter),s=sin(q*3.14159265);
+ vec2 uv=vUv;
+ float q=smoothstep(0.,1.,uEnter),s=sin(q*3.14159265);
  float n=noise(uv*vec2(3.2,4.7)+vec2(0.,uTime*.018));
  float front=q*1.5-.25-(uv.x*.24+uv.y*.76)+(n-.5)*.20*s;
- float mask=smoothstep(-.13,.13,front);
- if(uMotion<.5)mask=q;
+ float mask=uMotion<.5?q:smoothstep(-.13,.13,front);
  if(uEnter<=.0001)mask=0.;if(uEnter>=.9999)mask=1.;
- vec2 lens=vec2(sin(uv.y*9.+n*3.),cos(uv.x*7.-n*4.))*.027*s*uMotion;
- // Only the water reveal carries softness; both reading chapters stay sharp.
- float imageRadius=.006*s*s*uMotion;
  float change=smoothstep(0.,1.,uSceneMix);
- vec3 newer;
- // Uniform branches keep the resting scenes at one photo fetch. Both
- // images are sampled only while the scroll is actually changing scenes.
- if(change<.001)newer=photo(uPhoto,uv+lens,imageRadius,uAspect,0.);
- else if(change>.999)newer=photo(uPhoto2,uv+lens,imageRadius*.72,uAspect2,1.);
- else newer=mix(photo(uPhoto,uv+lens,imageRadius,uAspect,0.),photo(uPhoto2,uv+lens,imageRadius*.72,uAspect2,1.),change);
- vec3 c=newer;
+ // Two coloured atmospheres, no photographs, video or texture downloads.
+ vec3 low=mix(vec3(.075,.16,.235),vec3(.085,.215,.29),change);
+ vec3 high=mix(vec3(.31,.425,.54),vec3(.32,.49,.61),change);
+ vec3 c=mix(low,high,smoothstep(-.15,1.15,uv.y));
+ float glow=exp(-length((uv-vec2(.70,.85))*vec2(1.15,1.))*2.9);
+ c+=vec3(.07,.105,.13)*glow;
  if(uEnter<.9999){
-  vec3 older=texture2D(uOld,clamp(uv-lens*1.5,.001,.999)).rgb;
-  c=mix(older,newer,mask);
+  vec2 lens=vec2(sin(uv.y*9.+n*3.),cos(uv.x*7.-n*4.))*.012*s*uMotion;
+  c=mix(texture2D(uOld,clamp(uv-lens,.001,.999)).rgb,c,mask);
  }
- c+=vec3(.16,.24,.28)*exp(-pow(front/.10,2.))*.12*s*uMotion;
- // Small world-space moisture flecks; quiet enough to leave the copy clear.
+ c+=vec3(.10,.17,.21)*exp(-pow(front/.10,2.))*.10*s*uMotion;
  vec2 field=uv*vec2(44.,25.)+vec2(uTime*.012,uTime*.021)*uMotion;
  vec2 id=floor(field),local=fract(field)-.5;
- float seed=hash(id+13.),on=step(.965,seed);
- float sparkle=exp(-dot(local,local)*160.)*on*(.06+.04*sin(uTime*.6+seed*70.));
+ float seed=hash(id+13.);
+ float sparkle=exp(-dot(local,local)*160.)*step(.965,seed)*(.025+.015*sin(uTime*.6+seed*70.));
  c+=vec3(.65,.82,.89)*sparkle*mask;
- c*=(1.-.16*smoothstep(.35,.85,length((uv-.5)*vec2(1.1,1.))));
- c+=(hash(gl_FragCoord.xy)-.5)/255.;gl_FragColor=vec4(c,1.);
+ c+=(hash(gl_FragCoord.xy)-.5)/255.;
+ gl_FragColor=vec4(c,1.);
 }`;
 export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeasure=()=>{}}){
  const section=root.querySelector('[data-world-part="principles"]');if(!section)return null;
@@ -90,12 +60,11 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
   section.style.removeProperty('height');
   body.style.setProperty('--travel','0px');
   height=section.offsetHeight;overflow=Math.max(0,height-H);
-  // The final line, rather than the bottom of a padded section, hands over
-  // to the next scene. Overlap only the invisible tail of the document:
-  // the next WebGL cut starts while the closing CTA is still on screen.
+  // Trim only the empty padding after the closing CTA. The old .90-screen
+  // overlap started the logo mosaic while chapter two was still being read.
   const end=section.querySelector('.fiwp-bottom')||chapters[chapters.length-1]||body;
   const bottom=end.getBoundingClientRect().bottom-section.getBoundingClientRect().top-(parseFloat(end.style.getPropertyValue('--motion-y'))||0);
-  const overlap=Math.max(0,height-bottom+H*.90);
+  const overlap=Math.max(0,height-bottom);
   section.style.marginBottom=(-overlap).toFixed(1)+'px';
  }
  function measure(at,getTop){
@@ -108,7 +77,7 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
  function sample(y){
   const enter=clamp((y-(top-H*1.05))/(H*.85));
   const read=clamp((y-top)/Math.max(1,height-H));
-  const exit=smooth(contentEnd-H*.90,contentEnd-H*.65,y);
+  const exit=smooth(contentEnd-H*.60,contentEnd-H*.40,y);
   const sceneMix=smooth(secondTop-H*.90,secondTop-H*.10,y);
   last={y,enter,read,exit,sceneMix,show:smooth(.25,.90,enter)*(1-exit),active:y>top-H*1.10&&y<top+height+H*1.8};
   return last;
@@ -148,8 +117,9 @@ export function createWorldPrinciples({root,reducedMotion=false,go=()=>{},remeas
   if(status){const opacityText=p.show.toFixed(3);if(opacityText!==statusOpacityText){statusOpacityText=opacityText;status.style.opacity=opacityText;}}
  }
  let statusOpacityText='';
- const stopY=()=>top+H*.12;
+ const stopY=()=>top;
+ const stops=()=>[stopY(),secondTop];
  function close(){root.classList.remove('is-principles');body.style.visibility='hidden';}
  function dispose(){disposed=true;close();removeEventListener('pointermove',onPointer);texture?.dispose();old?.dispose();material?.dispose();quad?.geometry.dispose();if(pill&&was){pill.dataset.worldGo=was.go;if(label)label.textContent=was.text;}}
- return{layout,measure,sample,render,paint,stopY,close,dispose,get state(){return{top,height,overflow,secondTop,contentEnd,ready,failed,secondReady,secondFailed,flow:'document',sample:last};}};
+ return{layout,measure,sample,render,paint,stopY,stops,close,dispose,get state(){return{top,height,overflow,secondTop,contentEnd,ready,failed,secondReady,secondFailed,flow:'document',sample:last};}};
 }

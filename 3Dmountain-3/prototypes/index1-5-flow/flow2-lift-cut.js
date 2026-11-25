@@ -152,6 +152,28 @@
     ['— 進退場銜接 —'], ['往回捲多少才轉回山谷（約 .15＝一格滾輪）', 'backAsk', .05, .8, .01], ['離開後多久回來才重播蔓延（秒）', 'replayGap', 0, 120, 1]
   ] });
   T.preview = NaN; T.loop = 0;   // a preview left on in the panel's memory must not move the page on the next visit
+  /* ENTER ROUND (trial 2026-11-25, client: 「山道結束接俯視山谷的轉場 用 俯視山谷>俯視海岸橫移的轉場 試試看」). Only where the page sets html[data-rise-enter-round]
+     (index1-5-canyon-forest-rise-ui-enter-round.html; ?enterRound=0 there = the brush); every other page never reads RT. Brush mode only: the same moment, glide,
+     copy, gate and hand-overs, and the view's own entrance after it. Instead of the stroke the change plays as the view from above -> WHY sea change does
+     (why-sea.js TILE + flow2-lake-dive.js drop): the canyon rushes forward (radial zoom blur, speed lines, the outer picture brightening, the lens pushing in)
+     and the view from above opens at the centre in a round opening with a very wide feather (6 steps; solid core 34 % -> 84 % of the radius while it grows
+     2.25 x), the view inside starting at .64 of its size, covering the screen at t1. Back: the same, reversed, in RT.back s. The curve is the sea dive's own
+     (window.__FLOW2_LAKE_DIVE__.curve, evaluated with these dials); the picture is drawn by flow2-forest-atlas.js's composite (override.round).
+     Panel 「俯視山谷轉場速度（進場・圓形）」 (storage rise-ui-enter-round-1). Live: window.__FLOW2_LIFT_CUT__.round. */
+  const ROUND = studioPbr && document.documentElement.hasAttribute('data-rise-enter-round');
+  const RT = { on: 1, time: num('roundTime', 1.8), back: num('roundBack', 1.3), t0: .17, t1: .82, dropP: 1.7, bead: .05, scale0: .64, blur: .26, streak: .35, lift: .5, push: num('roundPush', 1.35) };
+  if (ROUND) {
+    api.round = RT;
+    window.__FLOW2_PANEL__?.add({ id: 'rise-enter-round', storageId: 'rise-ui-enter-round-1', title: '俯視山谷轉場速度（進場・圓形）', tune: RT, rows: [
+      ['— 從峽谷進入俯視山谷：圓形羽化開口（和離場同一種）—'],
+      ['轉場時間（秒）', 'time', .5, 8, .05], ['往回時間（秒）', 'back', .4, 6, .05],
+      ['開口出現時機（0～1）', 't0', .02, .6, .01], ['蓋滿畫面時機（0～1）', 't1', .4, .98, .01],
+      ['開口放大曲線（大＝先慢後快）', 'dropP', .6, 4, .05], ['開口起始大小', 'bead', .005, .3, .005],
+      ['俯視山谷在開口裡的起始大小（1＝不縮放）', 'scale0', .3, 1, .01],
+      ['— 衝刺感（峽谷）—'], ['放射模糊（0＝無）', 'blur', 0, .6, .01], ['速度線', 'streak', 0, 1.5, .01], ['外圈提亮', 'lift', 0, 1.5, .01],
+      ['鏡頭往前推（倍，1＝不推）', 'push', 1, 2.5, .01]
+    ] });
+  }
   /* Engineer 3 (2026-11-16): the hand-overs linked (see the header); ?motion=old = as before */
   const MOTION_NEW = Q.get('motion') !== 'old' && T.mode === 'brush';
   const overlapCopy = MOTION_NEW && rhythm?.overlapCopy;
@@ -354,8 +376,38 @@
      when the wipe reaches the middle; lower = it carries its motion into the wipe); backTime = the stroke's length on the way back. No other page reads these. */
   const RM = () => (studioPbr && window.__RISE_MASTER__ && window.__RISE_MASTER__.tune) || null;
   const glidePow = () => { const m = RM(), g = m ? +m.glidePow : NaN; return g >= 1 && g <= 4 ? (rhythm ? Math.min(2.4, g) : g) : 2.2; };
-  const strokeSpan = () => { if (reduce.matches) return Math.max(.05, T.reduceFade); const m = RM(), b = m && dir < 0 ? +m.backTime : NaN; return Math.max(.05, b >= .3 && b <= 3 ? b : T.brushTime); };
-  const glide = () => { const span = strokeSpan(), t = Math.min(1, (now() - t0) / 1000 / span); return pS + pD * (rhythm ? rhythm.glide(t, pSlope) : 1 - Math.pow(1 - t, glidePow())); };
+  /* ENTER ROUND (see RT above): on for this change? reduce motion keeps the brush's cross-fade; the sea dive's curve must be there */
+  const roundOn = () => ROUND && RT.on >= .5 && !reduce.matches && typeof window.__FLOW2_LAKE_DIVE__?.curve === 'function';
+  const roundGlideSpan = () => Math.max(.05, (+RT.time || 1.8) * Math.min(.99, Math.max(.06, +RT.t1 || .82)));   /* the valley comes to rest as the opening covers the screen */
+  const strokeSpan = () => { if (reduce.matches) return Math.max(.05, T.reduceFade); if (roundOn()) return Math.max(.05, +(dir < 0 ? RT.back : RT.time) || 1.5); const m = RM(), b = m && dir < 0 ? +m.backTime : NaN; return Math.max(.05, b >= .3 && b <= 3 ? b : T.brushTime); };
+  const glide = () => { const span = roundOn() ? roundGlideSpan() : strokeSpan(), t = Math.min(1, (now() - t0) / 1000 / span); return pS + pD * (rhythm ? rhythm.glide(t, pSlope) : 1 - Math.pow(1 - t, glidePow())); };
+  /* ENTER ROUND: this frame's look of the change; tc = its progress along the sea dive's own curve (0 = the canyon, 1 = the view from above) */
+  let roundNow = null;
+  const rsm = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+  function roundLook(tc, back) {
+    const D = window.__FLOW2_LAKE_DIVE__, w = Math.max(1, innerWidth), h = Math.max(1, innerHeight), m = Math.min(w, h);
+    const a = Math.min(.9, Math.max(.01, +RT.t0 || .17)), b = Math.min(.99, Math.max(a + .05, +RT.t1 || .82));
+    /* flow2-lake-dive.js curve() in drop mode, with this tab's dials in place of the dive's for this one call (put back at once; nothing else runs meanwhile) */
+    const over = { drop: 1, time: Math.max(.05, +RT.time || 1.8), t0: a, t1: b, dropP: +RT.dropP || 1.7, bead: Math.max(0, +RT.bead || 0), dropBlur: Math.max(0, +RT.blur || 0),
+      dropStreak: Math.max(0, +RT.streak || 0), dropLift: Math.max(0, +RT.lift || 0), beadGlow: 0, kb: 3, miEnd: 14, p: 2.2, featherMax: .2, streak: .5, dropF: .0025, dropFK: 0, dropRK: 1, settleFrom: .78 };
+    const keep = {}; let c;
+    for (const k in over) { keep[k] = D.tune[k]; D.tune[k] = over[k]; }
+    try { c = D.curve(tc, w / h); } finally { Object.assign(D.tune, keep); }
+    const u = Math.min(1, Math.max(0, (tc - a) / (b - a))), cover = tc >= b;
+    /* why-sea.js tileFrame: the radius grows 2.25 x while the feather tightens (solid core .34 -> .84); the world inside opens up from scale0 */
+    const grow = rsm(.45, 1, u), r = c.R * (1 + 1.25 * grow), solid = .34 + .5 * grow, s0 = Math.min(1, Math.max(.05, +RT.scale0 || 1));
+    const s = cover || s0 >= 1 ? 1 : Math.min(1, Math.max(s0 + (1 - s0) * rsm(0, .55, u), 2.04 * r * m / w, 2.04 * r * m / h));
+    const push = Math.exp(Math.log(Math.max(1, +RT.push || 1)) * Math.pow(Math.min(tc, b) / b, 2.2));   /* the lens's push follows the dive's zoom (power 2.2): slow, then rushing */
+    return { on: 1, tc, u, cover, r: cover ? 1e3 : r, solid, s, open: cover ? 1 : c.R > .002 ? rsm(0, .05, u) : 0,
+      blur: Math.max(Math.min(.07, .011 * c.speed), c.blurD), lnMo: c.lnMo, streak: c.streak * (back ? .6 : 1), lift: c.lift, push };
+  }
+  /* ENTER ROUND: called right after canyon.update() placed this frame's camera (which sets its fov again every frame): the lens pushes in along its line of sight */
+  function pushCanyon() {
+    const R = roundNow, cam = canyon && canyon.camera;
+    if (!R || !cam || !(R.push > 1.0005)) return;
+    cam.fov = 2 * Math.atan(Math.tan(cam.fov * Math.PI / 360) / R.push) * 180 / Math.PI;
+    cam.updateProjectionMatrix();
+  }
   function brushProgress(v) {
     const tw = now();
     if (phase === 'sweep') return dir > 0 ? glide() : Math.min(v, P1() + (MOTION_NEW ? -T.land : T.cap));
@@ -391,12 +443,12 @@
       document.documentElement.setAttribute('data-rise-copy-sweep', '');
     }
     document.documentElement.setAttribute('data-flow2-brush', d > 0 ? 'in' : 'out');   /* the canyon's lock-on labels fade with the stroke (flow2-forest-atlas.css) */
-    S.last = { dir: d, mode: 'brush', at: Math.round(t0), frames: [] };
+    S.last = { dir: d, mode: roundOn() ? 'round' : 'brush', at: Math.round(t0), frames: [] };   /* ENTER ROUND: 'round' */
     let replay = true;
     if (d > 0) {
       replay = !MOTION_NEW || !motion.recent() || !(F.growth > .02);
       if (replay) F.arrive?.(); else F.setGrowth?.(F.growth);   /* coming back soon: the land as it was left (it finishes growing after the stroke) */
-      const span = Math.max(.05, reduce.matches ? T.reduceFade : T.brushTime);
+      const span = roundOn() ? roundGlideSpan() : Math.max(.05, reduce.matches ? T.reduceFade : T.brushTime);   /* ENTER ROUND: the glide lasts until the opening covers */
       pS = Math.min(_p, P1() + T.cap); pD = Math.max(0, Math.min(speed * span / glidePow(), P1() + T.cap - pS));   /* RISE HOOK: glidePow() is 2.2 on every other page */
       pSlope = pD > 1e-6 ? Math.max(1, speed * span / pD) : glidePow();
       S.last.glide = { from: +(pS - shift()).toFixed(3), by: +pD.toFixed(3), speed: +speed.toFixed(3) };
@@ -408,7 +460,11 @@
   function setOverride(t, hold) {
     const A = forestApi(); if (!A) return;
     const e = t * t * (3 - 2 * t), c0 = 7.9, c1 = T.to;
-    const brush = .18 * t + .82 * e;                       // the stroke speeds up and settles
+    let brush = .18 * t + .82 * e;                       // the stroke speeds up and settles
+    /* ENTER ROUND: the opening's growth stands in for the stroke's (0 -> 1 as the view covers the screen), in the stroke's own time direction */
+    const R = roundOn() ? roundLook(dir > 0 ? t : 1 - t, dir < 0) : null;
+    if (R) { const cov = R.cover ? 1 : R.u; brush = dir > 0 ? cov : 1 - cov; }
+    roundNow = R;
     if (!hold && Number.isFinite(copyClock)) {
       if (brush >= .44 && copyClock !== incomingClock) {
         copyClock = incomingClock;
@@ -419,10 +475,12 @@
     }
     A.override = { on: 1, clock: dir > 0 ? c0 + (c1 - c0) * e : c1 - (c1 - c0) * e, brush: dir > 0 ? brush : 1 - brush, dir, reduce: reduce.matches ? 1 : 0,
       look: [T.brushAngle * Math.PI / 180, T.brushSoft, T.brushBristle, T.brushSmear], hold: !!hold };
+    if (R) A.override.round = R;   /* ENTER ROUND: drawn by flow2-forest-atlas.js's composite */
   }
   function endSweep(reason) {
     if (phase !== 'sweep') return;
     if (dir > 0 && reason !== 'navigation') { _p = P2(); _t = P2(); if (J) J.velocity = 0; }
+    roundNow = null;   /* ENTER ROUND */
     const A = forestApi(); if (A) { A.override = null; if (!(MOTION_NEW && dir < 0)) A.scene?.autoGrowth?.(); }
     phase = 'idle'; S.phase = 'idle'; S.t = 1; S.ended = reason;
     document.documentElement.removeAttribute('data-flow2-brush');
@@ -446,6 +504,7 @@
       if (S.last && S.last.frames.length < 240) S.last.frames.push(+(t1 - lastFrameAt).toFixed(1));
       lastFrameAt = t1;
       if (t >= 1) { endSweep('done'); if (T.loop >= .5) loopNext = now() + 900; } else setOverride(t);
+      pushCanyon();   /* ENTER ROUND (nothing without it: roundNow stays null) */
       return;
     }
     /* coming down the valley towards the stroke: draw the view from above once, invisibly (a mask of nothing), so its first real frame is warm */
@@ -463,9 +522,9 @@
     const wantHold = Number.isFinite(T.preview) && T.preview > 0, wantLoop = T.loop >= .5;
     if (wantHold && active()) {
       if (Math.abs(_p - P1()) > 1e-3) { navigating = false; _p = _t = P1(); if (J) J.velocity = 0; }
-      dir = 1; setOverride(Math.min(.999, T.preview), true); previewing = true; return;
+      dir = 1; setOverride(Math.min(.999, T.preview), true); previewing = true; pushCanyon(); return;
     }
-    if (previewing) { previewing = false; const A = forestApi(); if (A) A.override = null; }
+    if (previewing) { previewing = false; roundNow = null; const A = forestApi(); if (A) A.override = null; }
     if ((wantLoop || pendingPlay) && active() && now() >= loopNext) {
       const a = P1(), b = P2(), at = x => Math.abs(_p - x) < 1e-3 && Math.abs(_t - x) < 1e-3;
       if ((pendingPlay < 0 || (wantLoop && at(b))) && at(b)) { pendingPlay = 0; sweep(-1); _p = P1(); }

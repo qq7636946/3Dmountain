@@ -1,9 +1,9 @@
-import { createWorldSectionMotion } from './copy-motion.flow2.js?v=flow2-editorial-ffa3aa51caff';
+import { createWorldSectionMotion } from './copy-motion.js?v=flow2-editorial-ffa3aa51caff';
 import { createStrategyReveal } from './strategy-reveal.js?v=recorded-20261109';
 import { consumeMobileScroll, isNativeTouchControl, mountMobileTouchNavigation } from '../index1-5/js/mobile-touch-navigation.js?v=i15-mw30beoi';
 import { prepareOceanDom } from './js/ocean-chapter-dom.js?v=recorded-20261109';
 import { oceanPanelState, oceanProgress } from '../index1-5/js/world-ocean-scroll.js?v=i15-mw30beoi';
-import { mountRecordedPlates } from './flow2-recorded-plates.js?v=recorded-20261109';
+import { mountRecordedPlates } from './flow2-recorded-plates.js?v=flow2-static-news-1';
 
 const TIMELINE = { max: 13.074, logoStart: 1.95, logoEnd: 3.75, shift: 2.894 };
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -11,11 +11,12 @@ const mobile = matchMedia('(max-width: 760px) and (orientation: portrait)');
 
 export async function startRecorded(snapshot) {
   const page = document.documentElement, body = document.body;
+  const plainNews = page.hasAttribute('data-flow2-plain-news');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const variant = document.getElementById('journeyModule').src.includes('/main.flow2.js') ? '.flow2' : '';
   const [{ mountJourneyInterface }, { createChapterFlow }] = await Promise.all([
     import('./js/finnovation-interface' + variant + '.js?v=recorded-20261109'),
-    import('./js/site-sections' + variant + '.js?v=recorded-20261109')
+    import('./js/site-sections' + variant + '.js?v=flow2-static-news-1')
   ]);
   const journey = { ...TIMELINE, progress: clamp((snapshot?.progress || 0) / (snapshot?.max || TIMELINE.max)) * TIMELINE.max, target: 0, velocity: 0, mix: 0 };
   journey.target = journey.progress;
@@ -30,11 +31,13 @@ export async function startRecorded(snapshot) {
   document.querySelector('.alp-labels')?.remove();
   const clips = mountRecordedPlates(mobile, motion);
 
-  const panel = document.createElement('article');
-  panel.className = 'fi-copy-panel fi-portfolio-copy';
-  panel.tabIndex = -1;
-  panel.style.transition = 'none';
-  ui.root.querySelector('.fi-copy').append(panel);
+  const panel = plainNews ? null : document.createElement('article');
+  if (panel) {
+    panel.className = 'fi-copy-panel fi-portfolio-copy';
+    panel.tabIndex = -1;
+    panel.style.transition = 'none';
+    ui.root.querySelector('.fi-copy').append(panel);
+  }
   const header = ui.root.querySelector('.fi-header');
   const worldRoot = document.getElementById('fiWorld');
   prepareOceanDom(worldRoot);
@@ -86,13 +89,13 @@ export async function startRecorded(snapshot) {
   }
 
   function paintOwner() {
-    const owner = leg === 'sky' ? 'sky' : cardOpen ? 'news' : leg === 'sea' ? 'sea' : 'journey';
+    const owner = chapterFlow.plainNewsOpen ? 'plain-news' : leg === 'sky' ? 'sky' : cardOpen ? 'news' : leg === 'sea' ? 'sea' : 'journey';
     if (owner === previousOwner) return owner;
     previousOwner = owner;
     const showWorld = owner === 'sky' || owner === 'sea';
     body.classList.toggle('is-world', showWorld);
     body.classList.toggle('is-world-dark', showWorld);
-    body.classList.toggle('is-portfolio', owner === 'news');
+    body.classList.toggle('is-portfolio', owner === 'news' || owner === 'plain-news');
     worldRoot.hidden = !showWorld;
     worldRoot.inert = !showWorld;
     worldRoot.setAttribute('aria-hidden', String(!showWorld));
@@ -109,11 +112,13 @@ export async function startRecorded(snapshot) {
     }
     sectionMotion.close();
     if (owner === 'sea') { worldRoot.classList.remove('is-light'); loadOceanPhotos(); }
-    panel.style.visibility = owner === 'news' ? 'visible' : 'hidden';
-    panel.style.opacity = owner === 'news' ? '1' : '0';
-    panel.inert = owner !== 'news';
-    panel.setAttribute('aria-hidden', String(panel.inert));
-    header.style.setProperty('--alp-bridge-ink', owner === 'news' ? '1' : '0');
+    if (panel) {
+      panel.style.visibility = owner === 'news' ? 'visible' : 'hidden';
+      panel.style.opacity = owner === 'news' ? '1' : '0';
+      panel.inert = owner !== 'news';
+      panel.setAttribute('aria-hidden', String(panel.inert));
+    }
+    header.style.setProperty('--alp-bridge-ink', owner === 'news' || owner === 'plain-news' ? '1' : '0');
     return owner;
   }
 
@@ -184,14 +189,17 @@ export async function startRecorded(snapshot) {
   const reveal = createStrategyReveal({ journey, enabled: () => live && !ui.menuOpen,
     blocked: () => world.open || portfolio.open, initialCount: snapshot?.tributary });
   const chapterFlow = createChapterFlow({
-    ui: ui.root, journey, getPortfolio: () => portfolio, getWorld: () => world,
+    ui: ui.root, journey, getPortfolio: () => plainNews ? null : portfolio, getWorld: () => world,
+    onPlainNewsChange: open => { if (open) clips.hide(); wake(); },
     toCards: () => chapterFlow.goSection(3), reducedMotion: motion.matches, restoreHash: !snapshot
   });
   window.__MONTIS_STUDY__ = { journey, journeyUI: ui, chapterFlow, strategyReveal: reveal, world, portfolio, recorded: true };
 
   function paint(now) {
     raf = 0;
-    const owner = paintOwner(), factor = motion.matches ? 1 : 1 - Math.exp(-clamp((now - last) / 1000, 0.012, .05) * 12);
+    const owner = paintOwner();
+    if (owner === 'plain-news') return;
+    const factor = motion.matches ? 1 : 1 - Math.exp(-clamp((now - last) / 1000, 0.012, .05) * 12);
     last = now;
     const approach = (value, target, epsilon) => Math.abs(target - value) < epsilon ? target : value + (target - value) * factor;
     journey.progress = approach(journey.progress, journey.target, .002);
@@ -259,16 +267,18 @@ export async function startRecorded(snapshot) {
   function wake() { if (live && !raf) raf = requestAnimationFrame(paint); }
 
   function advance(delta, source, element) {
-    if (!delta || ui.menuOpen || isNativeTouchControl(element)) return;
+    if (!delta || chapterFlow.plainNewsOpen || ui.menuOpen || isNativeTouchControl(element)) return;
     const pixels = delta * Math.max(720, innerHeight * .85);
     const owner = paintOwner();
     if (owner === 'sky' || owner === 'sea') {
       const rest = consumeMobileScroll(element, pixels);
       if (!rest) return;
       if (owner === 'sky' && rest < 0 && y <= skyStops[0] + 1) {
-        portfolio.openAt(1); close();
+        if (plainNews) chapterFlow.goSection(3);
+        else { portfolio.openAt(1); close(); }
       } else if (owner === 'sea' && rest > 0 && y >= endSea() - 1) {
-        portfolio.openAt(0);
+        if (plainNews) chapterFlow.goSection(3);
+        else portfolio.openAt(0);
       } else if (owner === 'sea' && rest < 0 && y <= seaStart + 1) {
         close(); journey.target = journey.max - .06;
       } else world.scrollTo(targetY + rest);
@@ -285,7 +295,7 @@ export async function startRecorded(snapshot) {
 
   const events = new AbortController(), signal = events.signal;
   addEventListener('wheel', event => {
-    if (ui.menuOpen || isNativeTouchControl(event.target) || event.ctrlKey || event.shiftKey) return;
+    if (chapterFlow.plainNewsOpen || ui.menuOpen || isNativeTouchControl(event.target) || event.ctrlKey || event.shiftKey) return;
     const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
     if (horizontal && !['sea', 'news'].includes(previousOwner)) return;
     event.preventDefault();
@@ -293,7 +303,7 @@ export async function startRecorded(snapshot) {
     advance(clamp(px, -400, 400) / Math.max(720, innerHeight * .85), 'wheel', event.target);
   }, { passive: false, signal });
   addEventListener('keydown', event => {
-    if (ui.menuOpen || event.altKey || event.ctrlKey || event.metaKey || event.target.closest?.('input,textarea,select,[contenteditable]')) return;
+    if (chapterFlow.plainNewsOpen || ui.menuOpen || event.altKey || event.ctrlKey || event.metaKey || event.target.closest?.('input,textarea,select,[contenteditable]')) return;
     if (event.key === ' ' && event.target.closest?.('button,a')) return;
     const move = { ArrowDown: .15, ArrowUp: -.15, PageDown: .85, PageUp: -.85, ' ': event.shiftKey ? -.85 : .85 };
     if (event.key === 'Home') { event.preventDefault(); chapterFlow.goSection(0); }
@@ -301,7 +311,7 @@ export async function startRecorded(snapshot) {
     else if (Object.hasOwn(move, event.key)) { event.preventDefault(); advance(move[event.key], 'key', event.target.closest?.('.fi-rail') ? null : event.target); }
   }, { signal });
   const unmountTouch = mountMobileTouchNavigation({
-    blocked: () => !live || ui.menuOpen,
+    blocked: () => !live || chapterFlow.plainNewsOpen || ui.menuOpen,
     onDelta: ({ dx, dy, axis, target }) => {
       if (axis === 'y' || ['sea', 'news'].includes(previousOwner)) {
         advance((axis === 'y' ? dy : dx) * 1.9 / Math.max(580, innerHeight * .8), 'touch', target);
@@ -346,15 +356,19 @@ export async function startRecorded(snapshot) {
     chapterFlow.dispose(); reveal.dispose(); clips.dispose();
   }, { once: true });
 
-  await clips.prepare();
+  if (!plainNews || snapshot?.section !== 3) await clips.prepare();
   page.dataset.flow2Recorded = 'active';
   page.dataset.renderMode = 'webgl'; // The existing scene skin and layout use this selector.
   page.toggleAttribute('data-perf-phone', innerWidth <= 760 || (matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 900));
   live = true;
   if (snapshot?.section === 2) { world.jump(0, 'sea'); y = targetY = limitY(seaStart + (endSea() - seaStart) * clamp(snapshot.sea)); }
-  if (snapshot?.section === 3) portfolio.openAt(snapshot.card ?? 0);
+  if (snapshot?.section === 3) {
+    if (plainNews) await chapterFlow.goSection(3, { hash: false });
+    else portfolio.openAt(snapshot.card ?? 0);
+  }
   if (snapshot?.section === 4) {
-    portfolio.openAt(1); world.jump(0, 'sky');
+    if (!plainNews) portfolio.openAt(1);
+    world.jump(0, 'sky');
     y = targetY = limitY(skyStops[0] + (skyEnd - skyStops[0]) * clamp(snapshot.sky));
   }
   paint(performance.now());

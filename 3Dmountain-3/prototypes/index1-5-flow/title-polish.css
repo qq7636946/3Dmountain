@@ -52,9 +52,9 @@ html[data-look="index1-5"][data-alpine-ui]:not([data-render-mode="text"]) body.i
 /* Editorial chapters have their own measure; enlarging them independently
    avoids making the sea's paired columns or the menu overflow. */
 html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fiwo-strategy-title {
-  font-size: clamp(28px, 3.15vw, 52px);
-  line-height: 1.18;
-  letter-spacing: clamp(1px, .18vw, 2.8px);
+  font-size: clamp(30px, 3.3vw, 46px);
+  line-height: 1.12;
+  letter-spacing: clamp(1px, .22vw, 3.2px);
 }
 html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fiwp-title {
   font-size: clamp(28px, 3.9vw, 64px);
@@ -90,7 +90,7 @@ html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on 
    title height under control while retaining the new optical hierarchy. */
 @media (min-width: 681px) and (max-height: 650px) {
   html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fiwo-strategy-title {
-    font-size: clamp(29px, 3.4vw, 46px);
+    font-size: clamp(30px, 3.3vw, 44px);
     line-height: 1.12;
   }
   html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fiwp-title {
@@ -130,7 +130,7 @@ html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld.fisl-on 
     font-size: 13px;
   }
   html[data-look="index1-5"]:not([data-render-mode="text"]) body #fiWorld .fiwo-strategy-title {
-    font-size: clamp(27px, 8.1vw, 37px);
+    font-size: clamp(26px, 7.2vw, 33px);
     line-height: 1.16;
     letter-spacing: 1px;
   }

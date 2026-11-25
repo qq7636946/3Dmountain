@@ -323,6 +323,8 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 /* LOGO1 is authored in Blender from logo3D.svg. Keep its split normals:
    averaging them again would smooth the broad front faces into the rim and
    recreate the triangular refraction streaks this replacement removes. */
+const OPT_M_LOGO = (() => { try { const q = new URLSearchParams(location.search); return document.documentElement.hasAttribute('data-rise-studio-pbr') && q.get('perf') !== '0' && q.get('optM') !== '0' && q.get('optMlogo') !== '0'; } catch (e) { return false; } })();   /* OPT-M: see prepareBlenderModelSteps */
+const OPT_M_LOGO_LITE = OPT_M_LOGO && (() => { try { return new URLSearchParams(location.search).get('optMlite') !== '0'; } catch (e) { return false; } })();   /* OPT-M: the compact model file, see loadLogoLite */
 const BLENDER_ASSET_BASE = new URL('../assets/logo/', import.meta.url);
 const BLENDER_MANIFEST_URL = new URL('logo3d-current.json', BLENDER_ASSET_BASE).href;
 const BLENDER_BASE_THICKNESS = .148;
@@ -347,7 +349,11 @@ function* prepareBlenderModelSteps(THREE, gltf, specification) {
       if (!g.getAttribute('normal')) { g.dispose(); throw new Error('Blender logo is missing its authored normals'); }
       g.applyMatrix4(node.matrixWorld);
       yield;
-      if (g.index) { const source = g; g = g.toNonIndexed(); source.dispose(); }
+      /* OPT-M (strike team M, 2026-11-21; rise page only: html[data-rise-studio-pbr], ?optM=0 / ?optMlogo=0 / ?perf=0 = as before): the glTF's own
+         indexed vertices are kept (60,267 vertices, 120,526 triangles) instead of being spread into one vertex per corner (361,578). Every
+         attribute below is a function of the vertex's position (and the piece's name), so each corner gets the very values it got before, the
+         triangles stay in the same order: same picture, 15.2 MB -> 3.4 MB on the GPU, six times fewer vertex invocations. */
+      if (g.index && !OPT_M_LOGO) { const source = g; g = g.toNonIndexed(); source.dispose(); }
       yield;
       // glTF primitives may carry different optional attributes. Keep the
       // imported positions/normals/UVs and the two attributes our glass reads.
@@ -402,9 +408,26 @@ let blenderGltfTask = null, blenderGltfHref = '';
 function blenderGltfOf(href) {
   if (!blenderGltfTask || blenderGltfHref !== href) {
     blenderGltfHref = href;
-    blenderGltfTask = new GLTFLoader().loadAsync(href).catch(error => { blenderGltfTask = null; throw error; });
+    const glb = () => new GLTFLoader().loadAsync(href);
+    blenderGltfTask = (OPT_M_LOGO_LITE ? loadLogoLite(href).catch(() => glb()) : glb()).catch(error => { blenderGltfTask = null; throw error; });
   }
   return blenderGltfTask;
+}
+/* OPT-M (rise page only, see OPT_M_LOGO_LITE): the compact copy of this revision's GLB (lite/<asset>.<revision>.rgl, 0.79 MB instead of 2.17 MB;
+   made by scripts/perf-bake/rise-geo-logo.cjs). No copy for the revision, no gunzip in the browser, any error: the GLB, as before. */
+function loadLogoLite(href) {
+  const u = new URL(href), name = u.pathname.split('/').pop().replace(/\.glb$/i, ''), rev = u.searchParams.get('v');
+  if (!rev || !/^[a-z0-9._-]{1,80}$/i.test(rev)) return Promise.reject(new Error('no revision'));
+  u.pathname = u.pathname.replace(/[^/]*$/, 'lite/' + name + '.' + rev + '.rgl'); u.search = '';
+  return import('./rise-logo-lite.js').then(m => m.fetchLogoLite(u.href));
+}
+function liteToGltf(THREE, lite) {
+  const scene = new THREE.Group();
+  for (const p of lite.parts) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p.position, 3)); g.setAttribute('normal', new THREE.BufferAttribute(p.normal, 3)); g.setIndex(new THREE.BufferAttribute(p.index, 1));
+    const m = new THREE.Mesh(g); m.name = p.name; scene.add(m);
+  }
+  return { scene, userData: { rgl: lite.revision } };
 }
 /* firstpass: the lake starts to build, so the GLB starts to download with it (a request that is not parsed or prepared yet) */
 export function prefetchLogoModel() {
@@ -418,7 +441,7 @@ async function getBlenderModel(THREE) {
   const url = new URL(specification.asset, BLENDER_ASSET_BASE);url.searchParams.set('v', specification.revision);
   if (!blenderModelTask || blenderModelUrl !== url.href) {
     const previousTask = blenderModelTask;blenderModelUrl = url.href;
-    blenderModelTask = blenderGltfOf(url.href).then(gltf => runSliced(prepareBlenderModelSteps(THREE, gltf, { ...specification, assetURL: url.href }))).then(model => {
+    blenderModelTask = blenderGltfOf(url.href).then(gltf => gltf && gltf.parts && !gltf.scene ? liteToGltf(THREE, gltf) : gltf).then(gltf => runSliced(prepareBlenderModelSteps(THREE, gltf, { ...specification, assetURL: url.href }))).then(model => {
       previousTask?.then(previous => previous.geometry.dispose()).catch(() => {});
       return model;
     }).catch(error => { if(blenderModelUrl===url.href){ blenderModelTask = null; blenderGltfTask = null; } throw error; });

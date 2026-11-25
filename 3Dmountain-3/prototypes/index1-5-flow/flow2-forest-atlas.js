@@ -13,6 +13,7 @@
   const Q = new URLSearchParams(location.search);
   const html = document.documentElement;
   const studioOn = html.hasAttribute('data-rise-studio-pbr');
+  const ROUND = studioOn && html.hasAttribute('data-rise-enter-round');   /* ENTER ROUND (trial 2026-11-25): see roundShader() below and flow2-lift-cut.js RT */
   /* PERF STRIKE (2026-11-21, SHADE): rise page only, ?perf=0 = exactly as before. See .qa/perf/rise/PHASE-B.md */
   const PERF_RISE = studioOn && Q.get('perf') !== '0', PERF_CHECK = PERF_RISE && Q.get('perfCheck') === 'scissor';
   let boxNow = null;
@@ -324,7 +325,8 @@
   function landBox(w,h){
     boxNow=null;
     if(PERF_RISE&&tune.scissor>=.5&&pass){const o=ov();
-      if(o&&!o.reduce&&+o.brush<1){
+      if(ROUND&&o&&o.round)roundBox(o.round,w,h);   /* ENTER ROUND: only the opening's circle */
+      else if(o&&!o.reduce&&+o.brush<1){
         const L=o.look||pass.uniforms.uBrushLook.value.toArray(),y=Math.min(1,Math.max(0,+o.brush||0));
         const a=+L[0],band=.26*Math.abs(+L[1]),z=Math.abs(+L[2]),asp=w/h,dx=Math.cos(a),dy=Math.sin(a);
         const ext=.5*(Math.abs(dx)*asp+Math.abs(dy)),start=-ext-band*.45-.3,end=ext+band*1.05+.4,edge=.15*z;
@@ -342,6 +344,75 @@
     }
     setLandBox(boxNow);
     if(PERF_RISE){const k=boxNow?boxNow[2]*boxNow[3]/Math.max(1,w*h):1;state.scissor=boxNow?{frames:(state.scissor?.frames||0)+1,share:+k.toFixed(3),shareSum:+((state.scissor?.shareSum||0)+k).toFixed(3)}:state.scissor;}
+  }
+  /* ENTER ROUND (trial 2026-11-25, client: 「山道結束接俯視山谷的轉場 用 俯視山谷>俯視海岸橫移的轉場 試試看」; html[data-rise-enter-round] only — without it none
+     of this runs and the composite's program text is exactly as before). flow2-lift-cut.js sets override.round = { r, solid, s, open, blur, lnMo, streak, lift,
+     cover } from the WHY sea dive's own curve; here the view from above shows through a round opening at the centre with why-sea.js's 6-step feather
+     (featherMask: solid core, then .86 / .6 / .3 / .1 / 0 at 22 / 45 / 68 / 86 / 100 % of the rest), scaled by s from the centre, and the canyon outside
+     rushes as flow2-lake-dive.js draws the outer picture in drop mode (16-tap radial zoom blur, two layers of speed lines flying out with ln zoom, the
+     brightening; same constants, in linear light). */
+  function roundBox(R,w,h){
+    if(R.cover)return;
+    const half=Math.max(0,+R.r||0)/Math.max(.05,+R.s||1)*Math.min(w,h)+4;
+    if(!(half<.5*Math.hypot(w,h)))return;
+    const x0=Math.max(0,Math.floor(w/2-half)),x1=Math.min(Math.ceil(w),Math.ceil(w/2+half)),y0=Math.max(0,Math.floor(h/2-half)),y1=Math.min(Math.ceil(h),Math.ceil(h/2+half));
+    if(x0>0||y0>0||x1<w||y1<h)boxNow=[x0,y0,Math.max(0,x1-x0),Math.max(0,y1-y0)];
+  }
+  const ROUND_GLSL=`uniform vec4 uRoundA,uRoundB,uRoundC;
+        float rMask(float d){float r=max(uRoundA.y,1e-5),s=clamp(uRoundA.z,0.,.999),x=d/r;if(x<=s)return 1.;float k=(x-s)/(1.-s);if(k>=1.)return 0.;
+          if(k<.22)return mix(1.,.86,k/.22);if(k<.45)return mix(.86,.6,(k-.22)/.23);if(k<.68)return mix(.6,.3,(k-.45)/.23);if(k<.86)return mix(.3,.1,(k-.68)/.18);return mix(.1,0.,(k-.86)/.14);}
+        vec3 rLin(vec3 c){c=max(c,0.);return mix(pow((c+.055)/1.055,vec3(2.4)),c/12.92,vec3(lessThanEqual(c,vec3(.04045))));}
+        vec3 rEnc(vec3 c){c=max(c,0.);return mix(1.055*pow(c,vec3(1./2.4))-.055,c*12.92,vec3(lessThanEqual(c,vec3(.0031308))));}
+        float rH1(float n){return fract(sin(n*127.1+.7)*43758.5453);}
+        vec3 rRush(vec3 base){
+          float mm=min(uRes.x,uRes.y);vec2 k2=mm/uRes;vec2 p=(vUv-.5)/k2;float d=length(p);
+          vec3 c=base;float bl=uRoundB.y;
+          if(bl>.002){vec3 acc=vec3(0.);float ws=0.;float jt=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));
+            for(int i=0;i<16;i++){float f=(float(i)+jt)/16.;float w=1.-f*.6;acc+=texture2D(tDiffuse,.5+p*(1.-bl*f)*k2).rgb*w;ws+=w;}
+            c=acc/ws;}
+          float lift=clamp(uRoundC.x,0.,1.),sa=uRoundB.w*smoothstep(.1,.34,d);
+          if(lift<=0.&&sa<=.001)return c;
+          vec3 l=rLin(c);
+          l=mix(l,l*1.05+vec3(.012,.026,.032),lift);
+          if(sa>.001){
+            float a=atan(p.y,p.x)/6.2831853+.5,lr=log(max(d,1e-3));vec3 add=vec3(0.);
+            for(int L=0;L<2;L++){
+              float N=L==0?60.:104.,P=L==0?1.15:1.5;
+              float cell=floor(a*N),jit=(rH1(cell+N*3.1)-.5)*.5/N;
+              float da=abs(a-(cell+.5)/N-jit)*6.2831853*d*mm;
+              float qq=(lr-uRoundB.z*(L==0?1.:.8)-rH1(cell*1.7+N)*P)/P;
+              float kk=floor(qq),f=fract(qq);
+              float on=step(rH1(cell*7.3+kk*13.1+N),L==0?.32:.2);
+              float len=clamp(.06+bl*4.5,.06,.5);
+              float body=smoothstep(1.-len,1.,f)*(1.-smoothstep(.975,1.,f));
+              float wpx=(1.+1.3*rH1(cell*3.3+kk))*mm/930.;
+              float across=1.-smoothstep(wpx*.5,wpx*.5+1.1,da);
+              vec3 sc=mix(vec3(1.,.99,.96),vec3(.27,.83,.77),step(.45,rH1(cell*5.1+kk*2.)));
+              add+=sc*body*across*on*(L==0?1.:.6);
+            }
+            l+=add*sa;
+          }
+          return rEnc(l);
+        }
+        `;
+  function roundShader(){
+    const M=pass.material,A='if(uBrush.x>.5&&uBrush.y<1.){',B='vec3 base=texture2D(tDiffuse,vUv+offB).rgb;',C='void main(){';
+    let f=M.fragmentShader;
+    if(f.split(A).length!==2||f.split(B).length!==2||f.split(C).length!==2){state.errors.push('enter round: composite anchors not found (brush kept)');return false;}
+    f=f.replace(C,ROUND_GLSL+C)
+      .replace(A,'if(uRoundA.x>.5){m=rMask(length((vUv-.5)*uRes/min(uRes.x,uRes.y)))*uRoundB.x;offF=(vUv-.5)*(1./max(uRoundA.w,.05)-1.);}\n          else '+A)
+      .replace(B,B+'\n          if(uRoundA.x>.5&&m<.999)base=rRush(base);');
+    pass.uniforms.uRoundA={value:new THREE.Vector4()};pass.uniforms.uRoundB={value:new THREE.Vector4()};pass.uniforms.uRoundC={value:new THREE.Vector4()};
+    M.fragmentShader=f;M.defines.RISE_ENTER_ROUND=1;M.needsUpdate=true;state.round='ready';
+    return true;
+  }
+  function setRound(U,o){
+    if(!U.uRoundA)return;
+    const R=o&&!o.reduce&&o.round;
+    if(!R){U.uRoundA.value.x=0;return;}
+    U.uRoundA.value.set(1,R.cover?1e3:Math.max(0,+R.r||0),Math.min(.999,Math.max(0,+R.solid||0)),R.cover?1:Math.max(.05,+R.s||1));
+    U.uRoundB.value.set(R.cover?1:Math.max(0,+R.open||0),Math.max(0,+R.blur||0),+R.lnMo||0,Math.max(0,+R.streak||0));
+    U.uRoundC.value.set(Math.max(0,+R.lift||0),0,0,0);
   }
   function setLandBox(b){
     if(b){atlasTarget.scissor.set(b[0],b[1],b[2],b[3]);atlasTarget.scissorTest=true;}
@@ -513,6 +584,7 @@
           vec3 live=mix(base,forest,uWeight*m);gl_FragColor=vec4(mix(texture2D(tHeld,vUv).rgb,live,uFade),1.);}`});
     pass.uniforms.tForest.value=atlasTarget.texture;
     if(studioOn) pass.material.defines.STUDIO_PBR_VIEW=1;
+    if(ROUND)roundShader();   /* ENTER ROUND */
     pass.uniforms.tHeld.value=heldTarget.texture;
     pass.material.toneMapped=false;pass.enabled=false;
     copyPass=new ShaderPass({uniforms:{tDiffuse:{value:null}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv;uniform sampler2D tDiffuse;void main(){gl_FragColor=texture2D(tDiffuse,vUv);}'});
@@ -532,6 +604,7 @@
       if(!studioOn){const G=gradeTune,U=pass.uniforms;U.uGradeA.value.set(G.hue*Math.PI/180,G.sat,G.temp,Math.min(1,Math.max(0,+G.on||0)));U.uGradeB.value.set(G.yellow,G.lift,G.bright,G.shade);const c=new THREE.Color(G.liftColor);U.uGradeC.value.set(c.r,c.g,c.b,1);U.uGradeD.value.set(Number.isFinite(+G.contrast)?+G.contrast:1,0,0,0);}
       if(!studioOn){const BM=window.__FLOW2_RIVER_BEAMS__,BT=BM?.tune,q=window.__FLOW2_QUALITY__;pass.uniforms.uTilt.value.set(BT&&+BT.on>=.5&&!(q&&+q.rank===0)?Math.max(0,+(BM.state.tilt??BT.tilt)||0)*w/Math.max(1,innerWidth):0,Number.isFinite(+BT?.tiltFrom)?+BT.tiltFrom:.42,1,0);}   /* BEAM: the tilt-shift (河流光束 panel; none on the low tier, none with ?td=old) */
       {const o=ov(),U=pass.uniforms;U.uRes.value.set(w,h);U.uBrush.value.set(o?1:0,o?Math.min(1,Math.max(0,+o.brush||0)):1,o?o.dir:1,o?.reduce?1:0);if(o?.look)U.uBrushLook.value.fromArray(o.look);U.uSurvey.value.set(Math.max(0,+tune.surveyReach||0),0);}
+      if(ROUND)setRound(pass.uniforms,ov());   /* ENTER ROUND */
       pass.uniforms.uFade.value=fading?smooth(0,550,performance.now()-fadeAt):1;
       if(PERF_CHECK&&boxNow&&active&&!afterCovered)checkLandBox(r,read,dt,mask,draw);   /* PERF STRIKE: ?perfCheck=scissor */
       const screen=this.renderToScreen;

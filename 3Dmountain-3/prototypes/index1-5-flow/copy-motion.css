@@ -24,7 +24,7 @@ html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-
 html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .flow-copy-title .flow-copy-word {
   display: inline-block !important;
   white-space: nowrap;
-  clip-path: inset(var(--copy-mask-top, -12%) -.08em var(--copy-mask-bottom, -12%) -.08em);
+  clip-path: none;
   vertical-align: baseline;
   transition: none !important;
   animation: none !important;
@@ -32,10 +32,11 @@ html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .f
 html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body .flow-copy-title .flow-copy-ink,
 html[data-flow-copy-motion="on"]:not([data-render-mode="text"]) body #fiWorld .flow-copy-title .flow-copy-ink {
   display: inline-block !important;
-  opacity: 1 !important;
-  transform: translate3d(0, var(--copy-ink-y, 0em), 0) !important;
+  opacity: var(--copy-ink-alpha, 1) !important;
+  transform: translate3d(calc(var(--copy-ink-x, 0em) * var(--copy-drift, 1)), calc(var(--copy-ink-y, 0em) * var(--copy-drift, 1)), 0) scale(calc(1 + var(--copy-ink-scale, 0) * var(--copy-depth, 1))) rotate(var(--copy-ink-rotate, 0deg)) !important;
+  transform-origin: 50% 65%;
   translate: none !important;
-  filter: blur(var(--copy-ink-blur, 0px));
+  filter: blur(calc(var(--copy-ink-blur, 0px) * var(--copy-softness, 1)));
   transition: none !important;
   animation: none !important;
   color: inherit !important;
@@ -67,6 +68,14 @@ html[data-render-mode="text"] .flow-copy-ink {
   clip-path: none !important;
   transform: none !important;
   filter: none !important;
+  opacity: 1 !important;
+}
+@media (max-width:680px) {
+  html[data-flow-copy-motion="on"] {
+    --copy-softness:.4;
+    --copy-depth:.55;
+    --copy-drift:.7;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   html[data-flow-copy-motion="on"] body .flow-copy-word,

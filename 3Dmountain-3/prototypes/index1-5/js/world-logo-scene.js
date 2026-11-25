@@ -981,7 +981,8 @@ export function createLakeScene({ THREE, renderer, width = 1280, height = 720, p
 
   /* ---- the distant range (the opening's band) ---- */
   // TEMP_RANGE_BACKGROUND_PAUSED: 收尾湖景也暫停同一張背景圖；保留載入程式與圖片，方便之後還原。
-  const rangeBackgroundPaused = !!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement])');
+  // Opt this page back into the original mountain backdrop and its reflections.
+  const rangeBackgroundPaused = !!globalThis.document?.documentElement?.matches?.('[data-look="index1-5"]:not([data-opening-refinement]):not([data-range-background])');
   let rangeTex = null, rangeLoading = !rangeBackgroundPaused, rangeReady = false;
   if (!rangeBackgroundPaused) {
     const bases = [];

@@ -77,6 +77,7 @@ export function mountRecordedPlates(phone, motion) {
   }
 
   function show(scene, progress = 0, loop = false) {
+    element.hidden = false;
     const next = load(scene, variant());
     const changed = next !== active || playback !== loop;
     if (active !== next) {
@@ -112,6 +113,7 @@ export function mountRecordedPlates(phone, motion) {
   }
 
   function showTributary(value) {
+    element.hidden = false;
     const v = variant(), key = v + '/' + innerWidth + '/' + innerHeight;
     const current = clamp(value, 0, 4);
     const src = still(v, current);
@@ -160,6 +162,12 @@ export function mountRecordedPlates(phone, motion) {
 
   return {
     element, show, showTributary, skyProgress, prepare, preloadTributaries,
+    hide() {
+      if (active) { active.video.pause(); active.video.hidden = true; active = null; }
+      playback = false; activeStill = ''; step = -1;
+      element.hidden = true; layer.hidden = true;
+      delete page.dataset.flow2Shot;
+    },
     dispose() {
       for (const { video } of recordings.values()) { video.pause(); video.removeAttribute('src'); video.load(); }
       element.remove(); layer.remove();

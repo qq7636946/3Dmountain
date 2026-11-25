@@ -61,7 +61,7 @@ const VERT = /* glsl */`
 const FRAG = /* glsl */`
   precision highp float;
   uniform sampler2D tWater,tGrow;
-  uniform float uFlow,uGrow,uAmount,uStreak,uSoft,uCurrent,uPulse,uEddy,uVig,uHasGrow,uFoam,uFleck,uLakeIn,uLakeOut,uReach,uStreakReach;
+  uniform float uFlow,uGrow,uAmount,uStreak,uSoft,uCurrent,uPulse,uEddy,uVig,uHasGrow,uFoam,uFleck,uLakeIn,uLakeOut,uReach,uStreakReach,uRoute;
   uniform vec4 uEmph,uView;
   varying float vSide,vT,vS,vR,vSeed,vKind,vTotal,vEndR,vK,vLake;
   varying vec2 vUv;
@@ -81,6 +81,9 @@ const FRAG = /* glsl */`
     float wet=mix(1.,smoothstep(0.,.06,uGrow*3.-texture2D(tGrow,vUv).r),uHasGrow);
     /* the lake stays calm: everything dies away softly before the lake's middle (nothing round the centre) */
     float here=wm*wet*smoothstep(uLakeIn,uLakeOut,vR);
+    /* ROUTE (2026-11-25, -ui page: 「俯視水流也是進場後跟個光幕一起路徑進去」): the flow comes in along each river from its source with the light
+       curtain's growth, a soft front; uRoute 1 = all of it (every other page) */
+    if(uRoute<.999){ float rh=uRoute*1.12, rx=vT/max(vTotal,.001); here*=1.-smoothstep(rh-.12,rh,rx); }
     if(here<.004)discard;
     float as=abs(vSide);
     float begin=smoothstep(0.,.5,vT), finish=1.-smoothstep(vTotal-.45,vTotal,vT);
@@ -235,7 +238,7 @@ export async function createForestFlow(renderer, options = {}) {
     tWater: U.tWater?.value ? U.tWater : { value: blank }, tGrow: U.tGrow?.value ? U.tGrow : { value: blank }, uHasGrow: { value: U.tGrow?.value ? 1 : 0 },
     uGrow: U.uGrow || { value: 1 }, uBounds: U.uBounds || { value: bounds }, uView: U.uView || { value: new THREE.Vector4(0, 0, 1, 1) }, uVig: U.uVig || { value: 0 },
     uCentre: { value: new THREE.Vector3(centre[0], LEVEL, centre[1]) }, uSense: { value: data.sense || 1 }, uTwist: { value: 0 }, uTwistR: { value: 1.05 },   /* uTwist stays 0: the first version's winding round the centre is gone (client: no whirlpool) */
-    uPixel: { value: .001 }, uLift: { value: tune.lift }, uFlow: { value: 0 }, uAmount: { value: 1 }, uStreak: { value: 1 }, uSoft: { value: 1 }, uCurrent: { value: 1 }, uPulse: { value: 1 },
+    uPixel: { value: .001 }, uLift: { value: tune.lift }, uFlow: { value: 0 }, uRoute: { value: 1 }, uAmount: { value: 1 }, uStreak: { value: 1 }, uSoft: { value: 1 }, uCurrent: { value: 1 }, uPulse: { value: 1 },
     uEddy: { value: 0 }, uFoam: { value: 1 }, uFleck: { value: 1 }, uLakeIn: { value: .8 }, uLakeOut: { value: 1.5 }, uReach: { value: .9 }, uStreakReach: { value: 1.5 }, uWander: { value: 2.2 }, uEmph: { value: new THREE.Vector4(1, 1, 1, 1) },
     uStreakW: { value: 1.5 }, uSoftW: { value: 9 }, uCurrentW: { value: 5.5 }, uEddyW: { value: 1.3 }
   };
@@ -270,6 +273,7 @@ export async function createForestFlow(renderer, options = {}) {
       uniforms.uStreakW.value = tune.streakWidth; uniforms.uSoftW.value = tune.softWidth; uniforms.uCurrentW.value = tune.currentWidth; uniforms.uEddyW.value = tune.streakWidth * .9;
       geometry.setDrawRange(0, medium ? mediumIndexCount : I.length);
     },
+    setRoute(v) { uniforms.uRoute.value = Math.max(0, Math.min(1, +v)); },   /* ROUTE: 0 … 1 along each river (1 = all) */
     dispose() { geometry.dispose(); material.dispose(); blank.dispose(); group.removeFromParent(); }
   };
   state.stage = 'ready'; state.currentsIndexCount = currentsIndexCount; state.mediumIndexCount = mediumIndexCount;

@@ -20,7 +20,7 @@
        * Batched volumetric diagonal sunlight shafts aligned to live sun vector + alpine daylight sky dome with solar halo */
 import * as THREE from 'three';
 import { HIGHLAND_GLSL, packArrivalField } from '../studio-highland-ecology.js?v=weather1-bank1-fast1';
-import { createStudioClouds } from '../studio-clouds.js?v=look1';
+import { createStudioClouds } from './studio-clouds-drift.js?v=d1';   /* 2026-11-24: the drifting copy (「雲要會漂過去」) */
 import { createShoreCobbles } from '../studio-shore-cobbles.js?v=bank-toes1-falls1-redo2';
 import { refineHeadwaterBanks, headwaterStones } from '../studio-headwater-detail.js?v=ridge-banks2';
 

@@ -205,7 +205,7 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
 export async function createStudioPbrView(renderer, atlas, { reducedMotion, query, labels }) {
   /* 261124 PORT (2026-11-24 ~13:50, client: 「261124.html俯視山谷 移過來 index1-5-canyon-forest-rise-ui.html」): on the -ui page the whole view from
      above is 261124.html's (terrain-fusion/studio-pbr-view-fusion.js: its land, water, values and panel; forest off). ?fusion=0 = ours below. */
-  if (FUSION) return (await import('./terrain-fusion/studio-pbr-view-fusion.js?v=f10-29')).createStudioPbrView(renderer, atlas, { reducedMotion, query, labels });
+  if (FUSION) return (await import('./terrain-fusion/studio-pbr-view-fusion.js?v=f10-48')).createStudioPbrView(renderer, atlas, { reducedMotion, query, labels });
   const rhythm = window.__RISE_RHYTHM__;
   const logoExperiment = document.documentElement.hasAttribute('data-rise-floating-logo');
   const legacyMist = atlas.scene.getObjectByName('Forest legacy mist');

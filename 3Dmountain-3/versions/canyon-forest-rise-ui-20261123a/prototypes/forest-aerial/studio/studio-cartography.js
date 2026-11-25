@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createStrategyBeacons } from './studio-strategy-beacons.js?v=20261121-2-falls1';
+import { createStrategyBeacons } from './studio-strategy-beacons.js?v=20261125-idle2';
 
 const CALLOUTS = [
   { title:'AI量化交易', en:'AI QUANT TRADING', offset:[44,-26] },

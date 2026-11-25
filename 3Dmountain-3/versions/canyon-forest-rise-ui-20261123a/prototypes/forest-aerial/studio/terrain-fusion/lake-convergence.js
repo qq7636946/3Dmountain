@@ -22,7 +22,7 @@ const VERT = /* glsl */`
 const FRAG = /* glsl */`
   uniform float uTime;
   uniform vec4 uCV;    /* core · rings · tiers · speed */
-  uniform vec4 uCV2;   /* on (routes in × arrival) · dive fade distance · - · - */
+  uniform vec4 uCV2;   /* on (routes in × arrival) · dive fade distance · glints · - */
   uniform vec3 uCore, uGlow, uTier;
   uniform vec3 uCenter;
   varying vec2 vP; varying vec3 vWorld;
@@ -46,7 +46,7 @@ const FRAG = /* glsl */`
     /* a faint scatter of glints on the tiers, twinkling */
     vec2 cell = floor(vP * 46.);
     float g = h12(cell); float tw = .5 + .5 * sin(uTime * (1.5 + g * 3.) + g * 40.);
-    float glint = step(.965, g) * tw * (1. - smoothstep(.15, .66, r)) * .55;
+    float glint = step(.965, g) * tw * (1. - smoothstep(.15, .66, r)) * .55 * uCV2.z;   /* 2026-11-25 client: 「湖心匯集裡面的亮點取消」 → 0 by default */
     vec3 col = uCore * core * uCV.x + uGlow * glow * uCV.x + uTier * tiers * uCV.z + uGlow * ring * uCV.y * 1.25 + uCore * glint * uCV.z;
     /* dive: fades as the lens comes down to the water */
     float dive = smoothstep(uCV2.y * .35, uCV2.y, distance(cameraPosition, uCenter));
@@ -60,7 +60,7 @@ export function createLakeConvergence(atlas, studio, { query = new URLSearchPara
   const C = atlas.lake.center;
   const R = num('cvR', 1.0);
   /* 「湖心匯集光」 in the view-from-above panel (key P; 2026-11-24 client: 「這個要給我開關」): on / off and its dials; ?cv=0 starts it off */
-  const config = { beamStop: num('cvStop', .5), enabled: query.get('cv') !== '0', size: R, core: num('cvCore', 0),   /* 2026-11-24 client: 「中間光點取消」 (was 1) */ rings: num('cvRings', .9), tiers: num('cvTiers', 1.15), speed: num('cvSpeed', .16) };
+  const config = { glints: num('cvGlints', 0), beamStop: num('cvStop', .5), enabled: query.get('cv') !== '0', size: R, core: num('cvCore', 0),   /* 2026-11-24 client: 「中間光點取消」 (was 1) */ rings: num('cvRings', .9), tiers: num('cvTiers', 1.15), speed: num('cvSpeed', .16) };
   const u = {
     uTime: atlas.uniforms.uTime || { value: 0 },
     uCV: { value: new THREE.Vector4(num('cvCore', 1), num('cvRings', .9), num('cvTiers', 1.15), reducedMotion ? 0 : num('cvSpeed', .16)) },
@@ -84,6 +84,7 @@ export function createLakeConvergence(atlas, studio, { query = new URLSearchPara
   const apply = () => {
     u.uCV.value.set(+config.core, +config.rings, +config.tiers, reducedMotion ? 0 : +config.speed);
     mesh.scale.setScalar(Math.max(.05, +config.size || R));
+    u.uCV2.value.z = Math.max(0, +config.glints || 0);
     u.uCV2.value.x = on && config.enabled ? Math.min(1, route) * Math.min(1, arrival) : 0; mesh.visible = u.uCV2.value.x > .002;
   };
   const api = {

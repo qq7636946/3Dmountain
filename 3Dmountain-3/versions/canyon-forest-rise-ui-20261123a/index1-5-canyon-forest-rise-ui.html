@@ -1944,7 +1944,7 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <script defer src="prototypes/index1-5-flow/flow2-valley5-rock.js?v=4-dirB"></script>
   <script defer src="prototypes/index1-5-flow/flow2-plants.js?v=6-shrubs-gs1"></script>
   <script defer src="prototypes/index1-5-flow/flow2-valley5-light.js?v=3"></script>
-  <script defer src="prototypes/index1-5-flow/flow2-valley5-water.js?v=5-rise-tiers"></script>
+  <script defer src="prototypes/index1-5-flow/flow2-valley5-water.js?v=6-ui-swell"></script>
   <!-- Textures for speed (2026-11-16, client: 「這效能消耗太大了 很多地方幫我換成貼圖材質」): per-pixel work replaced by baked / CC0 textures, same picture.
        This page only; ?tex=0 turns the whole round off. Owners and rules: .qa/index1-5/flow2-tex/BRIEF.md. Each owner bumps only its own ?v=. -->
   <script defer src="prototypes/index1-5-flow/flow2-tex-engine.js?v=9-perf1"></script>
@@ -1957,13 +1957,13 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <script defer src="prototypes/rise/rhythm.js?v=20261121-overlap1"></script>
   <script defer src="prototypes/index1-5-flow/flow2-lift-cut.js?e3=1&v=16-rise-overlap"></script>
   <!-- Live brush composite. The Rise flag selects Studio PBR and its lake-to-ridge arrival. -->
-  <script defer src="prototypes/index1-5-flow/flow2-forest-atlas.js?v=rise-20261124-falls1-td5-vd56"></script>
+  <script defer src="prototypes/index1-5-flow/flow2-forest-atlas.js?v=rise-20261124-falls1-td5-vd75"></script>
   <script>__RISE_K__.w(__RISE_K__.q.get('after') === 'lines', '<script defer src="prototypes/forest-aerial/flow2-lattice.js?v=3-relief-a1"><\/script>')</script>   <!-- K: the 3D lines are built only by ?after=lines -->
   <!-- THE DIVE (team LZ, 2026-11-17, client: 「webgl 的中心點打開的轉場還不夠好 請認真思考我之前給你的網址」 = the OceanX globe → chapter move, zoom wanted, no grid): one notch past FOUR PATHS dives into the screen centre, a soft lens circle opens on a closer render of the same spot and fills the screen, the water sinks into the next block; flow2-lake-zoom.js drives it. ?after=open = the centre-opening brush; ?after=lines = the lines version -->
   <script defer src="prototypes/forest-aerial/flow2-lake-dive.js?v=7-blot"></script>
   <script defer src="prototypes/forest-aerial/flow2-lake-zoom.js?v=12-css"></script>
   <!-- WHY SEA (2026-11-22, client: 「俯視山谷結束後，如圖一這樣，放射光束圓點webgl打開接 index1-5-flow.html 為何選擇我們這區塊的設計俯視海浪海鷗岩石」): the dive above now opens, inside its own circle, on index1-5-flow.html's WHY FINNOVATION sea (waves from above, gulls, rock islands, the four cards) instead of the placeholder block; ?why=0 = the placeholder as before; remove this line to undo -->
-  <script defer src="prototypes/rise/why-sea.js?v=25-ui-rays"></script>
+  <script defer src="prototypes/rise/why-sea.js?v=37-ui-nobeams"></script>
   <script defer src="prototypes/rise/rise-load.js?v=2"></script><!-- RISE LOAD v2 (default; ?load=0 off) -->
   <!-- RISE starts under water. It shares one reversible camera path through the canyon's water surface.
        Load before flow2-scope.js so the underwater section can handle input at the head of the canyon. -->
@@ -1971,7 +1971,7 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <script defer src="prototypes/index1-5-flow/flow2-scope.js?v=7-end"></script>   <!-- the canyon and the view from above only (?scope=0 = whole page) -->
   <script defer src="prototypes/index1-5-flow/flow2-anchors.js?v=4-no-marks"></script>   <!-- round anchors + their flight to the four forest points (?anchors=0) -->
   <!-- Speed streaks (2026-11-14): while the visitor scrolls forward through the valley, thin bright streaks fly outwards from the vanishing point (client: 往前滾幫我加入這種放射狀); nothing at rest, none under reduce motion; before main.js; ?streaks=0 compares; remove this line to undo -->
-  <script defer src="prototypes/index1-5-flow/flow2-streaks.js?v=4"></script>
+  <script defer src="prototypes/index1-5-flow/flow2-streaks.js?v=5"></script>
   <!-- The mark in the valley (2026-11-14, trial page only): the closing chapter's glass mark stands on the river of the first screen, mirrored, with rings on the water; rises when the page is live, sinks as the flight approaches; ?mark=0 compares -->
   <!-- RISE (2026-11-18, client 「水上之前有的LOGO刪掉」): the glass brand mark over the canyon (flow2-mark.js) is not loaded on this page -->
   <!-- Four beams, four marks (2026-11-14, trial page only): the river's light beams become four and each carries one mark, the four investment fields; ?beams=0 = the five beams -->
@@ -2008,11 +2008,14 @@ html[data-gate="enter"] .gate-choice { opacity: 0; translate: -50% -14px; filter
   <script>if (new URLSearchParams(location.search).get('type') !== 'old') document.documentElement.dataset.txType = 'caustics';</script>
   <link rel="stylesheet" href="prototypes/text-caustics/text-caustics.css?v=7-oswald">
   <script type="module" src="prototypes/text-caustics/text-caustics.js?v=10-ui-nolines"></script>
+  <!-- CURSOR ALL (2026-11-25, client: 「全站統一 游標webgl 液體這個特效」): the canyon's liquid cursor also over the view from above, the opening under water and the WHY sea; before main.js; ?cursorAll=0 = as before; remove this line to undo -->
+  <script type="module" src="prototypes/rise/cursor-all.js?v=2"></script>
   <!-- RISE UI (2026-11-22, client: 「整體UI 字體系統都要統一 尺標我比較喜歡這種UI 請幫我融入整站統一」 → 「或是先備份原本的改一個 https://2023.breakthroughenergy.org/ 這個UI」):
        this page is the copy; index1-5-canyon-forest-rise.html stays as it was. One UI and type system over every section: the underwater depth ruler on both edges
        all the way through, a thin frame, a chapter pill at the top centre and a caption with a counter at the foot (that site's kind of chrome, drawn in our own style),
        one mono for every small label, the underwater title style for every title. ?ui=0 = the page without it. -->
   <script>if (new URLSearchParams(location.search).get('ui') !== '0') { document.documentElement.setAttribute('data-rise-ui', ''); if (new URLSearchParams(location.search).get('uiRail') !== '0') document.documentElement.setAttribute('data-ru-rail', ''); document.write('<link rel="stylesheet" href="prototypes/rise-ui/rise-ui.css?v=17-rail"><script defer src="prototypes/rise-ui/rise-ui.js?v=4-band"><\/script>'); }</script>
+  <style>/* 2026-11-25 client: 「這四個項目字放大2個px」 (the four strategy labels over the valley: 11 → 13 px, 8 → 10 px) */ html[data-rise-ui] .map-annotations--site .map-callout strong{font-size:13px} html[data-rise-ui] .map-annotations--site .map-callout small{font-size:10px}</style>
   <!-- RISE FALLS (2026-11-23, client: 「這段做成像圖一峽谷的樣子，匯集中間瀑布如圖三」): the view from above's lake becomes a tiered canyon waterfall.
        Brief docs/falls/BRIEF-20261123.md. Default ON on this page (?falls=0 reverts to the original central lake). -->
   <script>/* 2026-11-24 client 「湖泊峽谷可以改回去 原本的 這個湖泊」: the lake as on the rise page by default; ?falls=1 = the horseshoe waterfall */ if (new URLSearchParams(location.search).get('falls') === '1') document.documentElement.setAttribute('data-rise-falls', '');</script>

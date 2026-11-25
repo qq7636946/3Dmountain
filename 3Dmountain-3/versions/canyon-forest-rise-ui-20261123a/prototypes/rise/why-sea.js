@@ -27,6 +27,19 @@
      band, a colour split at the rim, a window highlight and a low arc of reflected light) moved by transform only. ?dive=lens = the lens dive as
      before; ?dropScale=1 = no opening-up; ?dropSkin=0 = no skin. */
   const DROP = Q.get('dive') !== 'lens' && !reduced;
+  /* TILE (2026-11-24, client: 「轉場幫我改成 2025.oceanx.org 一模一樣 點擊按鈕的這種轉場特效」; their method, our drawing): a clean push in on the
+     lake (no zoom blur, no streaks, no bead), and at the lake a framed survey tile of the next world rises with a fine graticule over it, and grows
+     with the push until it fills the screen; the frame and grid melt away as it does. -ui page only; ?dive=drop = the water drop, ?dive=lens = the lens. */
+  const TILE = DROP && document.documentElement.hasAttribute('data-rise-ui') && Q.get('dive') !== 'drop';
+  /* CANYON BEAMS OFF (2026-11-25, client on the -ui page: 「山道往前的光束關閉」): the river's blue currents in the canyon (index1-5's follow-light-lines:
+     meshes follow-current-0…4 in the canyon scene) are hidden; their group's own per-frame visibility is left alone. ?canyonBeams=1 = shown. */
+  if (document.documentElement.hasAttribute('data-rise-ui') && Q.get('canyonBeams') !== '1') {
+    let n = 0;
+    const hideBeams = () => { const sc = window.__FLOW2_LIFT_CUT__?.canyon?.scene; let hid = 0;
+      sc?.traverse?.(o => { if (/^follow-current-/.test(o.name || '') && o.material && o.material.visible !== false) { o.material.visible = false; hid++; } });   /* the material: the mesh's own visibility is set again elsewhere each frame */
+      if (hid) S.canyonBeams = 'off (' + hid + ')'; return hid > 0; };
+    const iv = setInterval(() => { if (hideBeams() || ++n > 240) clearInterval(iv); }, 500);
+  }
   const T = {
     fadeIn: num('whyFade', DROP ? .03 : .3),   // share of the circle's growth over which the sea fades in inside it (the close lake water dissolves into it)
     rim: num('whyRim', DROP ? 0 : .5),         // the thin light ring at the circle's edge (0 = none)
@@ -42,7 +55,9 @@
     irregular: num('dropIrr', html.hasAttribute('data-rise-ui') ? .26 : 0),
     /* RAYS (2026-11-24, client: 「這給他一點放射感打開」): the drop bursts open: spikes of the sea shoot out past its soft edge, longest while it opens,
        swallowed as it fills the screen. -ui page only (with the blot); ?dropRays=0 = none, ?dropRays=1.5 = longer. */
-    rays: num('dropRays', html.hasAttribute('data-rise-ui') ? 1 : 0),   /* 11-24 later 「不規則範圍再大一點絲滑一點」: .16 → .26, broad lobes only, no grain */
+    rays: num('dropRays', html.hasAttribute('data-rise-ui') ? 1 : 0),
+    fade0: .5, fade1: .85,   /* TILE: the frame and grid fade out between these shares of the growth */
+    grid: Q.get('tileGrid') === '1',   /* TILE: the survey grid over the opening; 2026-11-25 client: 「俯視山谷轉場不需要網格」 → off (panel checkbox / ?tileGrid=1 = on) */   /* 11-24 later 「不規則範圍再大一點絲滑一點」: .16 → .26, broad lobes only, no grain */
     /* ISLAND GRASS (2026-11-24, client on the -ui page: 「這塊石頭上加點草」): moss and grass on the islands' gentle, higher ground. -ui page only;
        ?whyGrass=0 = bare rock as before, ?whyGrass=1.4 = more. */
     grass: num('whyGrass', html.hasAttribute('data-rise-ui') ? 1 : 0),
@@ -120,13 +135,44 @@
   { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'prototypes/rise/why-sea.css?v=8-ui-center'; document.head.append(l); }
   if (Q.get('whyCenter') === '0') html.setAttribute('data-rise-why-nocenter', '');   /* RISE UI (2026-11-23): the card block as before (why-sea.css, rise-ui page only) */
   /* DROP: the dive plays as a drop, a little slower (their gate takes about two seconds; ours went 1.5 / 1.2) */
-  if (DROP) { const D0 = dive(); if (D0 && D0.tune) { D0.tune.drop = 1; if (T.feather > 0) D0.tune.dropFK = T.feather * .9; if (T.irregular > 0) D0.tune.dropRK = 1 - T.irregular * 1.1; if (!Q.has('diveTime')) D0.tune.time = 1.8; if (!Q.has('diveBack')) D0.tune.closeTime = 1.3; } }
+  if (DROP) { const D0 = dive(); if (D0 && D0.tune) { D0.tune.drop = 1; if (TILE) Object.assign(D0.tune, { dropBlur: .26, beadGlow: 0, dropStreak: .35, dropLift: .5, dropFK: 0, dropRK: .3, dropP: 1.7, bead: .05 });   /* 2026-11-25 client: 「原本的那個衝刺感要保留再配合現在的」: the zoom blur, streaks and lift of the drop dive stay with the round opening (only the bead is off) */ if (!TILE && T.feather > 0) D0.tune.dropFK = T.feather * .9; if (!TILE && T.irregular > 0) D0.tune.dropRK = 1 - T.irregular * 1.1; if (!Q.has('diveTime')) D0.tune.time = 1.8; if (!Q.has('diveBack')) D0.tune.closeTime = 1.3; } }
+  /* SPEED DIALS (2026-11-25, client: 「俯視山谷轉場的速度要給我控制數值」): panel 「俯視山谷轉場速度」 on the -ui page: the way in from the canyon
+     (td-transition.js tune, the same values as its own 「俯瞰轉場」 panel) and the way out (the tile / drop dive: flow2-lake-dive.js tune + the tile's fade).
+     Kept in this browser and in 複製參數 JSON like the other panels. */
+  if (html.hasAttribute('data-rise-ui')) {
+    let outDone = false, inDone = false, tries = 0;
+    const addSpeedPanels = () => {
+      const P = window.__FLOW2_PANEL__, D0 = dive(), cut = window.__FLOW2_LIFT_CUT__?.tune, master = window.__RISE_MASTER__?.tune, view = window.__RISE_STUDIO_FRAMING__;
+      if (P && D0?.tune && !outDone) {
+        P.add({ id: 'rise-ui-dive', storageId: 'rise-ui-dive-2', title: '俯視山谷轉場速度（離場）', tune: { dive: D0.tune, tile: T }, rows: [
+          ['— 離開俯視山谷（圓形開口轉場到下一段）—'],
+          ['轉場時間（秒）', 'dive.time', .5, 8, .05], ['往回時間（秒）', 'dive.closeTime', .4, 6, .05],
+          ['開口出現時機（0～1）', 'dive.t0', .02, .6, .01], ['蓋滿畫面時機（0～1）', 'dive.t1', .4, .98, .01],
+          ['開口放大曲線（大＝先慢後快）', 'dive.dropP', .6, 4, .05], ['開口起始大小', 'dive.bead', .005, .3, .005],
+          ['— 衝刺感 —'], ['放射模糊（0＝無）', 'dive.dropBlur', 0, .6, .01], ['速度線', 'dive.dropStreak', 0, 1.5, .01], ['外圈提亮', 'dive.dropLift', 0, 1.5, .01],
+          ['顯示網格', 'tile.grid', 'checkbox'], ['網格開始淡出（0～1）', 'tile.fade0', 0, 1, .01], ['網格完全淡出（0～1）', 'tile.fade1', .05, 1, .01]] });
+        outDone = true;
+      }
+      /* the way in: the canyon → top-down module loads later (when the canyon's end comes near), so its tab is added then */
+      if (P && cut && ((master && view) || tries > 40) && !inDone) {   /* this page's way in is the brush stroke (flow2-lift-cut.js, panel 「轉場」 X) with rise.js's master dials (panel 「俯瞰轉場」 J) */
+        P.add({ id: 'rise-ui-enter', storageId: 'rise-ui-enter-2', title: '俯視山谷轉場速度（進場）', tune: { cut, ...(master ? { master } : {}), ...(view ? { view } : {}) }, rows: [
+          ...(view ? [['— 進入山谷時鏡頭旋轉 —'], ['鏡頭旋轉時間（秒；轉到定位，小＝快）', 'view.turnSeconds', .5, 12, .1], ['旋轉起點方位（度；和定鏡方位差越多轉越多）', 'view.entryAzimuth', 0, 360, .5], ['顏色蔓延時間（秒）', 'view.arrivalSeconds', 1.5, 10, .1]] : []),
+          ['— 進入俯視山谷（從峽谷刷進來）—'], ['筆刷進場時間（秒）', 'cut.brushTime', .3, 4, .05], ['筆刷提早開始（越大越早）', 'cut.pre', 0, .6, .01],
+          ...(master ? [['山谷帶速度進轉場（小＝不減速）', 'master.glidePow', 1, 2.6, .05], ['退回峽谷的筆刷時間（秒）', 'master.backTime', .3, 3, .05],
+            ['河光・光幕出現的長度（秒）', 'master.lightSeconds', .3, 6, .05]] : [])] });
+        inDone = true;
+      }
+      S.speedPanel = (outDone ? 'out' : '') + (inDone ? '+in' : '');
+      return outDone && inDone;
+    };
+    if (!addSpeedPanels()) { const iv = setInterval(() => { if (addSpeedPanels() || ++tries > 600) clearInterval(iv); }, 500); }
+  }
 
   /* ---------------- fetch and build the world near FOUR PATHS ---------------- */
   function load() {
     if (job) return job;
     S.stage = 'loading'; S.warmAt = Math.round(performance.now());
-    job = import('../index1-5-flow/js/finnovation-world.js?v=rise-why2').then(module => {
+    job = import('../index1-5-flow/js/finnovation-world.js?v=rise-why3').then(module => {
       const C = study()?.CONFIG || {};
       root = document.querySelector('#fiWorld');
       if (!root) throw new Error('#fiWorld missing');
@@ -348,7 +394,51 @@
     S.dropShift = Math.round(shiftX);
   }
   /* one frame of the drop: c = the dive's curve, u = the drop's growth 0 → 1, m = the short side in px */
+  /* TILE (v2, 2026-11-25, client: 「打開是圓形的並且有羽化效果你怎麼會是方形 我要一模一樣」): the opening is ROUND with a wide feathered edge (the
+     next world fades into the zooming land, no frame), and a fine survey grid with brighter "+" marks every five cells lies over it, growing with
+     the push and fading out with the same feather. The feather tightens as the opening grows so the sea covers the screen before the dive ends. */
+  let tileEl = null;
+  let crossFor = 0, crossUrl = '';   /* one small "+" (12 px) in the middle of a tile five cells wide: drawn at its own size, never stretched */
+  const crossTile = big => { const b = Math.round(big); if (b !== crossFor) { crossFor = b; const h = b / 2;
+    crossUrl = 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + b + '" height="' + b + '"><path d="M' + h + ' ' + (h - 6) + 'v12M' + (h - 6) + ' ' + h + 'h12" stroke="rgb(236,246,255)" stroke-opacity=".7" stroke-width="1.3"/></svg>') + '")'; } return crossUrl; };
+  function tileFrameEl() {
+    if (tileEl) return tileEl;
+    tileEl = document.createElement('div'); tileEl.className = 'rise-why-tile'; tileEl.setAttribute('aria-hidden', 'true');
+    tileEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:41;opacity:0;will-change:opacity;background-repeat:repeat';
+    document.body.append(tileEl);
+    return tileEl;
+  }
+  const featherMask = (r, cx, cy, solid) => {
+    const p = v => (r * v).toFixed(1) + 'px';
+    return 'radial-gradient(circle ' + r.toFixed(1) + 'px at ' + cx.toFixed(1) + 'px ' + cy.toFixed(1) + 'px, #000 ' + p(solid) + ', rgba(0,0,0,.86) ' + p(solid + (1 - solid) * .22) +
+      ', rgba(0,0,0,.6) ' + p(solid + (1 - solid) * .45) + ', rgba(0,0,0,.3) ' + p(solid + (1 - solid) * .68) + ', rgba(0,0,0,.1) ' + p(solid + (1 - solid) * .86) + ', transparent ' + p(1) + ')';
+  };
+  function tileFrame(c, u, m) {
+    const W = innerWidth, H = innerHeight, R = c.R * m;
+    const grow = sm(.45, 1, u), r = R * (1 + 1.25 * grow), solid = .34 + .5 * grow;   /* a soft wide feather while small, tightening as it fills */
+    const tx = shiftX * (1 - sm(.25, .7, u));
+    const s = T.scale0 >= 1 && !tx ? 1 : Math.min(1, Math.max(T.scale0 + (1 - T.scale0) * sm(0, .55, u), 2.04 * (r + Math.abs(tx)) / W, 2.04 * r / H));
+    blotOff(); root.style.removeProperty('clip-path');
+    const g = featherMask(r / s, W / 2 - tx / s, H / 2, solid);
+    root.style.setProperty('-webkit-mask-image', g); root.style.setProperty('mask-image', g);
+    setXform(tx, s);
+    root.style.opacity = sm(0, .05, u).toFixed(3);
+    cardsAt(sm(.45, .8, u));
+    /* the grid: screen-space, centred where the opening is, cell size growing with it; same feather */
+    const el = tileFrameEl(), fo = T.grid ? sm(0, .06, u) * (1 - sm(Math.min(T.fade0, T.fade1 - .01), T.fade1, u)) : 0;
+    el.style.opacity = fo.toFixed(3);
+    if (fo > .002) {
+      const cell = Math.max(10, R * .062), big = cell * 5, ox = W / 2, oy = H / 2;
+      const mod = (v, k) => ((v % k) + k) % k;
+      el.style.backgroundImage = crossTile(big) + ',linear-gradient(rgb(160 200 236 / .16) 1px,transparent 1px),linear-gradient(90deg,rgb(160 200 236 / .16) 1px,transparent 1px)';
+      el.style.backgroundSize = Math.round(big) + 'px ' + Math.round(big) + 'px,' + cell.toFixed(1) + 'px ' + cell.toFixed(1) + 'px,' + cell.toFixed(1) + 'px ' + cell.toFixed(1) + 'px';
+      el.style.backgroundPosition = (mod(ox, big) - Math.round(big) / 2).toFixed(1) + 'px ' + (mod(oy, big) - Math.round(big) / 2).toFixed(1) + 'px,' + mod(ox, cell).toFixed(1) + 'px ' + mod(oy, cell).toFixed(1) + 'px,' + mod(ox, cell).toFixed(1) + 'px ' + mod(oy, cell).toFixed(1) + 'px';
+      const gm = featherMask(r * .96, ox, oy, solid * .9);
+      el.style.setProperty('-webkit-mask-image', gm); el.style.setProperty('mask-image', gm);
+    }
+  }
   function dropFrame(c, u, m) {
+    if (TILE) return tileFrame(c, u, m);
     const wob = T.wobble * (1 - sm(0, .35, u)) * Math.sin(performance.now() * .0138);   /* ≈ 2.2 trembles a second while small, taut once grown */
     const R = c.R * m, rx = R * (1 + wob), ry = R * (1 - wob), f = Math.max(.75, c.F * m);
     /* the sea starts small inside the drop and opens up; never so small that the drop shows past its edge */
@@ -359,7 +449,7 @@
     cardsAt(sm(.4, .78, u));
     setSkin(rx, ry, sm(0, .03, u) * (1 - sm(.5, .8, u)));
   }
-  function dropOff() { setSkin(0, 0, 0); setXform(0, 1); }
+  function dropOff() { setSkin(0, 0, 0); setXform(0, 1); if (root) root.style.removeProperty('clip-path'); if (tileEl) tileEl.style.opacity = '0'; }
   /* the skin is drawn and shown at opacity .001 ahead of the drop (at the rest's prewarm, else in the dive's first frames), so its upload never lands on the drop's birth */
   function warmSkin(on) {
     if (DROP && on && T.irregular > 0) { makeBlot(0); makeBlot(1); makeRays(); }

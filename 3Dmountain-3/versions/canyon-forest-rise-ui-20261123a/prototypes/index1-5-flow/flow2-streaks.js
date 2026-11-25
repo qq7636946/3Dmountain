@@ -18,6 +18,7 @@
   if (Q.get('streaks') === '0') return;
   const num = (key, fallback) => { const v = parseFloat(Q.get(key)); return Number.isFinite(v) ? v : fallback; };
   const T = {
+    enabled: true,                  // master on/off switch in 「放射光線 參數（R）」
     amount: num('streaksAmt', 1),   // brightness of all of it
     count: 70,                      // how many points fly (about a third are on screen at once)
     speedOn: .05,                   // scroll speed (journey units per second) where they begin to show
@@ -36,6 +37,7 @@
   window.__FLOW2_STREAKS__ = { tune: T, state: S };
   /* the client's sliders (flow2-panel.js): every value below is read each frame */
   window.__FLOW2_PANEL__?.add({ id: 'streaks', title: '放射光線', key: 'r', tune: T, rows: [
+    ['顯示放射光線', 'enabled', 'checkbox'],
     ['預覽（不用捲動）', 'test', 0, 1, .01, 'off0'],
     ['亮度', 'amount', 0, 2.5, .01], ['長度', 'length', 0, 3, .01], ['粗細', 'width', .4, 4, .05], ['飛過去的速度', 'flow', .2, 5, .05],
     ['— 什麼時候出現 —'],
@@ -131,11 +133,11 @@
     const now = performance.now() / 1000, dt = Math.min(.1, Math.max(0, now - lastT)); lastT = now;
     const journey = window.__MONTIS_STUDY__?.journey; if (!journey) return;
     const p = +journey.progress || 0, v = lastP === null || dt <= 0 ? 0 : (p - lastP) / dt; lastP = p;
+    if (!T.enabled || mainPass.scene !== canyon.scene || reduce.matches) { speed = 0; S.speed = 0; S.gain = 0; return; }
     const testing = Number.isFinite(T.test);
     const want = testing ? T.speedOn + (T.speedFull - T.speedOn) * Math.min(1, Math.max(0, T.test)) : Math.max(0, v);   // forward only
     speed += (want - speed) * (1 - Math.exp(-dt * (want > speed ? 9 : 4)));
     travel += speed * dt * T.flow;
-    if (mainPass.scene !== canyon.scene || reduce.matches) { S.gain = 0; return; }
     const gain = smooth(T.speedOn, T.speedFull, speed) * (1 - smooth(T.out[0], T.out[1], p)) * T.amount;
     S.speed = +speed.toFixed(3); S.gain = +gain.toFixed(3);
     if (gain < .004) return;

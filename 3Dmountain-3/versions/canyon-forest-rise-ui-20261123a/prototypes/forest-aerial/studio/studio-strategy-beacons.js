@@ -5,7 +5,12 @@ import * as THREE from 'three';
 export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = false } = {}) {
   const config = { enabled: true, particles: true, count: 24, height: .76, width: 1,
     brightness: 1.2, filaments: .85, halo: .9, particleSize: 1.16, particleBrightness: 1.55,
-    speed: .7, color: '#b5e6ff' };
+    speed: .7, color: '#b5e6ff',
+    /* IDLE (2026-11-25, client on the -ui page: 「項目光牆沒有hover狀態 比較淡然後沒有亮光點，hover過去才有」): the wall's strength and the sparks' share
+       while its label is not hovered (1 / 1 = as before; the -ui page's view sets its own) */
+    idleWall: 1, idleSparks: 1,
+    /* the motes rising at the lake's centre (1 = as before; 2026-11-25 the -ui page: 「湖心匯集裡面的亮點取消」 → 0) */
+    lakeSparks: 1 };
   const coarse = matchMedia('(pointer: coarse)').matches;
   const positions = [], uv = [], kinds = [], indices = [];
   const sides = 48, rows = 8;
@@ -40,7 +45,8 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
     uTint: { value: new THREE.Color(config.color) }, uFocus: { value: focus },
     uShape: { value: new THREE.Vector2(config.width, config.height) },
     uSpeed: { value: reducedMotion ? 0 : config.speed },
-    uStrength: { value: config.brightness }, uFilaments: { value: config.filaments }, uHalo: { value: config.halo }
+    uStrength: { value: config.brightness }, uFilaments: { value: config.filaments }, uHalo: { value: config.halo },
+    uIdle: { value: new THREE.Vector3(1, 1, 1) }
   };
   const mat = new THREE.ShaderMaterial({
     uniforms: shared,
@@ -63,7 +69,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
         gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.0);
       }`,
     fragmentShader: `
-      uniform float uTime,uSpeed,uStrength,uFilaments,uHalo,uLattice;
+      uniform float uTime,uSpeed,uStrength,uFilaments,uHalo,uLattice; uniform vec3 uIdle;
       uniform vec3 uTint;
       varying vec2 vUv; varying vec3 vWorld,vLocal;
       varying float vFoot,vIndex,vShow,vFocus;
@@ -89,7 +95,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
           float sweep=exp(-pow((y-fract(t*.12+seed))/.075,2.));
           alpha=(.025+.12*rim+.14*exp(-y*10.)+uFilaments*(.21*hair*(.25+.75*glint)+.08*sweep))*top;
         }
-        alpha*=vShow*uStrength*(1.+vFocus*.6);
+        alpha*=vShow*uStrength*(1.+vFocus*.6)*mix(uIdle.x,1.,vFocus);   /* IDLE: dimmer until hovered */
         if(alpha<.003) discard;
         vec3 color=mix(uTint,vec3(.91,.98,1.),vFoot>.5?.52:.27);
         gl_FragColor=vec4(color,alpha);
@@ -121,7 +127,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
     vertexShader: `
       uniform vec3 uSites[5]; uniform vec4 uFocus;
       uniform vec2 uShape;
-      uniform float uTime,uSpeed,uArrival,uProgress,uLattice,uCount,uDensity,uSize,uBright,uPixels,uDpr;
+      uniform float uTime,uSpeed,uArrival,uProgress,uLattice,uCount,uDensity,uSize,uBright,uPixels,uDpr; uniform vec3 uIdle;
       attribute vec4 aSeed; varying float vAlpha,vHot;
       void main(){
         int site=int(position.x+.5); float lake=step(3.5,position.x);
@@ -141,7 +147,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
         float life=smoothstep(0.,.16,age)*(1.-smoothstep(.64,1.,age));
         float twinkle=.82+.18*sin(uTime*uSpeed*.8+aSeed.z*2.);
         float focus=site<4?uFocus[site]:0.;
-        vAlpha=life*reveal*twinkle*uBright*(.75+.38*aSeed.w)*mix(1.,.7,lake)*(1.+focus*.35);
+        vAlpha=life*reveal*twinkle*uBright*(.75+.38*aSeed.w)*mix(1.,.7,lake)*(1.+focus*.35)*(site<4?mix(uIdle.y,1.,focus):uIdle.z);   /* IDLE: a strategy's sparks only while hovered */
         vHot=.3+.7*aSeed.w;
         if(mv.z>=0.)vAlpha=0.;
       }`,
@@ -180,6 +186,7 @@ export function createStrategyBeacons(atlas, studio, curtain, { reducedMotion = 
     pointMat.uniforms.uCount.value = THREE.MathUtils.clamp(Math.round(config.count),0,48);
     pointMat.uniforms.uSize.value = config.particleSize; pointMat.uniforms.uBright.value = config.particleBrightness;
     lights.visible = !!config.particles;
+    shared.uIdle.value.set(Math.max(0, Math.min(1, +config.idleWall)), Math.max(0, Math.min(1, +config.idleSparks)), Math.max(0, Math.min(1, +config.lakeSparks)));
   }
   function sync() {
     atlas.anchors.forEach((p,i) => {

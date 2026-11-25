@@ -380,6 +380,7 @@ export function mountWorld({ syncSceneTime = setSceneTime, root, reducedMotion =
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);
     scene = new THREE.Scene();
+    (window.__GL_RENDERERS__ ||= new Map()).set('fiw', renderer);   /* 2026-11-25: read only by pages that add a layer over this canvas (rise-ui cursor-all.js) */
   }
   function buildBackground() {
     if (background || disposed || !renderer) return;

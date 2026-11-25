@@ -2,16 +2,16 @@
    index1-5-canyon-forest-rise-ui.html」): the -ui page's view from above, delegated to by flow2-studio-pbr-view.js (?fusion=0 = ours).
    Changes: paths, our compressed terrain copy, the forest off (canopyCover 0), its own panel storage, the current falls stamp. */
 import * as THREE from 'three';
-import { createForestFlow } from '../../flow2-scene-flow.js?v=pbr-01-perf1';
+import { createForestFlow } from '../../flow2-scene-flow.js?v=pbr-01-perf1-route1';
 import { createForestBirds } from '../../flow2-scene-birds.js?v=timed-passes1';
 import { createRiverBeams } from '../../flow2-river-beams.js?v=studio-confluence-20261121-1-perf1';
-import { createStudioTerrainPbrLayer } from './terrain-pbr-fusion.js?v=f10-k11';
+import { createStudioTerrainPbrLayer } from './terrain-pbr-fusion.js?v=f10-k12';
 import { createLakeLogoVideo } from './lake-logo-video.js?v=f10-1';
-import { createLakeConvergence } from './lake-convergence.js?v=c6';
-import { layerOpacity } from './layer-opacity.js?v=o1';   /* 2026-11-24 client: 「這都要可以調透明度」 */   /* 2026-11-24 client: 「湖泊中間加入 這樣的設計代表匯集」 */
+import { createLakeConfluenceCore } from './lake-confluence-core.js?v=lc2';   /* 2026-11-25: unified 湖心匯集光 (261124 concentric terraces + luminous core + directional waves + stardust + beamStop) */
+import { layerOpacity } from './layer-opacity.js?v=o1';   /* 2026-11-24 client: 「這都要可以調透明度」 */
 import { bindAtmosphereArrival } from '../studio-highland-ecology.js?v=weather1-bank1-fast1';
 import { createTributaryNetwork, createTributaryNetworkAsync } from '../studio-tributary-network.js?v=meadow-riffles1-optR';
-import { createStudioCartography } from '../studio-cartography.js?v=strategy-beacons-20261121-2-perf1-falls1';
+import { createStudioCartography } from '../studio-cartography.js?v=strategy-beacons-20261125-idle2';
 import { createStudioLightCurtain } from '../studio-light-curtain.js?v=confluence-20261121-1-falls1-dir2';
 import { createStudio3DLines } from '../studio-3d-lines.js?v=ridge-banks1-fast1-falls2-redo1';
 
@@ -23,10 +23,16 @@ const CLOCK = 10.18;
    panel storage preset-5. Before: _archive/backups/td-params-20261123/ */
 /* FOV: 2026-11-24 a 25 → 14 narrowing with the turn was tried; then the client: 「FOV 不要動」 + their JSON (fov 15.6): one fixed fov again.
    entryFov (optional, ?) would bring the narrowing back: the code stays, unused. */
-const CLIENT_PRESET_20261124 = {"azimuth":323.44,"tilt":63.832,"distance":21.86,"fov":15.6,"target":[0.14,-0.03],"entryAzimuth":70.31,"arrivalSeconds":6,"pbr":{"style":1,"grassSat":1.58,"grassCoverage":70,"grassColor":"#88bfa5","grassTipColor":"#caecd6","grassMossColor":"#a4c1b9","grassDryColor":"#a9c1be","grassMossCoverage":64,"grassDryCoverage":64,"grassTipCoverage":66,"rockColor":"#737373","rockLayerColor":"#c7c7c7","grassPbr":0.91,"rockSlope":0.89,"biomeContrast":1.24,"cavityDepth":0.46,"strataStrength":1.4,"shoreWet":1.3,"relief":1.1,"waterDeep":"#496b97","waterShallow":"#1a3456","waterSpeed":1.05,"waterWave":1,"waterClear":1.32,"whitewater":1.18,"waterGlow":0.88,"waveScale":1.2,"riverDetail":1.38,"sunIntensity":1.86,"sunShadow":1.01,"sunRays":0.46,"sunAzimuth":47,"sunElevation":24,"mist":0.27,"cloudStrength":0.05,"cloudShadow":0.14,"airWhite":0.8,"mistColor":"#dfe6ec","valleyMist":0.02,"mistHeight":0.1,"contourOpacity":0.4,"contourInterval":0.04,"detailFusion":0.94,"erosionRelief":2,"erosionAlbedo":1.5,"erosionAO":1.6,"canopyCover":1.5,"canopyRelief":1.21,"meadowGrain":0.76,"colorVariety":0.79,"alpineAccents":0.81,"layers":{"tributaries":true,"contours":false,"terrainStyle":true,"water":true,"sunbeams":false,"atmosphere":true,"clouds":true,"gulls":true},"grassTuftCount":4800},"cartography":{"labels":true,"beacons":{"enabled":true,"particles":true,"count":48,"height":1.2,"width":0.88,"brightness":1.4,"filaments":1.07,"halo":0.79,"particleSize":0.98,"particleBrightness":1.64,"speed":0.79,"color":"#b5e6ff"}},"curtain":{"enabled":false,"showTributaries":false,"showLogo":false,"height":0.26,"speed":0.22,"brightness":0.36,"progress":1,"scanIntensity":0.84,"pulseStrength":1.38,"color":"#88ccf8","contactColor":"#d9f2ff","logoScale":1.55,"logoHeight":0.44,"logoRotation":320,"refinedRivers":true},"riverDesign":{"on":false,"bright":0.98,"coreWidth":0.95,"halo":0.82,"haloWidth":10,"wide":0.75,"speed":0.85,"spacing":2.5,"packetLength":1,"pulse":1.3,"filaments":1.1,"sparkDensity":0.24,"glint":1,"tribBright":0.4,"softClip":1.45,"colour":"#e3f7ff","glow":"#68bded"},"leftFog":{"enabled":false,"density":0.13,"scale":0.55,"thickness":0.87,"x":0.02,"y":-0.86,"z":0},"cloudLook":{"lit":"#ffffff","shade":"#e1e8ee","bright":1.09,"contrast":1.07},"floatingLogo":{"enabled":false,"height":1.31,"gap":0.1,"offsetX":0.53,"offsetY":-1.53,"offsetZ":-0.76,"yaw":0,"pitch":0,"roll":0,"depth":1,"rotate":true,"reverse":false,"period":18,"opacity":0.56,"transmission":1,"roughness":0.6,"volume":2,"ior":2.33,"dispersion":1.65,"envIntensity":1.72,"rimStrength":5.15,"caustic":2.38,"tint":"#ffffff","brandBlue":0.72,"brandBlueColor":"#143e6b","light":1.7,"maxBright":3},"logoVideo":{"enabled":false,"yaw":323.4,"tilt":0,"roll":0,"scale":2.62,"stretchY":1.38,"offsetX":0.02,"offsetZ":-0.04,"height":0.009,"opacity":0.96,"filterStrength":0.92,"contrast":1.32,"brightness":1.08,"glow":0.42,"feather":0.36,"speed":1,"tintDeep":"#041426","tintMid":"#124a61","tintFoam":"#e4f6ff","clipBeams":true,"clipRadius":0.8},"convergence":{"enabled":false,"size":1.15,"core":0,"rings":0.16,"tiers":1.1,"speed":0.24},"lines3d":{"enabled":false,"opacity":0.18,"color":"#d4e6ff","accentColor":"#76c4ff"}};
+/* 2026-11-25 (client: 「山谷參數改這樣」, sixth export, docs/valley-detail/client-td-20261125d.json): closer distance 17.121, swayX 1.25,
+   satDrape 1.35 / satScale 1.97 / satContrast 1.31, grassCoverage 79 / grassSat 1.18, detailFusion 1.25 / erosionRelief 0.62,
+   unified confluenceCore (opacity .89, scale 1.01, coreScale .4, coreBright .38); storage client-9. */
+const CLIENT_PRESET_20261124 = {"azimuth":320.3,"tilt":64.367,"distance":17.121,"fov":23.1,"target":[1.07,-1.02],"cameraMore":{"turnSeconds":3.5,"moveX":0.17,"moveY":0.13,"follow":3,"ty":0.079,"roll":2,"shiftX":-0.005,"shiftY":-0.089,"swayX":1.25,"swayY":0.65,"entryTilt":-4.1,"entryDist":0.08},"pbr":{"style":1,"grassSat":1.18,"grassCoverage":79,"grassColor":"#a3c8b6","grassTipColor":"#caecd6","grassMossColor":"#a4c1b9","grassDryColor":"#a9c1be","grassMossCoverage":64,"grassDryCoverage":64,"grassTipCoverage":66,"rockColor":"#737373","rockLayerColor":"#c7c7c7","grassPbr":0.91,"rockSlope":0.89,"biomeContrast":1.24,"cavityDepth":0.46,"strataStrength":1.4,"shoreWet":1.3,"relief":1.1,"waterDeep":"#496b97","waterShallow":"#1a3456","waterSpeed":1.05,"waterWave":1,"waterClear":1.32,"whitewater":1.18,"waterGlow":0.88,"waveScale":1.2,"riverDetail":1.38,"sunIntensity":1.86,"sunShadow":1.01,"sunRays":0.46,"sunAzimuth":47,"sunElevation":24,"mist":0.27,"cloudStrength":0.05,"cloudShadow":0.14,"airWhite":0.8,"mistColor":"#dfe6ec","valleyMist":0.02,"mistHeight":0.1,"contourOpacity":0.4,"contourInterval":0.04,"detailFusion":1.25,"erosionRelief":0.62,"erosionAlbedo":1.5,"erosionAO":1.6,"canopyCover":1.5,"canopyRelief":1.23,"meadowGrain":0.79,"colorVariety":1.03,"alpineAccents":0.94,"layers":{"tributaries":true,"contours":false,"terrainStyle":true,"water":true,"sunbeams":false,"atmosphere":true,"clouds":true,"gulls":true},"grassTuftCount":4800,"satDrape":1.35,"satScale":1.97,"satContrast":1.31},"cartography":{"labels":true,"beacons":{"enabled":true,"particles":true,"count":48,"height":1.2,"width":0.88,"brightness":1.4,"filaments":1.07,"halo":0.79,"particleSize":0.98,"particleBrightness":1.64,"speed":0.79,"color":"#b5e6ff","idleWall":0.42,"idleSparks":0,"lakeSparks":1}},"curtain":{"enabled":true,"showTributaries":false,"showLogo":true,"height":0.36,"speed":0.22,"brightness":0.36,"progress":0.91,"scanIntensity":0.84,"pulseStrength":1.38,"color":"#88ccf8","contactColor":"#d9f2ff","logoScale":1.55,"logoHeight":0.44,"logoRotation":320,"refinedRivers":true},"entryAzimuth":90.84,"arrivalSeconds":6,"riverDesign":{"on":true,"bright":0.98,"coreWidth":0.95,"halo":0.82,"haloWidth":10,"wide":0.75,"speed":0.85,"spacing":2.5,"packetLength":1,"pulse":1.3,"filaments":1.1,"sparkDensity":0.24,"glint":1,"tribBright":0.4,"softClip":1.45,"colour":"#e3f7ff","glow":"#68bded"},"leftFog":{"enabled":false,"density":0.13,"scale":0.55,"thickness":0.87,"x":0.02,"y":-0.86,"z":0},"cloudLook":{"lit":"#ffffff","shade":"#e1e8ee","bright":1.09,"contrast":1.07},"floatingLogo":{"enabled":false,"height":1.31,"gap":0.1,"offsetX":0.53,"offsetY":-1.53,"offsetZ":-0.76,"yaw":0,"pitch":0,"roll":0,"depth":1,"rotate":true,"reverse":false,"period":18,"opacity":0.56,"transmission":1,"roughness":0.6,"volume":2,"ior":2.33,"dispersion":1.65,"envIntensity":1.72,"rimStrength":5.15,"caustic":2.38,"tint":"#ffffff","brandBlue":0.72,"brandBlueColor":"#143e6b","light":1.7,"maxBright":3},"logoVideo":{"enabled":false,"yaw":323.4,"tilt":0,"roll":0,"scale":2.62,"stretchY":1.38,"offsetX":0.02,"offsetZ":-0.04,"height":0.009,"opacity":0.96,"filterStrength":0.92,"contrast":1.32,"brightness":1.08,"glow":0.42,"feather":0.36,"speed":1,"tintDeep":"#041426","tintMid":"#124a61","tintFoam":"#e4f6ff","clipBeams":true,"clipRadius":0.8},"opacity":{"riverBeams":0.26,"centralLogo":1},"cloudDrift":{"speed":0.55,"dir":41},"birds":{"flock":7,"solos":2,"size":2.1,"speed":1.04,"every":5,"height":1,"bright":1.08,"on":1,"flap":1,"shadow":1},"lines3d":{"enabled":true,"opacity":0.25,"color":"#d4e6ff","accentColor":"#76c4ff"},"lineTime":{"hold":0.5,"out":0.45},"lakeCentre":"261124","riverBeams":true,"confluenceCore":{"enabled":true,"opacity":0.89,"scale":1.01,"coreScale":0.4,"coreBright":0.38,"ringOpacity":1.23,"pulse":0.86,"pulseSpeed":0.85,"particles":1,"particleSpeed":1.65,"beamStop":0,"offsetX":0,"offsetZ":0,"coreColor":"#bdd6e5","ringColor":"#90b3d0"}};
 /* MORE ANGLES (2026-11-24, client: 「給我多一點能控制的角度」): aim height, roll, lens shift, pointer parallax, entry tilt / distance, drag framing */
 const CAMERA = { entryAzimuth: 70.31, azimuth: 323.44, tilt: 63.832, distance: 22.056, fov: 22, tx: .23, tz: -.03, arrivalSeconds: 3.25,
-  ty: .105, roll: 0, shiftX: 0, shiftY: 0, swayX: 3.15, swayY: 1.35, entryTilt: 0, entryDist: 0, drag: false };
+  ty: .105, roll: 0, shiftX: 0, shiftY: 0, swayX: 3.15, swayY: 1.35, entryTilt: 0, entryDist: 0, drag: false,
+  /* MOUSE MOVE (2026-11-24, client: 「加入跟著滑鼠游標滑動的位移控制」): the view slides with the cursor (world units), and how fast it follows */
+  moveX: .45, moveY: .3, follow: 3,
+  turnSeconds: 6   /* TURN SPEED: seconds for the lens's turn into place (2026-11-25; 6 = as the client's preset had it, with the 6 s growth) */ };
 const PBR = {
   style: 1, grassSat: 1.28, grassCoverage: 85, grassTuftCount: 4800, grassPbr: 0,
   grassColor: '#7a9086', grassTipColor: '#74a886', grassMossColor: '#6d8a82', grassDryColor: '#9bb8b4',
@@ -68,7 +74,7 @@ const ROWS = [
   ['鏡頭距離', 'camera.distance', 4, 40, .001],
   ['視野 FOV（度）', 'camera.fov', 5, 50, .1],
   ['注視點 X', 'camera.tx', -5, 5, .01], ['注視點 Z', 'camera.tz', -2.8, 2.8, .01],
-  ['蔓延時間（秒）', 'camera.arrivalSeconds', 1.5, 10, .1],
+  ['蔓延時間（秒）', 'camera.arrivalSeconds', 1.5, 10, .1], ['鏡頭旋轉時間（秒；轉到定位）', 'camera.turnSeconds', .5, 12, .1],
   ['— 鏡頭角度（更多）—'],
   ['拖曳取景（拖曳＝轉角度・Shift 拖曳＝平移・Alt 上下拖曳＝遠近）', 'camera.drag', 'checkbox'],
   ['注視點高度', 'camera.ty', -.3, 1.2, .001],
@@ -77,6 +83,9 @@ const ROWS = [
   ['畫面上下平移（構圖）', 'camera.shiftY', -.5, .5, .001],
   ['滑鼠視差：左右（度）', 'camera.swayX', 0, 15, .05],
   ['滑鼠視差：上下（度）', 'camera.swayY', 0, 8, .05],
+  ['滑鼠位移：左右（隨游標平移）', 'camera.moveX', 0, 2, .01],
+  ['滑鼠位移：前後（隨游標平移）', 'camera.moveY', 0, 2, .01],
+  ['滑鼠跟隨速度（小＝慢、更滑順）', 'camera.follow', .5, 12, .1],
   ['進場額外傾角（度，進場時加上、到位歸零）', 'camera.entryTilt', -40, 40, .1],
   ['進場額外距離（倍，進場時加上、到位歸零）', 'camera.entryDist', -.6, 2, .01],
   ['— 草坡、岩壁與河岸 —'],
@@ -134,6 +143,7 @@ const ROWS = [
   ['光幕色', 'curtain.color', 'color'], ['貼地底線', 'curtain.contactColor', 'color'],
   ['— 3D Line 地形線條 —'],
   ['3D Line 線條', 'lines3d.enabled', 'checkbox'], ['線條不透明度', 'lines3d.opacity', 0, 1, .01, 'percent'],
+  ['3D Line 進場後停留（秒）', 'lineTime.hold', 0, 4, .05], ['3D Line 退場時間（秒）', 'lineTime.out', .1, 3, .05],
   ['地形線色', 'lines3d.color', 'color'], ['水域線色', 'lines3d.accentColor', 'color'],
   ['— 圖層與標籤 —'],
   ['河流光束', 'riverBeams.on', 'checkbox'], ['河流光束透明度', 'opacity.riverBeams', 0, 1, .01],
@@ -144,17 +154,28 @@ const ROWS = [
   ['海鷗', 'pbr.layers.gulls', 'checkbox'], ['投資策略標籤', 'cartography.labels', 'checkbox']
 ];
 
-function registerControls(tune, { studio, curtain, cartography, lines3d, floatingLogo, logoVideo, convergence, valleyFalls, applyOpacity, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook }) {
+function registerControls(tune, { studio, curtain, cartography, lines3d, floatingLogo, logoVideo, confluenceCore, valleyFalls, applyOpacity, applyCloudDrift, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook }) {
   const panel = window.__FLOW2_PANEL__?.add({
-    id: 'rise-studio-pbr', storageId: 'rise-studio-pbr-ui-client-1', title: '俯視山谷 PBR', key: 'p', tune,
+    id: 'rise-studio-pbr', storageId: 'rise-studio-pbr-ui-client-9', title: '俯視山谷 PBR', key: 'p', tune,
     rows: [...(tune.riverBeams ? ROWS : ROWS.filter(row => row[1] !== 'riverBeams.on' && row[1] !== 'opacity.riverBeams')),
-      ...(tune.convergence ? [['— 湖心匯集光 —'],
-        ['顯示湖心匯集光', 'convergence.enabled', 'checkbox'], ['湖心匯集光透明度', 'opacity.convergence', 0, 1, .01],
-        ['大小（世界單位）', 'convergence.size', .3, 2.2, .01],
-        ['中央亮核', 'convergence.core', 0, 2.5, .01],
-        ['往內收的光紋', 'convergence.rings', 0, 2.5, .01],
-        ['層次光盤', 'convergence.tiers', 0, 2.5, .01],
-        ['光紋速度', 'convergence.speed', 0, .6, .01], ['河光停在湖心外（半徑，0＝交會到中心）', 'convergence.beamStop', 0, 1.5, .01]] : []),
+      ...(tune.birds ? [['— 飛鳥 —'], ['飛鳥大小', 'birds.size', .5, 4, .01], ['多久來一群（秒）', 'birds.every', 2, 30, .5], ['一群最多幾隻', 'birds.flock', 0, 7, 1], ['飛行速度', 'birds.speed', .3, 2.5, .01]] : []),
+      ...(tune.cloudDrift ? [['— 雲漂移 —'], ['雲漂移速度（0＝不動）', 'cloudDrift.speed', 0, 1.5, .01], ['雲漂移方向（度；41＝由左往右）', 'cloudDrift.dir', 0, 360, 1]] : []),
+      ...(tune.confluenceCore ? [['— 湖心匯集光 —'],
+        ['顯示湖心匯集光', 'confluenceCore.enabled', 'checkbox'],
+        ['湖心匯集光透明度', 'confluenceCore.opacity', 0, 1, .01],
+        ['整體大小', 'confluenceCore.scale', .3, 2.2, .01],
+        ['中央亮核（0＝無）', 'confluenceCore.coreBright', 0, 2.4, .01],
+        ['中央亮核大小', 'confluenceCore.coreScale', .4, 1.8, .02],
+        ['層次光盤', 'confluenceCore.ringOpacity', 0, 2.0, .01],
+        ['往內收的光紋', 'confluenceCore.pulse', 0, 2.2, .01],
+        ['光紋速度（正匯入負擴散）', 'confluenceCore.pulseSpeed', -2, 2, .02],
+        ['閃爍微光粒子（0＝無）', 'confluenceCore.particles', 0, 2.5, .01],
+        ['粒子匯流速度', 'confluenceCore.particleSpeed', 0, 2.5, .05],
+        ['河光停在湖心外（0＝交會）', 'confluenceCore.beamStop', 0, 1.5, .01],
+        ['中心位置 X', 'confluenceCore.offsetX', -1.2, 1.2, .01],
+        ['中心位置 Z', 'confluenceCore.offsetZ', -1.2, 1.2, .01],
+        ['中心核心色', 'confluenceCore.coreColor', 'color'],
+        ['同心光環色', 'confluenceCore.ringColor', 'color']] : []),
       ...(tune.valleyFalls ? [['— 山谷小瀑布 —'],
         ['顯示山谷瀑布', 'valleyFalls.enabled', 'checkbox'],
         ['瀑布數量', 'valleyFalls.count', 0, 12, 1],
@@ -199,7 +220,8 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
         ['底部光環', 'cartography.beacons.halo', 0, 2, .01], ['策略光幕色', 'cartography.beacons.color', 'color'],
         ['浮升亮點開關', 'cartography.beacons.particles', 'checkbox'], ['每柱亮點數量', 'cartography.beacons.count', 0, 48, 1],
         ['亮點大小', 'cartography.beacons.particleSize', .4, 2, .01], ['亮點亮度', 'cartography.beacons.particleBrightness', 0, 2.5, .01],
-        ['光絲與亮點流速', 'cartography.beacons.speed', 0, 1.5, .01]] : []),
+        ['光絲與亮點流速', 'cartography.beacons.speed', 0, 1.5, .01],
+        ['光牆平常亮度（滑鼠移上去＝全亮）', 'cartography.beacons.idleWall', 0, 1, .01], ['光牆平常亮點（0＝移上去才有）', 'cartography.beacons.idleSparks', 0, 1, .01], ['湖心上升光點（0＝無）', 'cartography.beacons.lakeSparks', 0, 1, .01]] : []),
       ...(tune.floatingLogo ? [['— 光幕上方 3D LOGO —'], ['3D LOGO 開啟／關閉', 'floatingLogo.enabled', 'checkbox'],
         ['左右位置 X', 'floatingLogo.offsetX', -3, 3, .01], ['上下位置 Y', 'floatingLogo.offsetY', -2, 3, .01],
         ['前後位置 Z', 'floatingLogo.offsetZ', -3, 3, .01],
@@ -219,13 +241,18 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
         ['高光上限', 'floatingLogo.maxBright', .3, 3, .05]] : [])],
     onChange(key) {
       if (key.startsWith('opacity.')) { applyOpacity?.(); return; }
+      if (key.startsWith('cloudDrift.')) { applyCloudDrift?.(); return; }
+      if (key.startsWith('birds.') || key.startsWith('lineTime.')) return;   /* read live */
       if (key.startsWith('pbr.')) studio.apply();
       else if (key.startsWith('curtain.')) {
         curtain.apply();
         studio.syncCurtain();
         if (key === 'curtain.logoScale' || key === 'curtain.logoRotation' || key === 'curtain.showLogo') applyBeamOutline();
       }
-      else if (key.startsWith('convergence.')) { convergence?.apply(); applyBeamOutline(); }
+      else if (key.startsWith('confluenceCore.')) {
+        confluenceCore?.apply();
+        if (key === 'confluenceCore.beamStop' || key === 'confluenceCore.offsetX' || key === 'confluenceCore.offsetZ' || key === 'confluenceCore.enabled') applyBeamOutline();
+      }
       else if (key.startsWith('valleyFalls.')) valleyFalls?.apply();
       else if (key.startsWith('logoVideo.')) {
         logoVideo?.apply();
@@ -246,13 +273,13 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
       return {
         view: 'topdown-studio-pbr', clock: CLOCK, azimuth, tilt, distance, fov,
         target: [tx, tz], position, window: [innerWidth, innerHeight],
-        cameraMore: { ty: tune.camera.ty, roll: tune.camera.roll, shiftX: tune.camera.shiftX, shiftY: tune.camera.shiftY, swayX: tune.camera.swayX, swayY: tune.camera.swayY, entryTilt: tune.camera.entryTilt, entryDist: tune.camera.entryDist },
+        cameraMore: { turnSeconds: tune.camera.turnSeconds, moveX: tune.camera.moveX, moveY: tune.camera.moveY, follow: tune.camera.follow, ty: tune.camera.ty, roll: tune.camera.roll, shiftX: tune.camera.shiftX, shiftY: tune.camera.shiftY, swayX: tune.camera.swayX, swayY: tune.camera.swayY, entryTilt: tune.camera.entryTilt, entryDist: tune.camera.entryDist },
         pbr: tune.pbr, cartography: tune.cartography, curtain: tune.curtain, entryAzimuth, arrivalSeconds,
         riverBeams: !!tune.riverBeams?.on,
         ...(tune.riverBeams?.filaments !== undefined ? { riverDesign: Object.fromEntries(
           ['on', 'bright', 'coreWidth', 'halo', 'haloWidth', 'wide', 'speed', 'spacing', 'packetLength', 'pulse',
             'filaments', 'sparkDensity', 'glint', 'tribBright', 'softClip', 'colour', 'glow'].map(key => [key, tune.riverBeams[key]])) } : {}),
-        leftFog: tune.leftFog, cloudLook: tune.cloudLook, floatingLogo: tune.floatingLogo, logoVideo: tune.logoVideo, convergence: tune.convergence, valleyFalls: tune.valleyFalls, opacity: tune.opacity,
+        leftFog: tune.leftFog, cloudLook: tune.cloudLook, floatingLogo: tune.floatingLogo, logoVideo: tune.logoVideo, confluenceCore: tune.confluenceCore, valleyFalls: tune.valleyFalls, opacity: tune.opacity, cloudDrift: tune.cloudDrift, birds: tune.birds, lineTime: tune.lineTime,
         lines3d: { enabled: !!tune.lines3d.enabled, opacity: tune.lines3d.opacity, color: tune.lines3d.color, accentColor: tune.lines3d.accentColor }
       };
     }
@@ -263,9 +290,10 @@ function registerControls(tune, { studio, curtain, cartography, lines3d, floatin
   cartography.apply();
   lines3d.apply();
   logoVideo?.apply();
-  convergence?.apply();
+  confluenceCore?.apply();
   valleyFalls?.apply();
   applyOpacity?.();
+  applyCloudDrift?.();
   applyBeamOutline();
   applyLeftFog();
   applyCloudLook();
@@ -288,14 +316,16 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   }
   const [studio, flow] = await Promise.all([
     createStudioTerrainPbrLayer(renderer, atlas, initPbr),
-    query.get('wflow') === '0' ? null : createForestFlow(renderer, { reducedMotion, atlas })
+    query.get('wflow') === '0' ? null : createForestFlow(renderer, { reducedMotion, atlas,
+      /* 2026-11-25 client's 俯視水流 values (panel 「俯視水流」 U) */
+      tune: { speed: .83, amount: .3, streak: 1.15, wander: 3.1, fleck: 1.12, foam: 2, soft: 3, softWidth: 24, current: 1.56, streakWidth: 4, reach: 2.5, streakReach: 3, lakeOut: 3, eddy: 1, lift: .06 } })   /* 2026-11-25 second set */
   ]);
   if (!studio.terrainPatched) throw new Error('Studio PBR terrain could not be applied');
   const [curtain, beams] = await Promise.all([
     createStudioLightCurtain(atlas, { ...CURTAIN, refinedRivers: logoExperiment }),
     createRiverBeams(renderer, { atlas, reducedMotion, refined: logoExperiment, panel: false, suppressFlowCurrent: false,
       /* RIVERS (2026-11-24): a fine, soft thread of light over the water, not a neon tube (was core 1.2, inner 3.4, halo 1 × 8, wide 1.5 × 24, land halo .3, head 1.2) */
-      tune: { on: true, bright: .86, coreWidth: .78, innerWidth: 2.1, halo: .62, haloWidth: 7, wide: .5, wideWidth: 18, landHalo: .08, head: .8, shimmer: .3 } })
+      tune: CLIENT_PRESET_20261124.lakeCentre === '261124' ? { on: true } : { on: true, bright: .86, coreWidth: .78, innerWidth: 2.1, halo: .62, haloWidth: 7, wide: .5, wideWidth: 18, landHalo: .08, head: .8, shimmer: .3 } })   /* 2026-11-25: 261124's beams again (its refined defaults + RIVER_DESIGN) */
       .catch(error => { console.warn('Rise river beams:', error); return null; })
   ]);
   studio.bindCurtain(curtain);
@@ -320,8 +350,8 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   const logoVideo = !falls && query.get('logoVideo') !== '0'
     ? createLakeLogoVideo(atlas, studio, { reducedMotion, query }) : null;
   if (logoVideo) atlas.scene.add(logoVideo.group);
-  const convergence = !falls ? createLakeConvergence(atlas, studio, { query, reducedMotion }) : null;   /* THE CONVERGENCE: where the four beams meet */
-  if (convergence) atlas.scene.add(convergence.group);
+  const confluenceCore = !falls ? createLakeConfluenceCore(renderer, atlas, studio, { reducedMotion, query }) : null;
+  if (confluenceCore) atlas.scene.add(confluenceCore.group);
   const valleyFalls = null;   /* 2026-11-24: small valley waterfalls tried, then the client: 「瀑布不用了」 (module kept in _archive/backups/lake-shelf-20261124/valley-waterfalls.js) */
   bindAtmosphereArrival(atlas, studio.uniforms);
 
@@ -353,16 +383,13 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       })));
     } else if (logoVideo?.config.enabled && logoVideo.config.clipBeams) {
       beams.setLogoOutline(logoVideo.getBeamOutline());
-    } else if (convergence && +convergence.config.beamStop > .01) {
-      /* NO CENTRE POINT (2026-11-24, 「中間光點取消」): the four beams end on a circle round the lake's centre and never cross into one point */
-      const c = atlas.lake.center, r = +convergence.config.beamStop, ring = [];
-      for (let i = 0; i <= 48; i++) { const a = i / 48 * Math.PI * 2; ring.push([c.x + Math.cos(a) * r, c.z + Math.sin(a) * r]); }
-      beams.setLogoOutline([ring]);
+    } else if (confluenceCore?.config.enabled && +confluenceCore.config.beamStop > .01) {
+      beams.setLogoOutline(confluenceCore.getBeamOutline());
     } else {
       beams.setLogoOutline([]);
     }
   };
-  const aim = new THREE.Vector3();
+  const aim = new THREE.Vector3(), moveOff = new THREE.Vector3();
   const orbit = new THREE.Spherical();
   const pointer = new THREE.Vector2();
   const sway = new THREE.Vector2();
@@ -376,7 +403,11 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
        colour has grown to lightAt, and takes lightSeconds;
      - the 3D lines withdraw once the lens has settled (client: 「轉到定位後 3Dline就退掉」), over lineOut seconds, and are back at once when the view is left. */
   const master = () => window.__RISE_MASTER__?.tune || null;
-  let lineKeep = 1, lineShown = NaN;
+  let lineKeep = 1, lineShown = NaN, lineClock = -1;
+  /* 3D LINES TIMING (2026-11-25, client: 「3d line 25%就好 然後快速出現快速退場 不用等到定位」): they sweep in with the entry's brush, stay
+     lineTime.hold seconds once the stroke is over, then leave over lineTime.out seconds (no longer waiting for the lens to settle) */
+  const lineTime = { hold: .5, out: .45 };
+  if (query.get('clientPreset') !== '0' && CLIENT_PRESET_20261124.lineTime) Object.assign(lineTime, CLIENT_PRESET_20261124.lineTime);
   function applyLineKeep(k) {
     const U = lines3d.lineMesh?.material?.uniforms?.uAlpha; if (!U) return;
     const base = clamp(+lines3d.config.opacity || 0, 0, 2), on = !!lines3d.config.enabled && k > .003;
@@ -385,12 +416,18 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   }
   const state = { clock: CLOCK, azimuth: reducedMotion ? framing.azimuth : framing.entryAzimuth, arrival: advance, routeProgress: advance };
   studio.uniforms.uArrival.value = state.arrival;
+  /* 2026-11-25 (lake centre as 261124): the strategy beacons and the lake's rising motes read the route on their own uniform, normalised to the
+     curtain's end, so a curtain held at .91 no longer holds them back */
+  const beaconRoute = { value: 0 };
+  atlas.scene.traverse(o => { if (/strategy light beacons|Strategy sparks/.test(o.name || '') && o.material?.uniforms?.uProgress) o.material.uniforms.uProgress = beaconRoute; });
   function applyRouteProgress(preview = false) {
     routePreview ||= preview;
     const target = clamp(curtain.config.progress, 0, 1);
     const progress = routePreview ? target : target * smoothstep(routeAdvance, 0, 1) * routeVisibility;
     state.routeProgress = progress;
     curtain.uniforms.uProgress.value = progress;
+    flow?.setRoute?.(query.get('flowRoute') === '0' ? 1 : (target > .01 ? Math.min(1, progress / target) : 1));
+    beaconRoute.value = target > .01 ? Math.min(1, progress / target) : progress;   /* the river flow comes in with the curtain (?flowRoute=0 = all at once) */
     studio.uniforms.uCurtainLogo.value.w = progress;
     studio.uniforms.uCurtainGlow.value = curtain.config.enabled ? curtain.config.brightness * smoothstep(progress, 0, 1) : 0;
     const percent = Math.round(progress * 100);
@@ -413,27 +450,41 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     const deep = (dst, src) => { if (!dst || !src) return; for (const k in src) { const v = src[k]; if (v && typeof v === 'object' && !Array.isArray(v) && dst[k] && typeof dst[k] === 'object') deep(dst[k], v); else dst[k] = v; } };
     Object.assign(framing, { azimuth: P.azimuth, tilt: P.tilt, distance: P.distance, fov: P.fov, tx: P.target[0], tz: P.target[1], entryAzimuth: P.entryAzimuth, arrivalSeconds: P.arrivalSeconds });
     delete framing.entryFov;
+    if (P.cameraMore) Object.assign(framing, P.cameraMore);
+    if (!Number.isFinite(+framing.turnSeconds)) framing.turnSeconds = CAMERA.turnSeconds;
     deep(studio.config, P.pbr); deep(cartography.config, P.cartography); deep(curtain.config, P.curtain);
     if (beams?.tune) deep(beams.tune, P.riverDesign);
     deep(leftFog, P.leftFog); deep(cloudLook, P.cloudLook);
     if (floatingLogo?.config) deep(floatingLogo.config, P.floatingLogo);
     if (logoVideo?.config) deep(logoVideo.config, P.logoVideo);
-    if (convergence?.config) deep(convergence.config, P.convergence);
+    if (confluenceCore?.config && P.confluenceCore) deep(confluenceCore.config, P.confluenceCore);
     deep(lines3d.config, P.lines3d);
   }
-  /* LAYER OPACITY (2026-11-24, client: 「這都要可以調透明度」): 河流光束 / 中央 LOGO / 湖心匯集光 each with an opacity dial next to its switch */
-  const layerOp = { riverBeams: 1, centralLogo: 1, convergence: 1 };
-  const ops = { riverBeams: layerOpacity(() => beams?.group), centralLogo: layerOpacity(() => curtain?.logo?.group), convergence: layerOpacity(() => convergence?.group) };
+  /* LAYER OPACITY (2026-11-24, client: 「這都要可以調透明度」): 河流光束 / 中央 LOGO (湖心匯集光透明度 is built into confluenceCore.opacity) */
+  const layerOp = { riverBeams: 1, centralLogo: 1 };
+  const ops = { riverBeams: layerOpacity(() => beams?.group), centralLogo: layerOpacity(() => curtain?.logo?.group) };
+  if (query.get('clientPreset') !== '0' && CLIENT_PRESET_20261124.opacity) {
+    if (Number.isFinite(+CLIENT_PRESET_20261124.opacity.riverBeams)) layerOp.riverBeams = +CLIENT_PRESET_20261124.opacity.riverBeams;
+    if (Number.isFinite(+CLIENT_PRESET_20261124.opacity.centralLogo)) layerOp.centralLogo = +CLIENT_PRESET_20261124.opacity.centralLogo;
+  }
   const applyOpacity = () => { for (const k in ops) ops[k].set(layerOp[k]); };
-  /* NO CENTRE POINT (2026-11-24, client: 「中間光點取消」): the convergence's hot core and the four beams' meeting glow are 0 by default (panel:
-     湖心匯集光 › 中央亮核, 河道流光設計 › 湖心會合光點). A core value kept in this browser's panel storage is dropped once. */
-  if (beams?.tune) beams.tune.meet = 0;
+  /* CLOUD DRIFT (2026-11-24, client: 「雲要會漂過去」): the banks drift across the valley (studio-clouds-drift.js); speed, direction (degrees on the
+     ground; 41 = left → right across the settled view), panel 「雲漂移」 */
+  const cloudDrift = { speed: +(query.get('cloudDrift') ?? .55), dir: 41 };   /* 2026-11-25 client: 「雲飄快一點」 .22 → .55 */
+  if (query.get('clientPreset') !== '0' && CLIENT_PRESET_20261124.cloudDrift && !query.has('cloudDrift')) Object.assign(cloudDrift, CLIENT_PRESET_20261124.cloudDrift);
+  let cloudMat = null; atlas.scene.traverse(o => { if (!cloudMat && o.material?.uniforms?.uCloudDrift) cloudMat = o.material; });
+  const applyCloudDrift = () => { if (!cloudMat) return; const a = degToRad(+cloudDrift.dir || 0); cloudMat.uniforms.uCloudDrift.value.set(Math.cos(a), Math.sin(a), reducedMotion ? 0 : Math.max(0, +cloudDrift.speed || 0), 26); };
+  if (beams?.tune) beams.tune.meet = CLIENT_PRESET_20261124.lakeCentre === '261124' ? .65 : 0;   /* 2026-11-25 client: 「應該是 261124.html 仿照這個呈現」: the four beams meet in 261124's glow again */
   try { const k = 'flow2-tune:rise-studio-pbr-ui-client-1'; if (!localStorage.getItem(k + ':nocore')) { const o = JSON.parse(localStorage.getItem(k) || '{}') || {}; delete o['convergence.core']; delete o['riverBeams.meet']; if (Object.keys(o).length) localStorage.setItem(k, JSON.stringify(o)); localStorage.setItem(k + ':nocore', '1'); } } catch (error) { }
+  window.__RISE_STUDIO_FRAMING__ = framing;   /* the entry tab (why-sea.js 「俯視山谷轉場速度（進場）」) reads the turn's dials here */
+  /* BIRDS (2026-11-25, client: 「飛鳥要大一點」): size 1.45 → 2.1; the panel's 「飛鳥」 rows change them live (the birds read this object every frame) */
+  const birdTune = { flock: 7, solos: 2, size: 2.1, speed: 1.04, every: 5, height: 1, bright: 1.08 };
+  if (query.get('clientPreset') !== '0' && CLIENT_PRESET_20261124.birds) Object.assign(birdTune, CLIENT_PRESET_20261124.birds);
   const panel = registerControls({
     camera: framing, pbr: studio.config, curtain: curtain.config, cartography: cartography.config,
     riverBeams: beams?.tune, lines3d: lines3d.config, leftFog, cloudLook, floatingLogo: floatingLogo?.config,
-    logoVideo: logoVideo?.config, convergence: convergence?.config, valleyFalls: valleyFalls?.config, opacity: layerOp
-  }, { studio, curtain, cartography, lines3d, floatingLogo, logoVideo, convergence, valleyFalls, applyOpacity, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook });
+    logoVideo: logoVideo?.config, confluenceCore: confluenceCore?.config, valleyFalls: valleyFalls?.config, opacity: layerOp, cloudDrift, birds: birdTune, lineTime
+  }, { studio, curtain, cartography, lines3d, floatingLogo, logoVideo, confluenceCore, valleyFalls, applyOpacity, applyCloudDrift, applyRouteProgress, applyBeamOutline, applyLeftFog, applyCloudLook });
 
   /* DRAG FRAMING (2026-11-24, 「給我多一點能控制的角度」): with 「拖曳取景」 on in the panel, drag on the picture to turn the lens (left / right =
      azimuth, up / down = tilt), Shift + drag slides the aim over the land, Alt + drag up / down moves the lens nearer / further. The sliders
@@ -476,7 +527,7 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   const gulls = !reducedMotion && query.get('birds') !== '0' ? createForestBirds(renderer, {
     atlas, camera: atlas.camera, once: false, panel: false, timedCrossings: true,
     focusDistance: () => atlas.camera.position.distanceTo(aim),
-    tune: { flock: 7, solos: 2, size: 1.45, speed: 1.04, every: 5, height: 1, bright: 1.08 }   /* 2026-11-24 client 「飛鳥飛過要頻繁一點」: a flock every 5 s (was 11), two solos (was 1) */   /* lead 11-20 (client: the valley needs a flock flying over): bigger flock, more often (was flock 5, size 1.22, every 22) */
+    tune: birdTune   /* 2026-11-24 client 「飛鳥飛過要頻繁一點」: a flock every 5 s (was 11), two solos (was 1) */   /* lead 11-20 (client: the valley needs a flock flying over): bigger flock, more often (was flock 5, size 1.22, every 22) */
   }) : null;
   if (gulls) {
     gulls.group.visible = false;
@@ -497,9 +548,14 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
     const away = 1 - (Number.isFinite(state.turnN) ? state.turnN : 1);   /* MORE ANGLES: 1 at the entry … 0 settled */
     const polar = clamp(framing.tilt + (+framing.entryTilt || 0) * away - z * 12 + (entry?.fore || 0) * .35 - sway.y * (1 - dive) * (+framing.swayY), 1, 88);
     const distance = framing.distance * (1 + (+framing.entryDist || 0) * away) * (entry?.dist || 1) * lerp(1, .065, dive);
-    aim.set(framing.tx, Number.isFinite(+framing.ty) ? +framing.ty : .105, framing.tz).lerp(falls ? falls.diveTarget : atlas.lake.center, dive);   /* RISE FALLS: the dive goes to the pool */
+    { const az = degToRad(state.azimuth), rx = Math.cos(az), rz = -Math.sin(az), fx = -Math.sin(az), fz = -Math.cos(az), k = 1 - dive;   /* MOUSE MOVE: screen right / screen up on the ground */
+      moveOff.set((rx * sway.x * +framing.moveX + fx * -sway.y * +framing.moveY) * k, 0, (rz * sway.x * +framing.moveX + fz * -sway.y * +framing.moveY) * k); }
+    aim.set(framing.tx, Number.isFinite(+framing.ty) ? +framing.ty : .105, framing.tz).add(moveOff).lerp(falls ? falls.diveTarget : atlas.lake.center, dive);   /* RISE FALLS: the dive goes to the pool */
     orbit.set(distance, degToRad(lerp(polar, .7, dive)), degToRad(state.azimuth + x * 26 + sway.x * (1 - dive) * (+framing.swayX)));
     lens.position.setFromSpherical(orbit).add(aim);
+    /* 2026-11-24 (client: 「轉場道下一塊怎麼一直360度亂飄」): the lake dive (flow2-lake-dive.js place()) copies the lens's own up into lens.up every
+       frame; with a roll that up is tilted, so the roll was added again each frame and the picture spun. Start every frame from world up. */
+    lens.up.set(0, 1, 0);
     lens.lookAt(aim);
     if (+framing.roll) lens.rotateZ(degToRad(+framing.roll) * (1 - dive));
     lens.updateMatrixWorld();
@@ -512,10 +568,11 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
   const retainCurrent = query.get('wflowCurrent') === '1';
   const removeWaterUpdate = atlas.onUpdate(frame => {
     flow?.update(frame);
-    beams?.update({ ...frame, routeProgress: state.routeProgress });
+    beams?.update({ ...frame, routeProgress: Math.min(1, state.routeProgress / Math.max(.01, clamp(curtain.config.progress, 0, 1))) });   /* 2026-11-25: the beams always reach the lake's centre (their meeting glow), even with the curtain held at .91 */
     falls?.update(frame);   /* RISE FALLS */
     valleyDetail?.update();   /* VALLEY DETAIL: follows the land's place and visibility */
     logoVideo?.update(frame);
+    confluenceCore?.update({ ...frame, routeProgress: Math.min(1, state.routeProgress / Math.max(.01, clamp(curtain.config.progress, 0, 1))) });
     if (flow && beams?.group.visible && !retainCurrent) flow.uniforms.uCurrent.value = 0;
   });
   const view = {
@@ -527,6 +584,7 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       advance = routeAdvance = reducedMotion ? 1 : 0;
       routeVisibility = 1;
       routePreview = false;
+      lineClock = -1;
       if (lineShown !== 1 && Number.isFinite(lineShown)) { lineKeep = 1; applyLineKeep(1); }   /* RISE HOOK: the lines are whole again for the next entrance */
       studio.uniforms.uEntrySurvey.value = 0;
       applyRouteProgress();
@@ -543,7 +601,11 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       const M = master();   /* RISE HOOK */
       if (!rhythm && !override && !(M && state.arrival < clamp(+M.lightAt || 0, 0, .98))) routeAdvance = Math.min(1, routeAdvance + dt / (M && +M.lightSeconds > .2 ? +M.lightSeconds : framing.arrivalSeconds * 0.53));
       const arrivalTime = override?.hold && !override.reduce ? override.brush * .29 : advance;
-      const turn = smootherstep(arrivalTime, .12 / CAMERA.arrivalSeconds, 3.55 / CAMERA.arrivalSeconds);
+      /* TURN SPEED (2026-11-25, client: 「我是要他進去山谷旋轉的動作的速度」): the lens's turn into place on its own clock (turnSeconds), apart from the
+         colour's growth (arrivalSeconds); 0 / unset = with the growth as before */
+      const turnK = +framing.turnSeconds > .05 ? Math.max(.05, +framing.arrivalSeconds) / +framing.turnSeconds : 1;
+      const turnTime = override?.hold && !override.reduce ? arrivalTime : Math.min(1, arrivalTime * turnK);
+      const turn = smootherstep(turnTime, .12 / CAMERA.arrivalSeconds, 3.55 / CAMERA.arrivalSeconds);
       const arc = euclideanModulo(framing.azimuth - framing.entryAzimuth + 180, 360) - 180;
       state.azimuth = turn === 1 ? framing.azimuth : framing.entryAzimuth + arc * turn;
       state.turnN = Math.min(1, turn / Math.max(.5, smootherstep(1, .12 / CAMERA.arrivalSeconds, 3.55 / CAMERA.arrivalSeconds)));
@@ -556,17 +618,24 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       if (rhythm && !override && !(M && state.arrival < clamp(+M.lightAt || 0, 0, .98))) routeAdvance = Math.min(1, routeAdvance + dt / (M && +M.lightSeconds > .2 ? +M.lightSeconds : framing.arrivalSeconds * 0.53));
       applyRouteProgress();
       falls?.setArrival(state.arrival);
-      convergence?.setArrival(state.arrival); convergence?.setRoute(state.routeProgress); valleyFalls?.setArrival(state.arrival);   /* RISE FALLS: the water comes with the land's colour */
+      valleyFalls?.setArrival(state.arrival);   /* RISE FALLS: the water comes with the land's colour */
       valleyDetail?.setArrival(state.arrival);   /* VALLEY DETAIL: comes with the land's colour */
       if (M) {   /* RISE HOOK: the 3D lines leave once the lens is in place; back quickly when the stroke takes the view away */
-        const settled = !override && turn >= 1 && state.arrival >= clamp(+M.lineAt || 0, 0, 1);
+        /* 2026-11-25 (client: 「先刷過一遍3dline，後淡出退場」): the turn's curve ends a hair short of 1 (its end is past the clock's end), so the
+           lines never withdrew; settled = the normalised turn has arrived */
         const back = override && override.dir === -1;
-        if (settled) lineKeep = Math.max(0, lineKeep - dt / Math.max(.05, +M.lineOut || .9));
-        else if (back) lineKeep = Math.min(1, lineKeep + dt / .22);
+        if (!override) {   /* the stroke is over: hold, then leave quickly */
+          lineClock = lineClock < 0 ? 0 : lineClock + dt;
+          lineKeep = Math.min(lineKeep, 1 - clamp((lineClock - Math.max(0, +lineTime.hold || 0)) / Math.max(.05, +lineTime.out || .45), 0, 1));
+        } else {
+          lineClock = -1;
+          if (back) lineKeep = Math.min(1, lineKeep + dt / .22);
+          else lineKeep = 1;   /* the entry's stroke: whole, they sweep in with the brush */
+        }
         const k = lineKeep * lineKeep * (3 - 2 * lineKeep);
         if (k !== lineShown || lines3d.group.visible !== (!!lines3d.config.enabled && k > .003)) applyLineKeep(k);
       }
-      const easing = 1 - Math.exp(-dt * 5);
+      const easing = 1 - Math.exp(-dt * Math.max(.2, +framing.follow || 5));   /* MOUSE MOVE: follow speed from the panel (was 5) */
       const follow = override ? 0 : smoothstep(state.arrival, .72, 1);
       sway.set(lerp(sway.x, pointer.x * follow, easing), lerp(sway.y, pointer.y * follow, easing));
       atlas.update(CLOCK, dt, { cloud: 0, drift: tune.drift });
@@ -584,7 +653,7 @@ export async function createStudioPbrView(renderer, atlas, { reducedMotion, quer
       falls?.dispose();
       valleyDetail?.dispose();
       logoVideo?.dispose();
-      convergence?.dispose();
+      confluenceCore?.dispose();
       valleyFalls?.dispose();
       floatingLogo?.dispose();
       lines3d.dispose();

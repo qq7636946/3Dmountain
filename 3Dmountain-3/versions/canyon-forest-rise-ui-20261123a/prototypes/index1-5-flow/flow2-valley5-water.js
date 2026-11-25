@@ -32,9 +32,10 @@
   const T = {
     amount: num('v5waterAmt', 1),       // all of it (0 = the river as the fourth round left it)
     swell: {
-      height: num('v5swell', 1.3),      // the swell's height (×): 1.3 ≈ 0.6–0.9 m crest to trough, more where trains stack
-      length: 1,                        // its wavelength (×)
-      speed: .8,                        // its speed (× deep-water waves of that length)
+      /* 2026-11-25 client on the -ui page (html[data-rise-ui]): 「河面初始參數」 height .45, length .75, speed .91; the rise page keeps 1.3 / 1 / .8 */
+      height: num('v5swell', document.documentElement.hasAttribute('data-rise-ui') ? .45 : 1.3),      // the swell's height (×): 1.3 ≈ 0.6–0.9 m crest to trough, more where trains stack
+      length: document.documentElement.hasAttribute('data-rise-ui') ? .75 : 1,                        // its wavelength (×)
+      speed: document.documentElement.hasAttribute('data-rise-ui') ? .91 : .8,                        // its speed (× deep-water waves of that length)
       reach: 260,                       // how far (m) the vertices carry it (beyond: normals only)
       crest: 1,                         // how much its crests take the third round's paler crest tint
       body: .35                         // crests lighter, troughs darker (the swell's own light and shade)

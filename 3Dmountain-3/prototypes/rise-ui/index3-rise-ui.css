@@ -1,0 +1,304 @@
+/* RISE UI (2026-11-22) — one UI and type system for index1-5-canyon-forest-rise-ui.html (the copy; the rise page itself does not load this file).
+   Client: 「整體UI 字體系統都要統一 尺標我比較喜歡這種UI 請幫我融入整站統一」 → 「或是先備份原本的改一個 https://2023.breakthroughenergy.org/ 這個UI」.
+   · TYPE (measured on the page, 2026-11-22: four title styles, three label fonts, two body faces) → one system, the underwater act's own:
+       title   Oswald 300, uppercase, the first word in the water's light blue
+       label   RU Mono (the ruler's mono: Cousine subset, all of ASCII) 400, uppercase, wide tracking; Chinese labels Noto Sans TC 500
+       body    XS Jakarta / Plus Jakarta Sans with Noto Sans TC
+   · CHROME (that site's kind, drawn in our style): a thin frame round the screen, the underwater depth ruler on both edges all the way through
+     (rise-ui.js), a chapter pill at the top centre, a caption and a counter at the foot.
+   ?ui=0 = the page without any of it. */
+@font-face { font-family: "RU Mono"; src: url("../drop-gorge/assets/fonts/Cousine-rise-subset.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+
+html[data-rise-ui] {
+  --ru-ink: #f1f8fa; --ru-acc: #9fdcec; --ru-dim: rgb(214 236 244 / .62); --ru-rule: rgb(214 236 244 / .22); --ru-rule-hi: rgb(214 236 244 / .5);
+  --ru-mono: "RU Mono", "RL Mono", "Noto Sans TC", ui-monospace, monospace;
+  --ru-body: "XS Jakarta", "Plus Jakarta Sans", "Noto Sans TC", sans-serif;
+  --ru-title: "Oswald", var(--site-font, sans-serif);
+  --ru-inset: 12px;
+}
+
+/* ---------------- type ---------------- */
+/* titles: the underwater weight everywhere (the canyon already was; the view from above and the sea were 500) */
+html[data-rise-ui] :is(.flow-copy-title, .fiwo-strategy-title, .xs-sea-t) .flow-copy-ink,
+html[data-rise-ui] :is(.flow-copy-title, .fiwo-strategy-title) { font-weight: 300 !important; letter-spacing: .012em !important; }
+/* the first word in the water's light blue, as under water (INSIGHT RUNS DEEP.) */
+html[data-rise-ui] .fi-copy-panel .flow-copy-title > :first-child > .flow-copy-word:first-child .flow-copy-ink { color: var(--ru-acc); }
+
+/* small labels: the ruler's mono */
+html[data-rise-ui] :is(.fi-rail-number, .fi-copy-kicker, .f2u-name, .btn-roll, .btn-roll-in, .flow2-menu-mobile-text, .fi-sound span, .why-photo-folio,
+  .fiwo-kicker, .xs-sea-k > span:not([lang])),
+html[data-rise-ui] #fiWorld :is(button, small, [class*="folio"], [class*="caption"], [class*="count"], [class*="meta"] > span),
+html[data-rise-ui] .finnovation-ui :is(small, [class*="label"]:not([lang])) {
+  font-family: var(--ru-mono) !important; font-weight: 400 !important; text-transform: uppercase; letter-spacing: .16em !important;
+}
+html[data-rise-ui] :is(.fi-rail-number, .f2u-name, .why-photo-folio) { font-size: 11px !important; }
+html[data-rise-ui] .fi-copy-kicker, html[data-rise-ui] .fiwo-kicker { font-size: 11px !important; letter-spacing: .22em !important; color: var(--ru-dim); }
+/* the counters (02 / 05): the title face, light */
+html[data-rise-ui] .finnovation-ui b, html[data-rise-ui] .f2u-count b { font-weight: 300 !important; }
+/* Chinese labels */
+html[data-rise-ui] :is(.fi-rail-zh, .xs-sea-k [lang], .fiwo-strategy-meta [lang]) { font-family: "Noto Sans TC", "PingFang TC", sans-serif !important; font-weight: 500 !important; letter-spacing: .14em !important; }
+/* body copy */
+html[data-rise-ui] :is(.fi-copy-panel p:not(.fi-copy-kicker):not(.fi-copy-zh), .fiwo-strategy-en, .xs-sea-p) { font-family: var(--ru-body) !important; }
+
+/* ---------------- chrome ---------------- */
+#ru-chrome { position: fixed; inset: 0; z-index: 64; pointer-events: none; opacity: 0; transition: opacity .8s ease .2s; }
+html[data-rise-ui].ru-on #ru-chrome { opacity: 1; }
+#ru-chrome .ru-frame { position: absolute; inset: var(--ru-inset); border: 1px solid var(--ru-rule); border-radius: 16px; }
+/* the ruler (the underwater one, rise.js #xs-sea .xs-sea-rule, carried on through the page) */
+#ru-chrome .ru-rule { position: absolute; top: calc(var(--ru-inset) + 70px); bottom: calc(var(--ru-inset) + 70px); width: 72px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 4%, #000 16%, #000 84%, transparent 96%); mask-image: linear-gradient(to bottom, transparent 4%, #000 16%, #000 84%, transparent 96%);
+  transition: opacity .5s ease; }
+#ru-chrome .ru-rule.l { left: calc(var(--ru-inset) + 12px); } #ru-chrome .ru-rule.r { right: calc(var(--ru-inset) + 12px); }
+#ru-chrome .ru-rule::before { content: ""; position: absolute; top: 0; bottom: 0; width: 1px; background: var(--ru-rule); }
+#ru-chrome .ru-rule.l::before { left: 0; } #ru-chrome .ru-rule.r::before { right: 0; }
+#ru-chrome .ru-strip { position: absolute; left: 0; right: 0; top: 0; height: 0; will-change: transform; }
+#ru-chrome .ru-strip i { position: absolute; height: 0; line-height: 0; white-space: nowrap; font: 400 10px/0 var(--ru-mono); font-style: normal; letter-spacing: .04em; color: var(--ru-dim); }
+#ru-chrome .ru-rule.l .ru-strip i { left: 0; padding-left: 18px; } #ru-chrome .ru-rule.r .ru-strip i { right: 0; padding-right: 18px; text-align: right; }
+#ru-chrome .ru-strip i::before { content: ""; position: absolute; top: 0; width: 5px; height: 1px; background: var(--ru-rule); }
+#ru-chrome .ru-rule.l .ru-strip i::before { left: 0; } #ru-chrome .ru-rule.r .ru-strip i::before { right: 0; }
+#ru-chrome .ru-strip i.M::before { width: 11px; background: var(--ru-rule-hi); }
+#ru-chrome .ru-mark { position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; background: var(--ru-acc); }
+#ru-chrome .ru-rule.l .ru-mark { left: -2px; } #ru-chrome .ru-rule.r .ru-mark { right: -2px; }
+/* under water the act draws its own ruler at the same place: ours steps aside */
+html[data-rise="under"] #ru-chrome .ru-rule, html[data-xs-gorge] #ru-chrome .ru-rule { opacity: 0; }
+
+/* the chapter pill (top centre): ‹ | 03 為何選擇我們 ── progress ── | › */
+#ru-chrome .ru-pill { position: absolute; top: calc(var(--ru-mid, 52px) - 20px); left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; height: 40px;
+  border: 1px solid var(--ru-rule); border-radius: 12px; background: rgb(8 22 36 / .28); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); pointer-events: auto; }
+#ru-chrome .ru-pill button { all: unset; cursor: pointer; width: 40px; display: grid; place-items: center; color: var(--ru-dim); transition: color .2s; }
+#ru-chrome .ru-pill button:hover { color: var(--ru-ink); }
+#ru-chrome .ru-pill button svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.4; }
+#ru-chrome .ru-pill .ru-now { position: relative; display: flex; align-items: center; gap: 12px; min-width: 300px; padding: 0 16px; border-left: 1px solid var(--ru-rule); border-right: 1px solid var(--ru-rule); }
+#ru-chrome .ru-now .ic { width: 16px; height: 16px; flex: none; stroke: var(--ru-acc); fill: none; stroke-width: 1.2; }
+#ru-chrome .ru-now .n { font: 400 11px/1 var(--ru-mono); letter-spacing: .16em; color: var(--ru-acc); }
+#ru-chrome .ru-now .t { font: 500 12px/1 "Noto Sans TC", sans-serif; letter-spacing: .14em; color: var(--ru-ink); white-space: nowrap; }
+#ru-chrome .ru-now .e { font: 400 10px/1 var(--ru-mono); letter-spacing: .16em; color: var(--ru-dim); text-transform: uppercase; white-space: nowrap; margin-left: auto; }
+#ru-chrome .ru-now .p { position: absolute; left: 16px; right: 16px; bottom: 7px; height: 1px; background: var(--ru-rule); }
+#ru-chrome .ru-now .p i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; transform-origin: 0 50%; transform: scaleX(0); background: var(--ru-acc); }
+
+/* the foot: a caption and a counter (bottom left) */
+#ru-chrome .ru-foot { position: absolute; left: calc(var(--ru-inset) + 104px); bottom: calc(var(--ru-inset) + 18px); display: flex; align-items: center; gap: 28px;
+  font: 400 10px/1.5 var(--ru-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--ru-dim); }
+#ru-chrome .ru-foot .c { max-width: 260px; }
+#ru-chrome .ru-foot .k { color: var(--ru-ink); }
+#ru-chrome .ru-foot .k::before { content: "— "; color: var(--ru-dim); }
+
+/* ---------------- the top bar (that site's: logo | Index ▾ | sound … pill … report button | menu) ---------------- */
+#ru-chrome .ru-bar-line { position: absolute; left: var(--ru-inset); right: var(--ru-inset); top: calc(var(--ru-mid, 52px) + 32px); height: 1px; background: var(--ru-rule); }
+#ru-chrome :is(.ru-left, .ru-right) { position: absolute; top: calc(var(--ru-mid, 52px) - 20px); height: 40px; display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+#ru-chrome .ru-left { left: calc(var(--ru-logo-r, 190px) + 18px); }
+#ru-chrome .ru-right { right: calc(var(--ru-inset) + 22px); gap: 10px; }
+#ru-chrome .ru-sep { width: 1px; height: 22px; background: var(--ru-rule); margin-right: 10px; }
+#ru-chrome :is(.ru-index-btn, .ru-sound, .ru-burger) { all: unset; cursor: pointer; height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 8px;
+  font: 400 11px/1 var(--ru-mono); letter-spacing: .16em; color: var(--ru-ink); transition: background .2s; }
+#ru-chrome :is(.ru-index-btn, .ru-sound, .ru-burger):hover, #ru-chrome .ru-index-btn[aria-expanded="true"] { background: rgb(214 236 244 / .08); }
+#ru-chrome .ru-caret { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.4; transition: transform .25s; }
+#ru-chrome .ru-index-btn[aria-expanded="true"] .ru-caret { transform: rotate(180deg); }
+#ru-chrome .ru-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+#ru-chrome .ru-bars i { width: 2px; height: 4px; background: var(--ru-dim); border-radius: 1px; }
+#ru-chrome .ru-bars i:nth-child(2) { height: 8px; } #ru-chrome .ru-bars i:nth-child(3) { height: 11px; } #ru-chrome .ru-bars i:nth-child(4) { height: 6px; }
+#ru-chrome .ru-sound[aria-pressed="true"] .ru-bars i { background: var(--ru-acc); animation: ru-bar .9s ease-in-out infinite alternate; }
+#ru-chrome .ru-sound[aria-pressed="true"] .ru-bars i:nth-child(2) { animation-delay: -.3s; } #ru-chrome .ru-sound[aria-pressed="true"] .ru-bars i:nth-child(3) { animation-delay: -.6s; } #ru-chrome .ru-sound[aria-pressed="true"] .ru-bars i:nth-child(4) { animation-delay: -.15s; }
+@keyframes ru-bar { from { transform: scaleY(.35); } to { transform: scaleY(1); } }
+#ru-chrome .ru-bars i { transform-origin: 50% 100%; }
+#ru-chrome .ru-burger { width: 40px; padding: 0; justify-content: center; flex-direction: column; gap: 5px; border: 1px solid var(--ru-rule); }
+#ru-chrome .ru-burger i { display: block; width: 16px; height: 1px; background: var(--ru-ink); } #ru-chrome .ru-burger i + i { width: 10px; margin-left: 6px; }
+/* the Index dropdown */
+#ru-chrome .ru-index { position: absolute; top: 48px; left: 0; min-width: 330px; padding: 8px; border: 1px solid var(--ru-rule); border-radius: 12px;
+  background: rgb(8 22 36 / .72); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); display: grid; gap: 2px; }
+#ru-chrome .ru-index[hidden] { display: none; }
+#ru-chrome .ru-index button { all: unset; cursor: pointer; display: grid; grid-template-columns: 28px 18px 1fr auto; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 8px; color: var(--ru-ink); }
+#ru-chrome .ru-index button:hover, #ru-chrome .ru-index button[aria-current] { background: rgb(214 236 244 / .08); }
+#ru-chrome .ru-index b { font: 400 11px/1 var(--ru-mono); letter-spacing: .14em; color: var(--ru-acc); }
+#ru-chrome .ru-index .ic { width: 16px; height: 16px; stroke: var(--ru-dim); fill: none; stroke-width: 1.2; }
+#ru-chrome .ru-index .zh { font: 500 13px/1 "Noto Sans TC", sans-serif; letter-spacing: .12em; }
+#ru-chrome .ru-index .en { font: 400 9px/1 var(--ru-mono); letter-spacing: .16em; color: var(--ru-dim); }
+/* the split-arrow button (that site's READ MORE | → / DOWNLOAD REPORT | ↓) */
+#ru-chrome .ru-btn { all: unset; cursor: pointer; height: 40px; display: inline-flex; align-items: stretch; border: 1px solid var(--ru-rule); border-radius: 8px; overflow: hidden;
+  background: rgb(214 236 244 / .9); color: #0b1d2e; transition: background .2s; }
+#ru-chrome .ru-btn:hover { background: #fff; }
+#ru-chrome .ru-btn span { display: flex; align-items: center; padding: 0 16px; font: 400 11px/1 var(--ru-mono); letter-spacing: .16em; white-space: nowrap; }
+#ru-chrome .ru-btn i { width: 40px; display: grid; place-items: center; border-left: 1px solid rgb(11 29 46 / .18); }
+#ru-chrome .ru-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.4; transition: transform .25s; }
+#ru-chrome .ru-btn:hover svg { transform: translateX(2px); }
+
+/* ---------------- the row of round chapter icons (bottom right) ---------------- */
+#ru-chrome .ru-dots { position: absolute; right: calc(var(--ru-inset) + 104px); bottom: calc(var(--ru-inset) + 14px); display: flex; gap: 10px; pointer-events: auto; }
+#ru-chrome .ru-dots button { all: unset; cursor: pointer; position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--ru-rule); background: rgb(8 22 36 / .22); color: var(--ru-dim); transition: color .2s, border-color .2s, background .2s; }
+#ru-chrome .ru-dots button:hover { color: var(--ru-ink); border-color: var(--ru-rule-hi); }
+#ru-chrome .ru-dots button[aria-current] { color: var(--ru-acc); border-color: var(--ru-acc); background: rgb(159 220 236 / .12); }
+#ru-chrome .ru-dots svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.2; }
+#ru-chrome .ru-dots .tip { position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 500 11px/1 "Noto Sans TC", sans-serif; letter-spacing: .12em;
+  color: var(--ru-ink); opacity: 0; transition: opacity .2s; pointer-events: none; }
+#ru-chrome .ru-dots button:hover .tip, #ru-chrome .ru-dots button[aria-current] .tip { opacity: 1; }
+#ru-chrome .ru-dots button[aria-current] .tip { color: var(--ru-acc); }
+
+/* ---------------- the cursor ---------------- */
+.ru-cursor { position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.ru-cursor.is-on { opacity: 1; }
+.ru-cursor i { position: absolute; left: 0; top: 0; border-radius: 50%; will-change: transform; }
+.ru-cursor .ring { width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 1px solid rgb(214 236 244 / .7); transition: width .25s, height .25s, margin .25s, border-color .25s; }
+.ru-cursor .dot { width: 4px; height: 4px; margin: -2px 0 0 -2px; background: #fff; }
+.ru-cursor.is-hot .ring { border-color: var(--ru-acc); }
+
+@media (max-width: 760px) {
+  html[data-rise-ui] { --ru-inset: 8px; }
+  #ru-chrome .ru-left, #ru-chrome .ru-contact, #ru-chrome .ru-dots { display: none; }
+  #ru-chrome .ru-rule { width: 44px; } #ru-chrome .ru-strip i { font-size: 9px; }
+  #ru-chrome .ru-pill { top: auto; bottom: calc(var(--ru-inset) + 12px); height: 36px; }
+  #ru-chrome .ru-pill .ru-now { min-width: 0; } #ru-chrome .ru-now .e { display: none; }
+  #ru-chrome .ru-foot { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #ru-chrome { transition: none; } }
+
+/* ---------------- the titles, against the pages' strongest rules ----------------
+   text-caustics.css and why-sea.css set the canyon / view-from-above / sea titles with nine-ID :root:not(#…) chains and !important (Oswald 500,
+   colour inherited down to every word); ten here, so the underwater title style wins on this page only. */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-panel > :is(h1, h2),
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body #fiWorld .fiwo-strategy-title {
+  font-weight: 300 !important; letter-spacing: .012em !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body #fiWorld .fiwo-strategy-title :is(span, .flow-copy-word, .flow-copy-ink) { font-weight: 300 !important; }
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-panel:not(#chapter-knowledge) > :is(h1, h2) > span:first-child > .flow-copy-word:first-child,
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-panel:not(#chapter-knowledge) > :is(h1, h2) > span:first-child > .flow-copy-word:first-child .flow-copy-ink {
+  color: var(--ru-acc) !important; -webkit-text-fill-color: var(--ru-acc) !important;
+}
+
+/* ---------------- the small labels, against the same rules ---------------- */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(
+  .finnovation-ui .fi-rail-number, .finnovation-ui .fi-copy-kicker, .finnovation-ui .fi-copy-kicker span:not([lang]),
+  .btn-roll, .btn-roll-in, .flow2-menu-mobile-text, .fi-sound span, .fi-menu-toggle span, .f2u-of, .f2u-flow,
+  #fiWorld .fiwo-kicker span, #fiWorld figcaption span, #fiWorld .fiwo-strategy-number, #fiWorld button, #fiWorld button span) {
+  font-family: var(--ru-mono) !important; font-weight: 400 !important; letter-spacing: .16em !important;
+}
+
+/* ---------------- one set of edges ----------------
+   2026-11-23 client 「左右兩邊的UI 改回去這種」: restore the original left chapter rail (.fi-rail: diamonds + 01..05) and right reading column
+   (.f2u-side: TAIPEI time/coords, 02/05, vertical section name + diamond track, FLOW %) as default on this page (data-ru-rail), hiding the
+   vertical edge rulers (.ru-rule / .xs-sea-rule) so they never overlap. ?uiRail=0 reverts to the rulers. */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui]:not([data-ru-rail]) body .finnovation-ui .fi-rail,
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui]:not([data-ru-rail]) body .f2u-side { display: none !important; }
+html[data-rise-ui][data-ru-rail] #ru-chrome .ru-rule,
+html[data-rise-ui][data-ru-rail] #xs-sea .xs-sea-rule { display: none !important; }
+/* keep the restored left & right HUD visible in Act 1 underwater as well (overriding rise.css's underwater fade) once the loader lifts */
+:root:not(#xs1):not(#xs2):not(#xs3):not(#xs4):not(#xs5):not(#xs6):not(#xs7):not(#xs8):not(#xs9):not(#xs10):not(#ru-r)[data-rise-ui][data-ru-rail][data-gate="off"] body.is-ready .finnovation-ui > :is(.fi-rail, .f2u-side) {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+@media (min-width: 761px) {
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h):not(#ru-r)[data-rise-ui][data-ru-rail][data-flow2-hud][data-render-mode="webgl"] body.is-ready .finnovation-ui > .fi-rail {
+    left: 48px !important;
+  }
+  :root:not(#f2h):not(#f2h):not(#f2h):not(#f2h):not(#ru-r)[data-rise-ui][data-ru-rail][data-flow2-hud][data-render-mode="webgl"][data-gate="off"]:not([data-flow2-plain-news-open]) body.is-ready .finnovation-ui > .f2u-side {
+    right: 48px !important;
+  }
+}
+
+/* ---------------- the page's own buttons: one split-arrow button ----------------
+   the chapters' FOLLOW / EXPLORE buttons and the sea's NEXT pill become that site's READ MORE | → (label, a hairline, the arrow in its own cell);
+   the page's SOUND OFF / MENU pills give way to the top bar (they stay in the page: the bar presses them). */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(#flow2-header-sound, #flow2-menu-toggle) {
+  visibility: hidden !important; pointer-events: none !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill) {
+  position: relative !important; height: 42px !important; min-height: 0 !important; padding: 0 58px 0 18px !important; border-radius: 8px !important;
+  border: 1px solid var(--ru-rule) !important; background: rgb(8 22 36 / .34) !important; box-shadow: none !important;
+  -webkit-backdrop-filter: blur(8px) !important; backdrop-filter: blur(8px) !important; overflow: hidden !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill)::after {
+  content: "" !important; position: absolute !important; top: 0 !important; bottom: 0 !important; right: 42px !important; width: 1px !important; left: auto !important; height: auto !important;
+  background: var(--ru-rule) !important; border: 0 !important; border-radius: 0 !important; opacity: 1 !important; transform: none !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-action .fi-icon {
+  position: absolute !important; right: 14px !important; top: 50% !important; width: 14px !important; height: 14px !important; margin: -7px 0 0 !important; transform: none !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body #fiWorld .fiwo-pill > i {
+  position: absolute !important; right: 0 !important; top: 0 !important; bottom: 0 !important; width: 42px !important; height: auto !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-action .fi-grid-icon { display: none !important; }
+/* the round arrow chip (btn-lux) moves into the arrow cell, without its circle; the plain arrow beside the label goes */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill) .btn-chip {
+  position: absolute !important; right: 0 !important; top: 0 !important; bottom: 0 !important; left: auto !important; width: 42px !important; height: auto !important; margin: 0 !important;
+  border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; transform: none !important; display: grid !important; place-items: center !important; overflow: hidden !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill) .btn-chip svg { width: 14px !important; height: 14px !important; }
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action > span > .fi-icon, #fiWorld .fiwo-pill > i) { display: none !important; }
+/* the canyon's first kicker (rise.css sets it with the font shorthand) */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-panel > .fi-copy-kicker,
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui][data-rise] body #chapter-innovation > .fi-copy-kicker {
+  font: 400 11px/1.4 var(--ru-mono) !important; letter-spacing: .22em !important;
+}
+/* rise.css sets that kicker inside @layer rise-typography (a layered !important beats every unlayered one): the same layer, more specific */
+@layer rise-typography {
+  :root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui][data-rise] body #chapter-innovation > .fi-copy-kicker {
+    font: 400 11px/1.4 var(--ru-mono) !important; letter-spacing: .22em !important;
+  }
+}
+/* the chapters' buttons: as wide as their label plus the arrow cell; the chip always shown */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-action {
+  width: auto !important; min-width: 0 !important; max-width: none !important; display: inline-flex !important; align-items: center !important; justify-content: flex-start !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill) .btn-chip {
+  opacity: 1 !important; visibility: visible !important; color: var(--ru-ink) !important;
+}
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill) .btn-chip svg {
+  stroke: currentColor !important; fill: none !important; stroke-width: 1.6 !important; opacity: 1 !important;
+}
+/* the chip sits in the button's own arrow cell (the label's span was its containing block) */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12)[data-rise-ui] body .finnovation-ui .fi-copy-action > span { position: static !important; transform: none !important; }
+
+/* 2026-11-23 client 「底下這排參數值給我一個小按鈕點選可以先隱藏」: the panel bar's hide / show button (rise-ui.js), left of the tabs */
+.ru-ptoggle { position: fixed; left: 64px; bottom: 18px; z-index: 2147483001; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; cursor: pointer;
+  border: 1px solid rgba(190, 220, 255, .28); border-radius: 8px; background: rgba(9, 17, 32, .72); color: #cfe2ff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.ru-ptoggle[hidden] { display: none; }
+.ru-ptoggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.ru-ptoggle:hover { background: rgba(190, 220, 255, .18); }
+html[data-ru-panels-off] .f2p { display: none !important; }
+@media (max-width: 760px) { .ru-ptoggle { display: none; } }
+
+/* 2026-11-23 client 「這些UI按鈕都要白色透明模糊那種毛玻璃UI」: every button of this page as white frosted glass
+   (translucent white, strong blur, a fine white rim and a soft top highlight). Same sizes and shapes as before; only the material changes. */
+:root[data-rise-ui] { --ru-glass: rgb(255 255 255 / .06); --ru-glass-hi: rgb(255 255 255 / .11); --ru-glass-rim: rgb(255 255 255 / .2);
+  --ru-glass-fx: blur(12px) saturate(125%); --ru-glass-shadow: none; }   /* 2026-11-23 client 「白色毛玻璃太明顯了 而且不用陰影」: toned down, no shadow (interim until the directors' pick) */
+#ru-chrome .ru-pill, #ru-chrome .ru-index, #ru-chrome .ru-dots button, .ru-ptoggle,
+:root[data-rise-ui] .f2p-tab {
+  background: var(--ru-glass) !important; border-color: var(--ru-glass-rim) !important; color: #fff !important;
+  -webkit-backdrop-filter: var(--ru-glass-fx) !important; backdrop-filter: var(--ru-glass-fx) !important; box-shadow: var(--ru-glass-shadow) !important; }
+#ru-chrome .ru-btn { background: var(--ru-glass) !important; border-color: var(--ru-glass-rim) !important; color: #fff !important;
+  -webkit-backdrop-filter: var(--ru-glass-fx); backdrop-filter: var(--ru-glass-fx); box-shadow: var(--ru-glass-shadow); }
+#ru-chrome .ru-btn:hover, #ru-chrome .ru-dots button:hover, .ru-ptoggle:hover, :root[data-rise-ui] .f2p-tab:hover { background: var(--ru-glass-hi) !important; }
+#ru-chrome .ru-dots button[aria-current] { background: var(--ru-glass-hi) !important; border-color: rgb(255 255 255 / .7) !important; }
+:root[data-rise-ui] .f2p-tab[aria-expanded="true"] { background: rgb(255 255 255 / .82) !important; color: #0b1d2e !important; }
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6):not(#ru7):not(#ru8):not(#ru9):not(#ru10):not(#ru11):not(#ru12):not(#ru13)[data-rise-ui] body :is(.finnovation-ui .fi-copy-action, #fiWorld .fiwo-pill) {
+  background: var(--ru-glass) !important; border-color: var(--ru-glass-rim) !important; color: #fff !important;
+  -webkit-backdrop-filter: var(--ru-glass-fx) !important; backdrop-filter: var(--ru-glass-fx) !important; box-shadow: var(--ru-glass-shadow) !important; }
+
+/* 2026-11-23 client 「UI上下間距都沒處理好」: the top bar is one band from the frame's top edge to the bar line, and its parts
+   (logo, INDEX, the chapter pill, CONTACT, menu) sit at its middle, so the space above and below them is equal */
+#ru-chrome .ru-bar-line { top: calc(var(--ru-mid, 52px) * 2 - var(--ru-inset)); }
+#ru-chrome .ru-rule { top: calc(var(--ru-mid, 52px) * 2 - var(--ru-inset) + 26px); }
+/* 2026-11-23 client 「下方這些內容+按鈕可以往上抬一點 太靠近下方了」: the copy column (kicker, title, Chinese line, button) stands higher,
+   clear of the foot caption and the chapter icons */
+:root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9):not(#ru-a)[data-rise-ui] body .finnovation-ui > main.fi-copy { --tx-bottom: clamp(64px, 10vh, 110px) !important; }
+@media (max-width: 760px) {
+  :root:not(#tx1):not(#tx2):not(#tx3):not(#tx4):not(#tx5):not(#tx6):not(#tx7):not(#tx8):not(#tx9):not(#ru-a)[data-rise-ui] body .finnovation-ui > main.fi-copy { --tx-bottom: 96px !important; }
+}
+
+/* 2026-11-23 client 「水下那行英文也拿掉」: the under-water chapters' English paragraph (rise.js .xs-sea-p) is not shown on this page */
+html[data-rise-ui] #xs-sea .xs-sea-p { display: none !important; }
+/* 2026-11-26 client 「橫移區的這個拿掉」: hide WHY horizontal section's tick + 01 / 02 / 03 / 04 progress pager */
+:root:not(#ru1):not(#ru2):not(#ru3):not(#ru4):not(#ru5):not(#ru6)[data-rise-ui] body #fiWorld .fiwo-progress { display: none !important; }
+
+/* 2026-11-23 client 「對照一下人家的間距 我選單高度要照這樣」 (2023.breakthroughenergy.org): on desktop the top bar is a 68 px band under the
+   frame's top edge; the logo (moved by rise-ui.js), INDEX, the chapter pill, CONTACT and the menu are 48 px tall and sit in it with an
+   even 10 px above and below; the separator runs the band's full height, as on that site. The frame stands 24 px in from the screen. */
+@media (min-width: 761px) {
+  #ru-chrome { --ru-inset: 24px; --ru-band: 68px; --ru-h: 48px; }
+  #ru-chrome .ru-bar-line { top: calc(var(--ru-inset) + var(--ru-band)); }
+  #ru-chrome .ru-rule { top: calc(var(--ru-inset) + var(--ru-band) + 26px); }
+  #ru-chrome .ru-pill, #ru-chrome :is(.ru-left, .ru-right) { top: calc(var(--ru-inset) + (var(--ru-band) - var(--ru-h)) / 2); height: var(--ru-h); }
+  #ru-chrome :is(.ru-btn, .ru-index-btn, .ru-sound, .ru-burger) { height: var(--ru-h); }
+  #ru-chrome .ru-burger { width: var(--ru-h); }
+  #ru-chrome .ru-sep { height: var(--ru-band); }
+}

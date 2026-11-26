@@ -1,0 +1,806 @@
+/* RISE MENU (2026-11-26) — Award-grade translucent frosted-glass navigation observatory for index1-5-canyon-forest-rise-ui.html.
+   Replaces the legacy opaque white menu sheet + PLAY REEL + 網站資訊 with a full-viewport glacial frosted-glass overlay
+   aligned to the exact 24px outer architectural frame and 68px top bar band of rise-ui.css.
+   Uses a single backdrop-filter layer on #fi-menu for silky 120 FPS performance. */
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu {
+  --rm-inset: 24px;
+  --rm-band: 68px;
+  --rm-ink: #f4f9fc;
+  --rm-ink-soft: rgb(222 240 248 / .76);
+  --rm-dim: rgb(198 226 238 / .56);
+  --rm-acc: #9fdcec;
+  --rm-acc-hi: #d8f3fc;
+  --rm-rule: rgb(214 236 244 / .18);
+  --rm-rule-hi: rgb(214 236 244 / .42);
+  --rm-ease: cubic-bezier(.16, 1, .3, 1);
+
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: var(--rm-inset) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  color: var(--rm-ink) !important;
+  color-scheme: dark !important;
+  background:
+    radial-gradient(85% 70% at 14% 12%, rgb(159 220 236 / .17), transparent 60%),
+    radial-gradient(75% 65% at 88% 88%, rgb(72 146 188 / .15), transparent 58%),
+    linear-gradient(155deg, rgb(9 24 40 / .42) 0%, rgb(6 17 29 / .52) 52%, rgb(10 26 42 / .44) 100%) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(150%) brightness(1.04) !important;
+  backdrop-filter: blur(26px) saturate(150%) brightness(1.04) !important;
+  box-shadow: none !important;
+  overscroll-behavior: contain !important;
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu::backdrop {
+  background: rgb(4 12 22 / .18) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Hide legacy chrome behind open menu so the framed glass stage takes over seamlessly */
+html[data-rise-ui][data-ru-menu-open] #ru-chrome,
+html[data-rise-ui]:has(#fi-menu[open]) #ru-chrome {
+  opacity: 0 !important;
+  transition: opacity .26s ease !important;
+}
+
+/* Inner architectural glass frame aligned with #ru-chrome .ru-frame */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-shell {
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--rm-band) minmax(0, 1fr) 46px;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  border: 1px solid rgb(214 236 244 / .24);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / .065) 0%, rgb(255 255 255 / .018) 32%, rgb(159 220 236 / .028) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .24),
+    inset 0 -1px 0 rgb(159 220 236 / .08),
+    0 32px 84px -26px rgb(2 10 18 / .58);
+  overflow: hidden;
+}
+
+/* Subtle architectural specular top edge & diagonal glass sheen */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, transparent 0%, rgb(214 236 244 / .42) 24%, rgb(159 220 236 / .62) 50%, rgb(214 236 244 / .42) 76%, transparent 100%) top center / 72% 1px no-repeat,
+    linear-gradient(128deg, rgb(255 255 255 / .055) 0%, transparent 38%, transparent 72%, rgb(159 220 236 / .04) 100%);
+  opacity: .88;
+}
+/* Optical frosted-glass micro-grain texture (zero extra backdrop-filter cost) */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* ---------------- Row 1: Top Architectural Bar (68px) ---------------- */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 100%;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--rm-rule);
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-home {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 0 6px 0 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--rm-ink) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: opacity .25s ease, transform .3s var(--rm-ease) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-home:hover {
+  opacity: .86;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-home svg {
+  width: 26px !important;
+  height: 30px !important;
+  fill: currentColor !important;
+  flex: none;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-brand-txt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  line-height: 1;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-brand-zh {
+  font: 500 13.5px/1 "Noto Sans TC", "PingFang TC", sans-serif;
+  letter-spacing: .22em;
+  color: var(--rm-ink);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-brand-en {
+  font: 400 8.5px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .24em;
+  color: var(--rm-dim);
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-sep {
+  width: 1px;
+  height: var(--rm-band);
+  background: var(--rm-rule);
+  flex: none;
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-tag {
+  font: 400 10px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .22em;
+  color: var(--rm-acc);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-mid {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgb(214 236 244 / .16);
+  background: rgb(255 255 255 / .04);
+  font: 400 10px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .18em;
+  color: var(--rm-dim);
+  white-space: nowrap;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-mid i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rm-acc);
+  box-shadow: 0 0 8px var(--rm-acc);
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-tools {
+  position: static !important;
+  inset: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+
+/* Sound toggle glass button */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-sound {
+  position: relative !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  border: 1px solid rgb(214 236 244 / .24) !important;
+  background: linear-gradient(180deg, rgb(255 255 255 / .09), rgb(255 255 255 / .02)) !important;
+  color: var(--rm-ink) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .18) !important;
+  cursor: pointer;
+  transition: border-color .28s var(--rm-ease), background .28s var(--rm-ease), color .28s var(--rm-ease) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-sound:is(:hover, :focus-visible) {
+  border-color: rgb(159 220 236 / .65) !important;
+  background: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(159 220 236 / .06)) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-sound[aria-pressed="true"] {
+  border-color: rgb(159 220 236 / .72) !important;
+  background: linear-gradient(180deg, rgb(159 220 236 / .24), rgb(159 220 236 / .08)) !important;
+  color: #fff !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .flow2-menu-sound .fi-icon {
+  width: 18px !important;
+  height: 18px !important;
+  stroke: currentColor !important;
+}
+
+/* Split-cell frosted glass CLOSE button (matches CONTACT | ->) */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: stretch !important;
+  width: auto !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  border: 1px solid rgb(214 236 244 / .28) !important;
+  background: linear-gradient(180deg, rgb(255 255 255 / .10), rgb(255 255 255 / .025)) !important;
+  color: var(--rm-ink) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .22) !important;
+  overflow: hidden !important;
+  cursor: pointer;
+  transition: border-color .28s var(--rm-ease), background .28s var(--rm-ease) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close::before,
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close::after {
+  display: none !important;
+  content: none !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close:is(:hover, :focus-visible) {
+  border-color: rgb(159 220 236 / .72) !important;
+  background: linear-gradient(180deg, rgb(255 255 255 / .18), rgb(159 220 236 / .07)) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close .flow2-menu-mobile-text {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0 16px !important;
+  font: 400 11px/1 var(--ru-mono, ui-monospace, monospace) !important;
+  letter-spacing: .2em !important;
+  color: var(--rm-ink) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close .ru-menu-x {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border-left: 1px solid rgb(214 236 244 / .2);
+  color: var(--rm-ink);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close .ru-menu-x svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: transform .36s var(--rm-ease);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-close:hover .ru-menu-x svg {
+  transform: rotate(90deg);
+}
+
+/* ---------------- Row 2: Two-Column Editorial Stage ---------------- */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-body {
+  display: grid !important;
+  grid-template-columns: minmax(310px, 0.43fr) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  gap: 0 !important;
+  padding: 0 !important;
+}
+
+/* Left Column: Brand Philosophy + Dynamic Chapter Preview Card */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: clamp(28px, 4.2vh, 52px) clamp(28px, 3.4vw, 52px);
+  border-right: 1px solid var(--rm-rule);
+  background: linear-gradient(180deg, rgb(255 255 255 / .024), rgb(6 18 30 / .08));
+  min-width: 0;
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font: 400 10.5px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .24em;
+  color: var(--rm-acc);
+  text-transform: uppercase;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--rm-acc);
+  transform: rotate(45deg);
+  box-shadow: 0 0 10px rgb(159 220 236 / .7);
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-statement {
+  margin: 0 0 16px;
+  font: 300 clamp(30px, 3.15vw, 48px)/1.06 var(--ru-title, "Oswald", sans-serif);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--rm-ink);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-statement .ru-menu-acc {
+  color: var(--rm-acc);
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-sub {
+  margin: 0;
+  max-width: 34ch;
+  font: 400 13.5px/1.85 "Noto Sans TC", "PingFang TC", sans-serif;
+  letter-spacing: .08em;
+  color: var(--rm-ink-soft);
+}
+
+/* Dynamic Hover / Active Chapter Telemetry Glass Card */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px 22px;
+  border-radius: 14px;
+  border: 1px solid rgb(214 236 244 / .2);
+  background: linear-gradient(155deg, rgb(255 255 255 / .085), rgb(159 220 236 / .03) 65%, rgb(255 255 255 / .02));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .2);
+  overflow: hidden;
+  transition: border-color .35s var(--rm-ease), background .35s var(--rm-ease);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-ic {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgb(159 220 236 / .34);
+  background: rgb(159 220 236 / .1);
+  color: var(--rm-acc);
+  flex: none;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-ic svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.3;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-idx {
+  font: 400 10.5px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .2em;
+  color: var(--rm-acc);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-badge {
+  margin-left: auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgb(214 236 244 / .24);
+  background: rgb(255 255 255 / .05);
+  font: 400 9px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .18em;
+  color: var(--rm-ink-soft);
+  text-transform: uppercase;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview[data-state="active"] .ru-menu-preview-badge {
+  border-color: rgb(159 220 236 / .55);
+  background: rgb(159 220 236 / .14);
+  color: var(--rm-acc-hi);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-en {
+  margin: 2px 0 0;
+  font: 300 22px/1.15 var(--ru-title, "Oswald", sans-serif);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--rm-ink);
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-desc {
+  margin: 0;
+  font: 400 13px/1.7 "Noto Sans TC", "PingFang TC", sans-serif;
+  letter-spacing: .05em;
+  color: var(--rm-ink-soft);
+  min-height: 2.8em;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-bar {
+  position: relative;
+  height: 1px;
+  margin-top: 4px;
+  background: rgb(214 236 244 / .16);
+  overflow: hidden;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--rm-acc), #fff);
+  transform-origin: 0 50%;
+  transform: scaleX(.4);
+  transition: transform .42s var(--rm-ease);
+}
+
+/* ---------------- Right Column: Monumental Editorial Navigation List ---------------- */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: clamp(20px, 3.6vh, 44px) clamp(28px, 4.2vw, 64px) !important;
+  gap: 0 !important;
+  overflow-y: auto;
+}
+
+/* Override flow2-scope opacity washout inside the award menu while preserving clear live vs upcoming hierarchy */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 64px minmax(0, 1fr) 44px !important;
+  align-items: center !important;
+  gap: 0 18px !important;
+  width: 100% !important;
+  min-height: clamp(72px, 10.8vh, 108px) !important;
+  padding: 14px 20px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--rm-rule) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--rm-ink) !important;
+  text-align: left !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  overflow: hidden;
+  transition:
+    background .38s var(--rm-ease),
+    opacity .34s var(--rm-ease),
+    border-color .34s var(--rm-ease) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:last-child {
+  border-bottom: 1px solid var(--rm-rule) !important;
+}
+
+/* Upcoming scoped items (04, 05) remain hoverable for preview, styled with refined subtle hierarchy */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button[data-ru-soon] {
+  --rm-row-o: .54;
+  opacity: .54 !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button[data-ru-soon]:hover {
+  opacity: .84 !important;
+}
+
+/* Luminous top-edge specular sweep bar */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, var(--rm-acc), rgb(255 255 255 / .8) 45%, transparent 92%) !important;
+  transform-origin: 0 50% !important;
+  transform: scaleX(0) !important;
+  opacity: 0 !important;
+  transition: transform .48s var(--rm-ease), opacity .32s ease !important;
+}
+
+/* Right frosted circular arrow badge */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button::after {
+  content: "" !important;
+  grid-column: 3 !important;
+  flex: none !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgb(214 236 244 / .22) !important;
+  rotate: 0deg !important;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23e8f6fc' stroke-width='1.35' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4'/%3E%3C/svg%3E") center / 15px 15px no-repeat,
+    rgb(255 255 255 / .03) !important;
+  opacity: .6 !important;
+  transform: translateX(0) !important;
+  transition:
+    transform .38s var(--rm-ease),
+    border-color .32s var(--rm-ease),
+    background-color .32s var(--rm-ease),
+    opacity .32s ease !important;
+}
+
+/* Gallery spotlight: gently dim sibling rows when hovering one */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links:has(button:hover) button:not(:hover) {
+  opacity: .38 !important;
+}
+
+/* Hover / Active frosted glass highlight sweep */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:is(:hover, :focus-visible) {
+  background: linear-gradient(90deg, rgb(255 255 255 / .11) 0%, rgb(159 220 236 / .065) 56%, transparent 100%) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .14) !important;
+  opacity: 1 !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button[aria-current="step"] {
+  background: linear-gradient(90deg, rgb(159 220 236 / .12) 0%, rgb(255 255 255 / .045) 58%, transparent 100%) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:is([aria-current="step"], :hover, :focus-visible)::before {
+  transform: scaleX(1) !important;
+  opacity: 1 !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:is(:hover, :focus-visible)::after {
+  border-color: rgb(159 220 236 / .78) !important;
+  background-color: rgb(159 220 236 / .16) !important;
+  opacity: 1 !important;
+  transform: translateX(4px) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button[aria-current="step"]::after {
+  border-color: rgb(159 220 236 / .62) !important;
+  background-color: rgb(159 220 236 / .12) !important;
+  opacity: .95 !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button[data-ru-soon]::after {
+  opacity: .26 !important;
+}
+
+/* Index Number + Architectural Diamond */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links .fi-menu-link-number {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: auto !important;
+  flex: none !important;
+  font: 400 11.5px/1 var(--ru-mono, ui-monospace, monospace) !important;
+  letter-spacing: .16em !important;
+  color: rgb(198 226 238 / .62) !important;
+  text-decoration: none !important;
+  border-bottom: 0 !important;
+  transition: color .3s ease !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links .fi-menu-link-number::after {
+  display: none !important;
+  content: none !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links .fi-menu-link-number::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: 1px solid rgb(214 236 244 / .48);
+  transform: rotate(45deg);
+  transition: background .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:is([aria-current="step"], :hover, :focus-visible) .fi-menu-link-number {
+  color: var(--rm-acc) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:is([aria-current="step"], :hover, :focus-visible) .fi-menu-link-number::before {
+  background: var(--rm-acc);
+  border-color: var(--rm-acc);
+  box-shadow: 0 0 10px rgb(159 220 236 / .8);
+}
+
+/* Bilingual Editorial Copy Column (English Kicker + Sculptural Chinese Title) */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button > span:nth-child(2) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  transform: translateX(0) !important;
+  transition: transform .42s var(--rm-ease) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button:is(:hover, :focus-visible) > span:nth-child(2) {
+  transform: translateX(10px) !important;
+}
+
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links .fi-menu-link-en {
+  display: block !important;
+  font: 400 10.5px/1 var(--ru-mono, ui-monospace, monospace) !important;
+  letter-spacing: .24em !important;
+  text-transform: uppercase !important;
+  color: rgb(159 220 236 / .72) !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links .fi-menu-link-zh {
+  display: block !important;
+  margin: 0 !important;
+  font: 300 clamp(24px, 2.55vw, 38px)/1.12 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif !important;
+  letter-spacing: .07em !important;
+  color: var(--rm-ink) !important;
+  white-space: nowrap !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button[aria-current="step"] .fi-menu-link-zh {
+  color: #fff !important;
+  text-shadow: 0 0 24px rgb(159 220 236 / .32) !important;
+}
+
+/* ---------------- Row 3: Architectural Footer Strip (NO 網站資訊 / NO REEL) ---------------- */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+  border-top: 1px solid var(--rm-rule);
+  font: 400 10px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .2em;
+  color: var(--rm-dim);
+  text-transform: uppercase;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot-mid {
+  color: rgb(214 236 244 / .42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot-mob {
+  display: none;
+  white-space: nowrap;
+  color: var(--rm-acc);
+  opacity: .78;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-kbd {
+  display: inline-grid;
+  place-items: center;
+  padding: 4px 7px;
+  border-radius: 5px;
+  border: 1px solid rgb(214 236 244 / .28);
+  background: rgb(255 255 255 / .06);
+  font: 400 9.5px/1 var(--ru-mono, ui-monospace, monospace);
+  letter-spacing: .12em;
+  color: var(--rm-ink);
+}
+
+/* Focus Ring on Dark Frosted Glass (keyboard only, never on dialog shell itself) */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu:focus {
+  outline: none !important;
+}
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu :is(button):focus-visible {
+  outline: 1px solid rgb(159 220 236 / .72) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Ensure legacy removed parts never reappear */
+:root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu :is(.flow2-menu-reel, .fi-menu-bottom, .flow2-menu-contact) {
+  display: none !important;
+}
+
+/* ---------------- Choreographed Entrance Motion ---------------- */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu {
+    opacity: 0 !important;
+    transform: scale(.988) !important;
+    transition:
+      opacity 280ms var(--rm-ease),
+      transform 380ms var(--rm-ease),
+      display 380ms allow-discrete,
+      overlay 380ms allow-discrete !important;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu[open] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  @starting-style {
+    :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu[open] {
+      opacity: 0 !important;
+      transform: scale(.988) !important;
+    }
+  }
+  #fi-menu[open] .ru-menu-aside {
+    animation: ru-menu-rise .52s var(--rm-ease) 55ms backwards;
+  }
+  #fi-menu[open] .fi-menu-links button {
+    animation: ru-menu-rise .5s var(--rm-ease) var(--menu-row-delay, 70ms) backwards;
+  }
+  #fi-menu .fi-menu-links button:nth-child(1) { --menu-row-delay: 75ms; }
+  #fi-menu .fi-menu-links button:nth-child(2) { --menu-row-delay: 115ms; }
+  #fi-menu .fi-menu-links button:nth-child(3) { --menu-row-delay: 155ms; }
+  #fi-menu .fi-menu-links button:nth-child(4) { --menu-row-delay: 195ms; }
+  #fi-menu .fi-menu-links button:nth-child(5) { --menu-row-delay: 235ms; }
+  @keyframes ru-menu-rise {
+    from { opacity: 0; translate: 0 14px; }
+    to { opacity: var(--rm-row-o, 1); translate: none; }
+  }
+}
+
+/* ---------------- Responsive Tablet & Mobile ---------------- */
+@media (max-width: 1020px) {
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-mid,
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot-mid {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu {
+    --rm-inset: 10px;
+    --rm-band: 60px;
+    padding: max(10px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px)) !important;
+    height: 100dvh !important;
+    inset: 0 !important;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar {
+    grid-template-columns: 1fr auto;
+    padding: 0 14px;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-sep,
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-bar-tag {
+    display: none;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-body {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    overflow-y: auto;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-aside {
+    padding: 20px 18px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rm-rule);
+    gap: 12px;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-preview {
+    display: none;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-statement {
+    font-size: clamp(24px, 6.8vw, 32px);
+    margin-bottom: 8px;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links {
+    justify-content: flex-start !important;
+    padding: 12px 14px 18px !important;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button {
+    grid-template-columns: 48px minmax(0, 1fr) 36px !important;
+    min-height: 62px !important;
+    padding: 12px 10px !important;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links .fi-menu-link-zh {
+    font-size: clamp(20px, 5.8vw, 26px) !important;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .fi-menu-links button::after {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot {
+    padding: 0 14px;
+    font-size: 9px;
+    letter-spacing: .12em;
+    white-space: nowrap;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot-hint {
+    display: none;
+  }
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body #fi-menu .ru-menu-foot-mob {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root:not(#rm1):not(#rm2):not(#rm3):not(#rm4):not(#rm5):not(#rm6):not(#rm7):not(#rm8):not(#rm9):not(#rm10)[data-rise-ui] body.is-ready .finnovation-ui #fi-menu {
+    background: rgb(8 20 34 / .94) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
